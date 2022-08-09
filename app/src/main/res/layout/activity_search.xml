@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fontFamily="cursive"
+        android:text="Procrasturbating"
+        android:textAlignment="center"
+        android:textSize="56sp" />
+
+    <TextView
+        android:id="@+id/textView2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fontFamily="casual"
+        android:text="Because you don't have better things to be doing"
+        android:textAlignment="center"
+        android:textSize="14sp" />
+
+    <AutoCompleteTextView
+        android:id="@+id/tagSearch"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:hint="Search tags..."
+        android:inputType="textNoSuggestions|textVisiblePassword|textMultiLine"
+        android:maxLines="1"
+        android:minHeight="48dp"
+        android:importantForAutofill="no" />
+<!--        android:hint="Enter tags... (hit space or enter to add tag)"-->
+
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/tagList"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:theme="@style/Theme.MaterialComponents.Light">
+    </com.google.android.material.chip.ChipGroup>
+
+    <Button
+        android:id="@+id/search"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Search"
+        android:onClick="onSearchClick" />
+
+</LinearLayout>
