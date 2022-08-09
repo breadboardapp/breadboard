@@ -7,9 +7,6 @@ class ImageSource(vararg tags: String) {
     private val baseUrl = "https://api.rule34.xxx/index.php?page=dapi&json=1&s=post&q=index&limit=100&tags=" +
         tags.joinToString("+") { URLEncoder.encode(it, Charsets.UTF_8.name()) }
     private var page = 0
-    init {
-        println(baseUrl)
-    }
 
     fun nextPage(): List<Image> {
         val body = RequestUtil.get("$baseUrl&pid=$page").get()
