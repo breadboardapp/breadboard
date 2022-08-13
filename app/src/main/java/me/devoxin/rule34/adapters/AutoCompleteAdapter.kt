@@ -4,14 +4,14 @@ import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.*
-import com.bugsnag.android.BreadcrumbType
-import com.bugsnag.android.Bugsnag
+import android.widget.BaseAdapter
+import android.widget.Filter
+import android.widget.Filterable
+import android.widget.TextView
 import me.devoxin.rule34.R
 import me.devoxin.rule34.RequestUtil
 import org.json.JSONArray
 import java.util.*
-import kotlin.collections.ArrayList
 
 class AutoCompleteAdapter(private val context: Context) : BaseAdapter(), Filterable {
     private var elements = ArrayList<TagSuggestion>()

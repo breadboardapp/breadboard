@@ -2,19 +2,13 @@ package me.devoxin.rule34.activities
 
 import android.content.Context
 import android.content.Intent
-import android.content.res.ColorStateList
-import android.graphics.Color
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import android.transition.Slide
-import android.transition.TransitionManager
-import android.view.Gravity
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.res.ResourcesCompat
 import com.bugsnag.android.Bugsnag
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipDrawable
@@ -24,7 +18,7 @@ import me.devoxin.rule34.adapters.AutoCompleteAdapter
 
 class MainActivity : AppCompatActivity() {
     private val tagList = mutableListOf<AutoCompleteAdapter.TagSuggestion>()
-    var lastFocusTime = 0L
+    private var lastFocusTime = 0L
 
     private fun addTag(tagSuggestion: AutoCompleteAdapter.TagSuggestion): Boolean {
         return if (tagList.contains(tagSuggestion)) {

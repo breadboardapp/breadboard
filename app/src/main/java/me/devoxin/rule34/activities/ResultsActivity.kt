@@ -7,8 +7,8 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import me.devoxin.rule34.ItemDecorator
 import me.devoxin.rule34.R
-import me.devoxin.rule34.adapters.RecyclerAdapter
 import me.devoxin.rule34.ScrollListener
+import me.devoxin.rule34.adapters.RecyclerAdapter
 
 class ResultsActivity : AppCompatActivity() {
     private lateinit var recyclerAdapter: RecyclerAdapter
