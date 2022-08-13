@@ -47,19 +47,17 @@
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="5dp"
-        android:layout_marginEnd="5dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="10dp"
+        android:layout_marginStart="11dp"
+        android:layout_marginEnd="11dp"
         android:orientation="horizontal">
 
         <AutoCompleteTextView
             android:id="@+id/tagSearch"
             android:layout_width="330dp"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="6dp"
-            android:layout_marginTop="10dp"
-            android:layout_marginBottom="10dp"
             android:background="@drawable/rounded_edittext"
-            android:ems="10"
             android:hint="Search tags"
             android:importantForAutofill="no"
             android:inputType="textNoSuggestions|textVisiblePassword|textMultiLine"
@@ -71,18 +69,18 @@
 
         <Button
             android:id="@+id/search"
-            style="?android:attr/borderlessButtonStyle"
             android:layout_width="60dp"
-            android:layout_height="60dp"
-            android:layout_alignParentTop="true"
+            android:layout_height="wrap_content"
+            android:layout_alignTop="@id/tagSearch"
+            android:layout_alignBottom="@id/tagSearch"
             android:layout_marginStart="0dp"
-            android:layout_marginTop="3.5dp"
-            android:layout_marginBottom="4dp"
             android:layout_toEndOf="@id/tagSearch"
-            android:backgroundTint="#333333"
+            android:background="@drawable/rounded_button"
             android:onClick="onSearchClick"
-            app:icon="@drawable/ic_baseline_search_24" />
-<!--        todo: fix button style -->
+            app:icon="@drawable/ic_baseline_search_24"
+            app:backgroundTint="@null"
+            android:bottomRightRadius="10dp" />
+
     </RelativeLayout>
 
     <com.google.android.material.chip.ChipGroup
