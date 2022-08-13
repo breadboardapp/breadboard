@@ -20,11 +20,15 @@ class ResultsActivity : AppCompatActivity() {
         val tagList = intent.getStringArrayExtra("tagList")
                 ?: throw IllegalStateException("Missing tagList!")
 
-        recyclerAdapter = RecyclerAdapter(this, *tagList) {
-            Toast.makeText(this, it, Toast.LENGTH_SHORT).show()
+        recyclerAdapter = RecyclerAdapter(this, *tagList, toastCallback = ::makeToast) {
+            makeToast(it)
             finish()
         }
         initAdapter()
+    }
+
+    private fun makeToast(text: String) {
+        Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
     }
 
     private fun initAdapter() {

@@ -2,6 +2,7 @@ package me.devoxin.rule34.adapters
 
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -18,6 +19,7 @@ import java.net.UnknownHostException
 class RecyclerAdapter(
     private val context: Context,
     vararg tags: String,
+    private val toastCallback: (String) -> Unit,
     private val finishCallback: (String) -> Unit
 ): RecyclerView.Adapter<RecyclerAdapter.ResultViewHolder>() {
     private var items = mutableListOf<Image>()
@@ -30,18 +32,22 @@ class RecyclerAdapter(
     }
 
     fun loadMore() {
+        // api has hard limit of 1000, so cut requests at page = 10?
+        Log.d("imageLoader", isLoading.toString())
         if (!isLoading) {
             isLoading = true
 
             try {
+                Log.d("imageLoader", "Loading next page")
                 val pageItems = sourceLoader.nextPage()
+                Log.d("imageLoader", "${pageItems.size} fetched items, ${items.size} stored items")
 
                 // Consider adding an `isAtEnd` boolean to prevent repeated load requests.
                 if (items.isEmpty() && pageItems.isEmpty()) {
                     return finishCallback("Query yielded no results")
                 }
 
-                val indexBegin = items.size // - 1
+                val indexBegin = items.size - 1
                 items.addAll(pageItems)
                 notifyItemRangeChanged(indexBegin, pageItems.size)
             } catch (e: Exception) {
@@ -49,8 +55,9 @@ class RecyclerAdapter(
                 e.printStackTrace()
 
                 if (cause is IOException || cause is UnknownHostException) {
-                    if (items.isEmpty()) {
-                        return finishCallback("A network error occurred whilst fetching images.")
+                    return when {
+                        items.isEmpty() -> finishCallback("A network error occurred whilst fetching images.")
+                        else -> toastCallback("A network error occurred whilst fetching images.")
                     }
                 } else {
                     Bugsnag.notify(e)

@@ -33,7 +33,7 @@ class ImageActivity: AppCompatActivity() {
         val imageUri = intent.getStringExtra("img")
             ?: throw IllegalStateException("Img key not set")
 
-        findViewById<Button>(R.id.save_button).isEnabled = intent.getBooleanExtra("hdAvailable", false)
+        findViewById<Button>(R.id.hd_button).isEnabled = intent.getBooleanExtra("hdAvailable", false)
 
         Picasso.get()
             .load(imageUri)

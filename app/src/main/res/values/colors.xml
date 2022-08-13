@@ -1,6 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="colorPrimary">#CBCCCC</color>
-    <color name="colorPrimaryDark">#CBCCCC</color>
+    <color name="colorPrimaryDark">#121212</color>
     <color name="colorAccent">#1E90FF</color>
+
+    <color name="colorFontLight">#FFFFFF</color>
+
+    <color name="chipSurfaceIncludedDark">#222322</color>
+    <color name="chipStrokeIncludedDark">#909090</color>
+    <color name="chipCloseIconTintIncludedDark">#909090</color>
+
+    <color name="chipSurfaceExcludedDark">#311515</color>
+    <color name="chipStrokeExcludedDark">#862323</color>
+    <color name="chipCloseIconTintExcludedDark">#862323</color>
 </resources>

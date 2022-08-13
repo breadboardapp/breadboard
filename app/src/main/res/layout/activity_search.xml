@@ -1,52 +1,101 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:orientation="vertical" android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/colorPrimaryDark"
+    android:orientation="vertical"
+    android:onClick="onApplicationClick"
+    android:animateLayoutChanges="true"
+    android:descendantFocusability="afterDescendants">
 
-    <TextView
-        android:id="@+id/textView"
+    <Space
+        android:id="@+id/titleSpace"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:fontFamily="cursive"
-        android:text="Procrasturbating"
-        android:textAlignment="center"
-        android:textSize="56sp" />
+        android:layout_weight="1" />
 
-    <TextView
-        android:id="@+id/textView2"
+    <LinearLayout
+        android:id="@+id/titleLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:fontFamily="casual"
-        android:text="Because you don't have better things to be doing"
-        android:textAlignment="center"
-        android:textSize="14sp" />
+        android:orientation="vertical">
 
-    <AutoCompleteTextView
-        android:id="@+id/tagSearch"
+        <TextView
+            android:id="@+id/textView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="cursive"
+            android:text="Procrasturbating"
+            android:textAlignment="center"
+            android:textColor="#FFFFFF"
+            android:textSize="56sp" />
+
+        <TextView
+            android:id="@+id/textView2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:fontFamily="casual"
+            android:text="Because you don't have better things to be doing"
+            android:textAlignment="center"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            />
+    </LinearLayout>
+
+    <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:ems="10"
-        android:hint="Search tags..."
-        android:inputType="textNoSuggestions|textVisiblePassword|textMultiLine"
-        android:maxLines="1"
-        android:minHeight="48dp"
-        android:importantForAutofill="no" />
-<!--        android:hint="Enter tags... (hit space or enter to add tag)"-->
+        android:layout_marginStart="5dp"
+        android:layout_marginEnd="5dp"
+        android:orientation="horizontal">
+
+        <AutoCompleteTextView
+            android:id="@+id/tagSearch"
+            android:layout_width="330dp"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="6dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="10dp"
+            android:background="@drawable/rounded_edittext"
+            android:ems="10"
+            android:hint="Search tags"
+            android:importantForAutofill="no"
+            android:inputType="textNoSuggestions|textVisiblePassword|textMultiLine"
+            android:maxLines="1"
+            android:minHeight="48dp"
+            android:padding="10dp"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#FFFFFF" />
+
+        <Button
+            android:id="@+id/search"
+            style="?android:attr/borderlessButtonStyle"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:layout_alignParentTop="true"
+            android:layout_marginStart="0dp"
+            android:layout_marginTop="3.5dp"
+            android:layout_marginBottom="4dp"
+            android:layout_toEndOf="@id/tagSearch"
+            android:backgroundTint="#333333"
+            android:onClick="onSearchClick"
+            app:icon="@drawable/ic_baseline_search_24" />
+<!--        todo: fix button style -->
+    </RelativeLayout>
 
     <com.google.android.material.chip.ChipGroup
         android:id="@+id/tagList"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:theme="@style/Theme.MaterialComponents.Light">
-    </com.google.android.material.chip.ChipGroup>
+        android:layout_marginLeft="11dp"
+        android:layout_marginRight="11dp"
+        style="@style/AppTheme" />
 
-    <Button
-        android:id="@+id/search"
+    <Space
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Search"
-        android:onClick="onSearchClick" />
+        android:layout_weight="1" />
 
 </LinearLayout>
