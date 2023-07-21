@@ -13,6 +13,7 @@ import me.devoxin.rule34.Image
 import me.devoxin.rule34.ImageSource
 import me.devoxin.rule34.R
 import me.devoxin.rule34.activities.ImageActivity
+import me.devoxin.rule34.activities.ImageSwipingActivity
 import java.io.IOException
 import java.net.UnknownHostException
 
@@ -92,15 +93,12 @@ class RecyclerAdapter(
 
     private fun onItemClick(view: ResultViewHolder, position: Int) {
         val i = items[position]
-        val int = Intent(context, ImageActivity::class.java)
-        val imgResource = i.sampleUrl.takeIf { it.isNotEmpty() }
+        val int = Intent(context, ImageSwipingActivity::class.java)
 
-        int.putExtra("img", imgResource ?: i.fileUrl)
-        int.putExtra("hdAvailable", imgResource != null && i.fileUrl.isNotEmpty())
-        int.putExtra("fileName", i.fileName)
-        int.putExtra("fileFormat", i.fileFormat)
+        int.putExtra("position", items.indexOf(i))
+        int.putParcelableArrayListExtra("images", ArrayList(items))
 
-        i.fileUrl.takeIf { it.isNotEmpty() }?.let { int.putExtra("hd", it) }
+        Log.i("load intent", i.defaultUrl)
         context.startActivity(int)
     }
 

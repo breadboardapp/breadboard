@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/viewpager"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/colorAccent"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/favourite_button"
+            android:layout_width="60dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|fill_horizontal"
+            android:background="#00FFFFFF"
+            android:visibility="visible"
+            app:icon="@drawable/md_star_outline"
+            app:iconSize="30dp" />
+
+        <Space
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
+
+        <Button
+            android:id="@+id/hd_button"
+            android:layout_width="60dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|fill_horizontal"
+            android:background="#00FFFFFF"
+            android:enabled="false"
+            android:onClick="onHdClick"
+            android:visibility="visible"
+            app:icon="@drawable/ic_baseline_hd_24"
+            app:iconSize="30dp" />
+
+        <Space
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
+
+        <Button
+            android:id="@+id/save_button"
+            android:layout_width="60dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|fill_horizontal"
+            android:background="#00FFFFFF"
+            android:enabled="false"
+            android:onClick="onSaveClick"
+            android:visibility="visible"
+            app:icon="@drawable/mid_save_30"
+            app:iconSize="30dp" />
+
+    </LinearLayout>
+
+</LinearLayout>
