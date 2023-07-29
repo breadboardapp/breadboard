@@ -20,13 +20,8 @@ jobs:
       run: ./gradlew build
     - name: Build Debug APK
       run: ./gradlew assembleDebug
-    - name: Generate version.txt for Hub release
-      run: ./gradlew generateVersionTxt
-    - name: Mark directory as safe
-      run: git config --global --add safe.directory /github/workspace
-    - name: Releasing using Hub
-      uses: valley-fordham/action-release-debugapk@master
-      env:
-       GITHUB_TOKEN: ${{ secrets.TOKEN }}
-       APP_FOLDER: app
-       RELEASE_TITLE: New Build
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: r34-debug.apk
+        path: app/build/outputs/apk/debug/app-debug.apk
