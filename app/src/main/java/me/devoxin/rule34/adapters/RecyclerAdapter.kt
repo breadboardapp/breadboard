@@ -98,7 +98,6 @@ class RecyclerAdapter(
         int.putExtra("position", items.indexOf(i))
         int.putParcelableArrayListExtra("images", ArrayList(items))
 
-        Log.i("load intent", i.defaultUrl)
         context.startActivity(int)
     }
 

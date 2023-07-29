@@ -76,3 +76,9 @@ dependencies {
     testImplementation 'junit:junit:4.13-beta-2'
 }
 
+task generateVersionTxt {
+    doLast {
+        file("./version.txt").text = android.defaultConfig.versionName
+    }
+}
+
