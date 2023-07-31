@@ -8,11 +8,10 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.recyclerview.widget.RecyclerView
 import com.bugsnag.android.Bugsnag
-import com.squareup.picasso.Picasso
+import com.bumptech.glide.Glide
 import me.devoxin.rule34.Image
 import me.devoxin.rule34.ImageSource
 import me.devoxin.rule34.R
-import me.devoxin.rule34.activities.ImageActivity
 import me.devoxin.rule34.activities.ImageSwipingActivity
 import java.io.IOException
 import java.net.UnknownHostException
@@ -80,11 +79,18 @@ class RecyclerAdapter(
     override fun onBindViewHolder(holder: ResultViewHolder, position: Int) {
         val image = items[position]
 
-        Picasso.get()
+//        Picasso.get()
+//            .load(image.previewUrl)
+//            .resize(300, 300)
+//            .centerCrop()
+//            .into(holder.view)
+
+        Glide.with(context)
             .load(image.previewUrl)
-            .resize(300, 300)
+            .override(300, 300)
             .centerCrop()
             .into(holder.view)
+
 
         holder.view.setOnClickListener { onItemClick(holder, position) }
     }

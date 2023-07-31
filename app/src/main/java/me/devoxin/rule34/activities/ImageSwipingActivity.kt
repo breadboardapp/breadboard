@@ -18,11 +18,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.CircularProgressDrawable
-import androidx.viewpager.widget.PagerAdapter
 import androidx.viewpager2.widget.ViewPager2
+import com.bumptech.glide.Glide
 import com.jsibbold.zoomage.ZoomageView
-import com.squareup.picasso.Picasso
-import com.squareup.picasso.Target
 import me.devoxin.rule34.Image
 import me.devoxin.rule34.R
 import java.io.File
@@ -49,18 +47,15 @@ class ImageSwipingActivity : AppCompatActivity() {
 
         images = intent.getParcelableArrayListExtra("images")!!
 
+        val position = intent.getIntExtra("position", 0)
         val view = findViewById<ViewPager2>(R.id.viewpager)
         view.adapter = ViewPagerAdapter()
-        view.setCurrentItem(intent.getIntExtra("position", 0), false)
+        view.setCurrentItem(position, false)
+        findViewById<Button>(R.id.hd_button).isEnabled = images[position].hdAvailable
 
         view.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
-                val hdAvailable = images[position].hdAvailable
-                val hdButton = findViewById<Button>(R.id.hd_button)
-
-                if (hdButton.isEnabled != hdAvailable) {
-                    hdButton.isEnabled = hdAvailable
-                }
+                findViewById<Button>(R.id.hd_button).isEnabled = images[position].hdAvailable
             }
         })
 
@@ -78,7 +73,12 @@ class ImageSwipingActivity : AppCompatActivity() {
 
         v.isEnabled = false
 
-        Picasso.get()
+//        Picasso.get()
+//            .load(images[currentPosition].highestQualityFormatUrl)
+//            .placeholder(circularProgressDrawable)
+//            .into(pager.findViewWithTag<ZoomageView>("View$currentPosition"))
+
+        Glide.with(this)
             .load(images[currentPosition].highestQualityFormatUrl)
             .placeholder(circularProgressDrawable)
             .into(pager.findViewWithTag<ZoomageView>("View$currentPosition"))
@@ -88,7 +88,12 @@ class ImageSwipingActivity : AppCompatActivity() {
         val zv = view.findViewById<ZoomageView>(R.id.zoom_view)
 
         fun setData(imageUrl: String) {
-            Picasso.get()
+//            Picasso.get()
+//                .load(imageUrl)
+//                .placeholder(circularProgressDrawable)
+//                .into(zv)
+
+            Glide.with(this@ImageSwipingActivity)
                 .load(imageUrl)
                 .placeholder(circularProgressDrawable)
                 .into(zv)
@@ -106,7 +111,6 @@ class ImageSwipingActivity : AppCompatActivity() {
 
         override fun onBindViewHolder(holder: ViewPagerViewHolder, position: Int) {
             val image = images[position]
-            findViewById<Button>(R.id.hd_button).isEnabled = image.hdAvailable
             holder.setData(image.defaultUrl)
             holder.zv.tag = "View$position"
 
@@ -135,23 +139,22 @@ class ImageSwipingActivity : AppCompatActivity() {
                         if (output.createNewFile()) {
                             it.isEnabled = false
 
-                            Picasso.get()
-                                .load(imageUrl)
-                                .into(object : Target {
-                                    override fun onBitmapLoaded(bitmap: Bitmap, from: Picasso.LoadedFrom) {
-                                        output.outputStream().use { stream ->
-                                            bitmap.compress(compressFormat, 100, stream)
-                                        }
-                                    }
-
-                                    override fun onBitmapFailed(e: Exception?, errorDrawable: Drawable?) {
-                                        it.isEnabled = true
-                                        Toast.makeText(this@ImageSwipingActivity, "uh oh fucky wucky!", Toast.LENGTH_SHORT).show()
-                                    }
-
-                                    override fun onPrepareLoad(placeHolderDrawable: Drawable?) = Unit
-                                })
-
+//                            Picasso.get()
+//                                .load(imageUrl)
+//                                .into(object : Target {
+//                                    override fun onBitmapLoaded(bitmap: Bitmap, from: Picasso.LoadedFrom) {
+//                                        output.outputStream().use { stream ->
+//                                            bitmap.compress(compressFormat, 100, stream)
+//                                        }
+//                                    }
+//
+//                                    override fun onBitmapFailed(e: Exception?, errorDrawable: Drawable?) {
+//                                        it.isEnabled = true
+//                                        Toast.makeText(this@ImageSwipingActivity, "uh oh fucky wucky!", Toast.LENGTH_SHORT).show()
+//                                    }
+//
+//                                    override fun onPrepareLoad(placeHolderDrawable: Drawable?) = Unit
+//                                })
                         }
                     }
                 }

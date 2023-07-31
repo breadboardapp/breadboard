@@ -67,7 +67,9 @@ dependencies {
 
     /* custom */
     //implementation 'com.android.support:multidex:1.0.3'
-    implementation 'com.squareup.picasso:picasso:2.8'
+    implementation 'com.github.bumptech.glide:glide:4.14.2'
+    implementation 'com.squareup.okhttp3:okhttp:3.10.0'
+    //implementation 'com.squareup.picasso:picasso:2.8'
     implementation "com.bugsnag:bugsnag-android:5.25.0"
 
     /* tests */
