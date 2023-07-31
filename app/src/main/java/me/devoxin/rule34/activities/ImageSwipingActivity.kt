@@ -1,19 +1,14 @@
 package me.devoxin.rule34.activities
 
 import android.Manifest
-import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.Drawable
 import android.media.MediaScannerConnection
 import android.os.Bundle
 import android.os.Environment
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.recyclerview.widget.RecyclerView
@@ -24,7 +19,6 @@ import com.jsibbold.zoomage.ZoomageView
 import me.devoxin.rule34.Image
 import me.devoxin.rule34.R
 import java.io.File
-import java.lang.Exception
 import java.util.ArrayList
 
 class ImageSwipingActivity : AppCompatActivity() {
