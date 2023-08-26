@@ -18,6 +18,8 @@ jobs:
         java-package: jdk
     - name: Make Gradle executable
       run: chmod +x ./gradlew
+    - name: Configure BugSnag
+      run: sed -e 's/API_KEY_HERE/${{ secrets.BUGSNAG }}'
     - name: Build Debug APK
       run: ./gradlew assembleDebug
     - name: Upload Artifacts
