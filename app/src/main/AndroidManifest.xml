@@ -25,7 +25,7 @@
             </intent-filter>
         </activity>
         <activity android:name="me.devoxin.rule34.activities.ResultsActivity"/>
-        <activity android:name="me.devoxin.rule34.activities.ImageActivity"/>
+        <activity android:name="me.devoxin.rule34.activities.ImageSwipingActivity"/>
     </application>
 
 </manifest>
