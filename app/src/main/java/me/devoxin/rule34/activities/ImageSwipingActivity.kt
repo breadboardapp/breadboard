@@ -129,7 +129,7 @@ class ImageSwipingActivity : AppCompatActivity() {
                         if (exists()) delete()
                     }
 
-                    MediaScannerConnection.scanFile(this@ImageSwipingActivity, arrayOf(output.absolutePath), arrayOf("image/$fileFormat")) { path, uri ->
+                    MediaScannerConnection.scanFile(this@ImageSwipingActivity, arrayOf(output.absolutePath), arrayOf("image/$fileFormat")) { _, _ ->
                         if (output.createNewFile()) {
                             it.isEnabled = false
 
