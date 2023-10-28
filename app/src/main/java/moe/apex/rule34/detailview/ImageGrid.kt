@@ -21,9 +21,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,6 +36,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.image.ImageSource
 import moe.apex.rule34.largeimageview.FullscreenLoadingSpinner
@@ -45,25 +49,23 @@ fun ImageGrid(
     imageSource: ImageSource,
     navController: NavController,
     shouldShowLargeImage: MutableState<Boolean>,
-    // currentHdImageUrl: MutableState<String>,
     initialPage: MutableIntState,
     allImages: SnapshotStateList<Image>
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-    // var allImages = remember { mutableStateListOf<Image>() }
-    val doneInitialLoad = remember { mutableStateOf(false) }
+    var doneInitialLoad by remember { mutableStateOf(false) }
     val lazyGridState = rememberLazyGridState()
-    val pageNumber = remember { mutableIntStateOf(1) }
-    val shouldKeepSearching = remember {mutableStateOf(true) }
+    var pageNumber by remember { mutableIntStateOf(1) }
+    var shouldKeepSearching by remember {mutableStateOf(true) }
     var isLoading = false
 
-    if (!doneInitialLoad.value && !isLoading) {
+    if (!doneInitialLoad) {
         isLoading = true
         val newImages = imageSource.loadPage(0)
         if (!allImages.addAll(newImages)) {
-            shouldKeepSearching.value = false
+            shouldKeepSearching = false
         }
-        doneInitialLoad.value = true
+        doneInitialLoad = true
         isLoading = false
     }
 
@@ -98,20 +100,6 @@ fun ImageGrid(
                                 interactionSource = interactionSource,
                                 indication = LocalIndication.current,
                                 onClick = {
-                                    /*
-                                    This is when ImageGrid was another full page rather than an overlay.
-                                    navController.navigate(
-                                        "viewImage/${
-                                            Base64
-                                                .getEncoder()
-                                                .encodeToString(image.highestQualityFormatUrl.toByteArray())
-                                        }"
-                                    )
-                                    currentHdImageUrl.value = Base64
-                                        .getEncoder()
-                                        .encodeToString(image.highestQualityFormatUrl.toByteArray())
-                                     */
-                                    // currentHdImageUrl.value = image.highestQualityFormatUrl
                                     initialPage.intValue = allImages.indexOf(image)
                                     shouldShowLargeImage.value = true
                                 }
@@ -121,25 +109,27 @@ fun ImageGrid(
             }
 
             item {
-                if (shouldKeepSearching.value) {
+                if (shouldKeepSearching) {
                     if (!isLoading) {
                         isLoading = true
                         LaunchedEffect(true) {
-                            val newImages = imageSource.loadPage(pageNumber.intValue)
-                            if (newImages.isNotEmpty()) {
-                                pageNumber.intValue++
-                                allImages.addAll(newImages)
-                            } else {
-                                shouldKeepSearching.value = false
+                            launch(Dispatchers.IO) {
+                                val newImages = imageSource.loadPage(pageNumber)
+                                if (newImages.isNotEmpty()) {
+                                    pageNumber++
+                                    allImages.addAll(newImages)
+                                } else {
+                                    shouldKeepSearching = false
+                                }
+                                isLoading = false
                             }
-                            isLoading = false
                         }
                     }
                 }
             }
         }
     } else {
-        if (!shouldKeepSearching.value) {
+        if (!shouldKeepSearching) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -148,7 +138,7 @@ fun ImageGrid(
                     "No results :(",
                     modifier = Modifier.padding(top = 48.dp)
                 )
-                shouldKeepSearching.value = false
+                shouldKeepSearching = false
             }
         }
     }

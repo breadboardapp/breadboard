@@ -30,59 +30,13 @@ import moe.apex.rule34.image.ImageSource
 import moe.apex.rule34.largeimageview.LargeImageView
 import moe.apex.rule34.ui.theme.ProcrasturbatingTheme
 
-/*
-class ResultsPagingSource(private val imageSource: ImageSource) : PagingSource<Int, Image>() {
-    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Image> {
-        val page: Int = params.key!!
-        val images = imageSource.loadPage(page)
-        Log.i("page", "$page")
-        Log.i("number of results", "${images.size}")
-        return LoadResult.Page(
-            data = images,
-            prevKey = null,
-            nextKey = page + 1
-        )
-    }
-
-
-    override fun getRefreshKey(state: PagingState<Int, Image>): Int? {
-        return state.anchorPosition?.let { anchorPosition ->
-            val anchorPage = state.closestPageToPosition(anchorPosition)
-            anchorPage?.prevKey?.plus(1) ?: anchorPage?.nextKey?.minus(1)
-        }
-    }
-}
-
-
-class ImageViewModel(tags: String) : ViewModel() {
-    val imageSource = ImageSource(tags)
-    val resultsPagingSource = ResultsPagingSource(imageSource)
-    val flow = Pager(
-        // Configure how data is loaded by passing additional properties to
-        // PagingConfig, such as prefetchDistance.
-        PagingConfig(pageSize = 60),
-        initialKey = 0
-    ) {
-        resultsPagingSource
-    }.flow
-        .cachedIn(viewModelScope)
-
-    //init {
-    //    viewModelScope.launch {
-    //        resultsPagingSource.load(PagingSource.LoadParams.Append(0, 60, false))
-    //    }
-    //}
-}
-*/
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchResults(navController: NavController, searchQuery: String) {
-    // val viewModel = ImageViewModel(searchQuery)
     val topAppBarScrollState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarScrollState)
     val shouldShowLargeImage = remember { mutableStateOf(false) }
-    // var currentHdImageUrl = remember { mutableStateOf("") }
     val initialPage = remember { mutableIntStateOf(0) }
     val allImages = remember { mutableStateListOf<Image>() }
 
@@ -118,7 +72,6 @@ fun SearchResults(navController: NavController, searchQuery: String) {
                     navController,
                     shouldShowLargeImage,
                     initialPage,
-                    // currentHdImageUrl,
                     allImages
                 )
             }
@@ -131,7 +84,6 @@ fun SearchResults(navController: NavController, searchQuery: String) {
     ) {
         LargeImageView(
             navController,
-            // currentHdImageUrl.value,
             initialPage,
             shouldShowLargeImage,
             allImages
