@@ -56,7 +56,7 @@ fun ImageGrid(
     var doneInitialLoad by remember { mutableStateOf(false) }
     val lazyGridState = rememberLazyGridState()
     var pageNumber by remember { mutableIntStateOf(1) }
-    var shouldKeepSearching by remember {mutableStateOf(true) }
+    var shouldKeepSearching by remember { mutableStateOf(true) }
     var isLoading = false
 
     if (!doneInitialLoad) {
