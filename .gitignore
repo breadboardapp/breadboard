@@ -1,5 +1,6 @@
 .gradle
 /build/
+/captures/
 
 # Ignore Gradle GUI config
 gradle-app.setting
@@ -20,3 +21,6 @@ out/
 local.properties
 AndroidManifest.xml
 version.txt
+.DS_Store
+.externalNativeBuild
+.cxx
