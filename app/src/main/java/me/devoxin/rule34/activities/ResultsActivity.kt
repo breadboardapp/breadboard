@@ -24,6 +24,7 @@ class ResultsActivity : AppCompatActivity() {
             makeToast(it)
             finish()
         }
+
         initAdapter()
     }
 

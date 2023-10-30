@@ -54,7 +54,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|fill_horizontal"
             android:background="#00FFFFFF"
-            android:enabled="false"
+            android:onClick="onSaveClick"
             android:visibility="visible"
             app:icon="@drawable/mid_save_30"
             app:iconSize="30dp" />

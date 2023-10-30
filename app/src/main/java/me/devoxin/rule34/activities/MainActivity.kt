@@ -112,13 +112,13 @@ class MainActivity : AppCompatActivity() {
         findViewById<LinearLayout>(R.id.titleLayout).visibility = visibility
     }
 
-    fun onSearchClick() {
+    fun onSearchClick(v: View) {
         val intent = Intent(this, ResultsActivity::class.java)
         intent.putExtra("tagList", tagList.map { it.formattedTag }.toTypedArray())
         this.startActivity(intent)
     }
 
-    fun onApplicationClick() {
+    fun onApplicationClick(v: View) {
         val textView = findViewById<AutoCompleteTextView>(R.id.tagSearch).also { it.clearFocus() }
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(textView.windowToken, 0)

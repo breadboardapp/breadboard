@@ -26,51 +26,57 @@ class RecyclerAdapter(
     private val sourceLoader = ImageSource(*tags)
 
     private var isLoading = false
+    private var noMoreResults = false
 
     init {
         loadMore()
     }
 
     fun loadMore() {
+        if (isLoading || noMoreResults) {
+            return
+        }
+
         // api has hard limit of 1000, so cut requests at page = 10?
-        Log.d("imageLoader", isLoading.toString())
-        if (!isLoading) {
-            isLoading = true
+        isLoading = true
 
-            try {
-                Log.d("imageLoader", "Loading next page")
-                val pageItems = sourceLoader.nextPage()
-                Log.d("imageLoader", "${pageItems.size} fetched items, ${items.size} stored items")
+        try {
+            Log.d("imageLoader", "Loading next page")
+            val pageItems = sourceLoader.nextPage()
+            Log.d("imageLoader", "${pageItems.size} fetched items, ${items.size} stored items")
 
-                // Consider adding an `isAtEnd` boolean to prevent repeated load requests.
-                if (items.isEmpty() && pageItems.isEmpty()) {
+            // Consider adding an `isAtEnd` boolean to prevent repeated load requests.
+            if (pageItems.isEmpty()) {
+                if (items.isEmpty()) {
                     return finishCallback("Query yielded no results")
                 }
 
-                val indexBegin = items.size - 1
-                items.addAll(pageItems)
-                notifyItemRangeChanged(indexBegin, pageItems.size)
-            } catch (e: Exception) {
-                val cause = e.let { it.cause ?: it }
-                e.printStackTrace()
-
-                if (cause is IOException || cause is UnknownHostException) {
-                    return when {
-                        items.isEmpty() -> finishCallback("A network error occurred whilst fetching images.")
-                        else -> toastCallback("A network error occurred whilst fetching images.")
-                    }
-                } else {
-                    Bugsnag.notify(e)
-                }
-            } finally {
-                isLoading = false
+                noMoreResults = true
             }
+
+            val indexBegin = items.size - 1
+            items.addAll(pageItems)
+            notifyItemRangeChanged(indexBegin, pageItems.size)
+        } catch (e: Exception) {
+            val cause = e.let { it.cause ?: it }
+            e.printStackTrace()
+
+            if (cause is IOException) { // || cause is UnknownHostException
+                return when {
+                    items.isEmpty() -> finishCallback("A network error occurred whilst fetching images.")
+                    else -> toastCallback("A network error occurred whilst fetching images.")
+                }
+            } else {
+                Bugsnag.notify(e)
+            }
+        } finally {
+            isLoading = false
         }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ResultViewHolder {
         val layoutInflater = LayoutInflater.from(parent.context)
-        val view = layoutInflater.inflate(R.layout.image_item, parent, false) // inflate (..., null)
+        val view = layoutInflater.inflate(R.layout.image_item, parent, false)
         val image = view.findViewById<ImageView>(R.id.image_item)
 
         return ResultViewHolder(image)
@@ -79,18 +85,11 @@ class RecyclerAdapter(
     override fun onBindViewHolder(holder: ResultViewHolder, position: Int) {
         val image = items[position]
 
-//        Picasso.get()
-//            .load(image.previewUrl)
-//            .resize(300, 300)
-//            .centerCrop()
-//            .into(holder.view)
-
         Glide.with(context)
             .load(image.previewUrl)
             .override(300, 300)
             .centerCrop()
             .into(holder.view)
-
 
         holder.view.setOnClickListener { onItemClick(holder, position) }
     }
@@ -101,8 +100,15 @@ class RecyclerAdapter(
         val i = items[position]
         val int = Intent(context, ImageSwipingActivity::class.java)
 
-        int.putExtra("position", items.indexOf(i))
-        int.putParcelableArrayListExtra("images", ArrayList(items))
+        // Causes issues when there's too many images.
+//        int.putExtra("position", items.indexOf(i))
+//        int.putParcelableArrayListExtra("images", ArrayList(items))
+
+        val minIndex = (position - 50).coerceAtLeast(0)
+        val maxIndex = (position + 50).coerceAtMost(items.size)
+        val imagesSlice = items.slice(minIndex until maxIndex)
+        int.putExtra("position", imagesSlice.indexOf(i))
+        int.putParcelableArrayListExtra("images", ArrayList(imagesSlice))
 
         context.startActivity(int)
     }

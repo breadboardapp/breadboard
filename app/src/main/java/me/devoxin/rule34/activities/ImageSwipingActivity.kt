@@ -2,6 +2,7 @@ package me.devoxin.rule34.activities
 
 import android.Manifest
 import android.graphics.Bitmap
+import android.graphics.drawable.Drawable
 import android.media.MediaScannerConnection
 import android.os.Bundle
 import android.os.Environment
@@ -9,12 +10,15 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.CircularProgressDrawable
 import androidx.viewpager2.widget.ViewPager2
 import com.bumptech.glide.Glide
+import com.bumptech.glide.request.target.CustomTarget
+import com.bumptech.glide.request.transition.Transition
 import com.jsibbold.zoomage.ZoomageView
 import me.devoxin.rule34.Image
 import me.devoxin.rule34.R
@@ -22,7 +26,6 @@ import java.io.File
 import java.util.ArrayList
 
 class ImageSwipingActivity : AppCompatActivity() {
-
     private val circularProgressDrawable: CircularProgressDrawable
         get() = CircularProgressDrawable(this).apply {
             strokeWidth = 10f
@@ -67,26 +70,71 @@ class ImageSwipingActivity : AppCompatActivity() {
 
         v.isEnabled = false
 
-//        Picasso.get()
-//            .load(images[currentPosition].highestQualityFormatUrl)
-//            .placeholder(circularProgressDrawable)
-//            .into(pager.findViewWithTag<ZoomageView>("View$currentPosition"))
-
         Glide.with(this)
             .load(images[currentPosition].highestQualityFormatUrl)
             .placeholder(circularProgressDrawable)
             .into(pager.findViewWithTag<ZoomageView>("View$currentPosition"))
     }
 
+    fun onSaveClick(v: View) {
+        val pager = findViewById<ViewPager2>(R.id.viewpager)
+        val currentPosition = pager.currentItem
+        val image = images[currentPosition]
+
+        val imageUrl = image.highestQualityFormatUrl
+        val fileName = image.fileName
+
+        val compressFormat = when (image.fileFormat) {
+            "jpeg", "jpg", "gif" -> Bitmap.CompressFormat.JPEG
+            "png" -> Bitmap.CompressFormat.PNG
+            else -> throw UnsupportedOperationException("Unsupported file format")
+        }
+
+        val fileFormat = compressFormat.name.lowercase()
+
+        ActivityCompat.requestPermissions(this@ImageSwipingActivity, arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), 1)
+        val appDirectory = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "rule34")
+
+        if (appDirectory.exists() || appDirectory.mkdirs()) {
+            val output = File(appDirectory, "${fileName}_2.$fileFormat").apply {
+                if (exists()) delete()
+            }
+
+            MediaScannerConnection.scanFile(this, arrayOf(output.absolutePath), arrayOf("image/$fileFormat")) { _, _ ->
+                @Suppress("BlockingMethodInNonBlockingContext")
+                if (!output.createNewFile()) {
+                    return@scanFile Toast.makeText(this, "Failed to create file!", Toast.LENGTH_SHORT).show()
+                }
+
+                v.isEnabled = false
+
+                Glide.with(this)
+                    .asBitmap()
+                    .load(imageUrl)
+                    .into(object : CustomTarget<Bitmap>() {
+                        override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
+                            output.outputStream().use { stream ->
+                                resource.compress(compressFormat, 100, stream)
+                            }
+
+                            Toast.makeText(this@ImageSwipingActivity, "Image saved", Toast.LENGTH_SHORT).show()
+                        }
+
+                        override fun onLoadFailed(errorDrawable: Drawable?) {
+                            v.isEnabled = true
+                            Toast.makeText(this@ImageSwipingActivity, "Failed to download image", Toast.LENGTH_SHORT).show()
+                        }
+
+                        override fun onLoadCleared(placeholder: Drawable?) = Unit
+                    })
+            }
+        }
+    }
+
     inner class ViewPagerViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val zv = view.findViewById<ZoomageView>(R.id.zoom_view)
 
         fun setData(imageUrl: String) {
-//            Picasso.get()
-//                .load(imageUrl)
-//                .placeholder(circularProgressDrawable)
-//                .into(zv)
-
             Glide.with(this@ImageSwipingActivity)
                 .load(imageUrl)
                 .placeholder(circularProgressDrawable)
@@ -107,52 +155,6 @@ class ImageSwipingActivity : AppCompatActivity() {
             val image = images[position]
             holder.setData(image.defaultUrl)
             holder.zv.tag = "View$position"
-
-            // TODO: Fix saving
-            findViewById<Button>(R.id.save_button).setOnClickListener {
-                val imageUrl = image.highestQualityFormatUrl
-                val fileName = image.fileName
-
-                val compressFormat = when (image.fileFormat) {
-                    "jpeg", "jpg", "gif" -> Bitmap.CompressFormat.JPEG
-                    "png" -> Bitmap.CompressFormat.PNG
-                    else -> throw UnsupportedOperationException("Unsupported file format")
-                }
-
-                val fileFormat = compressFormat.name.lowercase()
-
-                ActivityCompat.requestPermissions(this@ImageSwipingActivity, arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), 1)
-                val appDirectory = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "rule34")
-
-                if (appDirectory.exists() || appDirectory.mkdirs()) {
-                    val output = File(appDirectory, "${fileName}_2.$fileFormat").apply {
-                        if (exists()) delete()
-                    }
-
-                    MediaScannerConnection.scanFile(this@ImageSwipingActivity, arrayOf(output.absolutePath), arrayOf("image/$fileFormat")) { _, _ ->
-                        if (output.createNewFile()) {
-                            it.isEnabled = false
-
-//                            Picasso.get()
-//                                .load(imageUrl)
-//                                .into(object : Target {
-//                                    override fun onBitmapLoaded(bitmap: Bitmap, from: Picasso.LoadedFrom) {
-//                                        output.outputStream().use { stream ->
-//                                            bitmap.compress(compressFormat, 100, stream)
-//                                        }
-//                                    }
-//
-//                                    override fun onBitmapFailed(e: Exception?, errorDrawable: Drawable?) {
-//                                        it.isEnabled = true
-//                                        Toast.makeText(this@ImageSwipingActivity, "uh oh fucky wucky!", Toast.LENGTH_SHORT).show()
-//                                    }
-//
-//                                    override fun onPrepareLoad(placeHolderDrawable: Drawable?) = Unit
-//                                })
-                        }
-                    }
-                }
-            }
         }
     }
 }

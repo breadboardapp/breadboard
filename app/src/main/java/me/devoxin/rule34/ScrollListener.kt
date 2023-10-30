@@ -10,7 +10,7 @@ class ScrollListener(private val adapter: RecyclerAdapter) : RecyclerView.OnScro
             ?: return
 
         if (layoutManager.findLastCompletelyVisibleItemPosition() >= adapter.itemCount - 1) {
-            adapter.loadMore()
+            recyclerView.post { adapter.loadMore() }
         }
     }
 }
