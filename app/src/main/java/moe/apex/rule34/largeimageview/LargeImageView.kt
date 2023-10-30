@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
@@ -34,8 +36,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -98,6 +102,7 @@ fun LargeImageView(
     val canChangePage = remember { mutableStateOf(false) }
     val zoomState = rememberZoomableState(ZoomSpec(maxZoomFactor = 3.5f))
     val forciblyShowBottomBar = remember { mutableStateOf(false) }
+    var offset by remember { mutableStateOf(0.dp) }
 
     // Large image view is an overlay rather than a new screen entirely so we need to override
     // the default back button behaviour so we don't get taken to the home page.
@@ -105,12 +110,22 @@ fun LargeImageView(
         shouldShowLargeImage.value = false
     }
 
+    PredictiveBackHandler(shouldShowLargeImage.value) { progress ->
+        try {
+            progress.collect { backEvent ->
+                offset = (backEvent.progress * 200).dp
+            }
+            shouldShowLargeImage.value = false
+        }
+        catch(_: Exception) { }
+    }
+
     @Composable
     fun LargeImage(imageUrl: String) {
         val modifier =
             if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT) {
                 Modifier.fillMaxWidth()
-        } else { Modifier.fillMaxHeight() }
+            } else { Modifier.fillMaxHeight() }
         /*
         This is not foolproof. On smaller displays or aspect ratios, this might cause corners
         to appear wrongly clipped on very long or very wide images. We can use the
@@ -135,6 +150,7 @@ fun LargeImageView(
 
     ProcrasturbatingTheme {
         Scaffold(
+            modifier = Modifier.offset(y=offset),
             bottomBar = {
                 AnimatedVisibility(
                     visible = ((zoomState.zoomFraction ?: 0f) < 0.15f) || forciblyShowBottomBar.value,
@@ -200,32 +216,32 @@ fun LargeImageView(
                 userScrollEnabled = canChangePage.value,
                 beyondBoundsPageCount = 1
             ) {index ->
-                    val currentImg = allImages[index]
-                    val isInHd = remember { currentImg.preferHd }
+                val currentImg = allImages[index]
+                val isInHd = remember { currentImg.preferHd }
 
-                    Column(Modifier.zoomable(
-                            zoomState,
-                            onClick = {
-                                forciblyShowBottomBar.value = !forciblyShowBottomBar.value
-                            }
-                        )) {
-                        Row(modifier = Modifier
-                                .weight(1f, true)
-                                .fillMaxWidth()
-                                .navigationBarsPadding()
-                                .statusBarsPadding()
-                                .padding(bottom = 80.dp), // To account for the bottom bar
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            if (isInHd.value) {
-                                LargeImage(imageUrl = currentImg.highestQualityFormatUrl)
-                            } else {
-                                LargeImage(imageUrl = currentImg.sampleUrl)
-                            }
+                Column(Modifier.zoomable(
+                    zoomState,
+                    onClick = {
+                        forciblyShowBottomBar.value = !forciblyShowBottomBar.value
+                    }
+                )) {
+                    Row(modifier = Modifier
+                        .weight(1f, true)
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .statusBarsPadding()
+                        .padding(bottom = 80.dp), // To account for the bottom bar
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        if (isInHd.value) {
+                            LargeImage(imageUrl = currentImg.highestQualityFormatUrl)
+                        } else {
+                            LargeImage(imageUrl = currentImg.sampleUrl)
                         }
                     }
                 }
+            }
 
             /*
             if (pagerState.settledPage != index) {
