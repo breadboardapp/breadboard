@@ -79,29 +79,17 @@ fun FullscreenLoadingSpinner() {
 @Composable
 fun LargeImageView(
     navController: NavController,
-    // hdImageUrlB64: String,
     initialPage: MutableIntState,
     shouldShowLargeImage: MutableState<Boolean>,
     allImages: SnapshotStateList<Image>
 ) {
-    // val hdImageUrl = String(Base64.getDecoder().decode(hdImageUrlB64))
-
-    /*
-    var initialPage = 0
-    allImages.forEachIndexed { index, img ->
-        if (img.highestQualityFormatUrl == hdImageUrl) {
-            initialPage = index
-        }
-    }
-    */
-
     val pagerState = rememberPagerState(
         initialPage = initialPage.intValue,
         initialPageOffsetFraction = 0f
     ) { allImages.size }
-    val canChangePage = remember { mutableStateOf(false) }
+    var canChangePage by remember { mutableStateOf(false) }
     val zoomState = rememberZoomableState(ZoomSpec(maxZoomFactor = 3.5f))
-    val forciblyShowBottomBar = remember { mutableStateOf(false) }
+    var forciblyShowBottomBar by remember { mutableStateOf(false) }
     var offset by remember { mutableStateOf(0.dp) }
 
     // Large image view is an overlay rather than a new screen entirely so we need to override
@@ -153,7 +141,7 @@ fun LargeImageView(
             modifier = Modifier.offset(y=offset),
             bottomBar = {
                 AnimatedVisibility(
-                    visible = ((zoomState.zoomFraction ?: 0f) < 0.15f) || forciblyShowBottomBar.value,
+                    visible = ((zoomState.zoomFraction ?: 0f) < 0.15f) || forciblyShowBottomBar,
                     enter = slideInVertically(initialOffsetY = { it }),
                     exit = slideOutVertically(targetOffsetY = { it })
                 ) {
@@ -213,7 +201,7 @@ fun LargeImageView(
         ) {
             HorizontalPager(
                 state = pagerState,
-                userScrollEnabled = canChangePage.value,
+                userScrollEnabled = canChangePage,
                 beyondBoundsPageCount = 1
             ) {index ->
                 val currentImg = allImages[index]
@@ -222,7 +210,7 @@ fun LargeImageView(
                 Column(Modifier.zoomable(
                     zoomState,
                     onClick = {
-                        forciblyShowBottomBar.value = !forciblyShowBottomBar.value
+                        forciblyShowBottomBar = !forciblyShowBottomBar
                     }
                 )) {
                     Row(modifier = Modifier
@@ -243,20 +231,11 @@ fun LargeImageView(
                 }
             }
 
-            /*
-            if (pagerState.settledPage != index) {
-                // Reset zoom when page is changed
-                LaunchedEffect(Unit) {
-                    zoomState.resetZoom(withAnimation = false)
-                }
-            }
-            */
-
             val isZoomedOut = (zoomState.zoomFraction ?: 0f) < 0.15f
             // Disable page changing while zoomed in and reset bottom bar state
             LaunchedEffect(isZoomedOut) {
-                canChangePage.value = isZoomedOut
-                forciblyShowBottomBar.value = false
+                canChangePage = isZoomedOut
+                forciblyShowBottomBar = false
             }
         }
     }
