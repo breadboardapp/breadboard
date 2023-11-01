@@ -1,5 +1,6 @@
 package moe.apex.rule34.preferences
 
+import android.net.Uri
 import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -20,15 +21,15 @@ enum class DataSaver(val description: String) {
 
 
 data class Prefs(
-    val dataSaver: DataSaver
+    val dataSaver: DataSaver,
+    val storageLocation: Uri
 )
 
 
-class UserPreferencesRepository(
-    private val dataStore: DataStore<Preferences>
-) {
+class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
     private object PreferenceKeys {
         val DATA_SAVER = stringPreferencesKey("data_saver")
+        val STORAGE_LOCATION = stringPreferencesKey("storage_location")
     }
 
     val getPreferences: Flow<Prefs> = dataStore.data
@@ -52,14 +53,20 @@ class UserPreferencesRepository(
         }
     }
 
+    suspend fun updateStorageLocation(to: Uri) {
+        dataStore.edit { preferences ->
+            preferences[PreferenceKeys.STORAGE_LOCATION] = to.toString()
+        }
+    }
+
     private fun mapUserPreferences(preferences: Preferences): Prefs {
         // Get the sort order from preferences and convert it to a [SortOrder] object
-        val dataSaver =
-            DataSaver.valueOf(
+        val dataSaver = DataSaver.valueOf(
                 preferences[PreferenceKeys.DATA_SAVER] ?: DataSaver.AUTO.name
-            )
+        )
+        val storageLocation = Uri.parse(preferences[PreferenceKeys.STORAGE_LOCATION] ?: "")
 
-        return Prefs(dataSaver)
+        return Prefs(dataSaver, storageLocation)
     }
 
 }

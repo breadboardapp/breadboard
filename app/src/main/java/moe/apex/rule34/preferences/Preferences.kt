@@ -1,6 +1,9 @@
 package moe.apex.rule34.preferences
 
+import android.net.Uri
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -34,6 +37,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,23 +50,44 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import moe.apex.rule34.prefs
 import moe.apex.rule34.ui.theme.ProcrasturbatingTheme
+import moe.apex.rule34.util.SaveDirectorySelection
 
 
 @Composable
-fun Heading(text: String) {
+fun Heading(
+    modifier: Modifier = Modifier.padding(bottom=12.dp),
+    text: String
+) {
     Text(
-        modifier = Modifier.padding(bottom = 12.dp),
+        modifier = modifier,
         text = text,
         color = MaterialTheme.colorScheme.primary,
         letterSpacing = 0.sp,
         fontWeight = FontWeight.Medium
     )
+}
+
+@Composable
+fun TitleSummary(
+    modifier: Modifier = Modifier,
+    title: String,
+    summary: String
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(title)
+        Text(
+            summary,
+            color = Color.Gray,
+            fontSize = 14.sp,
+            lineHeight = 16.sp
+        )
+    }
 }
 
 
@@ -71,9 +96,11 @@ fun Heading(text: String) {
 fun PreferencesScreen(navController: NavController) {
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
-    val scope = CoroutineScope(Dispatchers.IO)
+    val scope = rememberCoroutineScope()
     val prefs = LocalContext.current.prefs
     var dataSaver by remember { mutableStateOf(DataSaver.AUTO) }
+    var storageLocation by remember { mutableStateOf(Uri.EMPTY) }
+    val requester = remember { mutableStateOf(false) }
 
 
     ProcrasturbatingTheme {
@@ -99,13 +126,16 @@ fun PreferencesScreen(navController: NavController) {
             Column(
                 Modifier
                     .padding(it)
-                    .padding(horizontal = 16.dp)
                     .nestedScroll(scrollBehavior.nestedScrollConnection)
             ) {
-                Heading("Data saver")
+                Heading(
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+                    text = "Data saver"
+                )
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
                         .height(IntrinsicSize.Min)
                         .clip(RoundedCornerShape(24.dp))
                         .border(
@@ -143,7 +173,9 @@ fun PreferencesScreen(navController: NavController) {
                 Spacer(Modifier.height(12.dp))
 
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Spacer(Modifier.width(4.dp))
@@ -162,13 +194,37 @@ fun PreferencesScreen(navController: NavController) {
                         color = Color.Gray
                     )
                 }
+                Spacer(Modifier.height(24.dp))
+                Heading(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    text = "Downloads"
+                )
+                TitleSummary(
+                    modifier = Modifier
+                        .clickable(
+                            onClick = { requester.value = true }
+                        )
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .height(72.dp),
+                    title = "Save downloads to" ,
+                    summary = if (storageLocation == Uri.EMPTY) {
+                        "Tap to set"
+                    } else storageLocation.toString()
+                )
+                if (requester.value) {
+                    SaveDirectorySelection(requester = requester)
+                }
             }
         }
 
         LaunchedEffect(true) {
-            withContext(this.coroutineContext) {
-                prefs.getPreferences.collect {value -> dataSaver = value.dataSaver}
+            scope.launch {
+                prefs.getPreferences.collect {value ->
+                    dataSaver = value.dataSaver
+                    storageLocation = value.storageLocation
+                }
             }
         }
     }
-}
+}//gradle try not to take forever to build challenge (impossible)
