@@ -18,5 +18,4 @@ out/
 
 *.iml
 local.properties
-AndroidManifest.xml
 version.txt

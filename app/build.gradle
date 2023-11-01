@@ -1,7 +1,5 @@
 apply plugin: 'com.android.application'
-
 apply plugin: 'kotlin-android'
-
 apply plugin: "com.bugsnag.android.gradle"
 
 //apply plugin: 'kotlin-android-extensions'
@@ -11,10 +9,21 @@ android {
 
     defaultConfig {
         applicationId "me.devoxin.rule34"
-        minSdkVersion 24
+        minSdkVersion 30
         targetSdkVersion 33
         versionCode 1
         versionName "1.0"
+
+        Properties props = new Properties()
+        File local = file("../local.properties")
+
+        if (local.exists()) {
+            local.withInputStream(props::load)
+        }
+
+        manifestPlaceholders = [
+            bugsnagKey: "${props.getProperty("bugsnag.api_key")}"
+        ]
 //        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 //        multiDexEnabled true
 //        javaCompileOptions {
