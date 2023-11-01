@@ -19,7 +19,7 @@ jobs:
     - name: Make Gradle executable
       run: chmod +x ./gradlew
     - name: Configure BugSnag
-      run: echo "$(sed -e 's/API_KEY_HERE/${{ secrets.BUGSNAG }}/' app/src/main/AndroidManifest.xml)" > app/src/main/AndroidManifest.xml
+      run: echo "$(sed -e 's/${bugsnagKey}/${{ secrets.BUGSNAG }}/' app/src/main/AndroidManifest.xml)" > app/src/main/AndroidManifest.xml
     - name: Build Debug APK
       run: ./gradlew assembleDebug
     - name: Upload Artifacts
