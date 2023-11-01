@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+    <SwitchPreferenceCompat
+        app:icon="@drawable/baseline_fingerprint_32"
+        app:key="secured"
+        app:summary="Require biometric authentication"
+        app:title="Authentication" />
+
+</PreferenceScreen>

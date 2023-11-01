@@ -9,11 +9,25 @@
     android:animateLayoutChanges="true"
     android:descendantFocusability="afterDescendants">
 
-    <Space
+    <TableLayout
         android:id="@+id/titleSpace"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_weight="1" />
+        android:layout_weight="1"
+        android:layout_height="0dp">
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="right">
+
+            <Button
+                android:id="@+id/button5"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Settings"
+                android:onClick="openSettings" />
+        </TableRow>
+    </TableLayout>
 
     <LinearLayout
         android:id="@+id/titleLayout"

@@ -35,6 +35,6 @@ class Image(
             return arrayOfNulls(size)
         }
 
-        fun Parcel.nextString(): String = this.readString()!!
+        fun Parcel.nextString(): String = readString()!!
     }
 }

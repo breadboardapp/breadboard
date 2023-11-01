@@ -8,7 +8,6 @@ import android.text.TextWatcher
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.*
-import androidx.appcompat.app.AppCompatActivity
 import com.bugsnag.android.Bugsnag
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipDrawable
@@ -16,7 +15,7 @@ import com.google.android.material.chip.ChipGroup
 import me.devoxin.rule34.R
 import me.devoxin.rule34.adapters.AutoCompleteAdapter
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AuthenticatableActivity() {
     private val tagList = mutableListOf<AutoCompleteAdapter.TagSuggestion>()
     private var lastFocusTime = 0L
 
@@ -108,19 +107,26 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setTitleVisibility(visibility: Int) {
-        findViewById<Space>(R.id.titleSpace).visibility = visibility
+        findViewById<TableLayout>(R.id.titleSpace).visibility = visibility
         findViewById<LinearLayout>(R.id.titleLayout).visibility = visibility
     }
 
     fun onSearchClick(v: View) {
         val intent = Intent(this, ResultsActivity::class.java)
         intent.putExtra("tagList", tagList.map { it.formattedTag }.toTypedArray())
-        this.startActivity(intent)
+        switchActivity(intent)
+//        startActivity(intent)
     }
 
     fun onApplicationClick(v: View) {
         val textView = findViewById<AutoCompleteTextView>(R.id.tagSearch).also { it.clearFocus() }
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(textView.windowToken, 0)
+    }
+
+    fun openSettings(view: View) {
+        val intent = Intent(this, SettingsActivity::class.java)
+        switchActivity(intent)
+//        startActivity(intent)
     }
 }

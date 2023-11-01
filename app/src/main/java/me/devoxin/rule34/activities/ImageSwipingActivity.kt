@@ -25,7 +25,7 @@ import me.devoxin.rule34.R
 import java.io.File
 import java.util.ArrayList
 
-class ImageSwipingActivity : AppCompatActivity() {
+class ImageSwipingActivity : AuthenticatableActivity() {
     private val circularProgressDrawable: CircularProgressDrawable
         get() = CircularProgressDrawable(this).apply {
             strokeWidth = 10f

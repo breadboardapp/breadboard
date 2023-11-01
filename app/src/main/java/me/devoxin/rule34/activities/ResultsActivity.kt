@@ -10,17 +10,17 @@ import me.devoxin.rule34.R
 import me.devoxin.rule34.ScrollListener
 import me.devoxin.rule34.adapters.RecyclerAdapter
 
-class ResultsActivity : AppCompatActivity() {
+class ResultsActivity : AuthenticatableActivity() {
     private lateinit var recyclerAdapter: RecyclerAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        setContentView(R.layout.activity_results)
 
         val tagList = intent.getStringArrayExtra("tagList")
                 ?: throw IllegalStateException("Missing tagList!")
 
-        recyclerAdapter = RecyclerAdapter(this, *tagList, toastCallback = ::makeToast) {
+        recyclerAdapter = RecyclerAdapter(this, *tagList, activityCallback = ::switchActivity, toastCallback = ::makeToast) {
             makeToast(it)
             finish()
         }

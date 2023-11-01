@@ -19,6 +19,7 @@ import java.net.UnknownHostException
 class RecyclerAdapter(
     private val context: Context,
     vararg tags: String,
+    private val activityCallback: (Intent) -> Unit,
     private val toastCallback: (String) -> Unit,
     private val finishCallback: (String) -> Unit
 ): RecyclerView.Adapter<RecyclerAdapter.ResultViewHolder>() {
@@ -110,7 +111,7 @@ class RecyclerAdapter(
         int.putExtra("position", imagesSlice.indexOf(i))
         int.putParcelableArrayListExtra("images", ArrayList(imagesSlice))
 
-        context.startActivity(int)
+        activityCallback(int)
     }
 
 

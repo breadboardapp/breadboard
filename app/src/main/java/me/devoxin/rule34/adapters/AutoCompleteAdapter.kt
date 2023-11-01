@@ -74,7 +74,7 @@ class AutoCompleteAdapter(private val context: Context) : BaseAdapter(), Filtera
         val formattedTag = if (exclude) "-$value" else value
 
         override fun equals(other: Any?): Boolean {
-            return other is TagSuggestion && other.value == this.value
+            return other is TagSuggestion && other.value == value
         }
 
         override fun hashCode(): Int {
