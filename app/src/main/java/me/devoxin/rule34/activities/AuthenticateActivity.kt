@@ -36,9 +36,10 @@ class AuthenticateActivity : AppCompatActivity() {
             authenticate()
         }
 
-
         onBackPressedDispatcher.addCallback {
             minimise()
+            remove()
+            handleOnBackPressed()
         }
     }
 
