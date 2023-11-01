@@ -20,7 +20,6 @@ class AuthenticateActivity : AppCompatActivity() {
 
     private var backgrounded = false
     private var finished = false
-    private var authenticated = false
 
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
