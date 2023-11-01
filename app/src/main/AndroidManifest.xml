@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="me.devoxin.rule34"
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>
 <!--    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />-->
 
@@ -18,14 +19,22 @@
         tools:ignore="GoogleAppIndexingWarning"
         android:windowSoftInputMode="adjustPan">
         <meta-data android:name="com.bugsnag.android.API_KEY" android:value="API_KEY_HERE"/>
-        <activity android:name="me.devoxin.rule34.activities.MainActivity" android:exported="true">
+        <activity android:name="me.devoxin.rule34.activities.AuthenticateActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name=".activities.MainActivity"/>
+<!--        <activity android:name="me.devoxin.rule34.activities.MainActivity" android:exported="true">-->
+<!--            <intent-filter>-->
+<!--                <action android:name="android.intent.action.MAIN" />-->
+<!--                <category android:name="android.intent.category.LAUNCHER" />-->
+<!--            </intent-filter>-->
+<!--        </activity>-->
         <activity android:name="me.devoxin.rule34.activities.ResultsActivity"/>
         <activity android:name="me.devoxin.rule34.activities.ImageSwipingActivity"/>
+        <activity android:name="me.devoxin.rule34.activities.SettingsActivity"/>
     </application>
 
 </manifest>
