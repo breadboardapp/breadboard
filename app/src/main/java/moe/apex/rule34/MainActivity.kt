@@ -3,6 +3,7 @@
 package moe.apex.rule34
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -30,6 +31,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.sharp.Search
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -37,6 +39,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -59,6 +62,8 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
+import androidx.datastore.preferences.preferencesDataStore
+import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -69,6 +74,8 @@ import androidx.navigation.navArgument
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import moe.apex.rule34.detailview.SearchResults
+import moe.apex.rule34.preferences.PreferencesScreen
+import moe.apex.rule34.preferences.UserPreferencesRepository
 import moe.apex.rule34.tag.TagSuggestion
 import moe.apex.rule34.ui.theme.ProcrasturbatingTheme
 import org.json.JSONArray
@@ -77,9 +84,15 @@ import soup.compose.material.motion.animation.materialSharedAxisXOut
 import soup.compose.material.motion.animation.rememberSlideDistance
 
 
+val Context.dataStore by preferencesDataStore("preferences")
+val Context.prefs: UserPreferencesRepository
+    get() = UserPreferencesRepository(dataStore)
+
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        applicationContext.preferencesDataStoreFile("preferences")
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent {
             val navController = rememberNavController()
@@ -234,7 +247,16 @@ fun HomeScreen(navController: NavController) {
         Scaffold(Modifier.fillMaxSize()) {
             Column {
                 LargeTopAppBar(
-                    title = { Text("Procrasturbating") }
+                    title = { Text("Procrasturbating") },
+                    actions = {
+                        IconButton(
+                            onClick = {
+                                navController.navigate("settings")
+                            }
+                        ) {
+                            Icon(imageVector = Icons.Outlined.Settings, contentDescription = "Settings")
+                        }
+                    }
                 )
 
                 Row(
@@ -395,12 +417,7 @@ fun Navigation(navController: NavHostController) {
                         navBackStackEntry.arguments?.getString("searchQuery") ?: ""
                     )
                 }
-                /*
-                composable(
-                    route = "viewImage/{hdImageUrlB64}",
-                    arguments = listOf(navArgument("hdImageUrlB64") {NavType.StringType})
-                 ) { navBackStackEntry -> LargeImageView(navController, navBackStackEntry.arguments?.getString("hdImageUrlB64") ?: "") }
-                */
+                composable("settings") { PreferencesScreen(navController)}
             }
         }
     }
