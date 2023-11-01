@@ -11,10 +11,11 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import java.io.IOException
 
+
 enum class DataSaver(val description: String) {
     ON ("Always"),
     OFF ("Never"),
-    AUTO ("When device is on mobile data")
+    AUTO ("When using mobile data")
 }
 
 
@@ -60,7 +61,5 @@ class UserPreferencesRepository(
 
         return Prefs(dataSaver)
     }
-
-
 
 }

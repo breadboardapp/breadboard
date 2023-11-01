@@ -1,8 +1,11 @@
 package moe.apex.rule34.largeimageview
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -53,12 +56,24 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
+import kotlinx.coroutines.withContext
 import me.saket.telephoto.zoomable.ZoomSpec
 import me.saket.telephoto.zoomable.rememberZoomableState
 import me.saket.telephoto.zoomable.zoomable
 import moe.apex.rule34.R
 import moe.apex.rule34.image.Image
+import moe.apex.rule34.preferences.DataSaver
+import moe.apex.rule34.prefs
 import moe.apex.rule34.ui.theme.ProcrasturbatingTheme
+
+
+private fun isUsingWiFi(context: Context): Boolean {
+    val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    val networkInfo = connectivityManager.activeNetwork
+    val networkCapabilities = connectivityManager.getNetworkCapabilities(networkInfo)
+
+    return networkCapabilities != null && networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+}
 
 
 @Composable
@@ -91,6 +106,17 @@ fun LargeImageView(
     val zoomState = rememberZoomableState(ZoomSpec(maxZoomFactor = 3.5f))
     var forciblyShowBottomBar by remember { mutableStateOf(false) }
     var offset by remember { mutableStateOf(0.dp) }
+    val context = LocalContext.current
+    val prefs = context.prefs
+    var dataSaver by remember { mutableStateOf(DataSaver.AUTO) }
+    val isUsingWifi = isUsingWiFi(context)
+
+
+    LaunchedEffect(dataSaver) {
+        withContext(this.coroutineContext) {
+            prefs.getPreferences.collect { value -> dataSaver = value.dataSaver }
+        }
+    }
 
     // Large image view is an overlay rather than a new screen entirely so we need to override
     // the default back button behaviour so we don't get taken to the home page.
@@ -147,12 +173,11 @@ fun LargeImageView(
                 ) {
                     BottomAppBar(
                         actions = {
-                            val context = LocalContext.current
                             IconButton(
                                 onClick = { allImages[pagerState.settledPage].toggleHd() },
                                 modifier = Modifier.padding(start = 4.dp)
                             ) {
-                                val vectorIcon = if (allImages[pagerState.settledPage].preferHd.value) {
+                                val vectorIcon = if (allImages[pagerState.settledPage].preferHd) {
                                     R.drawable.ic_hd_enabled
                                 } else {
                                     R.drawable.ic_hd_disabled
@@ -205,7 +230,14 @@ fun LargeImageView(
                 beyondBoundsPageCount = 1
             ) {index ->
                 val currentImg = allImages[index]
-                val isInHd = remember { currentImg.preferHd }
+
+                if (currentImg.hdQualityOverride == null) {
+                    when (dataSaver) {
+                        DataSaver.ON -> currentImg.preferHd = false
+                        DataSaver.OFF -> currentImg.preferHd = true
+                        DataSaver.AUTO -> currentImg.preferHd = isUsingWifi
+                    }
+                }
 
                 Column(Modifier.zoomable(
                     zoomState,
@@ -213,16 +245,17 @@ fun LargeImageView(
                         forciblyShowBottomBar = !forciblyShowBottomBar
                     }
                 )) {
-                    Row(modifier = Modifier
-                        .weight(1f, true)
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .statusBarsPadding()
-                        .padding(bottom = 80.dp), // To account for the bottom bar
+                    Row(
+                        modifier = Modifier
+                            .weight(1f, true)
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .statusBarsPadding()
+                            .padding(bottom = 80.dp), // To account for the bottom bar
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        if (isInHd.value) {
+                        if (currentImg.preferHd) {
                             LargeImage(imageUrl = currentImg.highestQualityFormatUrl)
                         } else {
                             LargeImage(imageUrl = currentImg.sampleUrl)

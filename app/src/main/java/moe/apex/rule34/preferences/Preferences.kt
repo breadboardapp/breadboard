@@ -146,15 +146,17 @@ fun PreferencesScreen(navController: NavController) {
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Spacer(Modifier.width(4.dp))
                     Icon(
                         modifier = Modifier.size(20.dp),
                         imageVector = Icons.Outlined.Info,
                         contentDescription = null,
                         tint = Color.Gray
                     )
-                    Spacer(Modifier.width(12.dp))
+                    Spacer(Modifier.width(16.dp))
                     Text(
-                        "Data saver prevents HD images from loading automatically.",
+                        text = "When enabled, data saver will load lower resolution images by default. " +
+                               "Downloads will always be in the maximum quality.",
                         fontSize = 14.sp,
                         lineHeight = 16.sp,
                         color = Color.Gray
