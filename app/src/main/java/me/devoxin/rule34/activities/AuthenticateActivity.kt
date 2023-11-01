@@ -5,6 +5,7 @@ import android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STR
 import android.hardware.biometrics.BiometricManager.Authenticators.DEVICE_CREDENTIAL
 import android.hardware.biometrics.BiometricPrompt
 import android.hardware.biometrics.BiometricPrompt.AuthenticationCallback
+import android.hardware.biometrics.BiometricPrompt.BIOMETRIC_ERROR_CANCELED
 import android.hardware.biometrics.BiometricPrompt.BIOMETRIC_ERROR_USER_CANCELED
 import android.os.Build
 import android.os.Bundle
@@ -36,20 +37,19 @@ class AuthenticateActivity : AppCompatActivity() {
         }
 
         onBackPressedDispatcher.addCallback {
-            minimise()
-            remove()
-            handleOnBackPressed()
+            if (lastActivity) {
+                minimise()
+                remove()
+            }
         }
     }
 
     private fun minimise() {
-        if (lastActivity) {
-            val intent = Intent(Intent.ACTION_MAIN)
-                .addCategory(Intent.CATEGORY_HOME)
-                .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val intent = Intent(Intent.ACTION_MAIN)
+            .addCategory(Intent.CATEGORY_HOME)
+            .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
-            startActivity(intent)
-        }
+        startActivity(intent)
     }
 
     override fun onStop() {
@@ -86,6 +86,7 @@ class AuthenticateActivity : AppCompatActivity() {
 
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence?) {
                 when (errorCode) {
+                    BIOMETRIC_ERROR_CANCELED -> {}
                     BIOMETRIC_ERROR_USER_CANCELED -> minimise()
                     else -> Toast.makeText(this@AuthenticateActivity, "Authentication failed with error code $errorCode", Toast.LENGTH_SHORT).show()
                 }

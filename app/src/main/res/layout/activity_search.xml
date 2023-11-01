@@ -24,8 +24,15 @@
                 android:id="@+id/button5"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Settings"
-                android:onClick="openSettings" />
+                android:backgroundTint="#000000FF"
+                android:minWidth="0dp"
+                android:onClick="openSettings"
+                android:outlineProvider="none"
+                android:paddingStart="13dp"
+                android:paddingLeft="0dp"
+                android:paddingEnd="3dp"
+                android:paddingRight="0dp"
+                app:icon="@drawable/baseline_settings_24" />
         </TableRow>
     </TableLayout>
 
