@@ -5,18 +5,22 @@ import android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STR
 import android.hardware.biometrics.BiometricManager.Authenticators.DEVICE_CREDENTIAL
 import android.hardware.biometrics.BiometricPrompt
 import android.hardware.biometrics.BiometricPrompt.AuthenticationCallback
+import android.hardware.biometrics.BiometricPrompt.BIOMETRIC_ERROR_USER_CANCELED
 import android.os.Build
 import android.os.Bundle
 import android.os.CancellationSignal
+import android.widget.Toast
+import androidx.activity.addCallback
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.PreferenceManager
 
 class AuthenticateActivity : AppCompatActivity() {
+    private var lastActivity = false
+
     private var backgrounded = false
     private var finished = false
-
-    private var lastActivity = false
+    private var authenticated = false
 
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -31,6 +35,29 @@ class AuthenticateActivity : AppCompatActivity() {
         } else {
             authenticate()
         }
+
+
+        onBackPressedDispatcher.addCallback {
+            minimise()
+        }
+    }
+
+    private fun minimise() {
+        if (lastActivity) {
+            val intent = Intent(Intent.ACTION_MAIN)
+                .addCategory(Intent.CATEGORY_HOME)
+                .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+            startActivity(intent)
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+
+        if (!backgrounded && !finished) {
+            backgrounded = true
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.R)
@@ -41,14 +68,6 @@ class AuthenticateActivity : AppCompatActivity() {
             backgrounded = false
 
             authenticate()
-        }
-    }
-
-    override fun onStop() {
-        super.onStop()
-
-        if (!backgrounded && !finished) {
-            backgrounded = true
         }
     }
 
@@ -63,6 +82,13 @@ class AuthenticateActivity : AppCompatActivity() {
         biometricPrompt.authenticate(CancellationSignal(), mainExecutor, object : AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult?) {
                 openApplication()
+            }
+
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence?) {
+                when (errorCode) {
+                    BIOMETRIC_ERROR_USER_CANCELED -> minimise()
+                    else -> Toast.makeText(this@AuthenticateActivity, "Authentication failed with error code $errorCode", Toast.LENGTH_SHORT).show()
+                }
             }
         })
     }
