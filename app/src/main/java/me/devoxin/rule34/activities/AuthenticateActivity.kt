@@ -7,12 +7,10 @@ import android.hardware.biometrics.BiometricPrompt
 import android.hardware.biometrics.BiometricPrompt.AuthenticationCallback
 import android.hardware.biometrics.BiometricPrompt.BIOMETRIC_ERROR_CANCELED
 import android.hardware.biometrics.BiometricPrompt.BIOMETRIC_ERROR_USER_CANCELED
-import android.os.Build
 import android.os.Bundle
 import android.os.CancellationSignal
 import android.widget.Toast
 import androidx.activity.addCallback
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.PreferenceManager
 
@@ -22,9 +20,9 @@ class AuthenticateActivity : AppCompatActivity() {
     private var backgrounded = false
     private var finished = false
 
-    @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         lastActivity = intent.getBooleanExtra("lastActivity", false)
 
         val preferences = PreferenceManager.getDefaultSharedPreferences(this)
@@ -60,7 +58,6 @@ class AuthenticateActivity : AppCompatActivity() {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.R)
     override fun onResume() {
         super.onResume()
 
@@ -71,7 +68,6 @@ class AuthenticateActivity : AppCompatActivity() {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.R)
     fun authenticate() {
         val biometricPrompt = BiometricPrompt.Builder(this)
             .setTitle("Authentication Required")

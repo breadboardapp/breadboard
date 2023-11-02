@@ -11,7 +11,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.CircularProgressDrawable
@@ -20,10 +19,9 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.jsibbold.zoomage.ZoomageView
-import me.devoxin.rule34.Image
+import me.devoxin.rule34.ImageSource
 import me.devoxin.rule34.R
 import java.io.File
-import java.util.ArrayList
 
 class ImageSwipingActivity : AuthenticatableActivity() {
     private val circularProgressDrawable: CircularProgressDrawable
@@ -34,34 +32,25 @@ class ImageSwipingActivity : AuthenticatableActivity() {
             start()
         }
 
-    private lateinit var images: ArrayList<Image>
-
     private var currentView: ViewPagerViewHolder? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.full_image_swiping)
 
-        images = intent.getParcelableArrayListExtra("images")!!
-
         val position = intent.getIntExtra("position", 0)
-        val view = findViewById<ViewPager2>(R.id.viewpager)
-        view.adapter = ViewPagerAdapter()
-        view.setCurrentItem(position, false)
-        findViewById<Button>(R.id.hd_button).isEnabled = images[position].hdAvailable
+        val view = findViewById<ViewPager2>(R.id.viewpager).apply {
+            adapter = ViewPagerAdapter()
+            setCurrentItem(position, false)
+        }
+
+        findViewById<Button>(R.id.hd_button).isEnabled = ImageSource.images[position].hdAvailable
 
         view.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
-                findViewById<Button>(R.id.hd_button).isEnabled = images[position].hdAvailable
+                findViewById<Button>(R.id.hd_button).isEnabled = ImageSource.images[position].hdAvailable
             }
         })
-
-//        Picasso.get()
-//            .load(imageUri)
-//            //.fit()
-//            //.centerInside()
-//            .placeholder(circularProgressDrawable)
-//            .into(view)
     }
 
     fun onHdClick(v: View) {
@@ -71,7 +60,7 @@ class ImageSwipingActivity : AuthenticatableActivity() {
         v.isEnabled = false
 
         Glide.with(this)
-            .load(images[currentPosition].highestQualityFormatUrl)
+            .load(ImageSource.images[currentPosition].highestQualityFormatUrl)
             .placeholder(circularProgressDrawable)
             .into(pager.findViewWithTag<ZoomageView>("View$currentPosition"))
     }
@@ -79,7 +68,7 @@ class ImageSwipingActivity : AuthenticatableActivity() {
     fun onSaveClick(v: View) {
         val pager = findViewById<ViewPager2>(R.id.viewpager)
         val currentPosition = pager.currentItem
-        val image = images[currentPosition]
+        val image = ImageSource.images[currentPosition]
 
         val imageUrl = image.highestQualityFormatUrl
         val fileName = image.fileName
@@ -143,7 +132,7 @@ class ImageSwipingActivity : AuthenticatableActivity() {
     }
 
     inner class ViewPagerAdapter : RecyclerView.Adapter<ImageSwipingActivity.ViewPagerViewHolder>() {
-        override fun getItemCount() = images.size
+        override fun getItemCount() = ImageSource.itemCount
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewPagerViewHolder {
             val inflater = LayoutInflater.from(parent.context)
@@ -152,7 +141,7 @@ class ImageSwipingActivity : AuthenticatableActivity() {
         }
 
         override fun onBindViewHolder(holder: ViewPagerViewHolder, position: Int) {
-            val image = images[position]
+            val image = ImageSource.images[position]
             holder.setData(image.defaultUrl)
             holder.zv.tag = "View$position"
         }

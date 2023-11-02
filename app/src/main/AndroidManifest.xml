@@ -18,6 +18,7 @@
         android:theme="@style/AppTheme"
         tools:ignore="GoogleAppIndexingWarning"
         android:windowSoftInputMode="adjustPan">
+        <!-- android:enableOnBackInvokedCallback="true" -->
         <meta-data android:name="com.bugsnag.android.API_KEY" android:value="${bugsnagKey}"/>
         <activity android:name="me.devoxin.rule34.activities.AuthenticateActivity" android:exported="true">
             <intent-filter>

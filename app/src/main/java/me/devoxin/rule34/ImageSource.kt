@@ -1,22 +1,23 @@
 package me.devoxin.rule34
 
+import android.util.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import java.net.URLEncoder
 
-class ImageSource(vararg tags: String) {
-    private val baseUrl = "https://api.rule34.xxx/index.php?page=dapi&json=1&s=post&q=index&limit=100&tags=" +
-        tags.joinToString("+") { URLEncoder.encode(it, Charsets.UTF_8.name()) }
+class ImageSource private constructor(vararg tags: String) {
+    private val url = BASE_URL + tags.joinToString("+") { URLEncoder.encode(it, Charsets.UTF_8.name()) }
     private var page = 0
 
-    fun nextPage(): List<Image> {
-        val body = RequestUtil.get("$baseUrl&pid=$page").get()
+    private var images = mutableListOf<Image>()
 
-        if (body.isEmpty()) {
-            return emptyList()
-        }
+    private suspend fun nextPage(): Int {
+        val body = withContext(Dispatchers.IO) { RequestUtil.get("$url&pid=$page").get() }.takeIf { it.isNotEmpty() }
+            ?: return 0
 
         val json = JSONArray(body)
-        val subjects = mutableListOf<Image>()
+        var added = 0
 
         for (i in 0 until json.length()) {
             val e = json.getJSONObject(i)
@@ -27,15 +28,34 @@ class ImageSource(vararg tags: String) {
             val sampleUrl = e.optString("sample_url", "")
             val previewUrl = e.getString("preview_url")
 
-            if (fileFormat != "jpeg" && fileFormat != "jpg" && fileFormat != "png" && fileFormat != "gif") {
-                println(fileFormat)
+            if (fileFormat !in SUPPORTED_FORMATS) {
+                Log.d("ImageSource", "Unsupported file format $fileFormat")
                 continue
             }
 
-            subjects.add(Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl))
+            images.add(Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl))
+            added++
         }
 
         page++
-        return subjects.toList()
+        return added
+    }
+
+    companion object {
+        private const val BASE_URL = "https://api.rule34.xxx/index.php?page=dapi&json=1&s=post&q=index&limit=100&tags="
+        private val SUPPORTED_FORMATS = setOf("jpeg", "jpg", "png", "gif")
+
+        private var instance: ImageSource? = null
+        val images: List<Image>
+            get() = instance?.images ?: emptyList()
+
+        val itemCount: Int
+            get() = instance?.images?.size ?: 0
+
+        fun withTags(vararg tags: String) {
+            instance = ImageSource(*tags)
+        }
+
+        suspend fun nextPage() = instance?.nextPage() ?: 0
     }
 }

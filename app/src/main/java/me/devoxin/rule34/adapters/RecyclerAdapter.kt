@@ -9,12 +9,13 @@ import android.widget.ImageView
 import androidx.recyclerview.widget.RecyclerView
 import com.bugsnag.android.Bugsnag
 import com.bumptech.glide.Glide
-import me.devoxin.rule34.Image
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import me.devoxin.rule34.ImageSource
 import me.devoxin.rule34.R
 import me.devoxin.rule34.activities.ImageSwipingActivity
 import java.io.IOException
-import java.net.UnknownHostException
 
 class RecyclerAdapter(
     private val context: Context,
@@ -23,17 +24,19 @@ class RecyclerAdapter(
     private val toastCallback: (String) -> Unit,
     private val finishCallback: (String) -> Unit
 ): RecyclerView.Adapter<RecyclerAdapter.ResultViewHolder>() {
-    private var items = mutableListOf<Image>()
-    private val sourceLoader = ImageSource(*tags)
-
     private var isLoading = false
     private var noMoreResults = false
 
     init {
+        ImageSource.withTags(*tags)
         loadMore()
     }
 
     fun loadMore() {
+        MAIN_SCOPE.launch { loadMore0() }
+    }
+
+    private suspend fun loadMore0() {
         if (isLoading || noMoreResults) {
             return
         }
@@ -42,29 +45,29 @@ class RecyclerAdapter(
         isLoading = true
 
         try {
-            Log.d("imageLoader", "Loading next page")
-            val pageItems = sourceLoader.nextPage()
-            Log.d("imageLoader", "${pageItems.size} fetched items, ${items.size} stored items")
+            Log.d("RecyclerAdapter", "Loading next page")
+            val currentImageCount = ImageSource.itemCount
+            val pageImageCount = ImageSource.nextPage()
+            val newImageCount = ImageSource.itemCount
+            Log.d("RecyclerAdapter", "$pageImageCount fetched items, $newImageCount stored items")
 
-            // Consider adding an `isAtEnd` boolean to prevent repeated load requests.
-            if (pageItems.isEmpty()) {
-                if (items.isEmpty()) {
+            if (pageImageCount == 0) {
+                if (newImageCount == 0) {
                     return finishCallback("Query yielded no results")
                 }
 
                 noMoreResults = true
+            } else {
+                Log.d("RecyclerAdapter", "Notifying item range inserted with values ($currentImageCount, $newImageCount)")
+                notifyItemRangeInserted(currentImageCount, pageImageCount)
             }
-
-            val indexBegin = items.size - 1
-            items.addAll(pageItems)
-            notifyItemRangeChanged(indexBegin, pageItems.size)
         } catch (e: Exception) {
             val cause = e.let { it.cause ?: it }
             e.printStackTrace()
 
             if (cause is IOException) { // || cause is UnknownHostException
-                return when {
-                    items.isEmpty() -> finishCallback("A network error occurred whilst fetching images.")
+                return when (ImageSource.itemCount) {
+                    0 -> finishCallback("A network error occurred whilst fetching images.")
                     else -> toastCallback("A network error occurred whilst fetching images.")
                 }
             } else {
@@ -84,7 +87,7 @@ class RecyclerAdapter(
     }
 
     override fun onBindViewHolder(holder: ResultViewHolder, position: Int) {
-        val image = items[position]
+        val image = ImageSource.images[position]
 
         Glide.with(context)
             .load(image.previewUrl)
@@ -95,22 +98,11 @@ class RecyclerAdapter(
         holder.view.setOnClickListener { onItemClick(holder, position) }
     }
 
-    override fun getItemCount(): Int = items.size
+    override fun getItemCount() = ImageSource.itemCount
 
     private fun onItemClick(view: ResultViewHolder, position: Int) {
-        val i = items[position]
         val int = Intent(context, ImageSwipingActivity::class.java)
-
-        // Causes issues when there's too many images.
-//        int.putExtra("position", items.indexOf(i))
-//        int.putParcelableArrayListExtra("images", ArrayList(items))
-
-        val minIndex = (position - 50).coerceAtLeast(0)
-        val maxIndex = (position + 50).coerceAtMost(items.size)
-        val imagesSlice = items.slice(minIndex until maxIndex)
-        int.putExtra("position", imagesSlice.indexOf(i))
-        int.putParcelableArrayListExtra("images", ArrayList(imagesSlice))
-
+        int.putExtra("position", position)
         activityCallback(int)
     }
 
@@ -120,4 +112,8 @@ class RecyclerAdapter(
     }
 
     class ResultViewHolder(val view: ImageView): RecyclerView.ViewHolder(view)
+
+    companion object {
+        private val MAIN_SCOPE = CoroutineScope(Dispatchers.Main)
+    }
 }

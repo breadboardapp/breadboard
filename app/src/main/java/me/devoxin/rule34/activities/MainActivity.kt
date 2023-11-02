@@ -7,7 +7,11 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
 import android.view.inputmethod.InputMethodManager
-import android.widget.*
+import android.widget.AdapterView
+import android.widget.AutoCompleteTextView
+import android.widget.Button
+import android.widget.LinearLayout
+import android.widget.TableLayout
 import com.bugsnag.android.Bugsnag
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipDrawable
@@ -40,8 +44,9 @@ class MainActivity : AuthenticatableActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Bugsnag.start(this)
         setContentView(R.layout.activity_search)
+
+        Bugsnag.start(this)
 
         val chips = findViewById<ChipGroup>(R.id.tagList)
         val tagSearch = findViewById<AutoCompleteTextView>(R.id.tagSearch)
@@ -51,7 +56,6 @@ class MainActivity : AuthenticatableActivity() {
             override fun onItemClick(adapterView: AdapterView<*>, view: View, position: Int, id: Long) {
                 val tagSuggestion = adapterView.getItemAtPosition(position) as AutoCompleteAdapter.TagSuggestion
                 if (!addTag(tagSuggestion)) return tagSearch.text.clear()
-                //if (!tagList.add(tagSuggestion)) return tagSearch.text.clear()
 
                 val chipStyle = if (tagSuggestion.exclude) R.style.Widget_R34_ChipExcluded else R.style.Widget_R34_ChipIncluded
                 val drawable = ChipDrawable.createFromAttributes(this@MainActivity, null, 0, chipStyle)

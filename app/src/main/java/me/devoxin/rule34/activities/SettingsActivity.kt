@@ -3,7 +3,6 @@ package me.devoxin.rule34.activities
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import me.devoxin.rule34.R
-import me.devoxin.rule34.fragments.SettingsFragment
 
 class SettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -2,7 +2,6 @@ package me.devoxin.rule34.activities
 
 import android.os.Bundle
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import me.devoxin.rule34.ItemDecorator
@@ -18,7 +17,7 @@ class ResultsActivity : AuthenticatableActivity() {
         setContentView(R.layout.activity_results)
 
         val tagList = intent.getStringArrayExtra("tagList")
-                ?: throw IllegalStateException("Missing tagList!")
+            ?: throw IllegalStateException("Missing tagList!")
 
         recyclerAdapter = RecyclerAdapter(this, *tagList, activityCallback = ::switchActivity, toastCallback = ::makeToast) {
             makeToast(it)
