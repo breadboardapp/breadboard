@@ -226,4 +226,4 @@ fun PreferencesScreen(navController: NavController) {
             }
         }
     }
-}//gradle try not to take forever to build challenge (impossible)
+}
