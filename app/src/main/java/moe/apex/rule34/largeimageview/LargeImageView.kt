@@ -70,7 +70,7 @@ import moe.apex.rule34.prefs
 import moe.apex.rule34.ui.theme.ProcrasturbatingTheme
 import moe.apex.rule34.util.MustSetLocation
 import moe.apex.rule34.util.SaveDirectorySelection
-import moe.apex.rule34.util.handleSaveClick
+import moe.apex.rule34.util.downloadImage
 
 
 
@@ -120,6 +120,7 @@ fun LargeImageView(
     var storageLocation by remember { mutableStateOf(Uri.EMPTY) }
     val isUsingWifi = isUsingWiFi(context)
     val requester = remember { mutableStateOf(false) }
+    var isDownloading by remember { mutableStateOf(false) }
 
 
     LaunchedEffect(true) {
@@ -228,7 +229,8 @@ fun LargeImageView(
                             FloatingActionButton(
                                 onClick = {
                                     scope.launch {
-                                        val result: Result<Boolean> = handleSaveClick(
+                                        isDownloading = true
+                                        val result: Result<Boolean> = downloadImage(
                                             context,
                                             allImages[pagerState.settledPage],
                                             storageLocation
@@ -236,7 +238,7 @@ fun LargeImageView(
 
                                         if (result.isSuccess) {
                                             Toast.makeText(context,
-                                                "Image downloaded.",
+                                                "Image saved.",
                                                 Toast.LENGTH_SHORT
                                             ).show()
                                         }
@@ -253,14 +255,20 @@ fun LargeImageView(
                                                 Toast.LENGTH_LONG
                                             ).show()
                                         }
+                                        isDownloading = false
                                     }
                                 },
                                 elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
                             ) {
-                                Icon(
-                                    imageVector = ImageVector.vectorResource(id = R.drawable.ic_download),
-                                    contentDescription = "Save"
-                                )
+                                if (isDownloading) {
+                                    CircularProgressIndicator(Modifier.scale(0.5F))
+                                }
+                                else {
+                                    Icon(
+                                        imageVector = ImageVector.vectorResource(id = R.drawable.ic_download),
+                                        contentDescription = "Save"
+                                    )
+                                }
                             }
                         }
                     )

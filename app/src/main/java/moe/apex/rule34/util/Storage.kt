@@ -22,7 +22,6 @@ import moe.apex.rule34.image.Image
 import moe.apex.rule34.prefs
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.Response
 import okio.buffer
 import okio.sink
 import java.io.IOException
@@ -61,9 +60,9 @@ fun SaveDirectorySelection(requester: MutableState<Boolean>) {
 }
 
 
-suspend fun handleSaveClick(context: Context, image: Image, location: Uri): Result<Boolean> {
+suspend fun downloadImage(context: Context, image: Image, location: Uri): Result<Boolean> {
     if (location == Uri.EMPTY) {
-        return Result.failure(MustSetLocation("Please set save location and try again."))
+        return Result.failure(MustSetLocation("Set save location and try again."))
     }
     val fileName = image.fileName
     val url = image.highestQualityFormatUrl
@@ -75,7 +74,7 @@ suspend fun handleSaveClick(context: Context, image: Image, location: Uri): Resu
 
     val outputFolder = DocumentFile.fromTreeUri(context, location)
     val outputFile = outputFolder!!.createFile("image/$compressFormat", fileName)
-        ?: return Result.failure(MustSetLocation("Please set save location and try again."))
+        ?: return Result.failure(MustSetLocation("Set save location and try again."))
 
     val outputUri = outputFile.uri
     val stream = context.contentResolver.openOutputStream(outputUri)
@@ -83,27 +82,24 @@ suspend fun handleSaveClick(context: Context, image: Image, location: Uri): Resu
     val client = OkHttpClient()
     val request = Request.Builder().url(url).build()
 
-    try {
-        val response: Response = withContext(Dispatchers.IO) {
-            client.newCall(request).execute()
-        }
-        return if (response.isSuccessful) {
-            response.body?.source()?.use { source ->
-                stream!!.sink().buffer().use { sink ->
-                    sink.writeAll(source)
+    return withContext(Dispatchers.IO) {
+        try {
+            val response = client.newCall(request).execute()
+
+            return@withContext if (response.isSuccessful) {
+                response.body?.source()?.use { source ->
+                    stream!!.sink().buffer().use { sink ->
+                        sink.writeAll(source)
+                    }
                 }
+                stream?.close()
+                Result.success(true)
+            } else {
+                Result.failure(Exception(response.code.toString()))
             }
-            if (stream != null) {
-                withContext(Dispatchers.IO) {
-                    stream.close()
-                }
-            }
-            Result.success(true)
-        } else {
-            Result.failure(Exception(response.code.toString()))
+        } catch (e: IOException) {
+            e.printStackTrace()
+            return@withContext Result.failure(e)
         }
-    } catch (e: IOException) {
-        e.printStackTrace()
-        return Result.failure(e)
     }
 }
