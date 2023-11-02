@@ -6,6 +6,8 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -42,6 +44,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
@@ -56,7 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 import me.saket.telephoto.zoomable.ZoomSpec
 import me.saket.telephoto.zoomable.rememberZoomableState
 import me.saket.telephoto.zoomable.zoomable
@@ -65,6 +68,10 @@ import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.DataSaver
 import moe.apex.rule34.prefs
 import moe.apex.rule34.ui.theme.ProcrasturbatingTheme
+import moe.apex.rule34.util.MustSetLocation
+import moe.apex.rule34.util.SaveDirectorySelection
+import moe.apex.rule34.util.handleSaveClick
+
 
 
 private fun isUsingWiFi(context: Context): Boolean {
@@ -108,13 +115,17 @@ fun LargeImageView(
     var offset by remember { mutableStateOf(0.dp) }
     val context = LocalContext.current
     val prefs = context.prefs
+    val scope = rememberCoroutineScope()
     var dataSaver by remember { mutableStateOf(DataSaver.AUTO) }
+    var storageLocation by remember { mutableStateOf(Uri.EMPTY) }
     val isUsingWifi = isUsingWiFi(context)
+    val requester = remember { mutableStateOf(false) }
 
 
-    LaunchedEffect(dataSaver) {
-        withContext(this.coroutineContext) {
-            prefs.getPreferences.collect { value -> dataSaver = value.dataSaver }
+    LaunchedEffect(true) {
+        prefs.getPreferences.collect {value ->
+            dataSaver = value.dataSaver
+            storageLocation = value.storageLocation
         }
     }
 
@@ -163,6 +174,10 @@ fun LargeImageView(
     }
 
     ProcrasturbatingTheme {
+        if (requester.value) {
+            SaveDirectorySelection(requester = requester)
+        }
+
         Scaffold(
             modifier = Modifier.offset(y=offset),
             bottomBar = {
@@ -211,7 +226,35 @@ fun LargeImageView(
                         },
                         floatingActionButton = {
                             FloatingActionButton(
-                                onClick = { /* TODO: This */ },
+                                onClick = {
+                                    scope.launch {
+                                        val result: Result<Boolean> = handleSaveClick(
+                                            context,
+                                            allImages[pagerState.settledPage],
+                                            storageLocation
+                                        )
+
+                                        if (result.isSuccess) {
+                                            Toast.makeText(context,
+                                                "Image downloaded.",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+
+                                        else {
+                                            val exc = result.exceptionOrNull()!!
+                                            println(exc)
+                                            if (exc is MustSetLocation) {
+                                                requester.value = true
+                                            }
+                                            Toast.makeText(
+                                                context,
+                                                exc.message,
+                                                Toast.LENGTH_LONG
+                                            ).show()
+                                        }
+                                    }
+                                },
                                 elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
                             ) {
                                 Icon(

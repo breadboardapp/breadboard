@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -194,9 +195,9 @@ fun PreferencesScreen(navController: NavController) {
                         color = Color.Gray
                     )
                 }
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(18.dp))
                 Heading(
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                     text = "Downloads"
                 )
                 TitleSummary(
@@ -206,8 +207,8 @@ fun PreferencesScreen(navController: NavController) {
                         )
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
-                        .height(72.dp),
-                    title = "Save downloads to" ,
+                        .heightIn(min = 72.dp),
+                    title = "Save downloads to",
                     summary = if (storageLocation == Uri.EMPTY) {
                         "Tap to set"
                     } else storageLocation.toString()
@@ -219,11 +220,9 @@ fun PreferencesScreen(navController: NavController) {
         }
 
         LaunchedEffect(true) {
-            scope.launch {
-                prefs.getPreferences.collect {value ->
-                    dataSaver = value.dataSaver
-                    storageLocation = value.storageLocation
-                }
+            prefs.getPreferences.collect {value ->
+                dataSaver = value.dataSaver
+                storageLocation = value.storageLocation
             }
         }
     }
