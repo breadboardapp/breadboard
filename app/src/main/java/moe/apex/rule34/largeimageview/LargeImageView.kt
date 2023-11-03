@@ -245,7 +245,8 @@ fun LargeImageView(
 
                                         else {
                                             val exc = result.exceptionOrNull()!!
-                                            println(exc)
+                                            exc.printStackTrace()
+
                                             if (exc is MustSetLocation) {
                                                 requester.value = true
                                             }

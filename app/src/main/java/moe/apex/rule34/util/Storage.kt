@@ -59,6 +59,7 @@ fun SaveDirectorySelection(requester: MutableState<Boolean>) {
     }
 }
 
+private val client = OkHttpClient()
 
 suspend fun downloadImage(context: Context, image: Image, location: Uri): Result<Boolean> {
     if (location == Uri.EMPTY) {
@@ -77,29 +78,28 @@ suspend fun downloadImage(context: Context, image: Image, location: Uri): Result
         ?: return Result.failure(MustSetLocation("Set save location and try again."))
 
     val outputUri = outputFile.uri
-    val stream = context.contentResolver.openOutputStream(outputUri)
-
-    val client = OkHttpClient()
     val request = Request.Builder().url(url).build()
 
-    return withContext(Dispatchers.IO) {
-        try {
-            val response = client.newCall(request).execute()
+    return context.contentResolver.openOutputStream(outputUri).use { file ->
+        withContext(Dispatchers.IO) {
+            try {
+                val response = client.newCall(request).execute()
 
-            return@withContext if (response.isSuccessful) {
+                if (!response.isSuccessful) {
+                    return@withContext Result.failure(Exception(response.code.toString()))
+                }
+
                 response.body?.source()?.use { source ->
-                    stream!!.sink().buffer().use { sink ->
+                    file!!.sink().buffer().use { sink ->
                         sink.writeAll(source)
                     }
                 }
-                stream?.close()
+
                 Result.success(true)
-            } else {
-                Result.failure(Exception(response.code.toString()))
+            } catch (e: IOException) {
+                e.printStackTrace()
+                return@withContext Result.failure(e)
             }
-        } catch (e: IOException) {
-            e.printStackTrace()
-            return@withContext Result.failure(e)
         }
     }
 }
