@@ -1,8 +1,13 @@
 package moe.apex.rule34.largeimageview
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -39,6 +44,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
@@ -53,12 +59,28 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
+import kotlinx.coroutines.launch
 import me.saket.telephoto.zoomable.ZoomSpec
 import me.saket.telephoto.zoomable.rememberZoomableState
 import me.saket.telephoto.zoomable.zoomable
 import moe.apex.rule34.R
 import moe.apex.rule34.image.Image
+import moe.apex.rule34.preferences.DataSaver
+import moe.apex.rule34.prefs
 import moe.apex.rule34.ui.theme.ProcrasturbatingTheme
+import moe.apex.rule34.util.MustSetLocation
+import moe.apex.rule34.util.SaveDirectorySelection
+import moe.apex.rule34.util.downloadImage
+
+
+
+private fun isUsingWiFi(context: Context): Boolean {
+    val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    val networkInfo = connectivityManager.activeNetwork
+    val networkCapabilities = connectivityManager.getNetworkCapabilities(networkInfo)
+
+    return networkCapabilities != null && networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+}
 
 
 @Composable
@@ -79,30 +101,34 @@ fun FullscreenLoadingSpinner() {
 @Composable
 fun LargeImageView(
     navController: NavController,
-    // hdImageUrlB64: String,
     initialPage: MutableIntState,
     shouldShowLargeImage: MutableState<Boolean>,
     allImages: SnapshotStateList<Image>
 ) {
-    // val hdImageUrl = String(Base64.getDecoder().decode(hdImageUrlB64))
-
-    /*
-    var initialPage = 0
-    allImages.forEachIndexed { index, img ->
-        if (img.highestQualityFormatUrl == hdImageUrl) {
-            initialPage = index
-        }
-    }
-    */
-
     val pagerState = rememberPagerState(
         initialPage = initialPage.intValue,
         initialPageOffsetFraction = 0f
     ) { allImages.size }
-    val canChangePage = remember { mutableStateOf(false) }
+    var canChangePage by remember { mutableStateOf(false) }
     val zoomState = rememberZoomableState(ZoomSpec(maxZoomFactor = 3.5f))
-    val forciblyShowBottomBar = remember { mutableStateOf(false) }
+    var forciblyShowBottomBar by remember { mutableStateOf(false) }
     var offset by remember { mutableStateOf(0.dp) }
+    val context = LocalContext.current
+    val prefs = context.prefs
+    val scope = rememberCoroutineScope()
+    var dataSaver by remember { mutableStateOf(DataSaver.AUTO) }
+    var storageLocation by remember { mutableStateOf(Uri.EMPTY) }
+    val isUsingWifi = isUsingWiFi(context)
+    val requester = remember { mutableStateOf(false) }
+    var isDownloading by remember { mutableStateOf(false) }
+
+
+    LaunchedEffect(true) {
+        prefs.getPreferences.collect {value ->
+            dataSaver = value.dataSaver
+            storageLocation = value.storageLocation
+        }
+    }
 
     // Large image view is an overlay rather than a new screen entirely so we need to override
     // the default back button behaviour so we don't get taken to the home page.
@@ -149,22 +175,25 @@ fun LargeImageView(
     }
 
     ProcrasturbatingTheme {
+        if (requester.value) {
+            SaveDirectorySelection(requester = requester)
+        }
+
         Scaffold(
             modifier = Modifier.offset(y=offset),
             bottomBar = {
                 AnimatedVisibility(
-                    visible = ((zoomState.zoomFraction ?: 0f) < 0.15f) || forciblyShowBottomBar.value,
+                    visible = ((zoomState.zoomFraction ?: 0f) < 0.15f) || forciblyShowBottomBar,
                     enter = slideInVertically(initialOffsetY = { it }),
                     exit = slideOutVertically(targetOffsetY = { it })
                 ) {
                     BottomAppBar(
                         actions = {
-                            val context = LocalContext.current
                             IconButton(
                                 onClick = { allImages[pagerState.settledPage].toggleHd() },
                                 modifier = Modifier.padding(start = 4.dp)
                             ) {
-                                val vectorIcon = if (allImages[pagerState.settledPage].preferHd.value) {
+                                val vectorIcon = if (allImages[pagerState.settledPage].preferHd) {
                                     R.drawable.ic_hd_enabled
                                 } else {
                                     R.drawable.ic_hd_disabled
@@ -198,13 +227,50 @@ fun LargeImageView(
                         },
                         floatingActionButton = {
                             FloatingActionButton(
-                                onClick = { /* TODO: This */ },
+                                onClick = {
+                                    if (!isDownloading) {
+                                        scope.launch {
+                                            isDownloading = true
+                                            val result: Result<Boolean> = downloadImage(
+                                                context,
+                                                allImages[pagerState.settledPage],
+                                                storageLocation
+                                            )
+
+                                            if (result.isSuccess) {
+                                                Toast.makeText(
+                                                    context,
+                                                    "Image saved.",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            } else {
+                                                val exc = result.exceptionOrNull()!!
+                                                exc.printStackTrace()
+
+                                                if (exc is MustSetLocation) {
+                                                    requester.value = true
+                                                }
+                                                Toast.makeText(
+                                                    context,
+                                                    exc.message,
+                                                    Toast.LENGTH_LONG
+                                                ).show()
+                                            }
+                                            isDownloading = false
+                                        }
+                                    }
+                                },
                                 elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
                             ) {
-                                Icon(
-                                    imageVector = ImageVector.vectorResource(id = R.drawable.ic_download),
-                                    contentDescription = "Save"
-                                )
+                                if (isDownloading) {
+                                    CircularProgressIndicator(Modifier.scale(0.5F))
+                                }
+                                else {
+                                    Icon(
+                                        imageVector = ImageVector.vectorResource(id = R.drawable.ic_download),
+                                        contentDescription = "Save"
+                                    )
+                                }
                             }
                         }
                     )
@@ -213,28 +279,36 @@ fun LargeImageView(
         ) {
             HorizontalPager(
                 state = pagerState,
-                userScrollEnabled = canChangePage.value,
+                userScrollEnabled = canChangePage,
                 beyondBoundsPageCount = 1
             ) {index ->
                 val currentImg = allImages[index]
-                val isInHd = remember { currentImg.preferHd }
+
+                if (currentImg.hdQualityOverride == null) {
+                    when (dataSaver) {
+                        DataSaver.ON -> currentImg.preferHd = false
+                        DataSaver.OFF -> currentImg.preferHd = true
+                        DataSaver.AUTO -> currentImg.preferHd = isUsingWifi
+                    }
+                }
 
                 Column(Modifier.zoomable(
                     zoomState,
                     onClick = {
-                        forciblyShowBottomBar.value = !forciblyShowBottomBar.value
+                        forciblyShowBottomBar = !forciblyShowBottomBar
                     }
                 )) {
-                    Row(modifier = Modifier
-                        .weight(1f, true)
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .statusBarsPadding()
-                        .padding(bottom = 80.dp), // To account for the bottom bar
+                    Row(
+                        modifier = Modifier
+                            .weight(1f, true)
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .statusBarsPadding()
+                            .padding(bottom = 80.dp), // To account for the bottom bar
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        if (isInHd.value) {
+                        if (currentImg.preferHd) {
                             LargeImage(imageUrl = currentImg.highestQualityFormatUrl)
                         } else {
                             LargeImage(imageUrl = currentImg.sampleUrl)
@@ -243,20 +317,11 @@ fun LargeImageView(
                 }
             }
 
-            /*
-            if (pagerState.settledPage != index) {
-                // Reset zoom when page is changed
-                LaunchedEffect(Unit) {
-                    zoomState.resetZoom(withAnimation = false)
-                }
-            }
-            */
-
             val isZoomedOut = (zoomState.zoomFraction ?: 0f) < 0.15f
             // Disable page changing while zoomed in and reset bottom bar state
             LaunchedEffect(isZoomedOut) {
-                canChangePage.value = isZoomedOut
-                forciblyShowBottomBar.value = false
+                canChangePage = isZoomedOut
+                forciblyShowBottomBar = false
             }
         }
     }

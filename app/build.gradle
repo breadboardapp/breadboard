@@ -11,8 +11,8 @@ android {
         applicationId "moe.apex.rule34"
         minSdk 26
         targetSdk 34
-        versionCode 200
-        versionName "2.0.0"
+        versionCode 210
+        versionName "2.1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -59,8 +59,10 @@ dependencies {
     implementation 'androidx.compose.ui:ui-graphics'
     implementation 'androidx.compose.ui:ui-tooling-preview'
     implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.documentfile:documentfile:1.0.1'
     implementation 'androidx.navigation:navigation-compose:2.7.4'
     implementation 'androidx.paging:paging-compose:3.2.1'
+    implementation 'androidx.datastore:datastore-preferences:1.0.0'
     implementation 'io.coil-kt:coil-compose:2.4.0'
     implementation 'me.saket.telephoto:zoomable:0.5.0'
     implementation 'io.github.fornewid:material-motion-compose-core:1.0.6'

@@ -34,8 +34,8 @@ import moe.apex.rule34.ui.theme.ProcrasturbatingTheme
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchResults(navController: NavController, searchQuery: String) {
-    val topAppBarScrollState = rememberTopAppBarState()
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarScrollState)
+    val topAppBarState = rememberTopAppBarState()
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
     val shouldShowLargeImage = remember { mutableStateOf(false) }
     val initialPage = remember { mutableIntStateOf(0) }
     val allImages = remember { mutableStateListOf<Image>() }

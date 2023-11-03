@@ -2,7 +2,9 @@ package moe.apex.rule34.image
 
 import android.os.Parcel
 import android.os.Parcelable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 
 class Image(
     val fileName: String,
@@ -14,7 +16,8 @@ class Image(
     val defaultUrl = sampleUrl.takeIf { it.isNotEmpty() } ?: fileUrl
     val hdAvailable = sampleUrl.isNotEmpty() && fileUrl.isNotEmpty() && sampleUrl != fileUrl
     val highestQualityFormatUrl = fileUrl.takeIf { it.isNotEmpty() } ?: sampleUrl
-    val preferHd = mutableStateOf(true)
+    var preferHd by mutableStateOf(false)
+    var hdQualityOverride: Boolean? by mutableStateOf(null)
 
     constructor(parcel: Parcel) : this(
         parcel.nextString(),
@@ -54,7 +57,11 @@ class Image(
         return other is Image && other.defaultUrl == defaultUrl
     }
 
-    fun toggleHd() {
-        preferHd.value = !preferHd.value
+    fun toggleHd(to: Boolean? = null) {
+        preferHd = when (to) {
+            null -> !preferHd
+            else -> to
+        }
+        hdQualityOverride = preferHd
     }
 }
