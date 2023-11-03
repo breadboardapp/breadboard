@@ -15,13 +15,27 @@ import androidx.core.app.ActivityCompat
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.CircularProgressDrawable
 import androidx.viewpager2.widget.ViewPager2
+import com.bugsnag.android.Bugsnag
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.jsibbold.zoomage.ZoomageView
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.devoxin.rule34.ImageSource
 import me.devoxin.rule34.R
+import me.devoxin.rule34.util.HttpUtil
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
 import java.io.File
+import java.io.IOException
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
 
 class ImageSwipingActivity : AuthenticatableActivity() {
     private val circularProgressDrawable: CircularProgressDrawable
@@ -66,56 +80,65 @@ class ImageSwipingActivity : AuthenticatableActivity() {
     }
 
     fun onSaveClick(v: View) {
-        val pager = findViewById<ViewPager2>(R.id.viewpager)
-        val currentPosition = pager.currentItem
-        val image = ImageSource.images[currentPosition]
+        MAIN_SCOPE.launch {
+            val pager = findViewById<ViewPager2>(R.id.viewpager)
+            val currentPosition = pager.currentItem
+            val image = ImageSource.images[currentPosition]
 
-        val imageUrl = image.highestQualityFormatUrl
-        val fileName = image.fileName
+            val imageUrl = image.highestQualityFormatUrl
+            val fileName = image.fileName
 
-        val compressFormat = when (image.fileFormat) {
-            "jpeg", "jpg", "gif" -> Bitmap.CompressFormat.JPEG
-            "png" -> Bitmap.CompressFormat.PNG
-            else -> throw UnsupportedOperationException("Unsupported file format")
-        }
-
-        val fileFormat = compressFormat.name.lowercase()
-
-        ActivityCompat.requestPermissions(this@ImageSwipingActivity, arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), 1)
-        val appDirectory = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "rule34")
-
-        if (appDirectory.exists() || appDirectory.mkdirs()) {
-            val output = File(appDirectory, "${fileName}_2.$fileFormat").apply {
-                if (exists()) delete()
+            val (fileFormat, contentType) = when (image.fileFormat) {
+                "gif" -> "gif" to "image/gif"
+                "jpeg", "jpg" -> "jpg" to "image/jpeg"
+                "png" -> "png" to "image/png"
+                else -> throw UnsupportedOperationException("Unsupported file format")
             }
 
-            MediaScannerConnection.scanFile(this, arrayOf(output.absolutePath), arrayOf("image/$fileFormat")) { _, _ ->
-                @Suppress("BlockingMethodInNonBlockingContext")
-                if (!output.createNewFile()) {
-                    return@scanFile Toast.makeText(this, "Failed to create file!", Toast.LENGTH_SHORT).show()
+            ActivityCompat.requestPermissions(this@ImageSwipingActivity, arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), 1)
+
+            val appDirectory = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "rule34")
+
+            if (appDirectory.exists() || appDirectory.mkdirs()) {
+                val output = File(appDirectory, "${fileName}_2.$fileFormat").apply {
+                    if (exists()) delete()
+                }
+
+                val scannerFuture = CompletableFuture<Void>()
+
+                MediaScannerConnection.scanFile(this@ImageSwipingActivity, arrayOf(output.absolutePath), arrayOf(contentType)) { _, _ ->
+                    // This is just a hack so we can return control back to the suspend function.
+                    scannerFuture.complete(null)
+                }
+
+                withContext(Dispatchers.IO) {
+                    scannerFuture.get(20, TimeUnit.SECONDS)
+
+                    if (!output.createNewFile()) {
+                        return@withContext Toast.makeText(this@ImageSwipingActivity, "Failed to create file!", Toast.LENGTH_SHORT).show()
+                    }
                 }
 
                 v.isEnabled = false
 
-                Glide.with(this)
-                    .asBitmap()
-                    .load(imageUrl)
-                    .into(object : CustomTarget<Bitmap>() {
-                        override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                            output.outputStream().use { stream ->
-                                resource.compress(compressFormat, 100, stream)
+                val result = withContext(Dispatchers.IO) {
+                    runCatching {
+                        HttpUtil.get(imageUrl).byteStream().get().use { src ->
+                            output.outputStream().use { file ->
+                                src.copyTo(file)
                             }
-
-                            Toast.makeText(this@ImageSwipingActivity, "Image saved", Toast.LENGTH_SHORT).show()
                         }
+                    }.onFailure {
+                        v.isEnabled = true
+                        Bugsnag.notify(it)
+                    }
+                }
 
-                        override fun onLoadFailed(errorDrawable: Drawable?) {
-                            v.isEnabled = true
-                            Toast.makeText(this@ImageSwipingActivity, "Failed to download image", Toast.LENGTH_SHORT).show()
-                        }
-
-                        override fun onLoadCleared(placeholder: Drawable?) = Unit
-                    })
+                if (result.isSuccess) {
+                    Toast.makeText(this@ImageSwipingActivity, "Image downloaded", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this@ImageSwipingActivity, "Failed to download image: ${result.exceptionOrNull()!!.message}", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
@@ -145,5 +168,9 @@ class ImageSwipingActivity : AuthenticatableActivity() {
             holder.setData(image.defaultUrl)
             holder.zv.tag = "View$position"
         }
+    }
+
+    companion object {
+        private val MAIN_SCOPE = CoroutineScope(Dispatchers.Main)
     }
 }
