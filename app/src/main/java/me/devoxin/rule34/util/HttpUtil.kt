@@ -17,19 +17,33 @@ object HttpUtil {
     }
 
     class HttpRequest(private val request: Request) {
-        fun string(): CompletableFuture<String> {
+        fun string() = doRequestExecute { res -> res.body()!!.string() }
+
+        fun byteStream() = doRequestExecute { res -> res.body()!!.byteStream() }
+
+        fun stringAsync(): CompletableFuture<String> {
             return CompletableFuture<String>().also {
-                doRequest(it) { res -> res.body()!!.string() }
+                doRequestAsync(it) { res -> res.body()!!.string() }
             }
         }
 
-        fun byteStream(): CompletableFuture<InputStream> {
+        fun byteStreamAsync(): CompletableFuture<InputStream> {
             return CompletableFuture<InputStream>().also {
-                doRequest(it) { res -> res.body()!!.byteStream() }
+                doRequestAsync(it) { res -> res.body()!!.byteStream() }
             }
         }
 
-        private fun <T> doRequest(future: CompletableFuture<T>, transform: (Response) -> T) {
+        private fun <T> doRequestExecute(transform: (Response) -> T): T {
+            val response = httpClient.newCall(request).execute()
+
+            if (!response.isSuccessful) {
+                throw IOException("Request was unsuccessful, response code: ${response.code()}")
+            }
+
+            return response.let(transform)
+        }
+
+        private fun <T> doRequestAsync(future: CompletableFuture<T>, transform: (Response) -> T) {
             httpClient.newCall(request).enqueue(object : Callback {
                 override fun onResponse(call: Call, response: Response) {
                     if (!response.isSuccessful) {

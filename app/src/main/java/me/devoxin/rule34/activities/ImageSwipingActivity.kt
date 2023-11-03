@@ -94,26 +94,17 @@ class ImageSwipingActivity : AuthenticatableActivity() {
                     if (exists()) delete()
                 }
 
-                val scannerFuture = CompletableFuture<Void>()
-
-                MediaScannerConnection.scanFile(this@ImageSwipingActivity, arrayOf(output.absolutePath), arrayOf(contentType)) { _, _ ->
-                    // This is just a hack so we can return control back to the suspend function.
-                    scannerFuture.complete(null)
-                }
-
-                withContext(Dispatchers.IO) {
-                    scannerFuture.get(20, TimeUnit.SECONDS)
-
-                    if (!output.createNewFile()) {
-                        return@withContext Toast.makeText(this@ImageSwipingActivity, "Failed to create file!", Toast.LENGTH_SHORT).show()
-                    }
-                }
-
                 v.isEnabled = false
+
+                val fileCreated = withContext(Dispatchers.IO) { output.createNewFile() }
+
+                if (!fileCreated) {
+                    return@launch Toast.makeText(this@ImageSwipingActivity, "Failed to create file!", Toast.LENGTH_SHORT).show()
+                }
 
                 val result = withContext(Dispatchers.IO) {
                     runCatching {
-                        HttpUtil.get(imageUrl).byteStream().get().use { src ->
+                        HttpUtil.get(imageUrl).byteStream().use { src ->
                             output.outputStream().use { file ->
                                 src.copyTo(file)
                             }
