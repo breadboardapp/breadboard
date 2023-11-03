@@ -67,14 +67,15 @@ suspend fun downloadImage(context: Context, image: Image, location: Uri): Result
     }
     val fileName = image.fileName
     val url = image.highestQualityFormatUrl
-    val compressFormat = when (image.fileFormat) {
-        "jpeg", "jpg", "gif" -> Bitmap.CompressFormat.JPEG
-        "png" -> Bitmap.CompressFormat.PNG
+    val mimeType = when (image.fileFormat) {
+        "jpeg", "jpg" -> "image/jpeg"
+        "png"         -> "image/png"
+        "gif"         -> "image/gif"
         else -> return Result.failure(UnsupportedFileType("Unsupported file format."))
-    }.name.lowercase()
+    }
 
     val outputFolder = DocumentFile.fromTreeUri(context, location)
-    val outputFile = outputFolder!!.createFile("image/$compressFormat", fileName)
+    val outputFile = outputFolder!!.createFile(mimeType, fileName)
         ?: return Result.failure(MustSetLocation("Set save location and try again."))
 
     val outputUri = outputFile.uri
