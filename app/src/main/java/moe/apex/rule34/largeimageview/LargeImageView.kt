@@ -228,35 +228,36 @@ fun LargeImageView(
                         floatingActionButton = {
                             FloatingActionButton(
                                 onClick = {
-                                    scope.launch {
-                                        isDownloading = true
-                                        val result: Result<Boolean> = downloadImage(
-                                            context,
-                                            allImages[pagerState.settledPage],
-                                            storageLocation
-                                        )
-
-                                        if (result.isSuccess) {
-                                            Toast.makeText(context,
-                                                "Image saved.",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-
-                                        else {
-                                            val exc = result.exceptionOrNull()!!
-                                            exc.printStackTrace()
-
-                                            if (exc is MustSetLocation) {
-                                                requester.value = true
-                                            }
-                                            Toast.makeText(
+                                    if (!isDownloading) {
+                                        scope.launch {
+                                            isDownloading = true
+                                            val result: Result<Boolean> = downloadImage(
                                                 context,
-                                                exc.message,
-                                                Toast.LENGTH_LONG
-                                            ).show()
+                                                allImages[pagerState.settledPage],
+                                                storageLocation
+                                            )
+
+                                            if (result.isSuccess) {
+                                                Toast.makeText(
+                                                    context,
+                                                    "Image saved.",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            } else {
+                                                val exc = result.exceptionOrNull()!!
+                                                exc.printStackTrace()
+
+                                                if (exc is MustSetLocation) {
+                                                    requester.value = true
+                                                }
+                                                Toast.makeText(
+                                                    context,
+                                                    exc.message,
+                                                    Toast.LENGTH_LONG
+                                                ).show()
+                                            }
+                                            isDownloading = false
                                         }
-                                        isDownloading = false
                                     }
                                 },
                                 elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()

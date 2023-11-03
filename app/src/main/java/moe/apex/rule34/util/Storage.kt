@@ -3,7 +3,6 @@ package moe.apex.rule34.util
 import android.app.Activity.RESULT_OK
 import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.widget.Toast
