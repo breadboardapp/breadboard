@@ -1,8 +1,6 @@
 package me.devoxin.rule34.activities
 
 import android.Manifest
-import android.graphics.Bitmap
-import android.graphics.drawable.Drawable
 import android.media.MediaScannerConnection
 import android.os.Bundle
 import android.os.Environment
@@ -17,23 +15,15 @@ import androidx.swiperefreshlayout.widget.CircularProgressDrawable
 import androidx.viewpager2.widget.ViewPager2
 import com.bugsnag.android.Bugsnag
 import com.bumptech.glide.Glide
-import com.bumptech.glide.request.target.CustomTarget
-import com.bumptech.glide.request.transition.Transition
 import com.jsibbold.zoomage.ZoomageView
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.devoxin.rule34.ImageSource
 import me.devoxin.rule34.R
 import me.devoxin.rule34.util.HttpUtil
-import okhttp3.Call
-import okhttp3.Callback
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.Response
+import me.devoxin.rule34.util.Scopes
 import java.io.File
-import java.io.IOException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 
@@ -80,7 +70,7 @@ class ImageSwipingActivity : AuthenticatableActivity() {
     }
 
     fun onSaveClick(v: View) {
-        MAIN_SCOPE.launch {
+        Scopes.MAIN.launch {
             val pager = findViewById<ViewPager2>(R.id.viewpager)
             val currentPosition = pager.currentItem
             val image = ImageSource.images[currentPosition]
@@ -89,9 +79,9 @@ class ImageSwipingActivity : AuthenticatableActivity() {
             val fileName = image.fileName
 
             val (fileFormat, contentType) = when (image.fileFormat) {
-                "gif" -> "gif" to "image/gif"
                 "jpeg", "jpg" -> "jpg" to "image/jpeg"
-                "png" -> "png" to "image/png"
+                "gif"         -> "gif" to "image/gif"
+                "png"         -> "png" to "image/png"
                 else -> throw UnsupportedOperationException("Unsupported file format")
             }
 
@@ -168,9 +158,5 @@ class ImageSwipingActivity : AuthenticatableActivity() {
             holder.setData(image.defaultUrl)
             holder.zv.tag = "View$position"
         }
-    }
-
-    companion object {
-        private val MAIN_SCOPE = CoroutineScope(Dispatchers.Main)
     }
 }

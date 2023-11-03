@@ -9,12 +9,11 @@ import android.widget.ImageView
 import androidx.recyclerview.widget.RecyclerView
 import com.bugsnag.android.Bugsnag
 import com.bumptech.glide.Glide
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import me.devoxin.rule34.ImageSource
 import me.devoxin.rule34.R
 import me.devoxin.rule34.activities.ImageSwipingActivity
+import me.devoxin.rule34.util.Scopes
 import java.io.IOException
 
 class RecyclerAdapter(
@@ -33,7 +32,7 @@ class RecyclerAdapter(
     }
 
     fun loadMore() {
-        MAIN_SCOPE.launch { loadMore0() }
+        Scopes.MAIN.launch { loadMore0() }
     }
 
     private suspend fun loadMore0() {
@@ -112,8 +111,4 @@ class RecyclerAdapter(
     }
 
     class ResultViewHolder(val view: ImageView): RecyclerView.ViewHolder(view)
-
-    companion object {
-        private val MAIN_SCOPE = CoroutineScope(Dispatchers.Main)
-    }
 }
