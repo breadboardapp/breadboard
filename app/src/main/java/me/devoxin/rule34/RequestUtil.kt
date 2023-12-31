@@ -11,12 +11,9 @@ import java.util.concurrent.CompletableFuture
 object RequestUtil {
     private val client = OkHttpClient()
 
-    fun get(url: String): CompletableFuture<String> {
+    fun get(url: String, apply: Request.Builder.() -> Unit = {}): CompletableFuture<String> {
         val future = CompletableFuture<String>()
-        val req = Request.Builder()
-                .url(url)
-                .get()
-                .build()
+        val req = Request.Builder().url(url).apply(apply).get().build()
 
         client.newCall(req).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {

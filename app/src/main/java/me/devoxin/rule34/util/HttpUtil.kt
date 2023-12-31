@@ -10,7 +10,9 @@ import java.io.InputStream
 import java.util.concurrent.CompletableFuture
 
 object HttpUtil {
-    private val httpClient = OkHttpClient()
+    private val httpClient = OkHttpClient.Builder()
+        .addInterceptor(UserAgentInterceptor())
+        .build()
 
     fun get(url: String): HttpRequest {
         return HttpRequest(Request.Builder().url(url).get().build())

@@ -38,7 +38,9 @@ class AutoCompleteAdapter(private val context: Context) : BaseAdapter(), Filtera
                 if (constraint != null) {
                     val tagExclusion = constraint.startsWith("-")
                     val query = constraint.replace("^-".toRegex(), "")
-                    val body = RequestUtil.get("https://rule34.xxx/public/autocomplete.php?q=$query").get()
+                    val body = RequestUtil.get("https://rule34.xxx/public/autocomplete.php?q=$query") {
+                        addHeader("Referer", "https://rule34.xxx/")
+                    }.get()
                     val results = JSONArray(body)
                     val resultCount = results.length()
                     val suggestions = ArrayList<TagSuggestion>()
