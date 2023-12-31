@@ -130,7 +130,9 @@ fun HomeScreen(navController: NavController) {
             val isExcluded = cleanedSearchString.startsWith("-")
             val query = cleanedSearchString
                 .replace("^-".toRegex(), "")
-            val body = RequestUtil.get("https://rule34.xxx/public/autocomplete.php?q=$query").get()
+            val body = RequestUtil.get("https://rule34.xxx/public/autocomplete.php?q=$query") {
+              addHeader("Referer", "https://rule34.xxx/")
+            }.get()
             val results = JSONArray(body)
             val resultCount = results.length()
 
