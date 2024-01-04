@@ -130,7 +130,9 @@ fun HomeScreen(navController: NavController) {
             val isExcluded = cleanedSearchString.startsWith("-")
             val query = cleanedSearchString
                 .replace("^-".toRegex(), "")
-            val body = RequestUtil.get("https://rule34.xxx/public/autocomplete.php?q=$query").get()
+            val body = RequestUtil.get("https://rule34.xxx/public/autocomplete.php?q=$query") {
+              addHeader("Referer", "https://rule34.xxx/")
+            }.get()
             val results = JSONArray(body)
             val resultCount = results.length()
 
@@ -242,113 +244,106 @@ fun HomeScreen(navController: NavController) {
     ProcrasturbatingTheme {
         val scope = rememberCoroutineScope()
 
-        // I'd like to move the top app bar to the topBar param in Scaffold but the padding gets
-        // messed up and I'd rather keep everything as is because it looks good.
-        Scaffold(Modifier.fillMaxSize()) {
-            Column {
+        Scaffold(
+            topBar = {
                 LargeTopAppBar(
                     title = { Text("Procrasturbating") },
                     actions = {
-                        IconButton(
-                            onClick = {
-                                navController.navigate("settings")
-                            }
-                        ) {
+                        IconButton(onClick = { navController.navigate("settings") }) {
                             Icon(imageVector = Icons.Outlined.Settings, contentDescription = "Settings")
                         }
                     }
                 )
-
+            }
+        ) {
+            Column(modifier = Modifier.padding(it)) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp)
-                        .align(Alignment.CenterHorizontally)
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).align(Alignment.CenterHorizontally)
                 ) {
                     OutlinedTextField(
                         modifier = Modifier.weight(1f, true),
                         value = searchString,
                         onValueChange = {
-                            searchString = it
-                            cleanedSearchString = searchString
-                                .trim()
-                                .replace(" ", "_")
-                        },
-                        placeholder = { Text("Search Tags") },
-                        shape = RoundedCornerShape(16.dp),
-                        singleLine = true,
-                        keyboardActions = KeyboardActions(
-                            onDone = {
-                                if (searchString.isNotEmpty()) {
-                                    if (mostRecentSuggestions.isNotEmpty()) {
-                                        addToFilter(mostRecentSuggestions[0])
-                                        searchString = ""
-                                        lastValidSearchString = ""
-                                        shouldShowSuggestions = false
-                                    }
-                                    else {
-                                        if (mostRecentSuggestions.isEmpty()) {
-                                            Toast.makeText(
-                                                context,
-                                                "No matching tags",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
+                                searchString = it
+                                cleanedSearchString = searchString
+                                    .trim()
+                                    .replace(" ", "_")
+                            },
+                            placeholder = { Text("Search Tags") },
+                            shape = RoundedCornerShape(16.dp),
+                            singleLine = true,
+                            keyboardActions = KeyboardActions(
+                                onDone = {
+                                    if (searchString.isNotEmpty()) {
+                                        if (mostRecentSuggestions.isNotEmpty()) {
+                                            addToFilter(mostRecentSuggestions[0])
+                                            searchString = ""
+                                            lastValidSearchString = ""
+                                            shouldShowSuggestions = false
+                                        }
+                                        else {
+                                            if (mostRecentSuggestions.isEmpty()) {
+                                                Toast.makeText(
+                                                    context,
+                                                    "No matching tags",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            }
                                         }
                                     }
+                                    else { activateSearch() }
                                 }
-                                else { activateSearch() }
-                            }
-                        ),
-                    )
-
-                    Spacer(modifier = Modifier.size(12.dp))
-
-                    FloatingActionButton(
-                        onClick = { activateSearch() },
-                        elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Sharp.Search,
-                            contentDescription = "Search"
+                            ),
                         )
+
+                        Spacer(modifier = Modifier.size(12.dp))
+
+                        FloatingActionButton(
+                            onClick = { activateSearch() },
+                            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Sharp.Search,
+                                contentDescription = "Search"
+                            )
+                        }
                     }
-                }
 
-                Spacer(Modifier.size(8.dp))
+                    Spacer(Modifier.size(8.dp))
 
-                Box {
-                    Column {
-                        AnimatedVisibility(tagChipList.isNotEmpty()) {
-                            Row(
-                                modifier = Modifier.horizontalScroll(scrollState)
-                            ) {
-                                Spacer(Modifier.size(16.dp))
+                    Box {
+                        Column {
+                            AnimatedVisibility(tagChipList.isNotEmpty()) {
+                                Row(
+                                    modifier = Modifier.horizontalScroll(scrollState)
+                                ) {
+                                    Spacer(Modifier.size(16.dp))
 
-                                for (t in tagChipList) {
-                                    FilterChip(
-                                        interactionSource = interactionSource,
-                                        label = { Text(t.formattedLabel) },
-                                        selected = !t.isExcluded,
-                                        onClick = { tagChipList.remove(t) }
-                                    )
+                                    for (t in tagChipList) {
+                                        FilterChip(
+                                            interactionSource = interactionSource,
+                                            label = { Text(t.formattedLabel) },
+                                            selected = !t.isExcluded,
+                                            onClick = { tagChipList.remove(t) }
+                                        )
+
+                                        Spacer(modifier = Modifier.size(8.dp))
+                                    }
 
                                     Spacer(modifier = Modifier.size(8.dp))
                                 }
-
-                                Spacer(modifier = Modifier.size(8.dp))
                             }
-                        }
-                        Column {
-                            AnimatedVisibility(
-                                shouldShowSuggestions,
-                                //enter = expandVertically(),
-                                //exit = shrinkVertically()
-                            ) {
-                                AutoCompleteTagResults(mostRecentSuggestions)
+                            Column {
+                                AnimatedVisibility(
+                                    shouldShowSuggestions,
+                                    //enter = expandVertically(),
+                                    //exit = shrinkVertically()
+                                ) {
+                                    AutoCompleteTagResults(mostRecentSuggestions)
+                                }
                             }
                         }
                     }
-                }
 
                 // I don't like this
                 LaunchedEffect(key1 = cleanedSearchString) {
