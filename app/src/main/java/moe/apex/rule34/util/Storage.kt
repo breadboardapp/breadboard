@@ -44,7 +44,7 @@ fun SaveDirectorySelection(requester: MutableState<Boolean>) {
                     val tree = DocumentsContract.buildDocumentUriUsingTree(
                         selectedUri, DocumentsContract.getTreeDocumentId(selectedUri)
                     )
-                    scope.launch { prefs.updateStorageLocation(tree) }
+                    scope.launch(Dispatchers.IO) { prefs.updateStorageLocation(tree) }
                 }
             } else {
                 Toast.makeText(context, "Nothing selected.", Toast.LENGTH_SHORT).show()
