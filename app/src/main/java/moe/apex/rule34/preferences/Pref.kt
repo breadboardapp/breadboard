@@ -90,7 +90,6 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
 
     @OptIn(ExperimentalSerializationApi::class)
     private fun mapUserPreferences(preferences: Preferences): Prefs {
-        // Get the sort order from preferences and convert it to a [SortOrder] object
         val dataSaver = DataSaver.valueOf(
                 preferences[PreferenceKeys.DATA_SAVER] ?: DataSaver.AUTO.name
         )

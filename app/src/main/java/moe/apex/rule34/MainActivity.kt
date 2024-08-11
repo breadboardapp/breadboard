@@ -343,11 +343,7 @@ fun HomeScreen(navController: NavController) {
                                 }
                             }
                             Column {
-                                AnimatedVisibility(
-                                    shouldShowSuggestions,
-                                    //enter = expandVertically(),
-                                    //exit = shrinkVertically()
-                                ) {
+                                AnimatedVisibility(shouldShowSuggestions,) {
                                     AutoCompleteTagResults(mostRecentSuggestions)
                                 }
                             }
