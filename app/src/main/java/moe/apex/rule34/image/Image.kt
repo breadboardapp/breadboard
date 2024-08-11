@@ -3,7 +3,9 @@ package moe.apex.rule34.image
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class Image(
     val fileName: String,
     val fileFormat: String,

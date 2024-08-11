@@ -6,7 +6,6 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.PredictiveBackHandler
@@ -31,7 +30,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
@@ -41,6 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,12 +59,14 @@ import androidx.navigation.NavController
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import me.saket.telephoto.zoomable.ZoomSpec
 import me.saket.telephoto.zoomable.rememberZoomableState
 import me.saket.telephoto.zoomable.zoomable
 import moe.apex.rule34.R
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.DataSaver
+import moe.apex.rule34.preferences.Prefs
 import moe.apex.rule34.prefs
 import moe.apex.rule34.ui.theme.ProcrasturbatingTheme
 import moe.apex.rule34.util.MustSetLocation
@@ -97,13 +98,13 @@ fun FullscreenLoadingSpinner() {
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Suppress("UNUSED_PARAMETER")
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun LargeImageView(
     navController: NavController,
     initialPage: MutableIntState,
     shouldShowLargeImage: MutableState<Boolean>,
-    allImages: SnapshotStateList<Image>
+    allImages: List<Image>
 ) {
     val pagerState = rememberPagerState(
         initialPage = initialPage.intValue,
@@ -114,21 +115,27 @@ fun LargeImageView(
     var forciblyShowBottomBar by remember { mutableStateOf(false) }
     var offset by remember { mutableStateOf(0.dp) }
     val context = LocalContext.current
-    val prefs = context.prefs
     val scope = rememberCoroutineScope()
-    var dataSaver by remember { mutableStateOf(DataSaver.AUTO) }
-    var storageLocation by remember { mutableStateOf(Uri.EMPTY) }
     val isUsingWifi = isUsingWiFi(context)
     val requester = remember { mutableStateOf(false) }
     var isDownloading by remember { mutableStateOf(false) }
 
-
-    LaunchedEffect(true) {
-        prefs.getPreferences.collect {value ->
-            dataSaver = value.dataSaver
-            storageLocation = value.storageLocation
-        }
+    if (allImages.isEmpty()) {
+        shouldShowLargeImage.value = false
+        return
     }
+
+    runBlocking {
+        if (pagerState.currentPage >= allImages.size)
+            pagerState.scrollToPage(allImages.size - 1)
+    }
+
+    val currentImage = allImages[pagerState.currentPage]
+
+    val prefs by context.prefs.getPreferences.collectAsState(Prefs.DEFAULT)
+    val dataSaver = prefs.dataSaver
+    val storageLocation = prefs.storageLocation
+    val favouriteImages = prefs.favouriteImages
 
     // Large image view is an overlay rather than a new screen entirely so we need to override
     // the default back button behaviour so we don't get taken to the home page.
@@ -190,10 +197,10 @@ fun LargeImageView(
                     BottomAppBar(
                         actions = {
                             IconButton(
-                                onClick = { allImages[pagerState.settledPage].toggleHd() },
+                                onClick = { currentImage.toggleHd() },
                                 modifier = Modifier.padding(start = 4.dp)
                             ) {
-                                val vectorIcon = if (allImages[pagerState.settledPage].preferHd) {
+                                val vectorIcon = if (currentImage.preferHd) {
                                     R.drawable.ic_hd_enabled
                                 } else {
                                     R.drawable.ic_hd_disabled
@@ -204,15 +211,30 @@ fun LargeImageView(
                                     modifier = Modifier.scale(1.2F)
                                 )
                             }
-                            IconButton(onClick = { /*TODO*/ }) {
-                                Icon(ImageVector.vectorResource(id = R.drawable.ic_star_hollow),
-                                    contentDescription = "Add to favourites")
+                            if (currentImage in favouriteImages) {
+                                IconButton(onClick = {
+                                    scope.launch { context.prefs.removeFavouriteImage(currentImage) }
+                                }) {
+                                    Icon(
+                                        imageVector = ImageVector.vectorResource(id = R.drawable.ic_star_filled),
+                                        contentDescription = "Remove from favourites"
+                                    )
+                                }
+                            } else {
+                                IconButton(onClick = {
+                                    scope.launch { context.prefs.addFavouriteImage(currentImage) }
+                                }) {
+                                    Icon(
+                                        imageVector = ImageVector.vectorResource(id = R.drawable.ic_star_hollow),
+                                        contentDescription = "Add to favourites"
+                                    )
+                                }
                             }
                             IconButton(
                                 onClick = {
                                     val sendIntent: Intent = Intent().apply {
                                         action = Intent.ACTION_SEND
-                                        putExtra(Intent.EXTRA_TEXT, allImages[pagerState.settledPage].highestQualityFormatUrl)
+                                        putExtra(Intent.EXTRA_TEXT, currentImage.highestQualityFormatUrl)
                                         type = "text/plain"
                                     }
                                     val shareIntent = Intent.createChooser(sendIntent, null)
@@ -233,7 +255,7 @@ fun LargeImageView(
                                             isDownloading = true
                                             val result: Result<Boolean> = downloadImage(
                                                 context,
-                                                allImages[pagerState.settledPage],
+                                                currentImage,
                                                 storageLocation
                                             )
 

@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imeNestedScroll
 import androidx.compose.foundation.layout.imePadding
@@ -58,6 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -74,6 +74,7 @@ import androidx.navigation.navArgument
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import moe.apex.rule34.detailview.SearchResults
+import moe.apex.rule34.favourites.FavouritesPage
 import moe.apex.rule34.preferences.PreferencesScreen
 import moe.apex.rule34.preferences.UserPreferencesRepository
 import moe.apex.rule34.tag.TagSuggestion
@@ -249,6 +250,11 @@ fun HomeScreen(navController: NavController) {
                 LargeTopAppBar(
                     title = { Text("Procrasturbating") },
                     actions = {
+                        IconButton(onClick = { navController.navigate("favourite_images") }) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_star_hollow),
+                                contentDescription = "Favourite images")
+                        }
                         IconButton(onClick = { navController.navigate("settings") }) {
                             Icon(imageVector = Icons.Outlined.Settings, contentDescription = "Settings")
                         }
@@ -258,7 +264,10 @@ fun HomeScreen(navController: NavController) {
         ) {
             Column(modifier = Modifier.padding(it)) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).align(Alignment.CenterHorizontally)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp)
+                        .align(Alignment.CenterHorizontally)
                 ) {
                     OutlinedTextField(
                         modifier = Modifier.weight(1f, true),
@@ -413,6 +422,7 @@ fun Navigation(navController: NavHostController) {
                     )
                 }
                 composable("settings") { PreferencesScreen(navController)}
+                composable("favourite_images") { FavouritesPage(navController)}
             }
         }
     }
