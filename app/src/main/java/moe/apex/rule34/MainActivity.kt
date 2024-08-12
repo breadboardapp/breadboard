@@ -46,12 +46,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -76,6 +78,7 @@ import kotlinx.coroutines.delay
 import moe.apex.rule34.detailview.SearchResults
 import moe.apex.rule34.favourites.FavouritesPage
 import moe.apex.rule34.preferences.PreferencesScreen
+import moe.apex.rule34.preferences.Prefs
 import moe.apex.rule34.preferences.UserPreferencesRepository
 import moe.apex.rule34.tag.TagSuggestion
 import moe.apex.rule34.ui.theme.ProcrasturbatingTheme
@@ -116,12 +119,20 @@ fun HomeScreen(navController: NavController) {
     val scrollState = rememberScrollState()
     val interactionSource = remember { MutableInteractionSource() }
     val context = LocalContext.current
+    val excludeAi = context.prefs.getPreferences
+        .collectAsState(initial = Prefs.DEFAULT).value.excludeAi
+    var forciblyAllowedAi by remember { mutableStateOf(false) }
 
 
     fun addToFilter(tag: TagSuggestion) {
-        if (!tagChipList.contains(tag)) {
-            tagChipList.add(tag)
-        }
+        val index = tagChipList.getIndexByName(tag.value)
+        Log.i("index", index.toString())
+        if (index != null) {
+            // For some reason `tagChipList[index] = tag` doesn't update in the UI
+            tagChipList.removeAt(index)
+            tagChipList.add(index, tag)
+            return
+        } else tagChipList.add(tag)
     }
 
 
@@ -241,6 +252,13 @@ fun HomeScreen(navController: NavController) {
         }
     }
 
+    fun addAiExcludedTag() {
+        if (excludeAi && !forciblyAllowedAi && tagChipList.getIndexByName("ai_generated") == null) {
+            val tag = TagSuggestion("", "ai_generated", "", true)
+            tagChipList.add(0, tag)
+        }
+    }
+    addAiExcludedTag()
 
     ProcrasturbatingTheme {
         val scope = rememberCoroutineScope()
@@ -331,9 +349,15 @@ fun HomeScreen(navController: NavController) {
                                     for (t in tagChipList) {
                                         FilterChip(
                                             interactionSource = interactionSource,
-                                            label = { Text(t.formattedLabel) },
+                                            label = { Text(t.value) },
                                             selected = !t.isExcluded,
-                                            onClick = { tagChipList.remove(t) }
+                                            onClick = {
+                                                if (t.value == "ai_generated") {
+                                                    if (t.isExcluded) forciblyAllowedAi = true
+                                                    else addAiExcludedTag()
+                                                }
+                                                tagChipList.remove(t)
+                                            }
                                         )
 
                                         Spacer(modifier = Modifier.size(8.dp))
@@ -422,4 +446,13 @@ fun Navigation(navController: NavHostController) {
             }
         }
     }
+}
+
+
+private fun SnapshotStateList<TagSuggestion>.getIndexByName(name: String): Int? {
+    this.forEachIndexed { index, tag ->
+        Log.i("", "${tag.value} $name")
+        if (tag.value == name) return index
+    }
+    return null
 }

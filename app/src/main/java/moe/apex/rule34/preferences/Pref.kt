@@ -4,6 +4,7 @@ import android.net.Uri
 import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.byteArrayPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
@@ -20,6 +21,14 @@ import moe.apex.rule34.image.Image
 import java.io.IOException
 
 
+data object PrefNames {
+    const val DATA_SAVER = "data_saver"
+    const val STORAGE_LOCATION = "storage_location"
+    const val FAVOURITE_IMAGES = "favourite_images"
+    const val EXCLUDE_AI = "exclude_ai"
+}
+
+
 enum class DataSaver(val description: String) {
     ON ("Always"),
     OFF ("Never"),
@@ -30,19 +39,21 @@ enum class DataSaver(val description: String) {
 data class Prefs(
     val dataSaver: DataSaver,
     val storageLocation: Uri,
-    val favouriteImages: List<Image>
+    val favouriteImages: List<Image>,
+    val excludeAi: Boolean
 ) {
     companion object {
-        val DEFAULT = Prefs(DataSaver.AUTO, Uri.EMPTY, emptyList())
+        val DEFAULT = Prefs(DataSaver.AUTO, Uri.EMPTY, emptyList(), false)
     }
 }
 
 
 class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
     private object PreferenceKeys {
-        val DATA_SAVER = stringPreferencesKey("data_saver")
-        val STORAGE_LOCATION = stringPreferencesKey("storage_location")
-        val FAVOURITE_IMAGES = byteArrayPreferencesKey("favourite_images")
+        val DATA_SAVER = stringPreferencesKey(PrefNames.DATA_SAVER)
+        val STORAGE_LOCATION = stringPreferencesKey(PrefNames.STORAGE_LOCATION)
+        val FAVOURITE_IMAGES = byteArrayPreferencesKey(PrefNames.FAVOURITE_IMAGES)
+        val EXCLUDE_AI = booleanPreferencesKey(PrefNames.EXCLUDE_AI)
     }
 
     val getPreferences: Flow<Prefs> = dataStore.data
@@ -88,6 +99,12 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         updateFavouriteImages(images)
     }
 
+    suspend fun updateExcludeAi(to: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferenceKeys.EXCLUDE_AI] = to
+        }
+    }
+
     @OptIn(ExperimentalSerializationApi::class)
     private fun mapUserPreferences(preferences: Preferences): Prefs {
         val dataSaver = DataSaver.valueOf(
@@ -96,8 +113,9 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val storageLocation = Uri.parse(preferences[PreferenceKeys.STORAGE_LOCATION] ?: "")
         val favouriteImagesRaw = preferences[PreferenceKeys.FAVOURITE_IMAGES]
         val favouriteImages: List<Image> = favouriteImagesRaw?.let { Cbor.decodeFromByteArray(it) } ?: emptyList()
+        val excludeAi = preferences[PreferenceKeys.EXCLUDE_AI] ?: false
 
-        return Prefs(dataSaver, storageLocation, favouriteImages)
+        return Prefs(dataSaver, storageLocation, favouriteImages, excludeAi)
     }
 
 }

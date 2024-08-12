@@ -28,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
@@ -56,7 +57,7 @@ import moe.apex.rule34.util.TitleBar
 
 
 @Composable
-fun Heading(
+private fun Heading(
     modifier: Modifier = Modifier,
     text: String
 ) {
@@ -69,11 +70,12 @@ fun Heading(
     )
 }
 
+
 @Composable
-fun TitleSummary(
+private fun TitleSummary(
     modifier: Modifier = Modifier,
     title: String,
-    summary: String
+    summary: String? = null
 ) {
     Column(
         modifier = modifier,
@@ -83,13 +85,35 @@ fun TitleSummary(
             text = title,
             modifier = Modifier.padding(top = 12.dp, start = 16.dp, end = 16.dp)
         )
-        Text(
-            summary,
-            color = Color.Gray,
-            fontSize = 14.sp,
-            lineHeight = 16.sp,
-            modifier = Modifier.padding(bottom = 12.dp, start = 16.dp, end = 16.dp)
-        )
+        if (summary != null) {
+            Text(
+                summary,
+                color = Color.Gray,
+                fontSize = 14.sp,
+                lineHeight = 16.sp,
+                modifier = Modifier.padding(bottom = 12.dp, start = 16.dp, end = 16.dp)
+            )
+        }
+    }
+}
+
+
+@Composable
+private fun SwitchPref(
+    checked: Boolean,
+    title: String,
+    summary: String? = null,
+    onToggle: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onToggle(!checked) },
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        TitleSummary(Modifier.weight(1f), title, summary)
+        Switch(checked, onToggle, Modifier.padding(end = 16.dp))
     }
 }
 
@@ -106,6 +130,7 @@ fun PreferencesScreen(navController: NavController) {
     val currentSettings by prefs.getPreferences.collectAsState(Prefs.DEFAULT)
     val dataSaver = currentSettings.dataSaver
     val storageLocation = currentSettings.storageLocation
+    val excludeAi = currentSettings.excludeAi
 
     ProcrasturbatingTheme {
         Scaffold(
@@ -186,7 +211,7 @@ fun PreferencesScreen(navController: NavController) {
                     Spacer(Modifier.width(16.dp))
                     Text(
                         text = "When enabled, data saver will load lower resolution images by default. " +
-                                "Downloads will always be in the maximum quality.",
+                               "Downloads will always be in the maximum quality.",
                         fontSize = 14.sp,
                         lineHeight = 16.sp,
                         color = Color.Gray
@@ -206,6 +231,18 @@ fun PreferencesScreen(navController: NavController) {
                 )
                 if (storageLocationPromptLaunched.value) {
                     SaveDirectorySelection(storageLocationPromptLaunched)
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                Heading(text = "Searching")
+                SwitchPref(
+                    checked = excludeAi,
+                    title = "Hide AI-generated images",
+                    summary = "Attempt to remove AI-generated images by excluding the " +
+                              "'ai_generated' tag in search queries by default."
+                ) {
+                    scope.launch { prefs.updateExcludeAi(it) }
                 }
             }
         }
