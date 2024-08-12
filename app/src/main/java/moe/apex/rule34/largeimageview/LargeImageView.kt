@@ -116,7 +116,7 @@ fun LargeImageView(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val isUsingWifi = isUsingWiFi(context)
-    val requester = remember { mutableStateOf(false) }
+    val storageLocationPromptLaunched = remember { mutableStateOf(false) }
     var isDownloading by remember { mutableStateOf(false) }
 
     if (allImages.isEmpty()) {
@@ -181,8 +181,8 @@ fun LargeImageView(
     }
 
     ProcrasturbatingTheme {
-        if (requester.value) {
-            SaveDirectorySelection(requester = requester)
+        if (storageLocationPromptLaunched.value) {
+            SaveDirectorySelection(storageLocationPromptLaunched)
         }
 
         Scaffold(
@@ -269,7 +269,7 @@ fun LargeImageView(
                                                 exc.printStackTrace()
 
                                                 if (exc is MustSetLocation) {
-                                                    requester.value = true
+                                                    storageLocationPromptLaunched.value = true
                                                 }
                                                 Toast.makeText(
                                                     context,

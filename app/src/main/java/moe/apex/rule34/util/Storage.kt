@@ -31,7 +31,7 @@ class UnsupportedFileType(message: String): Exception(message)
 
 
 @Composable
-fun SaveDirectorySelection(requester: MutableState<Boolean>) {
+fun SaveDirectorySelection(storageLocationPromptLaunched: MutableState<Boolean>) {
     val context = LocalContext.current
     val prefs = context.prefs
     val scope = rememberCoroutineScope()
@@ -49,7 +49,7 @@ fun SaveDirectorySelection(requester: MutableState<Boolean>) {
             } else {
                 Toast.makeText(context, "Nothing selected.", Toast.LENGTH_SHORT).show()
             }
-            requester.value = false
+            storageLocationPromptLaunched.value = false
         }
 
     val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
