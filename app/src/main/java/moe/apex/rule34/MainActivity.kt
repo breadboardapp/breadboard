@@ -13,13 +13,11 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imeNestedScroll
 import androidx.compose.foundation.layout.imePadding
@@ -33,11 +31,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.sharp.Search
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
@@ -47,17 +45,20 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -74,7 +75,9 @@ import androidx.navigation.navArgument
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import moe.apex.rule34.detailview.SearchResults
+import moe.apex.rule34.favourites.FavouritesPage
 import moe.apex.rule34.preferences.PreferencesScreen
+import moe.apex.rule34.preferences.Prefs
 import moe.apex.rule34.preferences.UserPreferencesRepository
 import moe.apex.rule34.tag.TagSuggestion
 import moe.apex.rule34.ui.theme.ProcrasturbatingTheme
@@ -113,14 +116,20 @@ fun HomeScreen(navController: NavController) {
     var cleanedSearchString by remember { mutableStateOf("") }
     val mostRecentSuggestions = remember { mutableStateListOf<TagSuggestion>() }
     val scrollState = rememberScrollState()
-    val interactionSource = MutableInteractionSource()
     val context = LocalContext.current
+    val excludeAi = context.prefs.getPreferences
+        .collectAsState(initial = Prefs.DEFAULT).value.excludeAi
+    var forciblyAllowedAi by remember { mutableStateOf(false) }
 
 
     fun addToFilter(tag: TagSuggestion) {
-        if (!tagChipList.contains(tag)) {
-            tagChipList.add(tag)
-        }
+        val index = tagChipList.getIndexByName(tag.value)
+        if (index != null) {
+            // For some reason `tagChipList[index] = tag` doesn't update in the UI
+            tagChipList.removeAt(index)
+            tagChipList.add(index, tag)
+            return
+        } else tagChipList.add(tag)
     }
 
 
@@ -154,16 +163,14 @@ fun HomeScreen(navController: NavController) {
     @Composable
     fun TagListEntry(tag: TagSuggestion) {
         Column(
-            Modifier.clickable(
-                onClick = {
-                    searchString = ""
-                    cleanedSearchString = ""
-                    lastValidSearchString = ""
-                    shouldShowSuggestions = false
-                    addToFilter(tag)
-                    mostRecentSuggestions.clear()
-                }
-            )
+            modifier = Modifier.clickable {
+                searchString = ""
+                cleanedSearchString = ""
+                lastValidSearchString = ""
+                shouldShowSuggestions = false
+                addToFilter(tag)
+                mostRecentSuggestions.clear()
+            }
         ) {
             Text(
                 modifier = Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp),
@@ -176,7 +183,7 @@ fun HomeScreen(navController: NavController) {
                 fontSize = 12.sp
             )
 
-            Divider()
+            HorizontalDivider()
         }
     }
 
@@ -240,6 +247,13 @@ fun HomeScreen(navController: NavController) {
         }
     }
 
+    fun addAiExcludedTag() {
+        if (excludeAi && !forciblyAllowedAi && tagChipList.getIndexByName("ai_generated") == null) {
+            val tag = TagSuggestion("", "ai_generated", "", true)
+            tagChipList.add(0, tag)
+        }
+    }
+    addAiExcludedTag()
 
     ProcrasturbatingTheme {
         val scope = rememberCoroutineScope()
@@ -249,6 +263,11 @@ fun HomeScreen(navController: NavController) {
                 LargeTopAppBar(
                     title = { Text("Procrasturbating") },
                     actions = {
+                        IconButton(onClick = { navController.navigate("favourite_images") }) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_star_hollow),
+                                contentDescription = "Favourite images")
+                        }
                         IconButton(onClick = { navController.navigate("settings") }) {
                             Icon(imageVector = Icons.Outlined.Settings, contentDescription = "Settings")
                         }
@@ -258,102 +277,102 @@ fun HomeScreen(navController: NavController) {
         ) {
             Column(modifier = Modifier.padding(it)) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).align(Alignment.CenterHorizontally)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp)
+                        .align(Alignment.CenterHorizontally)
                 ) {
                     OutlinedTextField(
                         modifier = Modifier.weight(1f, true),
                         value = searchString,
                         onValueChange = {
-                                searchString = it
-                                cleanedSearchString = searchString
-                                    .trim()
-                                    .replace(" ", "_")
-                            },
-                            placeholder = { Text("Search Tags") },
-                            shape = RoundedCornerShape(16.dp),
-                            singleLine = true,
-                            keyboardActions = KeyboardActions(
-                                onDone = {
-                                    if (searchString.isNotEmpty()) {
-                                        if (mostRecentSuggestions.isNotEmpty()) {
-                                            addToFilter(mostRecentSuggestions[0])
-                                            searchString = ""
-                                            lastValidSearchString = ""
-                                            shouldShowSuggestions = false
-                                        }
-                                        else {
-                                            if (mostRecentSuggestions.isEmpty()) {
-                                                Toast.makeText(
-                                                    context,
-                                                    "No matching tags",
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
-                                            }
+                            searchString = it
+                            cleanedSearchString = searchString
+                                .trim()
+                                .replace(" ", "_")
+                        },
+                        placeholder = { Text("Search Tags") },
+                        shape = RoundedCornerShape(16.dp),
+                        singleLine = true,
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                if (searchString.isNotEmpty()) {
+                                    if (mostRecentSuggestions.isNotEmpty()) {
+                                        addToFilter(mostRecentSuggestions[0])
+                                        searchString = ""
+                                        lastValidSearchString = ""
+                                        shouldShowSuggestions = false
+                                    } else {
+                                        if (mostRecentSuggestions.isEmpty()) {
+                                            Toast.makeText(
+                                                context,
+                                                "No matching tags",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
                                         }
                                     }
-                                    else { activateSearch() }
+                                } else {
+                                    activateSearch()
                                 }
-                            ),
+                            }
+                        ),
+                    )
+
+                    Spacer(modifier = Modifier.size(12.dp))
+
+                    FloatingActionButton(
+                        onClick = { activateSearch() },
+                        elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Sharp.Search,
+                            contentDescription = "Search"
                         )
-
-                        Spacer(modifier = Modifier.size(12.dp))
-
-                        FloatingActionButton(
-                            onClick = { activateSearch() },
-                            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Sharp.Search,
-                                contentDescription = "Search"
-                            )
-                        }
                     }
+                }
 
-                    Spacer(Modifier.size(8.dp))
+                Spacer(Modifier.size(8.dp))
 
-                    Box {
-                        Column {
-                            AnimatedVisibility(tagChipList.isNotEmpty()) {
-                                Row(
-                                    modifier = Modifier.horizontalScroll(scrollState)
-                                ) {
-                                    Spacer(Modifier.size(16.dp))
+                Box {
+                    Column {
+                        AnimatedVisibility(tagChipList.isNotEmpty()) {
+                            Row(
+                                modifier = Modifier.horizontalScroll(scrollState)
+                            ) {
+                                Spacer(Modifier.size(16.dp))
 
-                                    for (t in tagChipList) {
-                                        FilterChip(
-                                            interactionSource = interactionSource,
-                                            label = { Text(t.formattedLabel) },
-                                            selected = !t.isExcluded,
-                                            onClick = { tagChipList.remove(t) }
-                                        )
-
-                                        Spacer(modifier = Modifier.size(8.dp))
-                                    }
+                                for (t in tagChipList) {
+                                    FilterChip(
+                                        label = { Text(t.value) },
+                                        selected = !t.isExcluded,
+                                        onClick = {
+                                            if (t.value == "ai_generated") {
+                                                if (t.isExcluded) forciblyAllowedAi = true
+                                                else addAiExcludedTag()
+                                            }
+                                            tagChipList.remove(t)
+                                        }
+                                    )
 
                                     Spacer(modifier = Modifier.size(8.dp))
                                 }
-                            }
-                            Column {
-                                AnimatedVisibility(
-                                    shouldShowSuggestions,
-                                    //enter = expandVertically(),
-                                    //exit = shrinkVertically()
-                                ) {
-                                    AutoCompleteTagResults(mostRecentSuggestions)
-                                }
+
+                                Spacer(modifier = Modifier.size(8.dp))
                             }
                         }
+                        AnimatedVisibility(shouldShowSuggestions) {
+                            AutoCompleteTagResults(mostRecentSuggestions)
+                        }
                     }
+                }
 
                 // I don't like this
                 LaunchedEffect(key1 = cleanedSearchString) {
-                    println(lastValidSearchString)
                     if (cleanedSearchString.isNotEmpty()) { delay(200) }
                     if (lastValidSearchString != cleanedSearchString) {
                         lastValidSearchString = cleanedSearchString.trim().replace(" ", "_")
 
                         if (cleanedSearchString !in arrayListOf("", "-")) {
-
                             val deferredResponse = scope.async {
                                 return@async { filterTags() }
                             }
@@ -373,7 +392,7 @@ fun HomeScreen(navController: NavController) {
                                         "Error fetching results",
                                         Toast.LENGTH_SHORT
                                     ).show()
-                                    Log.e("App", "fucked mate", e)
+                                    Log.e("App", "Error fetching autocomplete results", e)
                                 }
                             }
                         } else {
@@ -412,8 +431,17 @@ fun Navigation(navController: NavHostController) {
                         navBackStackEntry.arguments?.getString("searchQuery") ?: ""
                     )
                 }
-                composable("settings") { PreferencesScreen(navController)}
+                composable("settings") { PreferencesScreen(navController) }
+                composable("favourite_images") { FavouritesPage(navController) }
             }
         }
     }
+}
+
+
+private fun SnapshotStateList<TagSuggestion>.getIndexByName(name: String): Int? {
+    this.forEachIndexed { index, tag ->
+        if (tag.value == name) return index
+    }
+    return null
 }
