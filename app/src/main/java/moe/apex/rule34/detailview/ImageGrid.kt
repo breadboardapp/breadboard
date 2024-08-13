@@ -1,8 +1,6 @@
 package moe.apex.rule34.detailview
 
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -22,7 +20,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -46,7 +43,6 @@ fun ImageGrid(
     images: List<Image>,
     onEndReached: () -> Unit = { }
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
     val lazyGridState = rememberLazyGridState()
 
     if (images.isNotEmpty()) {
@@ -80,14 +76,10 @@ fun ImageGrid(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
                             .fillMaxSize()
-                            .clickable(
-                                interactionSource = interactionSource,
-                                indication = LocalIndication.current,
-                                onClick = {
-                                    initialPage.intValue = images.indexOf(image)
-                                    shouldShowLargeImage.value = true
-                                }
-                            ),
+                            .clickable {
+                                initialPage.intValue = images.indexOf(image)
+                                shouldShowLargeImage.value = true
+                            },
                     )
                 }
             }

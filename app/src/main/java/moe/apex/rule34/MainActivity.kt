@@ -13,7 +13,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -117,7 +116,6 @@ fun HomeScreen(navController: NavController) {
     var cleanedSearchString by remember { mutableStateOf("") }
     val mostRecentSuggestions = remember { mutableStateListOf<TagSuggestion>() }
     val scrollState = rememberScrollState()
-    val interactionSource = remember { MutableInteractionSource() }
     val context = LocalContext.current
     val excludeAi = context.prefs.getPreferences
         .collectAsState(initial = Prefs.DEFAULT).value.excludeAi
@@ -348,7 +346,6 @@ fun HomeScreen(navController: NavController) {
 
                                     for (t in tagChipList) {
                                         FilterChip(
-                                            interactionSource = interactionSource,
                                             label = { Text(t.value) },
                                             selected = !t.isExcluded,
                                             onClick = {
