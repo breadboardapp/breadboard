@@ -200,7 +200,10 @@ fun LargeImageView(
                             }
                             if (currentImage in favouriteImages) {
                                 IconButton(onClick = {
-                                    scope.launch { context.prefs.removeFavouriteImage(currentImage) }
+                                    scope.launch {
+                                        context.prefs.removeFavouriteImage(currentImage)
+                                        Toast.makeText(context, "Removed from your favourites", Toast.LENGTH_SHORT).show()
+                                    }
                                 }) {
                                     Icon(
                                         imageVector = ImageVector.vectorResource(id = R.drawable.ic_star_filled),
@@ -209,7 +212,10 @@ fun LargeImageView(
                                 }
                             } else {
                                 IconButton(onClick = {
-                                    scope.launch { context.prefs.addFavouriteImage(currentImage) }
+                                    scope.launch {
+                                        context.prefs.addFavouriteImage(currentImage)
+                                        Toast.makeText(context, "Added to your favourites", Toast.LENGTH_SHORT).show()
+                                    }
                                 }) {
                                     Icon(
                                         imageVector = ImageVector.vectorResource(id = R.drawable.ic_star_hollow),
