@@ -223,7 +223,7 @@ fun PreferencesScreen(navController: NavController) {
                 Heading(text = "Downloads")
                 TitleSummary(
                     modifier = Modifier
-                        .clickable(onClick = { storageLocationPromptLaunched.value = true })
+                        .clickable { storageLocationPromptLaunched.value = true }
                         .fillMaxWidth(),
                     title = "Save downloads to",
                     summary = if (storageLocation == Uri.EMPTY) "Tap to set"

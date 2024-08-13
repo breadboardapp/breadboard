@@ -1,8 +1,5 @@
 package moe.apex.rule34.detailview
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -25,15 +22,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.image.ImageSource
-import moe.apex.rule34.largeimageview.LargeImageView
 import moe.apex.rule34.ui.theme.ProcrasturbatingTheme
+import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
 import moe.apex.rule34.util.TitleBar
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchResults(
-    navController: NavController, searchQuery: String) {
+fun SearchResults(navController: NavController, searchQuery: String) {
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
     val shouldShowLargeImage = remember { mutableStateOf(false) }
@@ -95,16 +91,5 @@ fun SearchResults(
             }
         }
     }
-    AnimatedVisibility(
-        visible = shouldShowLargeImage.value,
-        enter = slideInVertically(initialOffsetY = { it }),
-        exit = slideOutVertically(targetOffsetY =  { it })
-    ) {
-        LargeImageView(
-            navController,
-            initialPage,
-            shouldShowLargeImage,
-            allImages
-        )
-    }
+    AnimatedVisibilityLargeImageView(shouldShowLargeImage, navController, initialPage, allImages)
 }

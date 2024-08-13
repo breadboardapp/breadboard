@@ -30,7 +30,7 @@ import androidx.navigation.NavController
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import moe.apex.rule34.image.Image
-import moe.apex.rule34.largeimageview.FullscreenLoadingSpinner
+import moe.apex.rule34.util.FullscreenLoadingSpinner
 
 
 @Composable

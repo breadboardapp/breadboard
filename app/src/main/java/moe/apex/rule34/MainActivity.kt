@@ -124,7 +124,6 @@ fun HomeScreen(navController: NavController) {
 
     fun addToFilter(tag: TagSuggestion) {
         val index = tagChipList.getIndexByName(tag.value)
-        Log.i("index", index.toString())
         if (index != null) {
             // For some reason `tagChipList[index] = tag` doesn't update in the UI
             tagChipList.removeAt(index)
@@ -164,16 +163,14 @@ fun HomeScreen(navController: NavController) {
     @Composable
     fun TagListEntry(tag: TagSuggestion) {
         Column(
-            Modifier.clickable(
-                onClick = {
-                    searchString = ""
-                    cleanedSearchString = ""
-                    lastValidSearchString = ""
-                    shouldShowSuggestions = false
-                    addToFilter(tag)
-                    mostRecentSuggestions.clear()
-                }
-            )
+            modifier = Modifier.clickable {
+                searchString = ""
+                cleanedSearchString = ""
+                lastValidSearchString = ""
+                shouldShowSuggestions = false
+                addToFilter(tag)
+                mostRecentSuggestions.clear()
+            }
         ) {
             Text(
                 modifier = Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp),
@@ -289,97 +286,93 @@ fun HomeScreen(navController: NavController) {
                         modifier = Modifier.weight(1f, true),
                         value = searchString,
                         onValueChange = {
-                                searchString = it
-                                cleanedSearchString = searchString
-                                    .trim()
-                                    .replace(" ", "_")
-                            },
-                            placeholder = { Text("Search Tags") },
-                            shape = RoundedCornerShape(16.dp),
-                            singleLine = true,
-                            keyboardActions = KeyboardActions(
-                                onDone = {
-                                    if (searchString.isNotEmpty()) {
-                                        if (mostRecentSuggestions.isNotEmpty()) {
-                                            addToFilter(mostRecentSuggestions[0])
-                                            searchString = ""
-                                            lastValidSearchString = ""
-                                            shouldShowSuggestions = false
-                                        }
-                                        else {
-                                            if (mostRecentSuggestions.isEmpty()) {
-                                                Toast.makeText(
-                                                    context,
-                                                    "No matching tags",
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
-                                            }
+                            searchString = it
+                            cleanedSearchString = searchString
+                                .trim()
+                                .replace(" ", "_")
+                        },
+                        placeholder = { Text("Search Tags") },
+                        shape = RoundedCornerShape(16.dp),
+                        singleLine = true,
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                if (searchString.isNotEmpty()) {
+                                    if (mostRecentSuggestions.isNotEmpty()) {
+                                        addToFilter(mostRecentSuggestions[0])
+                                        searchString = ""
+                                        lastValidSearchString = ""
+                                        shouldShowSuggestions = false
+                                    } else {
+                                        if (mostRecentSuggestions.isEmpty()) {
+                                            Toast.makeText(
+                                                context,
+                                                "No matching tags",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
                                         }
                                     }
-                                    else { activateSearch() }
+                                } else {
+                                    activateSearch()
                                 }
-                            ),
+                            }
+                        ),
+                    )
+
+                    Spacer(modifier = Modifier.size(12.dp))
+
+                    FloatingActionButton(
+                        onClick = { activateSearch() },
+                        elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Sharp.Search,
+                            contentDescription = "Search"
                         )
-
-                        Spacer(modifier = Modifier.size(12.dp))
-
-                        FloatingActionButton(
-                            onClick = { activateSearch() },
-                            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Sharp.Search,
-                                contentDescription = "Search"
-                            )
-                        }
                     }
+                }
 
-                    Spacer(Modifier.size(8.dp))
+                Spacer(Modifier.size(8.dp))
 
-                    Box {
-                        Column {
-                            AnimatedVisibility(tagChipList.isNotEmpty()) {
-                                Row(
-                                    modifier = Modifier.horizontalScroll(scrollState)
-                                ) {
-                                    Spacer(Modifier.size(16.dp))
+                Box {
+                    Column {
+                        AnimatedVisibility(tagChipList.isNotEmpty()) {
+                            Row(
+                                modifier = Modifier.horizontalScroll(scrollState)
+                            ) {
+                                Spacer(Modifier.size(16.dp))
 
-                                    for (t in tagChipList) {
-                                        FilterChip(
-                                            label = { Text(t.value) },
-                                            selected = !t.isExcluded,
-                                            onClick = {
-                                                if (t.value == "ai_generated") {
-                                                    if (t.isExcluded) forciblyAllowedAi = true
-                                                    else addAiExcludedTag()
-                                                }
-                                                tagChipList.remove(t)
+                                for (t in tagChipList) {
+                                    FilterChip(
+                                        label = { Text(t.value) },
+                                        selected = !t.isExcluded,
+                                        onClick = {
+                                            if (t.value == "ai_generated") {
+                                                if (t.isExcluded) forciblyAllowedAi = true
+                                                else addAiExcludedTag()
                                             }
-                                        )
-
-                                        Spacer(modifier = Modifier.size(8.dp))
-                                    }
+                                            tagChipList.remove(t)
+                                        }
+                                    )
 
                                     Spacer(modifier = Modifier.size(8.dp))
                                 }
-                            }
-                            Column {
-                                AnimatedVisibility(shouldShowSuggestions,) {
-                                    AutoCompleteTagResults(mostRecentSuggestions)
-                                }
+
+                                Spacer(modifier = Modifier.size(8.dp))
                             }
                         }
+                        AnimatedVisibility(shouldShowSuggestions) {
+                            AutoCompleteTagResults(mostRecentSuggestions)
+                        }
                     }
+                }
 
                 // I don't like this
                 LaunchedEffect(key1 = cleanedSearchString) {
-                    println(lastValidSearchString)
                     if (cleanedSearchString.isNotEmpty()) { delay(200) }
                     if (lastValidSearchString != cleanedSearchString) {
                         lastValidSearchString = cleanedSearchString.trim().replace(" ", "_")
 
                         if (cleanedSearchString !in arrayListOf("", "-")) {
-
                             val deferredResponse = scope.async {
                                 return@async { filterTags() }
                             }
@@ -399,7 +392,7 @@ fun HomeScreen(navController: NavController) {
                                         "Error fetching results",
                                         Toast.LENGTH_SHORT
                                     ).show()
-                                    Log.e("App", "fucked mate", e)
+                                    Log.e("App", "Error fetching autocomplete results", e)
                                 }
                             }
                         } else {
@@ -438,8 +431,8 @@ fun Navigation(navController: NavHostController) {
                         navBackStackEntry.arguments?.getString("searchQuery") ?: ""
                     )
                 }
-                composable("settings") { PreferencesScreen(navController)}
-                composable("favourite_images") { FavouritesPage(navController)}
+                composable("settings") { PreferencesScreen(navController) }
+                composable("favourite_images") { FavouritesPage(navController) }
             }
         }
     }
@@ -448,7 +441,6 @@ fun Navigation(navController: NavHostController) {
 
 private fun SnapshotStateList<TagSuggestion>.getIndexByName(name: String): Int? {
     this.forEachIndexed { index, tag ->
-        Log.i("", "${tag.value} $name")
         if (tag.value == name) return index
     }
     return null

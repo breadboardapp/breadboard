@@ -1,8 +1,5 @@
 package moe.apex.rule34.favourites
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -21,17 +18,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import moe.apex.rule34.detailview.ImageGrid
-import moe.apex.rule34.largeimageview.LargeImageView
 import moe.apex.rule34.preferences.Prefs
 import moe.apex.rule34.prefs
+import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
 import moe.apex.rule34.util.TitleBar
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FavouritesPage(
-    navController: NavController
-) {
+fun FavouritesPage(navController: NavController) {
     val context = LocalContext.current
     val prefs by context.prefs.getPreferences.collectAsState(initial = Prefs.DEFAULT)
     val topAppBarState = rememberTopAppBarState()
@@ -58,16 +53,5 @@ fun FavouritesPage(
             images = images
         )
     }
-    AnimatedVisibility(
-        visible = shouldShowLargeImage.value,
-        enter = slideInVertically(initialOffsetY = { it }),
-        exit = slideOutVertically(targetOffsetY = { it })
-    ) {
-        LargeImageView(
-            navController,
-            initialPage,
-            shouldShowLargeImage,
-            images
-        )
-    }
+    AnimatedVisibilityLargeImageView(shouldShowLargeImage, navController, initialPage, images)
 }

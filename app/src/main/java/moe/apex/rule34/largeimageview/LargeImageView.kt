@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
@@ -68,6 +67,7 @@ import moe.apex.rule34.preferences.DataSaver
 import moe.apex.rule34.preferences.Prefs
 import moe.apex.rule34.prefs
 import moe.apex.rule34.ui.theme.ProcrasturbatingTheme
+import moe.apex.rule34.util.FullscreenLoadingSpinner
 import moe.apex.rule34.util.MustSetLocation
 import moe.apex.rule34.util.SaveDirectorySelection
 import moe.apex.rule34.util.downloadImage
@@ -80,18 +80,6 @@ private fun isUsingWiFi(context: Context): Boolean {
     val networkCapabilities = connectivityManager.getNetworkCapabilities(networkInfo)
 
     return networkCapabilities != null && networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
-}
-
-
-@Composable
-fun FullscreenLoadingSpinner() {
-    Row(
-        Modifier.fillMaxSize(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
-    ) {
-        CircularProgressIndicator()
-    }
 }
 
 
