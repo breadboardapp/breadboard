@@ -29,7 +29,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import moe.apex.rule34.image.Image
@@ -37,7 +36,6 @@ import moe.apex.rule34.util.FullscreenLoadingSpinner
 
 
 @Composable
-@Suppress("UNUSED_PARAMETER")
 fun ImageGrid(
     modifier: Modifier = Modifier,
     shouldShowLargeImage: MutableState<Boolean>,
