@@ -4,6 +4,7 @@ import moe.apex.rule34.RequestUtil
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.tag.TagSuggestion
 import org.json.JSONArray
+import org.json.JSONObject
 
 
 interface ImageBoard {
@@ -189,6 +190,63 @@ class Safebooru : ImageBoard {
             }
 
             subjects.add(Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.SAFEBOORU))
+        }
+
+        return subjects.toList()
+    }
+}
+
+
+class Gelbooru : ImageBoard {
+    override val autoCompleteSearchUrl = "https://gelbooru.com/index.php?page=autocomplete2&term=%s&type=tag_query&limit=10"
+    override val imageSearchUrl = "https://gelbooru.com/index.php?page=dapi&json=1&s=post&q=index&limit=100&tags=%s&pid=%d"
+    override val aiTagName = "ai-generated"
+
+
+    override fun loadAutoComplete(searchString: String): List<TagSuggestion> {
+        val suggestions = mutableListOf<TagSuggestion>()
+        val isExcluded = searchString.startsWith("-")
+        val query = searchString.replace("^-".toRegex(), "")
+        val body = RequestUtil.get(autoCompleteSearchUrl.format(query)).get()
+        val results = JSONArray(body)
+        val resultCount = results.length()
+
+        for (i in 0 until resultCount) {
+            val suggestion = results.getJSONObject(i)
+            val label = suggestion.getString("label")
+            val value = suggestion.getString("value")
+            val category = suggestion.getString("category")
+            suggestions.add(TagSuggestion(label, value, category, isExcluded))
+        }
+
+        return suggestions.toList()
+    }
+
+
+    override fun loadPage(tags: String, page: Int): List<Image> {
+        val body = RequestUtil.get(imageSearchUrl.format(tags, page)).get()
+
+        if (body.isEmpty()) {
+            return emptyList()
+        }
+
+        val json = JSONObject(body)
+        val posts = json.getJSONArray("post")
+        val subjects = mutableListOf<Image>()
+
+        for (i in 0 until posts.length()) {
+            val e = posts.getJSONObject(i)
+
+            val (fileName, fileFormat) = e.getString("image").split('.', limit = 2)
+            val fileUrl = e.getString("file_url")
+            val sampleUrl = e.optString("sample_url", "")
+            val previewUrl = e.getString("preview_url")
+
+            if (fileFormat != "jpeg" && fileFormat != "jpg" && fileFormat != "png" && fileFormat != "gif") {
+                continue
+            }
+
+            subjects.add(Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.GELBOORU))
         }
 
         return subjects.toList()
