@@ -33,9 +33,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.sharp.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -413,20 +412,19 @@ fun Navigation(navController: NavHostController) {
                     ) {
                         NavigationBar {
                             NavigationBarItem(
-                                label = { Text("Home") },
+                                label = { Text("Search") },
                                 selected = currentRoute == "home" || "searchResults" in currentRoute!!,
                                 icon = {
                                     Icon(
-                                        imageVector = if (currentRoute != "home" || "searchResults" in currentRoute) Icons.Outlined.Home
-                                                      else Icons.Filled.Home,
-                                        contentDescription = "Home"
+                                        imageVector = Icons.Outlined.Search, // Outlined and Filled search are the same
+                                        contentDescription = "Search"
                                     )
                                 },
                                 onClick = {
                                     if (currentRoute != "home") {
-                                        navController.navigate(
-                                            "home"
-                                        )
+                                        navController.navigate("home") {
+                                            popUpTo("home") { inclusive = true }
+                                        }
                                     }
                                 }
                             )
@@ -444,7 +442,9 @@ fun Navigation(navController: NavHostController) {
                                 },
                                 onClick = {
                                     if (currentRoute != "favourite_images") {
-                                        navController.navigate("favourite_images")
+                                        navController.navigate("favourite_images") {
+                                            popUpTo("favourite_images") { inclusive = true }
+                                        }
                                     }
                                 }
                             )
@@ -460,7 +460,9 @@ fun Navigation(navController: NavHostController) {
                                 },
                                 onClick = {
                                     if (currentRoute != "settings") {
-                                        navController.navigate("settings")
+                                        navController.navigate("settings") {
+                                            popUpTo("settings") { inclusive = true }
+                                        }
                                     }
                                 }
                             )
