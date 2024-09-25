@@ -81,7 +81,6 @@ import moe.apex.rule34.preferences.Prefs
 import moe.apex.rule34.preferences.UserPreferencesRepository
 import moe.apex.rule34.tag.TagSuggestion
 import moe.apex.rule34.ui.theme.ProcrasturbatingTheme
-import org.json.JSONArray
 import soup.compose.material.motion.animation.materialSharedAxisXIn
 import soup.compose.material.motion.animation.materialSharedAxisXOut
 import soup.compose.material.motion.animation.rememberSlideDistance
@@ -116,10 +115,12 @@ fun HomeScreen(navController: NavController) {
     var cleanedSearchString by remember { mutableStateOf("") }
     val mostRecentSuggestions = remember { mutableStateListOf<TagSuggestion>() }
     val scrollState = rememberScrollState()
-    val context = LocalContext.current
-    val excludeAi = context.prefs.getPreferences
-        .collectAsState(initial = Prefs.DEFAULT).value.excludeAi
     var forciblyAllowedAi by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val prefs by context.prefs.getPreferences.collectAsState(initial = Prefs.DEFAULT)
+    val excludeAi = prefs.excludeAi
+    val currentSource = prefs.imageSource
 
 
     fun addToFilter(tag: TagSuggestion) {
@@ -136,22 +137,7 @@ fun HomeScreen(navController: NavController) {
     fun filterTags(): List<TagSuggestion> {
         val suggestions = mutableListOf<TagSuggestion>()
         if (cleanedSearchString != "") {
-            val isExcluded = cleanedSearchString.startsWith("-")
-            val query = cleanedSearchString
-                .replace("^-".toRegex(), "")
-            val body = RequestUtil.get("https://rule34.xxx/public/autocomplete.php?q=$query") {
-              addHeader("Referer", "https://rule34.xxx/")
-            }.get()
-            val results = JSONArray(body)
-            val resultCount = results.length()
-
-            for (i in 0 until resultCount) {
-                val suggestion = results.getJSONObject(i)
-                val label = suggestion.getString("label")
-                val value = suggestion.getString("value")
-                val type = suggestion.getString("type")
-                suggestions.add(TagSuggestion(label, value, type, isExcluded))
-            }
+            return currentSource.site.loadAutoComplete(cleanedSearchString)
         } else {
             shouldShowSuggestions = false
         }
@@ -242,14 +228,14 @@ fun HomeScreen(navController: NavController) {
             ).show()
         }
         else {
-            val searchTags = tagChipList.joinToString("+") { it.formattedLabel }
+            val searchTags = currentSource.site.formatTagString(tagChipList)
             navController.navigate("searchResults/${searchTags}")
         }
     }
 
     fun addAiExcludedTag() {
-        if (excludeAi && !forciblyAllowedAi && tagChipList.getIndexByName("ai_generated") == null) {
-            val tag = TagSuggestion("", "ai_generated", "", true)
+        if (excludeAi && !forciblyAllowedAi && tagChipList.getIndexByName(currentSource.site.aiTagName) == null) {
+            val tag = TagSuggestion("", currentSource.site.aiTagName, "", true)
             tagChipList.add(0, tag)
         }
     }

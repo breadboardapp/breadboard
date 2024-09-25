@@ -17,8 +17,16 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.cbor.Cbor
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToByteArray
+import moe.apex.rule34.image.Danbooru
 import moe.apex.rule34.image.Image
+import moe.apex.rule34.image.ImageBoard
+import moe.apex.rule34.image.Rule34
 import java.io.IOException
+
+
+interface PrefEnum<T : Enum<T>> {
+    val description: String
+}
 
 
 data object PrefNames {
@@ -26,10 +34,11 @@ data object PrefNames {
     const val STORAGE_LOCATION = "storage_location"
     const val FAVOURITE_IMAGES = "favourite_images"
     const val EXCLUDE_AI = "exclude_ai"
+    const val IMAGE_SOURCE = "image_source"
 }
 
 
-enum class DataSaver(val description: String) {
+enum class DataSaver(override val description: String) : PrefEnum<DataSaver> {
     ON ("Always"),
     OFF ("Never"),
     AUTO ("When using mobile data")
@@ -40,10 +49,11 @@ data class Prefs(
     val dataSaver: DataSaver,
     val storageLocation: Uri,
     val favouriteImages: List<Image>,
-    val excludeAi: Boolean
+    val excludeAi: Boolean,
+    val imageSource: ImageSource
 ) {
     companion object {
-        val DEFAULT = Prefs(DataSaver.AUTO, Uri.EMPTY, emptyList(), false)
+        val DEFAULT = Prefs(DataSaver.AUTO, Uri.EMPTY, emptyList(), false, ImageSource.R34)
     }
 }
 
@@ -54,6 +64,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val STORAGE_LOCATION = stringPreferencesKey(PrefNames.STORAGE_LOCATION)
         val FAVOURITE_IMAGES = byteArrayPreferencesKey(PrefNames.FAVOURITE_IMAGES)
         val EXCLUDE_AI = booleanPreferencesKey(PrefNames.EXCLUDE_AI)
+        val IMAGE_SOURCE = stringPreferencesKey(PrefNames.IMAGE_SOURCE)
     }
 
     val getPreferences: Flow<Prefs> = dataStore.data
@@ -105,6 +116,12 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         }
     }
 
+    suspend fun updateImageSource(to: ImageSource) {
+        dataStore.edit { preferences ->
+            preferences[PreferenceKeys.IMAGE_SOURCE] = to.name
+        }
+    }
+
     @OptIn(ExperimentalSerializationApi::class)
     private fun mapUserPreferences(preferences: Preferences): Prefs {
         val dataSaver = DataSaver.valueOf(
@@ -114,8 +131,9 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val favouriteImagesRaw = preferences[PreferenceKeys.FAVOURITE_IMAGES]
         val favouriteImages: List<Image> = favouriteImagesRaw?.let { Cbor.decodeFromByteArray(it) } ?: emptyList()
         val excludeAi = preferences[PreferenceKeys.EXCLUDE_AI] ?: false
+        val imageSource = ImageSource.valueOf(preferences[PreferenceKeys.IMAGE_SOURCE] ?: ImageSource.R34.name)
 
-        return Prefs(dataSaver, storageLocation, favouriteImages, excludeAi)
+        return Prefs(dataSaver, storageLocation, favouriteImages, excludeAi, imageSource)
     }
 
 }
@@ -124,4 +142,10 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
 @OptIn(ExperimentalSerializationApi::class)
 private fun List<Image>.encodeToByteArray(): ByteArray {
     return Cbor.encodeToByteArray(this)
+}
+
+
+enum class ImageSource(override val description: String, val site: ImageBoard) : PrefEnum<ImageSource> {
+    R34("Rule34", Rule34()),
+    DANBOORU("Danbooru", Danbooru())
 }

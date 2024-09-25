@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import kotlinx.serialization.Serializable
+import moe.apex.rule34.preferences.ImageSource
 
 @Serializable
 data class Image(
@@ -11,7 +12,8 @@ data class Image(
     val fileFormat: String,
     val previewUrl: String,
     val fileUrl: String,
-    val sampleUrl: String
+    val sampleUrl: String,
+    val imageSource: ImageSource = ImageSource.R34 // Backwards compatibility
 ) {
     val highestQualityFormatUrl = fileUrl.takeIf { it.isNotEmpty() } ?: sampleUrl
     var preferHd by mutableStateOf(false)
