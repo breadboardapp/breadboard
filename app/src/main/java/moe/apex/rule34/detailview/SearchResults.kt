@@ -7,7 +7,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -17,17 +16,16 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import moe.apex.rule34.image.Image
-import moe.apex.rule34.preferences.Prefs
-import moe.apex.rule34.prefs
+import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.ui.theme.ProcrasturbatingTheme
 import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
 import moe.apex.rule34.util.TitleBar
+import moe.apex.rule34.util.withoutVertical
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,8 +41,7 @@ fun SearchResults(navController: NavController, searchQuery: String) {
     var shouldKeepSearching by remember { mutableStateOf(true) }
     var pageNumber by remember { mutableIntStateOf(1) }
     val scope = rememberCoroutineScope()
-    val imageSource = LocalContext.current.prefs.getPreferences
-        .collectAsState(Prefs.DEFAULT).value.imageSource.site
+    val imageSource = LocalPreferences.current.imageSource.site
 
     ProcrasturbatingTheme {
         Scaffold(
@@ -69,10 +66,9 @@ fun SearchResults(navController: NavController, searchQuery: String) {
 
             ImageGrid(
                 modifier = Modifier
-                    .padding(padding)
+                    .padding(padding.withoutVertical(top = false))
                     .padding(horizontal = 16.dp)
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
-                navController,
                 shouldShowLargeImage,
                 initialPage,
                 allImages
@@ -95,5 +91,5 @@ fun SearchResults(navController: NavController, searchQuery: String) {
             }
         }
     }
-    AnimatedVisibilityLargeImageView(shouldShowLargeImage, navController, initialPage, allImages)
+    AnimatedVisibilityLargeImageView(shouldShowLargeImage, initialPage, allImages)
 }

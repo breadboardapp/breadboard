@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -38,7 +37,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,7 +51,6 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import kotlinx.coroutines.launch
@@ -64,11 +61,12 @@ import me.saket.telephoto.zoomable.zoomable
 import moe.apex.rule34.R
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.DataSaver
-import moe.apex.rule34.preferences.Prefs
+import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.prefs
 import moe.apex.rule34.ui.theme.ProcrasturbatingTheme
 import moe.apex.rule34.util.FullscreenLoadingSpinner
 import moe.apex.rule34.util.MustSetLocation
+import moe.apex.rule34.util.NAV_BAR_HEIGHT
 import moe.apex.rule34.util.SaveDirectorySelection
 import moe.apex.rule34.util.downloadImage
 
@@ -84,14 +82,12 @@ private fun isUsingWiFi(context: Context): Boolean {
 
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
-@Suppress("UNUSED_PARAMETER")
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun LargeImageView(
-    navController: NavController,
     initialPage: MutableIntState,
     shouldShowLargeImage: MutableState<Boolean>,
-    allImages: List<Image>
+    allImages: List<Image>,
 ) {
     val pagerState = rememberPagerState(
         initialPage = initialPage.intValue,
@@ -119,7 +115,7 @@ fun LargeImageView(
 
     val currentImage = allImages[pagerState.currentPage]
 
-    val prefs by context.prefs.getPreferences.collectAsState(Prefs.DEFAULT)
+    val prefs = LocalPreferences.current
     val dataSaver = prefs.dataSaver
     val storageLocation = prefs.storageLocation
     val favouriteImages = prefs.favouriteImages
@@ -317,9 +313,8 @@ fun LargeImageView(
                         modifier = Modifier
                             .weight(1f, true)
                             .fillMaxWidth()
-                            .navigationBarsPadding()
                             .statusBarsPadding()
-                            .padding(bottom = 80.dp), // To account for the bottom bar
+                            .padding(bottom = NAV_BAR_HEIGHT.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {

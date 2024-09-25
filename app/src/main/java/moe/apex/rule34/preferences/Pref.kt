@@ -2,6 +2,7 @@ package moe.apex.rule34.preferences
 
 import android.net.Uri
 import android.util.Log
+import androidx.compose.runtime.compositionLocalOf
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -22,6 +23,11 @@ import moe.apex.rule34.image.Image
 import moe.apex.rule34.image.ImageBoard
 import moe.apex.rule34.image.Rule34
 import java.io.IOException
+
+
+val LocalPreferences = compositionLocalOf {
+    Prefs.DEFAULT
+}
 
 
 interface PrefEnum<T : Enum<T>> {

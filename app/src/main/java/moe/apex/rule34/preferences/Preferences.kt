@@ -24,13 +24,11 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,12 +44,11 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import moe.apex.rule34.prefs
 import moe.apex.rule34.ui.theme.ProcrasturbatingTheme
+import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.SaveDirectorySelection
-import moe.apex.rule34.util.TitleBar
 
 
 @Composable
@@ -179,28 +176,16 @@ private fun EnumPref(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PreferencesScreen(navController: NavController) {
+fun PreferencesScreen() {
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
     val scope = rememberCoroutineScope()
     val storageLocationPromptLaunched = remember { mutableStateOf(false) }
-
-    val prefs = LocalContext.current.prefs
-    val currentSettings by prefs.getPreferences.collectAsState(Prefs.DEFAULT)
-    val storageLocation = currentSettings.storageLocation
-    val excludeAi = currentSettings.excludeAi
+    val preferencesRepository = LocalContext.current.prefs
+    val currentSettings = LocalPreferences.current
 
     ProcrasturbatingTheme {
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            topBar = {
-                TitleBar(
-                    title = "Settings",
-                    scrollBehavior = scrollBehavior,
-                    navController = navController
-                )
-            }
-        ) {
+        MainScreenScaffold("Settings", scrollBehavior) {
             Column(
                 Modifier
                     .fillMaxSize()
@@ -216,7 +201,7 @@ fun PreferencesScreen(navController: NavController) {
                     summary = currentSettings.dataSaver.description,
                     enumItems = DataSaver.entries.toTypedArray(),
                     selectedItem = currentSettings.dataSaver,
-                    onSelection = { scope.launch { prefs.updateDataSaver(it as DataSaver) } }
+                    onSelection = { scope.launch { preferencesRepository.updateDataSaver(it as DataSaver) } }
                 )
 
                 Spacer(Modifier.height(24.dp))
@@ -227,8 +212,8 @@ fun PreferencesScreen(navController: NavController) {
                         .clickable { storageLocationPromptLaunched.value = true }
                         .fillMaxWidth(),
                     title = "Save downloads to",
-                    summary = if (storageLocation == Uri.EMPTY) "Tap to set"
-                    else storageLocation.toString()
+                    summary = if (currentSettings.storageLocation == Uri.EMPTY) "Tap to set"
+                    else currentSettings.storageLocation.toString()
                 )
                 if (storageLocationPromptLaunched.value) {
                     SaveDirectorySelection(storageLocationPromptLaunched)
@@ -242,15 +227,15 @@ fun PreferencesScreen(navController: NavController) {
                     summary = currentSettings.imageSource.description,
                     enumItems = ImageSource.entries.toTypedArray(),
                     selectedItem = currentSettings.imageSource,
-                    onSelection = { scope.launch { prefs.updateImageSource(it as ImageSource) } }
+                    onSelection = { scope.launch { preferencesRepository.updateImageSource(it as ImageSource) } }
                 )
                 SwitchPref(
-                    checked = excludeAi,
+                    checked = currentSettings.excludeAi,
                     title = "Hide AI-generated images",
                     summary = "Attempt to remove AI-generated images by excluding the " +
                               "'ai_generated' tag in search queries by default."
                 ) {
-                    scope.launch { prefs.updateExcludeAi(it) }
+                    scope.launch { preferencesRepository.updateExcludeAi(it) }
                 }
 
                 HorizontalDivider(Modifier.padding(vertical = 48.dp))

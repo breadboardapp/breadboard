@@ -3,10 +3,13 @@ package moe.apex.rule34.detailview
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -37,7 +40,6 @@ import moe.apex.rule34.util.FullscreenLoadingSpinner
 @Suppress("UNUSED_PARAMETER")
 fun ImageGrid(
     modifier: Modifier = Modifier,
-    navController: NavController,
     shouldShowLargeImage: MutableState<Boolean>,
     initialPage: MutableIntState,
     images: List<Image>,
@@ -49,9 +51,7 @@ fun ImageGrid(
         LazyVerticalGrid(
             columns = GridCells.Adaptive(128.dp),
             state = lazyGridState,
-            modifier = modifier
-                .padding(bottom = 12.dp)
-                .clip(RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp)),
+            modifier = modifier,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -85,6 +85,10 @@ fun ImageGrid(
             }
 
             item { onEndReached() }
+
+            item(span = { GridItemSpan(maxCurrentLineSpan) }) {
+                Spacer(modifier = Modifier.height(WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()))
+            }
         }
     } else {
         Text(
