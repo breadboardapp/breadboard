@@ -84,6 +84,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import moe.apex.rule34.detailview.SearchResults
 import moe.apex.rule34.favourites.FavouritesPage
+import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.PreferencesScreen
 import moe.apex.rule34.preferences.Prefs
@@ -162,10 +163,20 @@ fun HomeScreen(navController: NavController) {
     }
 
 
+    fun danbooruLimitCheck(): Boolean {
+        if (tagChipList.size == 2 && prefs.imageSource == ImageSource.DANBOORU) {
+            Toast.makeText(context, "Danbooru supports up to 2 tags", Toast.LENGTH_SHORT).show()
+            return false
+        }
+        return true
+    }
+
+
     @Composable
     fun TagListEntry(tag: TagSuggestion) {
         Column(
             modifier = Modifier.clickable {
+                if (!danbooruLimitCheck()) return@clickable
                 searchString = ""
                 cleanedSearchString = ""
                 lastValidSearchString = ""
@@ -283,6 +294,7 @@ fun HomeScreen(navController: NavController) {
                             onDone = {
                                 if (searchString.isNotEmpty()) {
                                     if (mostRecentSuggestions.isNotEmpty()) {
+                                        if (!danbooruLimitCheck()) return@KeyboardActions
                                         addToFilter(mostRecentSuggestions[0])
                                         searchString = ""
                                         lastValidSearchString = ""
