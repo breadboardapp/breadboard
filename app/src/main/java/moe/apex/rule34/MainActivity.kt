@@ -16,8 +16,10 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -25,6 +27,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -37,6 +40,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.sharp.Search
+import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
@@ -175,28 +179,35 @@ fun HomeScreen(navController: NavController) {
     @Composable
     fun TagListEntry(tag: TagSuggestion) {
         Column(
-            modifier = Modifier.clickable {
-                if (!danbooruLimitCheck()) return@clickable
-                searchString = ""
-                cleanedSearchString = ""
-                lastValidSearchString = ""
-                shouldShowSuggestions = false
-                addToFilter(tag)
-                mostRecentSuggestions.clear()
-            }
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier
+                .heightIn(min = 72.dp)
+                .fillMaxWidth()
+                .clickable {
+                    if (!danbooruLimitCheck()) return@clickable
+                    searchString = ""
+                    cleanedSearchString = ""
+                    lastValidSearchString = ""
+                    shouldShowSuggestions = false
+                    addToFilter(tag)
+                    mostRecentSuggestions.clear()
+                }
         ) {
             Text(
-                modifier = Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp),
-                text = tag.label
+                modifier = Modifier.padding(horizontal = 20.dp),
+                text = tag.label,
+                fontSize = 16.sp,
+                lineHeight = 17.sp
             )
 
-            Text(
-                modifier = Modifier.padding(bottom = 16.dp, start = 16.dp, end = 16.dp),
-                text = tag.type,
-                fontSize = 12.sp
-            )
-
-            HorizontalDivider()
+            tag.type?.let {
+                Text(
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                    text = it,
+                    fontSize = 12.sp,
+                    lineHeight = 13.sp
+                )
+            }
         }
     }
 
@@ -237,6 +248,7 @@ fun HomeScreen(navController: NavController) {
                     } else {
                         for (t in suggestions) {
                             TagListEntry(tag = t)
+                            HorizontalDivider()
                         }
                     }
                 }
@@ -343,7 +355,7 @@ fun HomeScreen(navController: NavController) {
                                         label = { Text(t.value) },
                                         selected = !t.isExcluded,
                                         onClick = {
-                                            if (t.value == "ai_generated") {
+                                            if (t.value == prefs.imageSource.site.aiTagName) {
                                                 if (t.isExcluded) forciblyAllowedAi = true
                                                 else addAiExcludedTag()
                                             }

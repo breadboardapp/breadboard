@@ -5,7 +5,7 @@ import java.util.Objects
 class TagSuggestion(
     val label: String,
     val value: String,
-    val type: String,
+    val type: String?,
     val isExcluded: Boolean
 ) {
     val formattedLabel = if (isExcluded) "-$value" else value

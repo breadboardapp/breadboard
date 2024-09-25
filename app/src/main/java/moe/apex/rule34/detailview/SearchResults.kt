@@ -39,9 +39,9 @@ fun SearchResults(navController: NavController, searchQuery: String) {
     var doneInitialLoad by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var shouldKeepSearching by remember { mutableStateOf(true) }
-    var pageNumber by remember { mutableIntStateOf(1) }
     val scope = rememberCoroutineScope()
     val imageSource = LocalPreferences.current.imageSource.site
+    var pageNumber by remember { mutableIntStateOf(imageSource.firstPageIndex) }
 
     ProcrasturbatingTheme {
         Scaffold(
@@ -56,12 +56,13 @@ fun SearchResults(navController: NavController, searchQuery: String) {
         ) { padding ->
             if (!doneInitialLoad) {
                 isLoading = true
-                val newImages = imageSource.loadPage(searchQuery, 0)
+                val newImages = imageSource.loadPage(searchQuery, pageNumber)
                 if (!allImages.addAll(newImages)) {
                     shouldKeepSearching = false
                 }
                 doneInitialLoad = true
                 isLoading = false
+                pageNumber ++
             }
 
             ImageGrid(

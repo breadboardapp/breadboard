@@ -22,6 +22,7 @@ import moe.apex.rule34.image.Danbooru
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.image.ImageBoard
 import moe.apex.rule34.image.Rule34
+import moe.apex.rule34.image.Safebooru
 import java.io.IOException
 
 
@@ -153,5 +154,6 @@ private fun List<Image>.encodeToByteArray(): ByteArray {
 
 enum class ImageSource(override val description: String, val site: ImageBoard) : PrefEnum<ImageSource> {
     R34("Rule34", Rule34()),
-    DANBOORU("Danbooru", Danbooru())
+    DANBOORU("Danbooru", Danbooru()),
+    SAFEBOORU("Safebooru", Safebooru())
 }
