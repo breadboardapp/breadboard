@@ -291,7 +291,7 @@ fun LargeImageView(
             HorizontalPager(
                 state = pagerState,
                 userScrollEnabled = canChangePage,
-                beyondBoundsPageCount = 1
+                beyondViewportPageCount = 1
             ) {index ->
                 val currentImg = allImages[index]
 
