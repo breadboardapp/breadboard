@@ -19,7 +19,6 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -53,7 +52,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -82,8 +80,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import kotlinx.coroutines.async
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import moe.apex.rule34.detailview.SearchResults
 import moe.apex.rule34.favourites.FavouritesPage
 import moe.apex.rule34.preferences.ImageSource
@@ -127,19 +127,23 @@ class MainActivity : ComponentActivity() {
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun HomeScreen(navController: NavController) {
+    /* We use shouldShowSuggestions for determining autocomplete section visibility because if we
+       used mostRecentSuggestions.isNotEmpty(), it would temporarily show the "No results" message
+       while disappearing and that looks bad. */
     var shouldShowSuggestions by remember { mutableStateOf(false) }
     val tagChipList = remember { mutableStateListOf<TagSuggestion>() }
     var searchString by remember { mutableStateOf("") }
-    var lastValidSearchString by remember { mutableStateOf("") }
     var cleanedSearchString by remember { mutableStateOf("") }
     val mostRecentSuggestions = remember { mutableStateListOf<TagSuggestion>() }
-    val scrollState = rememberScrollState()
     var forciblyAllowedAi by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val prefs = LocalPreferences.current
     val excludeAi = prefs.excludeAi
     val currentSource = prefs.imageSource
+
+    var searchJob: Job? = null
+    val scope = rememberCoroutineScope()
 
 
     fun addToFilter(tag: TagSuggestion) {
@@ -153,24 +157,34 @@ fun HomeScreen(navController: NavController) {
     }
 
 
-    fun filterTags(): List<TagSuggestion> {
-        val suggestions = mutableListOf<TagSuggestion>()
-        if (cleanedSearchString != "") {
-            return currentSource.site.loadAutoComplete(cleanedSearchString)
-        } else {
-            shouldShowSuggestions = false
-        }
-
-        return suggestions.toList()
-    }
-
-
     fun danbooruLimitCheck(): Boolean {
         if (tagChipList.size == 2 && prefs.imageSource == ImageSource.DANBOORU) {
             Toast.makeText(context, "Danbooru supports up to 2 tags", Toast.LENGTH_SHORT).show()
             return false
         }
         return true
+    }
+
+
+    fun getSuggestions() {
+        searchJob?.cancel()
+        searchJob = scope.launch(Dispatchers.IO) {
+            if (cleanedSearchString.isNotEmpty()) delay(200)
+            if (cleanedSearchString !in listOf("", "-")) {
+                try {
+                    val suggestions = currentSource.site.loadAutoComplete(cleanedSearchString)
+                    mostRecentSuggestions.clear()
+                    mostRecentSuggestions.addAll(suggestions)
+                    shouldShowSuggestions = true
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Error fetching results", Toast.LENGTH_SHORT).show()
+                    Log.e("App", "Error fetching autocomplete results", e)
+                }
+            } else {
+                mostRecentSuggestions.clear()
+                shouldShowSuggestions = false
+            }
+        }
     }
 
 
@@ -185,10 +199,8 @@ fun HomeScreen(navController: NavController) {
                     if (!danbooruLimitCheck()) return@clickable
                     searchString = ""
                     cleanedSearchString = ""
-                    lastValidSearchString = ""
                     shouldShowSuggestions = false
                     addToFilter(tag)
-                    mostRecentSuggestions.clear()
                 }
         ) {
             Text(
@@ -210,9 +222,8 @@ fun HomeScreen(navController: NavController) {
     }
 
 
-
     @Composable
-    fun AutoCompleteTagResults(suggestions: List<TagSuggestion>) {
+    fun AutoCompleteTagResults() {
         Column(
             modifier = Modifier
                 .consumeWindowInsets(PaddingValues(0.dp, 0.dp, 0.dp, (NAV_BAR_HEIGHT + 16).dp))
@@ -238,13 +249,13 @@ fun HomeScreen(navController: NavController) {
                         .fillMaxWidth()
                         .animateContentSize(),
                 ) {
-                    if (suggestions.isEmpty()) {
+                    if (mostRecentSuggestions.isEmpty()) {
                         Text(
-                            modifier = Modifier.padding(16.dp),
+                            modifier = Modifier.padding(20.dp),
                             text = "No results :("
                         )
                     } else {
-                        for (t in suggestions) {
+                        for (t in mostRecentSuggestions) {
                             TagListEntry(tag = t)
                             HorizontalDivider()
                         }
@@ -278,8 +289,6 @@ fun HomeScreen(navController: NavController) {
     addAiExcludedTag()
 
     ProcrasturbatingTheme {
-        val scope = rememberCoroutineScope()
-
         MainScreenScaffold("Procrasturbating") {
             Column(Modifier.padding(it)) {
                 Row(
@@ -296,6 +305,7 @@ fun HomeScreen(navController: NavController) {
                             cleanedSearchString = searchString
                                 .trim()
                                 .replace(" ", "_")
+                            getSuggestions()
                         },
                         placeholder = { Text("Search Tags") },
                         shape = RoundedCornerShape(16.dp),
@@ -307,7 +317,6 @@ fun HomeScreen(navController: NavController) {
                                         if (!danbooruLimitCheck()) return@KeyboardActions
                                         addToFilter(mostRecentSuggestions[0])
                                         searchString = ""
-                                        lastValidSearchString = ""
                                         shouldShowSuggestions = false
                                     } else {
                                         if (mostRecentSuggestions.isEmpty()) {
@@ -340,71 +349,33 @@ fun HomeScreen(navController: NavController) {
 
                 Spacer(Modifier.size(8.dp))
 
-                Box {
-                    Column {
-                        AnimatedVisibility(tagChipList.isNotEmpty()) {
-                            Row(
-                                modifier = Modifier.horizontalScroll(scrollState),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Spacer(Modifier.size(8.dp))
+                Column {
+                    AnimatedVisibility(tagChipList.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Spacer(Modifier.size(8.dp))
 
-                                for (t in tagChipList) {
-                                    FilterChip(
-                                        label = { Text(t.value) },
-                                        selected = !t.isExcluded,
-                                        onClick = {
-                                            if (t.value == prefs.imageSource.site.aiTagName) {
-                                                if (t.isExcluded) forciblyAllowedAi = true
-                                                else addAiExcludedTag()
-                                            }
-                                            tagChipList.remove(t)
+                            for (t in tagChipList) {
+                                FilterChip(
+                                    label = { Text(t.value) },
+                                    selected = !t.isExcluded,
+                                    onClick = {
+                                        if (t.value == prefs.imageSource.site.aiTagName) {
+                                            if (t.isExcluded) forciblyAllowedAi = true
+                                            else addAiExcludedTag()
                                         }
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.size(8.dp))
+                                        tagChipList.remove(t)
+                                    }
+                                )
                             }
-                        }
-                        AnimatedVisibility(shouldShowSuggestions) {
-                            AutoCompleteTagResults(mostRecentSuggestions)
+
+                            Spacer(modifier = Modifier.size(8.dp))
                         }
                     }
-                }
-
-                // I don't like this
-                LaunchedEffect(key1 = cleanedSearchString) {
-                    if (cleanedSearchString.isNotEmpty()) { delay(200) }
-                    if (lastValidSearchString != cleanedSearchString) {
-                        lastValidSearchString = cleanedSearchString.trim().replace(" ", "_")
-
-                        if (cleanedSearchString !in arrayListOf("", "-")) {
-                            val deferredResponse = scope.async {
-                                return@async { filterTags() }
-                            }
-                            try {
-                                val response = deferredResponse.await().invoke()
-                                // I don't have a better way of ensuring the right state
-                                // without risking noticeable UI lag yet
-                                if (cleanedSearchString == lastValidSearchString) {
-                                    mostRecentSuggestions.clear()
-                                    mostRecentSuggestions.addAll(response)
-                                    shouldShowSuggestions = true
-                                }
-                            } catch (e: Exception) {
-                                if (e.message?.contains("was cancelled") != true) {
-                                    Toast.makeText(
-                                        context,
-                                        "Error fetching results",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                    Log.e("App", "Error fetching autocomplete results", e)
-                                }
-                            }
-                        } else {
-                            shouldShowSuggestions = false
-                            mostRecentSuggestions.clear()
-                        }
+                    AnimatedVisibility(shouldShowSuggestions) {
+                        AutoCompleteTagResults()
                     }
                 }
             }
