@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.byteArrayPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
@@ -43,6 +44,7 @@ data object PrefNames {
     const val FAVOURITE_IMAGES = "favourite_images"
     const val EXCLUDE_AI = "exclude_ai"
     const val IMAGE_SOURCE = "image_source"
+    const val FAVOURITES_FILTER = "favourites_filter"
 }
 
 
@@ -58,10 +60,17 @@ data class Prefs(
     val storageLocation: Uri,
     val favouriteImages: List<Image>,
     val excludeAi: Boolean,
-    val imageSource: ImageSource
+    val imageSource: ImageSource,
+    val favouritesFilter: List<ImageSource>
 ) {
     companion object {
-        val DEFAULT = Prefs(DataSaver.AUTO, Uri.EMPTY, emptyList(), false, ImageSource.R34)
+        val DEFAULT = Prefs(
+            DataSaver.AUTO,
+            Uri.EMPTY,
+            emptyList(),
+            false, ImageSource.R34,
+            ImageSource.entries.toList()
+        )
     }
 }
 
@@ -73,6 +82,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val FAVOURITE_IMAGES = byteArrayPreferencesKey(PrefNames.FAVOURITE_IMAGES)
         val EXCLUDE_AI = booleanPreferencesKey(PrefNames.EXCLUDE_AI)
         val IMAGE_SOURCE = stringPreferencesKey(PrefNames.IMAGE_SOURCE)
+        val FAVOURITES_FILTER = stringSetPreferencesKey(PrefNames.FAVOURITES_FILTER)
     }
 
     val getPreferences: Flow<Prefs> = dataStore.data
@@ -130,18 +140,37 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         }
     }
 
+    private suspend fun updateFavouritesFilter(to: MutableSet<ImageSource>) {
+        dataStore.edit { preferences ->
+            preferences[PreferenceKeys.FAVOURITES_FILTER] = to.mapTo(mutableSetOf()) { it.name }
+        }
+    }
+
+    suspend fun addFavouritesFilter(source: ImageSource) {
+        val sources = getPreferences.first().favouritesFilter.toMutableSet().apply { add(source) }
+        updateFavouritesFilter(sources)
+    }
+
+    suspend fun removeFavouritesFilter(source: ImageSource) {
+        val sources = getPreferences.first().favouritesFilter.toMutableSet().apply { remove(source) }
+        updateFavouritesFilter(sources)
+    }
+
     @OptIn(ExperimentalSerializationApi::class)
     private fun mapUserPreferences(preferences: Preferences): Prefs {
         val dataSaver = DataSaver.valueOf(
-                preferences[PreferenceKeys.DATA_SAVER] ?: DataSaver.AUTO.name
+            preferences[PreferenceKeys.DATA_SAVER] ?: DataSaver.AUTO.name
         )
         val storageLocation = Uri.parse(preferences[PreferenceKeys.STORAGE_LOCATION] ?: "")
         val favouriteImagesRaw = preferences[PreferenceKeys.FAVOURITE_IMAGES]
         val favouriteImages: List<Image> = favouriteImagesRaw?.let { Cbor.decodeFromByteArray(it) } ?: emptyList()
         val excludeAi = preferences[PreferenceKeys.EXCLUDE_AI] ?: false
         val imageSource = ImageSource.valueOf(preferences[PreferenceKeys.IMAGE_SOURCE] ?: ImageSource.R34.name)
+        val favouritesFilter = (
+            preferences[PreferenceKeys.FAVOURITES_FILTER]?.map { ImageSource.valueOf(it) } ?: ImageSource.entries
+        )
 
-        return Prefs(dataSaver, storageLocation, favouriteImages, excludeAi, imageSource)
+        return Prefs(dataSaver, storageLocation, favouriteImages, excludeAi, imageSource, favouritesFilter)
     }
 
 }

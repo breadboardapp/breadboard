@@ -32,8 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -42,8 +41,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
+import kotlinx.coroutines.launch
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.ImageSource
+import moe.apex.rule34.preferences.LocalPreferences
+import moe.apex.rule34.prefs
 import moe.apex.rule34.util.FullscreenLoadingSpinner
 
 
@@ -56,9 +58,12 @@ fun ImageGrid(
     images: List<Image>,
     onEndReached: () -> Unit = { }
 ) {
+    val preferencesRepository = LocalContext.current.prefs
+    val prefs = LocalPreferences.current
     val lazyGridState = rememberLazyGridState()
-    val wantedSites = remember { mutableStateListOf<ImageSource>().apply { addAll(ImageSource.entries) } }
-    val wantedImages = images.filter { it.imageSource in wantedSites }
+    val scope = rememberCoroutineScope()
+    val wantedSites = prefs.favouritesFilter
+    val wantedImages = images.filter { it.imageSource in prefs.favouritesFilter }
 
     LazyVerticalGrid(
         columns = GridCells.Adaptive(128.dp),
@@ -83,8 +88,10 @@ fun ImageGrid(
                             FilterChip(
                                 selected = site in wantedSites,
                                 onClick = {
-                                    if (site in wantedSites) wantedSites.remove(site)
-                                    else wantedSites.add(site)
+                                    scope.launch {
+                                        if (site in wantedSites) preferencesRepository.removeFavouritesFilter(site)
+                                        else preferencesRepository.addFavouritesFilter(site)
+                                    }
                                 },
                                 label = { Text(site.description) },
                                 leadingIcon = {
