@@ -16,7 +16,6 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -40,7 +39,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.sharp.Search
-import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
@@ -346,9 +344,10 @@ fun HomeScreen(navController: NavController) {
                     Column {
                         AnimatedVisibility(tagChipList.isNotEmpty()) {
                             Row(
-                                modifier = Modifier.horizontalScroll(scrollState)
+                                modifier = Modifier.horizontalScroll(scrollState),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Spacer(Modifier.size(16.dp))
+                                Spacer(Modifier.size(8.dp))
 
                                 for (t in tagChipList) {
                                     FilterChip(
@@ -362,8 +361,6 @@ fun HomeScreen(navController: NavController) {
                                             tagChipList.remove(t)
                                         }
                                     )
-
-                                    Spacer(modifier = Modifier.size(8.dp))
                                 }
 
                                 Spacer(modifier = Modifier.size(8.dp))

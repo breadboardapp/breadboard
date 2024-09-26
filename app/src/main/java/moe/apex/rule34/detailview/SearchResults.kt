@@ -70,9 +70,9 @@ fun SearchResults(navController: NavController, searchQuery: String) {
                     .padding(padding.withoutVertical(top = false))
                     .padding(horizontal = 16.dp)
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
-                shouldShowLargeImage,
-                initialPage,
-                allImages
+                shouldShowLargeImage = shouldShowLargeImage,
+                initialPage = initialPage,
+                images = allImages
             ) {
                 if (shouldKeepSearching) {
                     if (!isLoading) {
