@@ -231,7 +231,7 @@ class Gelbooru : ImageBoard {
         }
 
         val json = JSONObject(body)
-        val posts = json.getJSONArray("post")
+        val posts = json.optJSONArray("post") ?: return emptyList()
         val subjects = mutableListOf<Image>()
 
         for (i in 0 until posts.length()) {
