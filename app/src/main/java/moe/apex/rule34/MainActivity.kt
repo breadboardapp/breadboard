@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
@@ -63,9 +64,14 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -126,7 +132,7 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun HomeScreen(navController: NavController) {
+fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
     /* We use shouldShowSuggestions for determining autocomplete section visibility because if we
        used mostRecentSuggestions.isNotEmpty(), it would temporarily show the "No results" message
        while disappearing and that looks bad. */
@@ -266,7 +272,7 @@ fun HomeScreen(navController: NavController) {
     }
 
 
-    fun activateSearch() {
+    fun performSearch() {
         if (tagChipList.isEmpty()) {
             Toast.makeText(
                 context,
@@ -288,6 +294,27 @@ fun HomeScreen(navController: NavController) {
     }
     addAiExcludedTag()
 
+    fun beginSearch() {
+        if (searchString.isNotEmpty()) {
+            if (mostRecentSuggestions.isNotEmpty()) {
+                if (!danbooruLimitCheck()) return
+                addToFilter(mostRecentSuggestions[0])
+                searchString = ""
+                shouldShowSuggestions = false
+            } else {
+                if (mostRecentSuggestions.isEmpty()) {
+                    Toast.makeText(
+                        context,
+                        "No matching tags",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        } else {
+            performSearch()
+        }
+    }
+
     ProcrasturbatingTheme {
         MainScreenScaffold("Procrasturbating") {
             Column(Modifier.padding(it)) {
@@ -298,7 +325,9 @@ fun HomeScreen(navController: NavController) {
                         .align(Alignment.CenterHorizontally)
                 ) {
                     OutlinedTextField(
-                        modifier = Modifier.weight(1f, true),
+                        modifier = Modifier
+                            .weight(1f, true)
+                            .focusRequester(focusRequester),
                         value = searchString,
                         onValueChange = {
                             searchString = it
@@ -310,34 +339,21 @@ fun HomeScreen(navController: NavController) {
                         placeholder = { Text("Search Tags") },
                         shape = RoundedCornerShape(16.dp),
                         singleLine = true,
+                        keyboardOptions = KeyboardOptions.Default.copy(
+                            capitalization = KeyboardCapitalization.None,
+                            imeAction = ImeAction.Search
+                            // Maybe also look into https://issuetracker.google.com/issues/359257538
+                        ),
                         keyboardActions = KeyboardActions(
-                            onDone = {
-                                if (searchString.isNotEmpty()) {
-                                    if (mostRecentSuggestions.isNotEmpty()) {
-                                        if (!danbooruLimitCheck()) return@KeyboardActions
-                                        addToFilter(mostRecentSuggestions[0])
-                                        searchString = ""
-                                        shouldShowSuggestions = false
-                                    } else {
-                                        if (mostRecentSuggestions.isEmpty()) {
-                                            Toast.makeText(
-                                                context,
-                                                "No matching tags",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-                                    }
-                                } else {
-                                    activateSearch()
-                                }
-                            }
+                            onDone = { beginSearch() },
+                            onSearch = { beginSearch() }
                         ),
                     )
 
                     Spacer(modifier = Modifier.size(12.dp))
 
                     FloatingActionButton(
-                        onClick = { activateSearch() },
+                        onClick = { performSearch() },
                         elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp)
                     ) {
                         Icon(
@@ -391,6 +407,8 @@ fun Navigation(navController: NavHostController) {
     val bottomBarVisibleState = remember { mutableStateOf(true) }
     val currentBSE by navController.currentBackStackEntryAsState()
     val currentRoute = currentBSE?.destination?.route
+    val focusRequester = remember { FocusRequester() }
+    val keyboard = LocalSoftwareKeyboardController.current
 
     ProcrasturbatingTheme {
         Surface {
@@ -417,6 +435,11 @@ fun Navigation(navController: NavHostController) {
                                         navController.navigate("home") {
                                             popUpTo("home") { inclusive = true }
                                         }
+                                    } else {
+                                        focusRequester.requestFocus()
+                                        keyboard?.show() /* Not technically necessary but allows the keyboard to appear
+                                                            again if the user taps away while the search bar is still
+                                                            focused */
                                     }
                                 }
                             )
@@ -487,7 +510,7 @@ fun Navigation(navController: NavHostController) {
                         else fadeOut()
                     }
                 ) {
-                    composable("home") { HomeScreen(navController) }
+                    composable("home") { HomeScreen(navController, focusRequester) }
                     composable(
                         route = "searchResults/{searchQuery}",
                         arguments = listOf(navArgument("searchQuery") { NavType.StringType })
