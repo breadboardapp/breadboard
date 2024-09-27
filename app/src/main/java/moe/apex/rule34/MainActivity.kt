@@ -90,14 +90,15 @@ import androidx.navigation.navArgument
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import moe.apex.rule34.detailview.SearchResults
 import moe.apex.rule34.favourites.FavouritesPage
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.PreferencesScreen
-import moe.apex.rule34.preferences.Prefs
 import moe.apex.rule34.preferences.UserPreferencesRepository
 import moe.apex.rule34.tag.TagSuggestion
 import moe.apex.rule34.ui.theme.ProcrasturbatingTheme
@@ -123,8 +124,9 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent {
             val navController = rememberNavController()
-            val initialPrefs = prefs.getPreferences.collectAsState(Prefs.DEFAULT).value
-            CompositionLocalProvider(LocalPreferences provides initialPrefs) {
+            val initialPrefs = runBlocking { prefs.getPreferences.first() }
+            val prefs = prefs.getPreferences.collectAsState(initialPrefs).value
+            CompositionLocalProvider(LocalPreferences provides prefs) {
                 Navigation(navController)
             }
         }
