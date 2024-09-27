@@ -45,6 +45,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedTextField
@@ -90,6 +91,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import moe.apex.rule34.detailview.SearchResults
 import moe.apex.rule34.favourites.FavouritesPage
 import moe.apex.rule34.preferences.ImageSource
@@ -99,6 +101,7 @@ import moe.apex.rule34.preferences.Prefs
 import moe.apex.rule34.preferences.UserPreferencesRepository
 import moe.apex.rule34.tag.TagSuggestion
 import moe.apex.rule34.ui.theme.ProcrasturbatingTheme
+import moe.apex.rule34.ui.theme.searchField
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.NAV_BAR_HEIGHT
 import moe.apex.rule34.util.withoutVertical
@@ -179,15 +182,20 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
             if (cleanedSearchString !in listOf("", "-")) {
                 try {
                     val suggestions = currentSource.site.loadAutoComplete(cleanedSearchString)
+                    /* This check shouldn't be needed but avoids a race condition whereby clearing
+                       the query in the time between getting suggestions and displaying them will cause
+                       the old suggestions to be displayed. */
+                    if (cleanedSearchString.isEmpty()) return@launch
                     mostRecentSuggestions.clear()
                     mostRecentSuggestions.addAll(suggestions)
                     shouldShowSuggestions = true
                 } catch (e: Exception) {
-                    Toast.makeText(context, "Error fetching results", Toast.LENGTH_SHORT).show()
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "Error fetching results", Toast.LENGTH_SHORT).show()
+                    }
                     Log.e("App", "Error fetching autocomplete results", e)
                 }
             } else {
-                mostRecentSuggestions.clear()
                 shouldShowSuggestions = false
             }
         }
@@ -230,6 +238,8 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
 
     @Composable
     fun AutoCompleteTagResults() {
+        Log.i("cleaned search string", cleanedSearchString)
+        Log.i("should show suggestions", shouldShowSuggestions.toString())
         Column(
             modifier = Modifier
                 .consumeWindowInsets(PaddingValues(0.dp, 0.dp, 0.dp, (NAV_BAR_HEIGHT + 16).dp))
@@ -258,6 +268,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                     if (mostRecentSuggestions.isEmpty()) {
                         Text(
                             modifier = Modifier.padding(20.dp),
+                            fontSize = 16.sp,
                             text = "No results :("
                         )
                     } else {
@@ -329,6 +340,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                             .weight(1f, true)
                             .focusRequester(focusRequester),
                         value = searchString,
+                        textStyle = MaterialTheme.typography.searchField,
                         onValueChange = {
                             searchString = it
                             cleanedSearchString = searchString
@@ -336,7 +348,10 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                                 .replace(" ", "_")
                             getSuggestions()
                         },
-                        placeholder = { Text("Search Tags", fontSize = 15.sp) },
+                        placeholder = { Text(
+                                text = "Search Tags",
+                                style = MaterialTheme.typography.searchField
+                        ) },
                         shape = RoundedCornerShape(16.dp),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions.Default.copy(

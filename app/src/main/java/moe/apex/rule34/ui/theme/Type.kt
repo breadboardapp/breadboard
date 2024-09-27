@@ -44,3 +44,6 @@ val Typography = Typography(
                 fontWeight = FontWeight.Bold,
         )
 )
+
+val Typography.searchField: TextStyle
+        get() = Typography.bodyLarge.copy(fontSize = 16.sp)
