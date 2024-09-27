@@ -1,6 +1,8 @@
 package moe.apex.rule34.detailview
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -33,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -95,7 +98,11 @@ fun ImageGrid(
                                 },
                                 label = { Text(site.description) },
                                 leadingIcon = {
-                                    AnimatedVisibility(site in wantedSites) {
+                                    AnimatedVisibility(
+                                        visible = site in wantedSites,
+                                        enter = expandHorizontally(expandFrom = Alignment.Start),
+                                        exit = shrinkHorizontally(shrinkTowards = Alignment.Start)
+                                    ) {
                                         Icon(
                                             imageVector = Icons.Filled.Check,
                                             contentDescription = "Selected",
