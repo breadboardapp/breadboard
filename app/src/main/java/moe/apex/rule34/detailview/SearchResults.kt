@@ -34,7 +34,7 @@ fun SearchResults(navController: NavController, searchQuery: String) {
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
     val shouldShowLargeImage = remember { mutableStateOf(false) }
-    val initialPage = remember { mutableIntStateOf(0) }
+    var initialPage by remember { mutableIntStateOf(0) }
     val allImages = remember { mutableStateListOf<Image>() }
     var doneInitialLoad by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
@@ -70,9 +70,11 @@ fun SearchResults(navController: NavController, searchQuery: String) {
                     .padding(padding.withoutVertical(top = false))
                     .padding(horizontal = 16.dp)
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
-                shouldShowLargeImage = shouldShowLargeImage,
-                initialPage = initialPage,
-                images = allImages
+                images = allImages,
+                onImageClick = { index, image ->
+                    initialPage = index
+                    shouldShowLargeImage.value = true
+                }
             ) {
                 if (shouldKeepSearching) {
                     if (!isLoading) {

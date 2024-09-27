@@ -20,7 +20,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,8 +32,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableIntState
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,18 +53,15 @@ import moe.apex.rule34.util.FullscreenLoadingSpinner
 @Composable
 fun ImageGrid(
     modifier: Modifier = Modifier,
-    shouldShowLargeImage: MutableState<Boolean>,
-    initialPage: MutableIntState,
     showFilter: Boolean = false,
     images: List<Image>,
+    onImageClick: (Int, Image) -> Unit,
     onEndReached: () -> Unit = { }
 ) {
     val preferencesRepository = LocalContext.current.prefs
     val prefs = LocalPreferences.current
     val lazyGridState = rememberLazyGridState()
     val scope = rememberCoroutineScope()
-    val wantedImages = if (showFilter) images.filter { it.imageSource in prefs.favouritesFilter }
-                       else images
 
     LazyVerticalGrid(
         columns = GridCells.Adaptive(128.dp),
@@ -122,7 +117,7 @@ fun ImageGrid(
             Spacer(modifier = Modifier.height(12.dp))
         }
 
-        items(wantedImages, key = { image -> image.previewUrl }) { image ->
+        itemsIndexed(images, key = { _, image -> image.previewUrl }) { index, image ->
             Surface(
                 Modifier
                     .aspectRatio(1f)
@@ -139,17 +134,14 @@ fun ImageGrid(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
                         .fillMaxSize()
-                        .clickable {
-                            initialPage.intValue = images.indexOf(image)
-                            shouldShowLargeImage.value = true
-                        },
+                        .clickable { onImageClick(index, image) },
                 )
             }
         }
 
         item { onEndReached() }
 
-        if (wantedImages.isEmpty()) {
+        if (images.isEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Text(
                     text = "No images :(",

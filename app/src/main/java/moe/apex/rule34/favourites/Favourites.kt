@@ -6,9 +6,11 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
@@ -25,9 +27,9 @@ fun FavouritesPage(bottomBarVisibleState: MutableState<Boolean>) {
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
     val shouldShowLargeImage = remember { mutableStateOf(false) }
-    val initialPage = remember { mutableIntStateOf(0) }
+    var initialPage by remember { mutableIntStateOf(0) }
 
-    val images = prefs.favouriteImages.reversed()
+    val images = prefs.favouriteImages.reversed().filter { it.imageSource in prefs.favouritesFilter }
 
     MainScreenScaffold("Favourite images", scrollBehavior) { padding ->
         ImageGrid(
@@ -35,10 +37,13 @@ fun FavouritesPage(bottomBarVisibleState: MutableState<Boolean>) {
                 .padding(padding)
                 .padding(horizontal = 16.dp)
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
-            shouldShowLargeImage = shouldShowLargeImage,
-            initialPage = initialPage,
             showFilter = true,
-            images = images
+            images = images,
+            onImageClick = { index, image ->
+                bottomBarVisibleState.value = false
+                initialPage = index
+                shouldShowLargeImage.value = true
+            }
         )
     }
     AnimatedVisibilityLargeImageView(shouldShowLargeImage, initialPage, images, bottomBarVisibleState)

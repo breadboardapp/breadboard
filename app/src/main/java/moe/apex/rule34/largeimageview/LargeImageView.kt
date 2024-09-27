@@ -12,7 +12,6 @@ import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -35,7 +34,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -82,15 +80,14 @@ private fun isUsingWiFi(context: Context): Boolean {
 
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun LargeImageView(
-    initialPage: MutableIntState,
-    shouldShowLargeImage: MutableState<Boolean>,
+    initialPage: Int,
+    visible: MutableState<Boolean>,
     allImages: List<Image>,
 ) {
     val pagerState = rememberPagerState(
-        initialPage = initialPage.intValue,
+        initialPage = initialPage,
         initialPageOffsetFraction = 0f
     ) { allImages.size }
     var canChangePage by remember { mutableStateOf(false) }
@@ -104,7 +101,7 @@ fun LargeImageView(
     var isDownloading by remember { mutableStateOf(false) }
 
     if (allImages.isEmpty()) {
-        shouldShowLargeImage.value = false
+        visible.value = false
         return
     }
 
@@ -122,16 +119,16 @@ fun LargeImageView(
 
     // Large image view is an overlay rather than a new screen entirely so we need to override
     // the default back button behaviour so we don't get taken to the home page.
-    BackHandler(shouldShowLargeImage.value) {
-        shouldShowLargeImage.value = false
+    BackHandler(visible.value) {
+        visible.value = false
     }
 
-    PredictiveBackHandler(shouldShowLargeImage.value) { progress ->
+    PredictiveBackHandler(visible.value) { progress ->
         try {
             progress.collect { backEvent ->
                 offset = (backEvent.progress * 200).dp
             }
-            shouldShowLargeImage.value = false
+            visible.value = false
         }
         catch(_: Exception) { }
     }

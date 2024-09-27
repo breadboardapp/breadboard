@@ -21,7 +21,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -77,7 +76,7 @@ fun FullscreenLoadingSpinner() {
 @Composable
 fun AnimatedVisibilityLargeImageView(
     shouldShowLargeImage: MutableState<Boolean>,
-    initialPage: MutableIntState,
+    initialPage: Int,
     allImages: List<Image>,
     bottomBarVisibleState: MutableState<Boolean>? = null
 ) {
