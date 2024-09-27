@@ -41,9 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import moe.apex.rule34.prefs
 import moe.apex.rule34.ui.theme.ProcrasturbatingTheme
@@ -60,8 +58,21 @@ private fun Heading(
         modifier = modifier.padding(horizontal = 16.dp),
         text = text,
         color = MaterialTheme.colorScheme.primary,
-        letterSpacing = 0.sp,
-        fontWeight = FontWeight.Medium
+        style = MaterialTheme.typography.titleMedium
+    )
+}
+
+
+@Composable
+private fun Summary(
+    modifier: Modifier = Modifier,
+    text: String
+) {
+    Text(
+        text = text,
+        color = Color.Gray,
+        style = MaterialTheme.typography.bodySmall,
+        modifier = modifier
     )
 }
 
@@ -73,25 +84,22 @@ private fun TitleSummary(
     summary: String? = null
 ) {
     Column(
-        modifier = modifier.heightIn(min = 64.dp),
+        modifier = modifier.heightIn(min = 72.dp),
         verticalArrangement = Arrangement.Center
     ) {
         Text(
             text = title,
-            fontSize = 17.sp,
+            style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.padding(
                 start = 16.dp,
                 end = 16.dp,
                 top = 14.dp,
-                bottom = (if (summary == null) 14.dp else 0.dp))
+                bottom = (if (summary == null) 14.dp else 2.dp))
         )
 
         if (summary != null) {
-            Text(
-                summary,
-                color = Color.Gray,
-                fontSize = 14.sp,
-                lineHeight = 16.sp,
+            Summary(
+                text = summary,
                 modifier = Modifier.padding(bottom = 14.dp, start = 16.dp, end = 16.dp)
             )
         }
@@ -174,6 +182,25 @@ private fun EnumPref(
 }
 
 
+@Composable
+private fun InfoSection(text: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+    ) {
+        Icon(
+            modifier = Modifier.size(20.dp),
+            imageVector = Icons.Outlined.Info,
+            contentDescription = null,
+            tint = Color.Gray
+        )
+        Spacer(Modifier.size(12.dp))
+        Summary(text = text)
+    }
+}
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PreferencesScreen() {
@@ -240,26 +267,8 @@ fun PreferencesScreen() {
 
                 HorizontalDivider(Modifier.padding(vertical = 48.dp))
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                ) {
-                    Icon(
-                        modifier = Modifier.size(20.dp),
-                        imageVector = Icons.Outlined.Info,
-                        contentDescription = null,
-                        tint = Color.Gray
-                    )
-                    Spacer(Modifier.size(12.dp))
-                    Text(
-                        text = "When data saver is enabled, images will load in a lower resolution by default. " +
-                                "Downloads will always be in the maximum resolution.",
-                        fontSize = 14.sp,
-                        lineHeight = 16.sp,
-                        color = Color.Gray
-                    )
-                }
+                InfoSection(text = "When data saver is enabled, images will load in a lower resolution " +
+                                   "by default. Downloads will always be in the maximum resolution.")
             }
         }
     }

@@ -26,6 +26,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import moe.apex.rule34.image.Image
@@ -43,7 +44,7 @@ fun TitleBar(
     navController: NavController? = null
 ) {
     LargeTopAppBar(
-        title = { Text(title) },
+        title = { Text(title, overflow = TextOverflow.Ellipsis) },
         scrollBehavior = scrollBehavior,
         navigationIcon = {
             if (navController != null) {

@@ -336,7 +336,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                                 .replace(" ", "_")
                             getSuggestions()
                         },
-                        placeholder = { Text("Search Tags") },
+                        placeholder = { Text("Search Tags", fontSize = 15.sp) },
                         shape = RoundedCornerShape(16.dp),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions.Default.copy(
