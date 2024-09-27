@@ -65,8 +65,8 @@ fun ImageGrid(
     val prefs = LocalPreferences.current
     val lazyGridState = rememberLazyGridState()
     val scope = rememberCoroutineScope()
-    val wantedSites = prefs.favouritesFilter
-    val wantedImages = images.filter { it.imageSource in prefs.favouritesFilter }
+    val wantedImages = if (showFilter) images.filter { it.imageSource in prefs.favouritesFilter }
+                       else images
 
     LazyVerticalGrid(
         columns = GridCells.Adaptive(128.dp),
@@ -76,6 +76,7 @@ fun ImageGrid(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         if (showFilter) {
+            val wantedSites = prefs.favouritesFilter
             item(span = { GridItemSpan(maxLineSpan) }) { Spacer(Modifier.height(12.dp)) }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Row(
