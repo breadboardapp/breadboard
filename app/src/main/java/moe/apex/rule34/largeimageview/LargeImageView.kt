@@ -12,14 +12,13 @@ import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -48,6 +47,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
@@ -167,7 +167,7 @@ fun LargeImageView(
         }
 
         Scaffold(
-            modifier = Modifier.offset(y=offset),
+            modifier = Modifier.offset { IntOffset(y = offset.roundToPx(), x = 0) },
             bottomBar = {
                 AnimatedVisibility(
                     visible = ((zoomState.zoomFraction ?: 0f) < 0.15f) || forciblyShowBottomBar,
@@ -300,20 +300,18 @@ fun LargeImageView(
                     }
                 }
 
-                Column(Modifier.zoomable(
+                Box(Modifier.zoomable(
                     zoomState,
                     onClick = {
                         forciblyShowBottomBar = !forciblyShowBottomBar
                     }
                 )) {
-                    Row(
+                    Box(
                         modifier = Modifier
-                            .weight(1f, true)
-                            .fillMaxWidth()
-                            .statusBarsPadding()
+                            .fillMaxSize()
+                            .systemBarsPadding()
                             .padding(bottom = NAV_BAR_HEIGHT.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
+                        contentAlignment = Alignment.Center
                     ) {
                         if (currentImg.preferHd) {
                             LargeImage(imageUrl = currentImg.highestQualityFormatUrl)
