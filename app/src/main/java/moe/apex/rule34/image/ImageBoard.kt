@@ -4,6 +4,7 @@ import moe.apex.rule34.RequestUtil
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.tag.TagSuggestion
 import org.json.JSONArray
+import org.json.JSONException
 import org.json.JSONObject
 
 
@@ -174,7 +175,7 @@ class Safebooru : ImageBoard {
             return emptyList()
         }
 
-        val json = JSONArray(body)
+        val json = try { JSONArray(body) } catch (e: JSONException) { return emptyList() }
         val subjects = mutableListOf<Image>()
 
         for (i in 0 until json.length()) {
