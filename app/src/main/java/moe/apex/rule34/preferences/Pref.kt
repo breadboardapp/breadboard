@@ -1,6 +1,9 @@
 package moe.apex.rule34.preferences
 
+import android.content.Context
+import android.content.pm.PackageInfo
 import android.net.Uri
+import android.os.Build
 import android.util.Log
 import androidx.compose.runtime.compositionLocalOf
 import androidx.datastore.core.DataStore
@@ -9,6 +12,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.byteArrayPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import kotlinx.coroutines.flow.Flow
@@ -45,6 +49,7 @@ data object PrefNames {
     const val EXCLUDE_AI = "exclude_ai"
     const val IMAGE_SOURCE = "image_source"
     const val FAVOURITES_FILTER = "favourites_filter"
+    const val LAST_USED_VERSION_CODE = "last_used_version_code"
 }
 
 
@@ -61,15 +66,17 @@ data class Prefs(
     val favouriteImages: List<Image>,
     val excludeAi: Boolean,
     val imageSource: ImageSource,
-    val favouritesFilter: List<ImageSource>
+    val favouritesFilter: List<ImageSource>,
+    val lastUsedVersionCode: Int,
 ) {
     companion object {
         val DEFAULT = Prefs(
             DataSaver.AUTO,
             Uri.EMPTY,
             emptyList(),
-            false, ImageSource.R34,
-            ImageSource.entries.toList()
+            false, ImageSource.SAFEBOORU,
+            ImageSource.entries.toList(),
+            0, // We'll update this later
         )
     }
 }
@@ -83,6 +90,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val EXCLUDE_AI = booleanPreferencesKey(PrefNames.EXCLUDE_AI)
         val IMAGE_SOURCE = stringPreferencesKey(PrefNames.IMAGE_SOURCE)
         val FAVOURITES_FILTER = stringSetPreferencesKey(PrefNames.FAVOURITES_FILTER)
+        val LAST_USED_VERSION_CODE = intPreferencesKey(PrefNames.LAST_USED_VERSION_CODE)
     }
 
     val getPreferences: Flow<Prefs> = dataStore.data
@@ -97,6 +105,31 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         }.map { preferences ->
             mapUserPreferences(preferences)
         }
+
+    suspend fun handleMigration(context: Context) {
+        val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+        val isOnFirstInstallVersion = packageInfo.firstInstallTime == packageInfo.lastUpdateTime
+
+        val currentPreferences = dataStore.data.first()
+        val lastUsedVersionCode = currentPreferences[PreferenceKeys.LAST_USED_VERSION_CODE] ?: 0
+
+        if (isOnFirstInstallVersion) {
+            return updateLastUsedVersionCode(packageInfo)
+        }
+
+        /* Version code 230 introduced app version tracking and also changed the default source from
+           R34 to Safebooru but we don't want to change it for existing users.
+           If the last used version code is 0 (i.e. before 2.3.0) and isFirstRun is false then it
+           means the user has updated the app. */
+        if (lastUsedVersionCode == 0)
+            updateImageSource(ImageSource.R34)
+
+
+        // Place any future migrations above this line by checking the last used version code.
+        if (getCurrentRunningVersionCode(packageInfo) >= lastUsedVersionCode)
+            updateLastUsedVersionCode(packageInfo)
+    }
+
 
     suspend fun updateDataSaver(to: DataSaver) {
         // updateData handles data transactionally, ensuring that if the sort is updated at the same
@@ -156,6 +189,21 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         updateFavouritesFilter(sources)
     }
 
+    @Suppress("Deprecation")
+    private fun getCurrentRunningVersionCode(packageInfo: PackageInfo): Int {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) packageInfo.longVersionCode.toInt()
+        else packageInfo.versionCode
+    }
+
+    private suspend fun updateLastUsedVersionCode(packageInfo: PackageInfo) {
+        val versionCode = getCurrentRunningVersionCode(packageInfo)
+
+        dataStore.edit { preferences ->
+            preferences[PreferenceKeys.LAST_USED_VERSION_CODE] = versionCode
+        }
+    }
+
+
     @OptIn(ExperimentalSerializationApi::class)
     private fun mapUserPreferences(preferences: Preferences): Prefs {
         val dataSaver = DataSaver.valueOf(
@@ -165,12 +213,13 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val favouriteImagesRaw = preferences[PreferenceKeys.FAVOURITE_IMAGES]
         val favouriteImages: List<Image> = favouriteImagesRaw?.let { Cbor.decodeFromByteArray(it) } ?: emptyList()
         val excludeAi = preferences[PreferenceKeys.EXCLUDE_AI] ?: false
-        val imageSource = ImageSource.valueOf(preferences[PreferenceKeys.IMAGE_SOURCE] ?: ImageSource.R34.name)
+        val imageSource = ImageSource.valueOf(preferences[PreferenceKeys.IMAGE_SOURCE] ?: ImageSource.SAFEBOORU.name)
         val favouritesFilter = (
             preferences[PreferenceKeys.FAVOURITES_FILTER]?.map { ImageSource.valueOf(it) } ?: ImageSource.entries
         )
+        val lastUsedVersionCode = preferences[PreferenceKeys.LAST_USED_VERSION_CODE] ?: 0
 
-        return Prefs(dataSaver, storageLocation, favouriteImages, excludeAi, imageSource, favouritesFilter)
+        return Prefs(dataSaver, storageLocation, favouriteImages, excludeAi, imageSource, favouritesFilter, lastUsedVersionCode)
     }
 
 }

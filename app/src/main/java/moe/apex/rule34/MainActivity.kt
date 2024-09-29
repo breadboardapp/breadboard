@@ -120,11 +120,14 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+
         applicationContext.preferencesDataStoreFile("preferences")
+        runBlocking { prefs.handleMigration(applicationContext) }
+        val initialPrefs = runBlocking { prefs.getPreferences.first() }
+
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent {
             val navController = rememberNavController()
-            val initialPrefs = runBlocking { prefs.getPreferences.first() }
             val prefs = prefs.getPreferences.collectAsState(initialPrefs).value
             CompositionLocalProvider(LocalPreferences provides prefs) {
                 Navigation(navController)
