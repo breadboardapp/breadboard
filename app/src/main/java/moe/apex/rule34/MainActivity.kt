@@ -76,7 +76,6 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.view.WindowCompat
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.navigation.NavController
@@ -125,7 +124,6 @@ class MainActivity : ComponentActivity() {
         runBlocking { prefs.handleMigration(applicationContext) }
         val initialPrefs = runBlocking { prefs.getPreferences.first() }
 
-        WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent {
             val navController = rememberNavController()
             val prefs = prefs.getPreferences.collectAsState(initialPrefs).value
@@ -243,8 +241,6 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
 
     @Composable
     fun AutoCompleteTagResults() {
-        Log.i("cleaned search string", cleanedSearchString)
-        Log.i("should show suggestions", shouldShowSuggestions.toString())
         Column(
             modifier = Modifier
                 .consumeWindowInsets(PaddingValues(0.dp, 0.dp, 0.dp, (NAV_BAR_HEIGHT + 16).dp))
