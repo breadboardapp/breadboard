@@ -100,7 +100,7 @@ import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.PreferencesScreen
 import moe.apex.rule34.preferences.UserPreferencesRepository
 import moe.apex.rule34.tag.TagSuggestion
-import moe.apex.rule34.ui.theme.ProcrasturbatingTheme
+import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.ui.theme.searchField
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.NAV_BAR_HEIGHT
@@ -327,8 +327,8 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
         }
     }
 
-    ProcrasturbatingTheme {
-        MainScreenScaffold("Procrasturbating") {
+    BreadboardTheme {
+        MainScreenScaffold("Breadboard") {
             Column(Modifier.padding(it)) {
                 Row(
                     modifier = Modifier
@@ -426,7 +426,7 @@ fun Navigation(navController: NavHostController) {
     val focusRequester = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
 
-    ProcrasturbatingTheme {
+    BreadboardTheme {
         Surface {
             Scaffold(
                 bottomBar = {

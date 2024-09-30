@@ -1,8 +1,8 @@
-<img src=".github/assets/r34.png" align="right" height="150" width="150">
+<img src=".github/assets/breadboard.png" align="right" height="150" width="150">
 
-# Procrasturbating
+# Breadboard
 
-An Android application for browsing image boards.
+Breadboard is an Android app designed to make browsing your favourite image boards as fast and effortless as possible.
 
 ## Features
 
@@ -12,13 +12,14 @@ An Android application for browsing image boards.
   - Gelbooru
   - Rule34
 
+- **Simple, clean, modern UI**
 - **Search by wanted and unwanted tags** (prefix a tag with a hyphen `-` to exclude it)
-- **Image downloads**
+- **Image downloading**
 - **Image favouriting** and filtering favourites by site
 - **Hiding AI-generated images**
-- **Support for modern Android features** (dynamic colour, themed icon, predictive back animations)
+- **Support for the latest Android features** like dynamic colour, themed icon, and predictive back animations
 
 
 ## Contributing
 
-This app is a project by two inexperienced Android devs. Feedback and code contributions are welcome!
+Feedback and code contributions are welcome!

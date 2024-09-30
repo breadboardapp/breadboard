@@ -44,7 +44,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import moe.apex.rule34.prefs
-import moe.apex.rule34.ui.theme.ProcrasturbatingTheme
+import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.SaveDirectorySelection
 
@@ -211,7 +211,7 @@ fun PreferencesScreen() {
     val preferencesRepository = LocalContext.current.prefs
     val currentSettings = LocalPreferences.current
 
-    ProcrasturbatingTheme {
+    BreadboardTheme {
         MainScreenScaffold("Settings", scrollBehavior) {
             Column(
                 Modifier

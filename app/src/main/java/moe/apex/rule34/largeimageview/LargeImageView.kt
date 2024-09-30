@@ -61,7 +61,7 @@ import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.DataSaver
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.prefs
-import moe.apex.rule34.ui.theme.ProcrasturbatingTheme
+import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.util.FullscreenLoadingSpinner
 import moe.apex.rule34.util.MustSetLocation
 import moe.apex.rule34.util.NAV_BAR_HEIGHT
@@ -161,7 +161,7 @@ fun LargeImageView(
         )
     }
 
-    ProcrasturbatingTheme {
+    BreadboardTheme {
         if (storageLocationPromptLaunched.value) {
             SaveDirectorySelection(storageLocationPromptLaunched)
         }

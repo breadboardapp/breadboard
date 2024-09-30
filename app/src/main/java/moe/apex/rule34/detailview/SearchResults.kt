@@ -22,7 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.LocalPreferences
-import moe.apex.rule34.ui.theme.ProcrasturbatingTheme
+import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
 import moe.apex.rule34.util.TitleBar
 import moe.apex.rule34.util.withoutVertical
@@ -43,7 +43,7 @@ fun SearchResults(navController: NavController, searchQuery: String) {
     val imageSource = LocalPreferences.current.imageSource.site
     var pageNumber by remember { mutableIntStateOf(imageSource.firstPageIndex) }
 
-    ProcrasturbatingTheme {
+    BreadboardTheme {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             topBar = {
