@@ -12,16 +12,13 @@ import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,9 +33,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,8 +47,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import kotlinx.coroutines.launch
@@ -64,11 +59,12 @@ import me.saket.telephoto.zoomable.zoomable
 import moe.apex.rule34.R
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.DataSaver
-import moe.apex.rule34.preferences.Prefs
+import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.prefs
-import moe.apex.rule34.ui.theme.ProcrasturbatingTheme
+import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.util.FullscreenLoadingSpinner
 import moe.apex.rule34.util.MustSetLocation
+import moe.apex.rule34.util.NAV_BAR_HEIGHT
 import moe.apex.rule34.util.SaveDirectorySelection
 import moe.apex.rule34.util.downloadImage
 
@@ -84,17 +80,14 @@ private fun isUsingWiFi(context: Context): Boolean {
 
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
-@Suppress("UNUSED_PARAMETER")
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun LargeImageView(
-    navController: NavController,
-    initialPage: MutableIntState,
-    shouldShowLargeImage: MutableState<Boolean>,
-    allImages: List<Image>
+    initialPage: Int,
+    visible: MutableState<Boolean>,
+    allImages: List<Image>,
 ) {
     val pagerState = rememberPagerState(
-        initialPage = initialPage.intValue,
+        initialPage = initialPage,
         initialPageOffsetFraction = 0f
     ) { allImages.size }
     var canChangePage by remember { mutableStateOf(false) }
@@ -108,7 +101,7 @@ fun LargeImageView(
     var isDownloading by remember { mutableStateOf(false) }
 
     if (allImages.isEmpty()) {
-        shouldShowLargeImage.value = false
+        visible.value = false
         return
     }
 
@@ -119,23 +112,23 @@ fun LargeImageView(
 
     val currentImage = allImages[pagerState.currentPage]
 
-    val prefs by context.prefs.getPreferences.collectAsState(Prefs.DEFAULT)
+    val prefs = LocalPreferences.current
     val dataSaver = prefs.dataSaver
     val storageLocation = prefs.storageLocation
     val favouriteImages = prefs.favouriteImages
 
     // Large image view is an overlay rather than a new screen entirely so we need to override
     // the default back button behaviour so we don't get taken to the home page.
-    BackHandler(shouldShowLargeImage.value) {
-        shouldShowLargeImage.value = false
+    BackHandler(visible.value) {
+        visible.value = false
     }
 
-    PredictiveBackHandler(shouldShowLargeImage.value) { progress ->
+    PredictiveBackHandler(visible.value) { progress ->
         try {
             progress.collect { backEvent ->
                 offset = (backEvent.progress * 200).dp
             }
-            shouldShowLargeImage.value = false
+            visible.value = false
         }
         catch(_: Exception) { }
     }
@@ -168,13 +161,13 @@ fun LargeImageView(
         )
     }
 
-    ProcrasturbatingTheme {
+    BreadboardTheme {
         if (storageLocationPromptLaunched.value) {
             SaveDirectorySelection(storageLocationPromptLaunched)
         }
 
         Scaffold(
-            modifier = Modifier.offset(y=offset),
+            modifier = Modifier.offset { IntOffset(y = offset.roundToPx(), x = 0) },
             bottomBar = {
                 AnimatedVisibility(
                     visible = ((zoomState.zoomFraction ?: 0f) < 0.15f) || forciblyShowBottomBar,
@@ -295,7 +288,7 @@ fun LargeImageView(
             HorizontalPager(
                 state = pagerState,
                 userScrollEnabled = canChangePage,
-                beyondBoundsPageCount = 1
+                beyondViewportPageCount = 1
             ) {index ->
                 val currentImg = allImages[index]
 
@@ -307,21 +300,18 @@ fun LargeImageView(
                     }
                 }
 
-                Column(Modifier.zoomable(
+                Box(Modifier.zoomable(
                     zoomState,
                     onClick = {
                         forciblyShowBottomBar = !forciblyShowBottomBar
                     }
                 )) {
-                    Row(
+                    Box(
                         modifier = Modifier
-                            .weight(1f, true)
-                            .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .statusBarsPadding()
-                            .padding(bottom = 80.dp), // To account for the bottom bar
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
+                            .fillMaxSize()
+                            .systemBarsPadding()
+                            .padding(bottom = NAV_BAR_HEIGHT.dp),
+                        contentAlignment = Alignment.Center
                     ) {
                         if (currentImg.preferHd) {
                             LargeImage(imageUrl = currentImg.highestQualityFormatUrl)

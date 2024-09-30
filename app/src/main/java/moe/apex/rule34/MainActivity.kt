@@ -9,26 +9,34 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imeNestedScroll
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.sharp.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -37,14 +45,15 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -56,13 +65,17 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.view.WindowCompat
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.navigation.NavController
@@ -70,18 +83,28 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import kotlinx.coroutines.async
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import moe.apex.rule34.detailview.SearchResults
 import moe.apex.rule34.favourites.FavouritesPage
+import moe.apex.rule34.preferences.ImageSource
+import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.PreferencesScreen
-import moe.apex.rule34.preferences.Prefs
 import moe.apex.rule34.preferences.UserPreferencesRepository
 import moe.apex.rule34.tag.TagSuggestion
-import moe.apex.rule34.ui.theme.ProcrasturbatingTheme
-import org.json.JSONArray
+import moe.apex.rule34.ui.theme.BreadboardTheme
+import moe.apex.rule34.ui.theme.searchField
+import moe.apex.rule34.util.MainScreenScaffold
+import moe.apex.rule34.util.NAV_BAR_HEIGHT
+import moe.apex.rule34.util.withoutVertical
 import soup.compose.material.motion.animation.materialSharedAxisXIn
 import soup.compose.material.motion.animation.materialSharedAxisXOut
 import soup.compose.material.motion.animation.rememberSlideDistance
@@ -94,12 +117,19 @@ val Context.prefs: UserPreferencesRepository
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+
         applicationContext.preferencesDataStoreFile("preferences")
-        WindowCompat.setDecorFitsSystemWindows(window, false)
+        runBlocking { prefs.handleMigration(applicationContext) }
+        val initialPrefs = runBlocking { prefs.getPreferences.first() }
+
         setContent {
             val navController = rememberNavController()
-            Navigation(navController)
+            val prefs = prefs.getPreferences.collectAsState(initialPrefs).value
+            CompositionLocalProvider(LocalPreferences provides prefs) {
+                Navigation(navController)
+            }
         }
     }
 }
@@ -108,18 +138,24 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun HomeScreen(navController: NavController) {
+fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
+    /* We use shouldShowSuggestions for determining autocomplete section visibility because if we
+       used mostRecentSuggestions.isNotEmpty(), it would temporarily show the "No results" message
+       while disappearing and that looks bad. */
     var shouldShowSuggestions by remember { mutableStateOf(false) }
     val tagChipList = remember { mutableStateListOf<TagSuggestion>() }
     var searchString by remember { mutableStateOf("") }
-    var lastValidSearchString by remember { mutableStateOf("") }
     var cleanedSearchString by remember { mutableStateOf("") }
     val mostRecentSuggestions = remember { mutableStateListOf<TagSuggestion>() }
-    val scrollState = rememberScrollState()
-    val context = LocalContext.current
-    val excludeAi = context.prefs.getPreferences
-        .collectAsState(initial = Prefs.DEFAULT).value.excludeAi
     var forciblyAllowedAi by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val prefs = LocalPreferences.current
+    val excludeAi = prefs.excludeAi
+    val currentSource = prefs.imageSource
+
+    var searchJob: Job? = null
+    val scope = rememberCoroutineScope()
 
 
     fun addToFilter(tag: TagSuggestion) {
@@ -133,67 +169,81 @@ fun HomeScreen(navController: NavController) {
     }
 
 
-    fun filterTags(): List<TagSuggestion> {
-        val suggestions = mutableListOf<TagSuggestion>()
-        if (cleanedSearchString != "") {
-            val isExcluded = cleanedSearchString.startsWith("-")
-            val query = cleanedSearchString
-                .replace("^-".toRegex(), "")
-            val body = RequestUtil.get("https://rule34.xxx/public/autocomplete.php?q=$query") {
-              addHeader("Referer", "https://rule34.xxx/")
-            }.get()
-            val results = JSONArray(body)
-            val resultCount = results.length()
-
-            for (i in 0 until resultCount) {
-                val suggestion = results.getJSONObject(i)
-                val label = suggestion.getString("label")
-                val value = suggestion.getString("value")
-                val type = suggestion.getString("type")
-                suggestions.add(TagSuggestion(label, value, type, isExcluded))
-            }
-        } else {
-            shouldShowSuggestions = false
+    fun danbooruLimitCheck(): Boolean {
+        if (tagChipList.size == 2 && prefs.imageSource == ImageSource.DANBOORU) {
+            Toast.makeText(context, "Danbooru supports up to 2 tags", Toast.LENGTH_SHORT).show()
+            return false
         }
+        return true
+    }
 
-        return suggestions.toList()
+
+    fun getSuggestions() {
+        searchJob?.cancel()
+        searchJob = scope.launch(Dispatchers.IO) {
+            if (cleanedSearchString.isNotEmpty()) delay(200)
+            if (cleanedSearchString !in listOf("", "-")) {
+                try {
+                    val suggestions = currentSource.site.loadAutoComplete(cleanedSearchString)
+                    /* This check shouldn't be needed but avoids a race condition whereby clearing
+                       the query in the time between getting suggestions and displaying them will cause
+                       the old suggestions to be displayed. */
+                    if (cleanedSearchString.isEmpty()) return@launch
+                    mostRecentSuggestions.clear()
+                    mostRecentSuggestions.addAll(suggestions)
+                    shouldShowSuggestions = true
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "Error fetching results", Toast.LENGTH_SHORT).show()
+                    }
+                    Log.e("App", "Error fetching autocomplete results", e)
+                }
+            } else {
+                shouldShowSuggestions = false
+            }
+        }
     }
 
 
     @Composable
     fun TagListEntry(tag: TagSuggestion) {
         Column(
-            modifier = Modifier.clickable {
-                searchString = ""
-                cleanedSearchString = ""
-                lastValidSearchString = ""
-                shouldShowSuggestions = false
-                addToFilter(tag)
-                mostRecentSuggestions.clear()
-            }
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier
+                .heightIn(min = 72.dp)
+                .fillMaxWidth()
+                .clickable {
+                    if (!danbooruLimitCheck()) return@clickable
+                    searchString = ""
+                    cleanedSearchString = ""
+                    shouldShowSuggestions = false
+                    addToFilter(tag)
+                }
         ) {
             Text(
-                modifier = Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp),
-                text = tag.label
+                modifier = Modifier.padding(horizontal = 20.dp),
+                text = tag.label,
+                fontSize = 16.sp,
+                lineHeight = 17.sp
             )
 
-            Text(
-                modifier = Modifier.padding(bottom = 16.dp, start = 16.dp, end = 16.dp),
-                text = tag.type,
-                fontSize = 12.sp
-            )
-
-            HorizontalDivider()
+            tag.type?.let {
+                Text(
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                    text = it,
+                    fontSize = 12.sp,
+                    lineHeight = 13.sp
+                )
+            }
         }
     }
 
 
-    @OptIn(ExperimentalLayoutApi::class)
     @Composable
-    fun AutoCompleteTagResults(suggestions: List<TagSuggestion>) {
+    fun AutoCompleteTagResults() {
         Column(
             modifier = Modifier
-                .navigationBarsPadding()
+                .consumeWindowInsets(PaddingValues(0.dp, 0.dp, 0.dp, (NAV_BAR_HEIGHT + 16).dp))
                 .imePadding()
         ) {
             Surface(
@@ -205,8 +255,7 @@ fun HomeScreen(navController: NavController) {
                         bottom = 16.dp
                     )
                     .clip(RoundedCornerShape(16.dp))
-                    .verticalScroll(rememberScrollState())
-                    .imeNestedScroll(),
+                    .verticalScroll(rememberScrollState()),
                 tonalElevation = 4.dp
             ) {
                 Spacer(Modifier.size(18.dp))
@@ -217,14 +266,16 @@ fun HomeScreen(navController: NavController) {
                         .fillMaxWidth()
                         .animateContentSize(),
                 ) {
-                    if (suggestions.isEmpty()) {
+                    if (mostRecentSuggestions.isEmpty()) {
                         Text(
-                            modifier = Modifier.padding(16.dp),
+                            modifier = Modifier.padding(20.dp),
+                            fontSize = 16.sp,
                             text = "No results :("
                         )
                     } else {
-                        for (t in suggestions) {
+                        for (t in mostRecentSuggestions) {
                             TagListEntry(tag = t)
+                            HorizontalDivider()
                         }
                     }
                 }
@@ -233,7 +284,7 @@ fun HomeScreen(navController: NavController) {
     }
 
 
-    fun activateSearch() {
+    fun performSearch() {
         if (tagChipList.isEmpty()) {
             Toast.makeText(
                 context,
@@ -242,40 +293,43 @@ fun HomeScreen(navController: NavController) {
             ).show()
         }
         else {
-            val searchTags = tagChipList.joinToString("+") { it.formattedLabel }
+            val searchTags = currentSource.site.formatTagString(tagChipList)
             navController.navigate("searchResults/${searchTags}")
         }
     }
 
     fun addAiExcludedTag() {
-        if (excludeAi && !forciblyAllowedAi && tagChipList.getIndexByName("ai_generated") == null) {
-            val tag = TagSuggestion("", "ai_generated", "", true)
+        if (excludeAi && !forciblyAllowedAi && tagChipList.getIndexByName(currentSource.site.aiTagName) == null) {
+            val tag = TagSuggestion("", currentSource.site.aiTagName, "", true)
             tagChipList.add(0, tag)
         }
     }
     addAiExcludedTag()
 
-    ProcrasturbatingTheme {
-        val scope = rememberCoroutineScope()
-
-        Scaffold(
-            topBar = {
-                LargeTopAppBar(
-                    title = { Text("Procrasturbating") },
-                    actions = {
-                        IconButton(onClick = { navController.navigate("favourite_images") }) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_star_hollow),
-                                contentDescription = "Favourite images")
-                        }
-                        IconButton(onClick = { navController.navigate("settings") }) {
-                            Icon(imageVector = Icons.Outlined.Settings, contentDescription = "Settings")
-                        }
-                    }
-                )
+    fun beginSearch() {
+        if (searchString.isNotEmpty()) {
+            if (mostRecentSuggestions.isNotEmpty()) {
+                if (!danbooruLimitCheck()) return
+                addToFilter(mostRecentSuggestions[0])
+                searchString = ""
+                shouldShowSuggestions = false
+            } else {
+                if (mostRecentSuggestions.isEmpty()) {
+                    Toast.makeText(
+                        context,
+                        "No matching tags",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
             }
-        ) {
-            Column(modifier = Modifier.padding(it)) {
+        } else {
+            performSearch()
+        }
+    }
+
+    BreadboardTheme {
+        MainScreenScaffold("Breadboard") {
+            Column(Modifier.padding(it)) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -283,45 +337,39 @@ fun HomeScreen(navController: NavController) {
                         .align(Alignment.CenterHorizontally)
                 ) {
                     OutlinedTextField(
-                        modifier = Modifier.weight(1f, true),
+                        modifier = Modifier
+                            .weight(1f, true)
+                            .focusRequester(focusRequester),
                         value = searchString,
+                        textStyle = MaterialTheme.typography.searchField,
                         onValueChange = {
                             searchString = it
                             cleanedSearchString = searchString
                                 .trim()
                                 .replace(" ", "_")
+                            getSuggestions()
                         },
-                        placeholder = { Text("Search Tags") },
+                        placeholder = { Text(
+                                text = "Search Tags",
+                                style = MaterialTheme.typography.searchField
+                        ) },
                         shape = RoundedCornerShape(16.dp),
                         singleLine = true,
+                        keyboardOptions = KeyboardOptions.Default.copy(
+                            capitalization = KeyboardCapitalization.None,
+                            imeAction = ImeAction.Search
+                            // Maybe also look into https://issuetracker.google.com/issues/359257538
+                        ),
                         keyboardActions = KeyboardActions(
-                            onDone = {
-                                if (searchString.isNotEmpty()) {
-                                    if (mostRecentSuggestions.isNotEmpty()) {
-                                        addToFilter(mostRecentSuggestions[0])
-                                        searchString = ""
-                                        lastValidSearchString = ""
-                                        shouldShowSuggestions = false
-                                    } else {
-                                        if (mostRecentSuggestions.isEmpty()) {
-                                            Toast.makeText(
-                                                context,
-                                                "No matching tags",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-                                    }
-                                } else {
-                                    activateSearch()
-                                }
-                            }
+                            onDone = { beginSearch() },
+                            onSearch = { beginSearch() }
                         ),
                     )
 
                     Spacer(modifier = Modifier.size(12.dp))
 
                     FloatingActionButton(
-                        onClick = { activateSearch() },
+                        onClick = { performSearch() },
                         elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp)
                     ) {
                         Icon(
@@ -333,72 +381,33 @@ fun HomeScreen(navController: NavController) {
 
                 Spacer(Modifier.size(8.dp))
 
-                Box {
-                    Column {
-                        AnimatedVisibility(tagChipList.isNotEmpty()) {
-                            Row(
-                                modifier = Modifier.horizontalScroll(scrollState)
-                            ) {
-                                Spacer(Modifier.size(16.dp))
+                Column {
+                    AnimatedVisibility(tagChipList.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Spacer(Modifier.size(8.dp))
 
-                                for (t in tagChipList) {
-                                    FilterChip(
-                                        label = { Text(t.value) },
-                                        selected = !t.isExcluded,
-                                        onClick = {
-                                            if (t.value == "ai_generated") {
-                                                if (t.isExcluded) forciblyAllowedAi = true
-                                                else addAiExcludedTag()
-                                            }
-                                            tagChipList.remove(t)
+                            for (t in tagChipList) {
+                                FilterChip(
+                                    label = { Text(t.value) },
+                                    selected = !t.isExcluded,
+                                    onClick = {
+                                        if (t.value == prefs.imageSource.site.aiTagName) {
+                                            if (t.isExcluded) forciblyAllowedAi = true
+                                            else addAiExcludedTag()
                                         }
-                                    )
-
-                                    Spacer(modifier = Modifier.size(8.dp))
-                                }
-
-                                Spacer(modifier = Modifier.size(8.dp))
+                                        tagChipList.remove(t)
+                                    }
+                                )
                             }
-                        }
-                        AnimatedVisibility(shouldShowSuggestions) {
-                            AutoCompleteTagResults(mostRecentSuggestions)
+
+                            Spacer(modifier = Modifier.size(8.dp))
                         }
                     }
-                }
-
-                // I don't like this
-                LaunchedEffect(key1 = cleanedSearchString) {
-                    if (cleanedSearchString.isNotEmpty()) { delay(200) }
-                    if (lastValidSearchString != cleanedSearchString) {
-                        lastValidSearchString = cleanedSearchString.trim().replace(" ", "_")
-
-                        if (cleanedSearchString !in arrayListOf("", "-")) {
-                            val deferredResponse = scope.async {
-                                return@async { filterTags() }
-                            }
-                            try {
-                                val response = deferredResponse.await().invoke()
-                                // I don't have a better way of ensuring the right state
-                                // without risking noticeable UI lag yet
-                                if (cleanedSearchString == lastValidSearchString) {
-                                    mostRecentSuggestions.clear()
-                                    mostRecentSuggestions.addAll(response)
-                                    shouldShowSuggestions = true
-                                }
-                            } catch (e: Exception) {
-                                if (e.message?.contains("was cancelled") != true) {
-                                    Toast.makeText(
-                                        context,
-                                        "Error fetching results",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                    Log.e("App", "Error fetching autocomplete results", e)
-                                }
-                            }
-                        } else {
-                            shouldShowSuggestions = false
-                            mostRecentSuggestions.clear()
-                        }
+                    AnimatedVisibility(shouldShowSuggestions) {
+                        AutoCompleteTagResults()
                     }
                 }
             }
@@ -411,28 +420,125 @@ fun HomeScreen(navController: NavController) {
 fun Navigation(navController: NavHostController) {
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val slideDistance = rememberSlideDistance()
-    ProcrasturbatingTheme {
+    val bottomBarVisibleState = remember { mutableStateOf(true) }
+    val currentBSE by navController.currentBackStackEntryAsState()
+    val currentRoute = currentBSE?.destination?.route
+    val focusRequester = remember { FocusRequester() }
+    val keyboard = LocalSoftwareKeyboardController.current
+
+    BreadboardTheme {
         Surface {
-            NavHost(
-                navController = navController,
-                startDestination = "home",
-                enterTransition = { materialSharedAxisXIn(!isRtl, slideDistance) },
-                exitTransition = { materialSharedAxisXOut(!isRtl, slideDistance) },
-                popEnterTransition = { materialSharedAxisXIn(isRtl, slideDistance) },
-                popExitTransition = { materialSharedAxisXOut(isRtl, slideDistance) }
-            ) {
-                composable("home") { HomeScreen(navController) }
-                composable(
-                    route = "searchResults/{searchQuery}",
-                    arguments = listOf(navArgument("searchQuery") { NavType.StringType })
-                ) { navBackStackEntry ->
-                    SearchResults(
-                        navController,
-                        navBackStackEntry.arguments?.getString("searchQuery") ?: ""
-                    )
+            Scaffold(
+                bottomBar = {
+                    AnimatedVisibility(
+                        visible = listOf("home", "settings", "favourite_images").contains(currentRoute)
+                            && bottomBarVisibleState.value,
+                        enter = expandVertically { 0 },
+                        exit = shrinkVertically { 0 }
+                    ) {
+                        NavigationBar {
+                            NavigationBarItem(
+                                label = { Text("Search") },
+                                selected = currentRoute == "home" || "searchResults" in currentRoute!!,
+                                icon = {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Search, // Outlined and Filled search are the same
+                                        contentDescription = "Search"
+                                    )
+                                },
+                                onClick = {
+                                    if (currentRoute != "home") {
+                                        navController.navigate("home") {
+                                            popUpTo("home") { inclusive = true }
+                                        }
+                                    } else {
+                                        focusRequester.requestFocus()
+                                        keyboard?.show() /* Not technically necessary but allows the keyboard to appear
+                                                            again if the user taps away while the search bar is still
+                                                            focused */
+                                    }
+                                }
+                            )
+                            NavigationBarItem(
+                                label = { Text("Favourites") },
+                                selected = currentRoute == "favourite_images",
+                                icon = {
+                                    Icon(
+                                        painter = painterResource(
+                                            if (currentRoute != "favourite_images") R.drawable.ic_star_hollow
+                                            else R.drawable.ic_star_filled
+                                        ),
+                                        contentDescription = "Favourite images"
+                                    )
+                                },
+                                onClick = {
+                                    if (currentRoute != "favourite_images") {
+                                        navController.navigate("favourite_images") {
+                                            popUpTo("favourite_images") { inclusive = true }
+                                        }
+                                    }
+                                }
+                            )
+                            NavigationBarItem(
+                                label = { Text("Settings") },
+                                selected = currentRoute == "settings",
+                                icon = {
+                                    Icon(
+                                        imageVector = if (currentRoute != "settings") Icons.Outlined.Settings
+                                        else Icons.Filled.Settings,
+                                        contentDescription = "Settings"
+                                    )
+                                },
+                                onClick = {
+                                    if (currentRoute != "settings") {
+                                        navController.navigate("settings") {
+                                            popUpTo("settings") { inclusive = true }
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    }
                 }
-                composable("settings") { PreferencesScreen(navController) }
-                composable("favourite_images") { FavouritesPage(navController) }
+            ) {
+                NavHost(
+                    modifier = Modifier.padding(it.withoutVertical()),
+                    navController = navController,
+                    startDestination = "home",
+                    enterTransition = {
+                        if (targetState.destination.route?.contains("searchResults") == true)
+                            materialSharedAxisXIn(!isRtl, slideDistance)
+                        else fadeIn()
+                    },
+                    exitTransition = {
+                        if (targetState.destination.route?.contains("searchResults") == true)
+                            materialSharedAxisXOut(!isRtl, slideDistance)
+                        else fadeOut()
+                    },
+                    popEnterTransition = {
+                        if (initialState.destination.route?.contains("searchResults") == true)
+                            materialSharedAxisXIn(isRtl, slideDistance)
+                        else fadeIn()
+                    },
+                    popExitTransition = {
+                        if (initialState.destination.route?.contains("searchResults") == true)
+                            materialSharedAxisXOut(isRtl, slideDistance)
+                        else fadeOut()
+                    }
+                ) {
+                    composable("home") { HomeScreen(navController, focusRequester) }
+                    composable(
+                        route = "searchResults/{searchQuery}",
+                        arguments = listOf(navArgument("searchQuery") { NavType.StringType })
+                    ) { navBackStackEntry ->
+                        SearchResults(
+                            navController,
+                            navBackStackEntry.arguments?.getString("searchQuery") ?: ""
+                        )
+                    }
+                    composable("settings") { PreferencesScreen() }
+                    composable("favourite_images") { FavouritesPage(bottomBarVisibleState) }
+                }
             }
         }
     }

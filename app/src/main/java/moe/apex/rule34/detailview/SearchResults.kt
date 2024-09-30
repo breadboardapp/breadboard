@@ -21,10 +21,11 @@ import androidx.navigation.NavController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import moe.apex.rule34.image.Image
-import moe.apex.rule34.image.ImageSource
-import moe.apex.rule34.ui.theme.ProcrasturbatingTheme
+import moe.apex.rule34.preferences.LocalPreferences
+import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
 import moe.apex.rule34.util.TitleBar
+import moe.apex.rule34.util.withoutVertical
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,16 +34,16 @@ fun SearchResults(navController: NavController, searchQuery: String) {
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
     val shouldShowLargeImage = remember { mutableStateOf(false) }
-    val initialPage = remember { mutableIntStateOf(0) }
+    var initialPage by remember { mutableIntStateOf(0) }
     val allImages = remember { mutableStateListOf<Image>() }
-    val imageSource = remember { ImageSource(searchQuery) }
     var doneInitialLoad by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var shouldKeepSearching by remember { mutableStateOf(true) }
-    var pageNumber by remember { mutableIntStateOf(1) }
     val scope = rememberCoroutineScope()
+    val imageSource = LocalPreferences.current.imageSource.site
+    var pageNumber by remember { mutableIntStateOf(imageSource.firstPageIndex) }
 
-    ProcrasturbatingTheme {
+    BreadboardTheme {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             topBar = {
@@ -55,29 +56,31 @@ fun SearchResults(navController: NavController, searchQuery: String) {
         ) { padding ->
             if (!doneInitialLoad) {
                 isLoading = true
-                val newImages = imageSource.loadPage(0)
+                val newImages = imageSource.loadPage(searchQuery, pageNumber)
                 if (!allImages.addAll(newImages)) {
                     shouldKeepSearching = false
                 }
                 doneInitialLoad = true
                 isLoading = false
+                pageNumber ++
             }
 
             ImageGrid(
                 modifier = Modifier
-                    .padding(padding)
+                    .padding(padding.withoutVertical(top = false))
                     .padding(horizontal = 16.dp)
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
-                navController,
-                shouldShowLargeImage,
-                initialPage,
-                allImages
+                images = allImages,
+                onImageClick = { index, image ->
+                    initialPage = index
+                    shouldShowLargeImage.value = true
+                }
             ) {
                 if (shouldKeepSearching) {
                     if (!isLoading) {
                         isLoading = true
                         scope.launch(Dispatchers.IO) {
-                            val newImages = imageSource.loadPage(pageNumber)
+                            val newImages = imageSource.loadPage(searchQuery, pageNumber)
                             if (newImages.isNotEmpty()) {
                                 pageNumber++
                                 allImages.addAll(newImages)
@@ -91,5 +94,5 @@ fun SearchResults(navController: NavController, searchQuery: String) {
             }
         }
     }
-    AnimatedVisibilityLargeImageView(shouldShowLargeImage, navController, initialPage, allImages)
+    AnimatedVisibilityLargeImageView(shouldShowLargeImage, initialPage, allImages)
 }

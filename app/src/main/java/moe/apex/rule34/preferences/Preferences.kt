@@ -1,43 +1,39 @@
 package moe.apex.rule34.preferences
 
 import android.net.Uri
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material3.DividerDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,15 +41,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import moe.apex.rule34.prefs
-import moe.apex.rule34.ui.theme.ProcrasturbatingTheme
+import moe.apex.rule34.ui.theme.BreadboardTheme
+import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.SaveDirectorySelection
-import moe.apex.rule34.util.TitleBar
 
 
 @Composable
@@ -65,8 +58,21 @@ private fun Heading(
         modifier = modifier.padding(horizontal = 16.dp),
         text = text,
         color = MaterialTheme.colorScheme.primary,
-        letterSpacing = 0.sp,
-        fontWeight = FontWeight.Medium
+        style = MaterialTheme.typography.titleMedium
+    )
+}
+
+
+@Composable
+private fun Summary(
+    modifier: Modifier = Modifier,
+    text: String
+) {
+    Text(
+        text = text,
+        color = Color.Gray,
+        style = MaterialTheme.typography.bodySmall,
+        modifier = modifier
     )
 }
 
@@ -78,20 +84,23 @@ private fun TitleSummary(
     summary: String? = null
 ) {
     Column(
-        modifier = modifier,
+        modifier = modifier.heightIn(min = 72.dp),
         verticalArrangement = Arrangement.Center
     ) {
         Text(
             text = title,
-            modifier = Modifier.padding(top = 12.dp, start = 16.dp, end = 16.dp)
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(
+                start = 16.dp,
+                end = 16.dp,
+                top = 14.dp,
+                bottom = (if (summary == null) 14.dp else 2.dp))
         )
+
         if (summary != null) {
-            Text(
-                summary,
-                color = Color.Gray,
-                fontSize = 14.sp,
-                lineHeight = 16.sp,
-                modifier = Modifier.padding(bottom = 12.dp, start = 16.dp, end = 16.dp)
+            Summary(
+                text = summary,
+                modifier = Modifier.padding(bottom = 14.dp, start = 16.dp, end = 16.dp)
             )
         }
     }
@@ -118,31 +127,92 @@ private fun SwitchPref(
 }
 
 
+@Composable
+private fun EnumPref(
+    title: String,
+    summary: String?,
+    enumItems: Array<PrefEnum<*>>,
+    selectedItem: PrefEnum<*>,
+    onSelection: (PrefEnum<*>) -> Unit
+) {
+    var showDialog by remember { mutableStateOf(false) }
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            confirmButton = { },
+            title = { Text(title) },
+            text = {
+                Column(Modifier.fillMaxWidth()) {
+                    for (setting in enumItems) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .clip(RoundedCornerShape(100))
+                                .selectable(
+                                    selected = selectedItem == setting,
+                                    onClick = {
+                                        onSelection(setting)
+                                        showDialog = false
+                                    },
+                                    role = Role.RadioButton
+                                ),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                modifier = Modifier.padding(start = 12.dp, end = 16.dp),
+                                selected = selectedItem == setting,
+                                onClick = null
+                            )
+                            Text(text = setting.description)
+                        }
+                    }
+                }
+            }
+        )
+    }
+
+    TitleSummary(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { showDialog = true },
+        title = title,
+        summary = summary
+    )
+}
+
+
+@Composable
+private fun InfoSection(text: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+    ) {
+        Icon(
+            modifier = Modifier.size(20.dp),
+            imageVector = Icons.Outlined.Info,
+            contentDescription = null,
+            tint = Color.Gray
+        )
+        Spacer(Modifier.size(12.dp))
+        Summary(text = text)
+    }
+}
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PreferencesScreen(navController: NavController) {
+fun PreferencesScreen() {
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
     val scope = rememberCoroutineScope()
     val storageLocationPromptLaunched = remember { mutableStateOf(false) }
+    val preferencesRepository = LocalContext.current.prefs
+    val currentSettings = LocalPreferences.current
 
-    val prefs = LocalContext.current.prefs
-    val currentSettings by prefs.getPreferences.collectAsState(Prefs.DEFAULT)
-    val dataSaver = currentSettings.dataSaver
-    val storageLocation = currentSettings.storageLocation
-    val excludeAi = currentSettings.excludeAi
-
-    ProcrasturbatingTheme {
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            topBar = {
-                TitleBar(
-                    title = "Settings",
-                    scrollBehavior = scrollBehavior,
-                    navController = navController
-                )
-            }
-        ) {
+    BreadboardTheme {
+        MainScreenScaffold("Settings", scrollBehavior) {
             Column(
                 Modifier
                     .fillMaxSize()
@@ -151,72 +221,15 @@ fun PreferencesScreen(navController: NavController) {
                     .verticalScroll(rememberScrollState())
             ) {
                 Spacer(Modifier.height(12.dp))
-                Heading(
-                    modifier = Modifier.padding(bottom = 12.dp),
-                    text = "Data saver"
+
+                Heading(text = "Data saver")
+                EnumPref(
+                    title = "Data saver",
+                    summary = currentSettings.dataSaver.description,
+                    enumItems = DataSaver.entries.toTypedArray(),
+                    selectedItem = currentSettings.dataSaver,
+                    onSelection = { scope.launch { preferencesRepository.updateDataSaver(it as DataSaver) } }
                 )
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .height(IntrinsicSize.Min)
-                        .clip(RoundedCornerShape(24.dp))
-                        .border(
-                            DividerDefaults.Thickness,
-                            DividerDefaults.color,
-                            RoundedCornerShape(24.dp)
-                        ),
-                    tonalElevation = 2.dp
-                ) {
-                    Column(Modifier.fillMaxWidth()) {
-                        for (setting in DataSaver.entries) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(64.dp)
-                                    .selectable(
-                                        selected = dataSaver == setting,
-                                        onClick = { scope.launch { prefs.updateDataSaver(setting) } },
-                                        role = Role.RadioButton
-                                    ),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    modifier = Modifier.padding(horizontal = 16.dp),
-                                    selected = dataSaver == setting,
-                                    onClick = null
-                                )
-                                Text(text = setting.description)
-                            }
-                            HorizontalDivider()
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(12.dp))
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Spacer(Modifier.width(4.dp))
-                    Icon(
-                        modifier = Modifier.size(20.dp),
-                        imageVector = Icons.Outlined.Info,
-                        contentDescription = null,
-                        tint = Color.Gray
-                    )
-                    Spacer(Modifier.width(16.dp))
-                    Text(
-                        text = "When enabled, data saver will load lower resolution images by default. " +
-                               "Downloads will always be in the maximum quality.",
-                        fontSize = 14.sp,
-                        lineHeight = 16.sp,
-                        color = Color.Gray
-                    )
-                }
 
                 Spacer(Modifier.height(24.dp))
 
@@ -226,8 +239,8 @@ fun PreferencesScreen(navController: NavController) {
                         .clickable { storageLocationPromptLaunched.value = true }
                         .fillMaxWidth(),
                     title = "Save downloads to",
-                    summary = if (storageLocation == Uri.EMPTY) "Tap to set"
-                    else storageLocation.toString()
+                    summary = if (currentSettings.storageLocation == Uri.EMPTY) "Tap to set"
+                    else currentSettings.storageLocation.toString()
                 )
                 if (storageLocationPromptLaunched.value) {
                     SaveDirectorySelection(storageLocationPromptLaunched)
@@ -236,14 +249,26 @@ fun PreferencesScreen(navController: NavController) {
                 Spacer(Modifier.height(24.dp))
 
                 Heading(text = "Searching")
+                EnumPref(
+                    title = "Image source",
+                    summary = currentSettings.imageSource.description,
+                    enumItems = ImageSource.entries.toTypedArray(),
+                    selectedItem = currentSettings.imageSource,
+                    onSelection = { scope.launch { preferencesRepository.updateImageSource(it as ImageSource) } }
+                )
                 SwitchPref(
-                    checked = excludeAi,
+                    checked = currentSettings.excludeAi,
                     title = "Hide AI-generated images",
                     summary = "Attempt to remove AI-generated images by excluding the " +
                               "'ai_generated' tag in search queries by default."
                 ) {
-                    scope.launch { prefs.updateExcludeAi(it) }
+                    scope.launch { preferencesRepository.updateExcludeAi(it) }
                 }
+
+                HorizontalDivider(Modifier.padding(vertical = 48.dp))
+
+                InfoSection(text = "When data saver is enabled, images will load in a lower resolution " +
+                                   "by default. Downloads will always be in the maximum resolution.")
             }
         }
     }
