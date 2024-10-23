@@ -19,9 +19,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Share
@@ -31,7 +33,9 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -45,17 +49,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import coil3.ImageLoader
+import coil3.compose.AsyncImage
 import coil3.compose.SubcomposeAsyncImage
 import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import coil3.request.ImageRequest
-import coil3.request.crossfade
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import me.saket.telephoto.zoomable.ZoomSpec
@@ -104,6 +109,17 @@ fun LargeImageView(
     val isUsingWifi = isUsingWiFi(context)
     val storageLocationPromptLaunched = remember { mutableStateOf(false) }
     var isDownloading by remember { mutableStateOf(false) }
+    val loader = remember {
+        ImageLoader.Builder(context)
+            .components {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    add(AnimatedImageDecoder.Factory())
+                } else {
+                    add(GifDecoder.Factory())
+                }
+            }
+            .build()
+    }
 
     if (allImages.isEmpty()) {
         visible.value = false
@@ -139,7 +155,7 @@ fun LargeImageView(
     }
 
     @Composable
-    fun LargeImage(imageUrl: String) {
+    fun LargeImage(imageUrl: String, previewImageUrl: String) {
         val modifier =
             if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT) {
                 Modifier.fillMaxWidth()
@@ -153,30 +169,33 @@ fun LargeImageView(
         Suggestions welcome.
         */
 
-        /* These need to be remembered otherwise recompositions (like when zooming) will cause
-           them to flash. */
-        val loader = remember {
-            ImageLoader.Builder(context)
-                .components {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                        add(AnimatedImageDecoder.Factory())
-                    } else {
-                        add(GifDecoder.Factory())
-                    }
-                }
-                .build()
-        }
         val model = remember {
             ImageRequest.Builder(context)
                 .data(imageUrl)
-                .crossfade(true)
                 .build()
         }
         SubcomposeAsyncImage(
             model = model,
             imageLoader = loader,
             contentDescription = "Image",
-            loading = { FullscreenLoadingSpinner() },
+            loading = { Box(
+                modifier = modifier,
+                contentAlignment = Alignment.Center
+            ) {
+                SubcomposeAsyncImage(
+                    model = previewImageUrl,
+                    contentDescription = "Image",
+                    contentScale = ContentScale.Fit,
+                    modifier = modifier.clip(RoundedCornerShape(24.dp))
+                )
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = CircleShape,
+                    modifier = Modifier.size(72.dp)
+                ) {
+                    FullscreenLoadingSpinner()
+                }
+            } },
             modifier = modifier
                 .scale(0.95f)
                 .clip(RoundedCornerShape(24.dp))
@@ -336,9 +355,9 @@ fun LargeImageView(
                         contentAlignment = Alignment.Center
                     ) {
                         if (currentImg.preferHd) {
-                            LargeImage(imageUrl = currentImg.highestQualityFormatUrl)
+                            LargeImage(imageUrl = currentImg.highestQualityFormatUrl, previewImageUrl = currentImg.previewUrl)
                         } else {
-                            LargeImage(imageUrl = currentImg.sampleUrl)
+                            LargeImage(imageUrl = currentImg.sampleUrl, previewImageUrl = currentImg.previewUrl)
                         }
                     }
                 }
