@@ -3,9 +3,12 @@ package moe.apex.rule34.detailview
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -15,7 +18,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -29,6 +34,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -124,19 +130,44 @@ fun ImageGrid(
                     .aspectRatio(1f)
                     .widthIn(max = 144.dp)
             ) {
-                SubcomposeAsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(image.previewUrl)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = "Image",
-                    contentScale = ContentScale.Crop,
-                    loading = { FullscreenLoadingSpinner() },
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .fillMaxSize()
-                        .clickable { onImageClick(index, image) },
-                )
+                Box(modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(12.dp))
+                ) {
+                    SubcomposeAsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(image.previewUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "Image",
+                        contentScale = ContentScale.Crop,
+                        loading = { FullscreenLoadingSpinner() },
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clickable { onImageClick(index, image) },
+                    )
+                    if (image.fileFormat == "gif") {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(8.dp)
+                                .height(IntrinsicSize.Min)
+                                .width(IntrinsicSize.Min)
+                                .background(
+                                    MaterialTheme.colorScheme.primary,
+                                    RoundedCornerShape(4.dp)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "GIF",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.padding(vertical = 2.dp, horizontal = 4.dp)
+                            )
+                        }
+                    }
+                }
             }
         }
 
