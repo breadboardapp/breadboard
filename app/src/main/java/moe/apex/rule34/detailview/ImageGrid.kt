@@ -40,8 +40,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import coil.compose.SubcomposeAsyncImage
-import coil.request.ImageRequest
+import coil3.compose.SubcomposeAsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import kotlinx.coroutines.launch
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.ImageSource
