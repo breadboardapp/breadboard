@@ -20,6 +20,12 @@ val Typography = Typography(
                 fontSize = 14.sp,
                 lineHeight = 16.sp,
         ),
+        labelSmall = Typography().labelSmall.copy(
+                fontFamily = FontFamily(Font(R.font.kumbh)),
+                fontWeight = FontWeight.Black,
+                fontSize = 10.sp,
+                lineHeight = 10.sp
+        ),
         labelMedium = Typography().labelMedium.copy(
                 fontSize = 13.sp,
                 lineHeight = 18.sp,

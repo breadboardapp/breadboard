@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.PredictiveBackHandler
@@ -49,8 +50,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import coil.compose.SubcomposeAsyncImage
-import coil.request.ImageRequest
+import coil3.ImageLoader
+import coil3.compose.SubcomposeAsyncImage
+import coil3.gif.AnimatedImageDecoder
+import coil3.gif.GifDecoder
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import me.saket.telephoto.zoomable.ZoomSpec
@@ -148,11 +153,28 @@ fun LargeImageView(
         Suggestions welcome.
         */
 
-        SubcomposeAsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
+        /* These need to be remembered otherwise recompositions (like when zooming) will cause
+           them to flash. */
+        val loader = remember {
+            ImageLoader.Builder(context)
+                .components {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                        add(AnimatedImageDecoder.Factory())
+                    } else {
+                        add(GifDecoder.Factory())
+                    }
+                }
+                .build()
+        }
+        val model = remember {
+            ImageRequest.Builder(context)
                 .data(imageUrl)
                 .crossfade(true)
-                .build(),
+                .build()
+        }
+        SubcomposeAsyncImage(
+            model = model,
+            imageLoader = loader,
             contentDescription = "Image",
             loading = { FullscreenLoadingSpinner() },
             modifier = modifier
