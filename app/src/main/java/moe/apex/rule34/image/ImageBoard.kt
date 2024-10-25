@@ -3,6 +3,7 @@ package moe.apex.rule34.image
 import moe.apex.rule34.RequestUtil
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.tag.TagSuggestion
+import moe.apex.rule34.util.extractPixivId
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -76,7 +77,14 @@ class Rule34 : ImageBoard {
                 continue
             }
 
-            subjects.add(Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.R34))
+            // Usually on R34 the "source" is the link, but sometimes it's the artist and sometimes it's blank.
+            val metaSource = e.optString("source", "").takeIf { it.isNotEmpty() }
+            val metaTags = e.getString("tags").split(" ")
+            val metaRating = ImageRating.fromString(e.getString("rating"))
+            val metaPixivId = extractPixivId(metaSource)
+            val metadata = ImageMetadata(null, metaSource, metaTags, metaRating, metaPixivId)
+
+            subjects.add(Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.R34, metadata))
         }
 
         return subjects.toList()
@@ -135,7 +143,19 @@ class Danbooru : ImageBoard {
                 continue
             }
 
-            subjects.add(Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.DANBOORU))
+            val metaSource = e.optString("source", "").takeIf { it.isNotEmpty() }
+            val metaArtist = e.optString("tag_string_artist", "").takeIf { it.isNotEmpty() }
+            var metaTags = e.getString("tag_string").split(" ")
+            if (metaArtist != null)
+                metaTags = metaTags
+                    .toMutableList()
+                    .minus(metaArtist)
+                    .toList()
+            val metaRating = ImageRating.fromString(e.optString("rating"))
+            val metaPixivId = e.optInt("pixiv_id").takeIf { it != 0 }
+            val metadata = ImageMetadata(metaArtist, metaSource, metaTags, metaRating, metaPixivId)
+
+            subjects.add(Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.DANBOORU, metadata))
         }
 
         return subjects.toList()
@@ -190,7 +210,13 @@ class Safebooru : ImageBoard {
                 continue
             }
 
-            subjects.add(Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.SAFEBOORU))
+            val metaSource = e.optString("source", "").takeIf { it.isNotEmpty() }
+            val metaTags = e.getString("tags").split(" ")
+            val metaRating = ImageRating.fromString(e.getString("rating"))
+            val metaPixivId = extractPixivId(metaSource)
+            val metadata = ImageMetadata(null, metaSource, metaTags, metaRating, metaPixivId)
+
+            subjects.add(Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.SAFEBOORU, metadata))
         }
 
         return subjects.toList()
@@ -247,7 +273,13 @@ class Gelbooru : ImageBoard {
                 continue
             }
 
-            subjects.add(Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.GELBOORU))
+            val metaSource = e.optString("source", "").takeIf { it.isNotEmpty() }
+            val metaTags = e.getString("tags").split(" ")
+            val metaRating = ImageRating.fromString(e.getString("rating"))
+            val metaPixivId = extractPixivId(metaSource)
+            val metadata = ImageMetadata(null, metaSource, metaTags, metaRating, metaPixivId)
+
+            subjects.add(Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.GELBOORU, metadata))
         }
 
         return subjects.toList()

@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
@@ -132,6 +133,7 @@ fun LargeImageView(
     }
 
     val currentImage = allImages[pagerState.currentPage]
+    val popupVisibilityState = remember { mutableStateOf(false) }
 
     val prefs = LocalPreferences.current
     val dataSaver = prefs.dataSaver
@@ -142,6 +144,10 @@ fun LargeImageView(
     // the default back button behaviour so we don't get taken to the home page.
     BackHandler(visible.value) {
         visible.value = false
+    }
+
+    if (popupVisibilityState.value) {
+        InfoSheet(currentImage, popupVisibilityState)
     }
 
     PredictiveBackHandler(visible.value) { progress ->
@@ -273,6 +279,16 @@ fun LargeImageView(
                                     "Share"
                                 )
                             }
+                            if (currentImage.metadata != null) {
+                                IconButton(
+                                    onClick = { popupVisibilityState.value = true }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Info,
+                                        contentDescription = "Info"
+                                    )
+                                }
+                            }
                         },
                         floatingActionButton = {
                             FloatingActionButton(
@@ -330,7 +346,7 @@ fun LargeImageView(
                 state = pagerState,
                 userScrollEnabled = canChangePage,
                 beyondViewportPageCount = 1
-            ) {index ->
+            ) { index ->
                 val currentImg = allImages[index]
 
                 if (currentImg.hdQualityOverride == null) {

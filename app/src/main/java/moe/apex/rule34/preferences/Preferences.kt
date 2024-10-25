@@ -45,22 +45,9 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import moe.apex.rule34.prefs
 import moe.apex.rule34.ui.theme.BreadboardTheme
+import moe.apex.rule34.util.Heading
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.SaveDirectorySelection
-
-
-@Composable
-private fun Heading(
-    modifier: Modifier = Modifier,
-    text: String
-) {
-    Text(
-        modifier = modifier.padding(horizontal = 16.dp),
-        text = text,
-        color = MaterialTheme.colorScheme.primary,
-        style = MaterialTheme.typography.titleMedium
-    )
-}
 
 
 @Composable
