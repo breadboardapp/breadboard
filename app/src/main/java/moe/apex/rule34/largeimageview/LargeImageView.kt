@@ -41,6 +41,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -57,7 +58,6 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import coil3.ImageLoader
-import coil3.compose.AsyncImage
 import coil3.compose.SubcomposeAsyncImage
 import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
@@ -347,13 +347,13 @@ fun LargeImageView(
                 userScrollEnabled = canChangePage,
                 beyondViewportPageCount = 1
             ) { index ->
-                val currentImg = allImages[index]
+                val imageAtIndex = allImages[index]
 
-                if (currentImg.hdQualityOverride == null) {
+                if (imageAtIndex.hdQualityOverride == null) {
                     when (dataSaver) {
-                        DataSaver.ON -> currentImg.preferHd = false
-                        DataSaver.OFF -> currentImg.preferHd = true
-                        DataSaver.AUTO -> currentImg.preferHd = isUsingWifi
+                        DataSaver.ON -> imageAtIndex.preferHd = false
+                        DataSaver.OFF -> imageAtIndex.preferHd = true
+                        DataSaver.AUTO -> imageAtIndex.preferHd = isUsingWifi
                     }
                 }
 
@@ -370,10 +370,18 @@ fun LargeImageView(
                             .padding(bottom = NAV_BAR_HEIGHT.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (currentImg.preferHd) {
-                            LargeImage(imageUrl = currentImg.highestQualityFormatUrl, previewImageUrl = currentImg.previewUrl)
-                        } else {
-                            LargeImage(imageUrl = currentImg.sampleUrl, previewImageUrl = currentImg.previewUrl)
+                        key(allImages[index]) {
+                            if (imageAtIndex.preferHd) {
+                                LargeImage(
+                                    imageUrl = imageAtIndex.highestQualityFormatUrl,
+                                    previewImageUrl = imageAtIndex.previewUrl
+                                )
+                            } else {
+                                LargeImage(
+                                    imageUrl = imageAtIndex.sampleUrl,
+                                    previewImageUrl = imageAtIndex.previewUrl
+                                )
+                            }
                         }
                     }
                 }
