@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.ui.theme.BreadboardTheme
@@ -54,17 +55,6 @@ fun SearchResults(navController: NavController, searchQuery: String) {
                 )
             }
         ) { padding ->
-            if (!doneInitialLoad) {
-                isLoading = true
-                val newImages = imageSource.loadPage(searchQuery, pageNumber)
-                if (!allImages.addAll(newImages)) {
-                    shouldKeepSearching = false
-                }
-                doneInitialLoad = true
-                isLoading = false
-                pageNumber ++
-            }
-
             ImageGrid(
                 modifier = Modifier
                     .padding(padding.withoutVertical(top = false))
@@ -74,20 +64,23 @@ fun SearchResults(navController: NavController, searchQuery: String) {
                 onImageClick = { index, image ->
                     initialPage = index
                     shouldShowLargeImage.value = true
+                },
+                initialLoad = {
+                    withContext(Dispatchers.IO) {
+                        val newImages = imageSource.loadPage(searchQuery, pageNumber)
+                        if (!allImages.addAll(newImages)) shouldKeepSearching = false
+                        pageNumber++
+                    }
                 }
             ) {
                 if (shouldKeepSearching) {
-                    if (!isLoading) {
-                        isLoading = true
-                        scope.launch(Dispatchers.IO) {
-                            val newImages = imageSource.loadPage(searchQuery, pageNumber)
-                            if (newImages.isNotEmpty()) {
-                                pageNumber++
-                                allImages.addAll(newImages)
-                            } else {
-                                shouldKeepSearching = false
-                            }
-                            isLoading = false
+                    scope.launch(Dispatchers.IO) {
+                        val newImages = imageSource.loadPage(searchQuery, pageNumber)
+                        if (newImages.isNotEmpty()) {
+                            pageNumber++
+                            allImages.addAll(newImages)
+                        } else {
+                            shouldKeepSearching = false
                         }
                     }
                 }
