@@ -305,13 +305,14 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
         } else if (prefs.ratingsFilter.isEmpty()) {
             showToast(context, "Please select some ratings")
         } else if (prefs.ratingsFilter.size != 4 && prefs.imageSource == ImageSource.DANBOORU) {
-            showToast(context, "Danbooru does not support rating filtering. Please enable all ratings or use a different source.")
-            // It does but it limits the number of tags to 2 and ratings are included in that limit.
+            showToast(context, "Filtering by rating is not supported on Danbooru")
+            // It is but it limits the number of tags to 2 and ratings are included in that limit.
         }
         else {
             val searchTags = currentSource.site.formatTagString(tagChipList)
             val ratingsFilter = ImageRating.buildSearchStringFor(prefs.ratingsFilter)
-            navController.navigate("searchResults/$searchTags+$ratingsFilter}")
+            val searchRoute = searchTags + if (ratingsFilter.isNotEmpty()) "+$ratingsFilter" else ""
+            navController.navigate("searchResults/$searchRoute")
         }
     }
 
