@@ -35,6 +35,7 @@ import moe.apex.rule34.largeimageview.LargeImageView
 
 
 const val NAV_BAR_HEIGHT = 80
+const val CHIP_SPACING = 10
 
 
 @Composable

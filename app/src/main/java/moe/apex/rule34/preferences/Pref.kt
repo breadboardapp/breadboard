@@ -27,6 +27,7 @@ import moe.apex.rule34.image.Danbooru
 import moe.apex.rule34.image.Gelbooru
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.image.ImageBoard
+import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.image.Rule34
 import moe.apex.rule34.image.Safebooru
 import java.io.IOException
@@ -50,6 +51,7 @@ data object PrefNames {
     const val IMAGE_SOURCE = "image_source"
     const val FAVOURITES_FILTER = "favourites_filter"
     const val LAST_USED_VERSION_CODE = "last_used_version_code"
+    const val RATINGS_FILTER = "ratings_filter"
 }
 
 
@@ -68,6 +70,7 @@ data class Prefs(
     val imageSource: ImageSource,
     val favouritesFilter: List<ImageSource>,
     val lastUsedVersionCode: Int,
+    val ratingsFilter: List<ImageRating>
 ) {
     companion object {
         val DEFAULT = Prefs(
@@ -77,6 +80,7 @@ data class Prefs(
             false, ImageSource.SAFEBOORU,
             ImageSource.entries.toList(),
             0, // We'll update this later
+            listOf(ImageRating.SAFE)
         )
     }
 }
@@ -91,6 +95,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val IMAGE_SOURCE = stringPreferencesKey(PrefNames.IMAGE_SOURCE)
         val FAVOURITES_FILTER = stringSetPreferencesKey(PrefNames.FAVOURITES_FILTER)
         val LAST_USED_VERSION_CODE = intPreferencesKey(PrefNames.LAST_USED_VERSION_CODE)
+        val RATINGS_FILTER = stringSetPreferencesKey(PrefNames.RATINGS_FILTER)
     }
 
     val getPreferences: Flow<Prefs> = dataStore.data
@@ -203,6 +208,22 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         }
     }
 
+    private suspend fun updateRatingsFilter(to: Set<ImageRating>) {
+        dataStore.edit { preferences ->
+            preferences[PreferenceKeys.RATINGS_FILTER] = to.mapTo(mutableSetOf()) { it.name }
+        }
+    }
+
+    suspend fun addRatingFilter(rating: ImageRating) {
+        val ratings = getPreferences.first().ratingsFilter.toMutableSet().apply { add(rating) }
+        updateRatingsFilter(ratings)
+    }
+
+    suspend fun removeRatingFilter(rating: ImageRating) {
+        val ratings = getPreferences.first().ratingsFilter.toMutableSet().apply { remove(rating) }
+        updateRatingsFilter(ratings)
+    }
+
 
     @OptIn(ExperimentalSerializationApi::class)
     private fun mapUserPreferences(preferences: Preferences): Prefs {
@@ -218,8 +239,20 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             preferences[PreferenceKeys.FAVOURITES_FILTER]?.map { ImageSource.valueOf(it) } ?: ImageSource.entries
         )
         val lastUsedVersionCode = preferences[PreferenceKeys.LAST_USED_VERSION_CODE] ?: 0
+        val ratingsFilter = (
+            preferences[PreferenceKeys.RATINGS_FILTER]?.map { ImageRating.valueOf(it) } ?: listOf(ImageRating.SAFE)
+        )
 
-        return Prefs(dataSaver, storageLocation, favouriteImages, excludeAi, imageSource, favouritesFilter, lastUsedVersionCode)
+        return Prefs(
+            dataSaver,
+            storageLocation,
+            favouriteImages,
+            excludeAi,
+            imageSource,
+            favouritesFilter,
+            lastUsedVersionCode,
+            ratingsFilter
+        )
     }
 
 }

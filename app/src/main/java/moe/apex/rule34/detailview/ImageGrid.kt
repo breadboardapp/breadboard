@@ -54,6 +54,7 @@ import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.prefs
+import moe.apex.rule34.util.CHIP_SPACING
 import moe.apex.rule34.util.FullscreenLoadingSpinner
 
 
@@ -88,7 +89,7 @@ fun ImageGrid(
                 ) {
                     Row(
                         modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp)
                     ) {
                         for (site in ImageSource.entries) {
                             FilterChip(

@@ -12,6 +12,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -25,22 +26,25 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.sharp.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -48,10 +52,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.VerticalDivider
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
@@ -65,8 +72,10 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -95,6 +104,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import moe.apex.rule34.detailview.SearchResults
 import moe.apex.rule34.favourites.FavouritesPage
+import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.PreferencesScreen
@@ -102,6 +112,7 @@ import moe.apex.rule34.preferences.UserPreferencesRepository
 import moe.apex.rule34.tag.TagSuggestion
 import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.ui.theme.searchField
+import moe.apex.rule34.util.CHIP_SPACING
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.NAV_BAR_HEIGHT
 import moe.apex.rule34.util.withoutVertical
@@ -148,6 +159,8 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
     var cleanedSearchString by remember { mutableStateOf("") }
     val mostRecentSuggestions = remember { mutableStateListOf<TagSuggestion>() }
     var forciblyAllowedAi by remember { mutableStateOf(false) }
+    var showRatingFilter by remember { mutableStateOf(false) }
+    val chevronRotation by animateFloatAsState(if (showRatingFilter) 180f else 0f)
 
     val context = LocalContext.current
     val prefs = LocalPreferences.current
@@ -249,12 +262,12 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
             Surface(
                 modifier = Modifier
                     .padding(
-                        top = 10.dp,
-                        start = 12.dp,
-                        end = 12.dp,
+                        top = 12.dp,
+                        start = 16.dp,
+                        end = 16.dp,
                         bottom = 16.dp
                     )
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(MaterialTheme.shapes.large)
                     .verticalScroll(rememberScrollState()),
                 tonalElevation = 4.dp
             ) {
@@ -262,7 +275,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
 
                 Column(
                     Modifier
-                        .clip(RoundedCornerShape(20.dp))
+                        .clip(MaterialTheme.shapes.large)
                         .fillMaxWidth()
                         .animateContentSize(),
                 ) {
@@ -333,10 +346,10 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 16.dp)
                         .align(Alignment.CenterHorizontally)
                 ) {
-                    OutlinedTextField(
+                    TextField(
                         modifier = Modifier
                             .weight(1f, true)
                             .focusRequester(focusRequester),
@@ -349,11 +362,15 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                                 .replace(" ", "_")
                             getSuggestions()
                         },
-                        placeholder = { Text(
+                        //prefix = { Spacer(modifier = Modifier.size(8.dp)) },
+                        suffix = { Spacer(modifier = Modifier.size(8.dp)) },
+                        placeholder = {
+                            Text(
                                 text = "Search Tags",
                                 style = MaterialTheme.typography.searchField
-                        ) },
-                        shape = RoundedCornerShape(16.dp),
+                            )
+                        },
+                        shape = MaterialTheme.shapes.large,
                         singleLine = true,
                         keyboardOptions = KeyboardOptions.Default.copy(
                             capitalization = KeyboardCapitalization.None,
@@ -364,9 +381,30 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                             onDone = { beginSearch() },
                             onSearch = { beginSearch() }
                         ),
+                        colors = TextFieldDefaults.colors().copy(
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(
+                                8.dp
+                            ),
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(
+                                8.dp
+                            )
+                        ),
+                        trailingIcon = {
+                            Icon(
+                                imageVector = Icons.Outlined.KeyboardArrowDown,
+                                contentDescription = "Filter",
+                                modifier = Modifier
+                                    .rotate(chevronRotation)
+                                    .clickable {
+                                        showRatingFilter = !showRatingFilter
+                                    }
+                            )
+                        }
                     )
 
-                    Spacer(modifier = Modifier.size(12.dp))
+                    Spacer(modifier = Modifier.size(10.dp))
 
                     FloatingActionButton(
                         onClick = { performSearch() },
@@ -379,36 +417,69 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                     }
                 }
 
-                Spacer(Modifier.size(8.dp))
+                Spacer(Modifier.height(12.dp))
 
-                Column {
-                    AnimatedVisibility(tagChipList.isNotEmpty()) {
+                AnimatedVisibility(showRatingFilter) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "Ratings",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(horizontal = 24.dp)
+                        )
+                        VerticalDivider(Modifier.height(FilterChipDefaults.Height))
                         Row(
-                            modifier = Modifier.horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp),
+                            modifier = Modifier.horizontalScroll(rememberScrollState())
                         ) {
-                            Spacer(Modifier.size(8.dp))
-
-                            for (t in tagChipList) {
+                            Spacer(Modifier.width(14.dp))
+                            for (rating in ImageRating.entries.filter { it != ImageRating.UNKNOWN }) {
                                 FilterChip(
-                                    label = { Text(t.value) },
-                                    selected = !t.isExcluded,
+                                    selected = rating in prefs.ratingsFilter,
+                                    label = { Text(rating.label) },
                                     onClick = {
-                                        if (t.value == prefs.imageSource.site.aiTagName) {
-                                            if (t.isExcluded) forciblyAllowedAi = true
-                                            else addAiExcludedTag()
+                                        scope.launch {
+                                            if (rating in prefs.ratingsFilter) context.prefs.removeRatingFilter(
+                                                rating
+                                            )
+                                            else context.prefs.addRatingFilter(rating)
                                         }
-                                        tagChipList.remove(t)
                                     }
                                 )
                             }
-
-                            Spacer(modifier = Modifier.size(8.dp))
+                            Spacer(Modifier.width(8.dp))
                         }
                     }
-                    AnimatedVisibility(shouldShowSuggestions) {
-                        AutoCompleteTagResults()
+                }
+
+                AnimatedVisibility(tagChipList.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp)
+                    ) {
+                        Spacer(Modifier.size(8.dp))
+
+                        for (t in tagChipList) {
+                            FilterChip(
+                                label = { Text(t.value) },
+                                selected = !t.isExcluded,
+                                onClick = {
+                                    if (t.value == prefs.imageSource.site.aiTagName) {
+                                        if (t.isExcluded) forciblyAllowedAi = true
+                                        else addAiExcludedTag()
+                                    }
+                                    tagChipList.remove(t)
+                                }
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.size(8.dp))
                     }
+                }
+                AnimatedVisibility(shouldShowSuggestions) {
+                    AutoCompleteTagResults()
                 }
             }
         }
