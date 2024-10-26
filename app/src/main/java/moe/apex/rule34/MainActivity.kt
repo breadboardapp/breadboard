@@ -48,6 +48,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -363,7 +364,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                         },
                         placeholder = {
                             Text(
-                                text = "Search Tags",
+                                text = "Search ${prefs.imageSource.description}",
                                 style = MaterialTheme.typography.searchField
                             )
                         },
@@ -389,15 +390,14 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                             )
                         ),
                         trailingIcon = {
-                            Icon(
-                                imageVector = Icons.Outlined.KeyboardArrowDown,
-                                contentDescription = "Filter",
-                                modifier = Modifier
-                                    .rotate(chevronRotation)
-                                    .clickable {
-                                        showRatingFilter = !showRatingFilter
-                                    }
-                            )
+                            IconButton(modifier = Modifier.rotate(chevronRotation),
+                                onClick = { showRatingFilter = !showRatingFilter }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.KeyboardArrowDown,
+                                    contentDescription = "Filter"
+                                )
+                            }
                         }
                     )
 
