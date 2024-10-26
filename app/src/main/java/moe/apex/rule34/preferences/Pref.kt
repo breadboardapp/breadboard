@@ -124,11 +124,15 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
 
         /* Version code 230 introduced app version tracking and also changed the default source from
            R34 to Safebooru but we don't want to change it for existing users.
-           If the last used version code is 0 (i.e. before 2.3.0) and isFirstRun is false then it
-           means the user has updated the app. */
-        if (lastUsedVersionCode == 0)
+           If the last used version code is below 230 (always 0 as we didn't save it before 230)
+           and isFirstRun is false then it means the user has updated the app. */
+        if (lastUsedVersionCode < 230)
             updateImageSource(ImageSource.R34)
 
+        /* Version code 240 introduced the ratings filter. Keep all ratings enabled for existing
+           users. New users will get the default set of ratings (only SAFE). */
+        if (lastUsedVersionCode < 240)
+            updateRatingsFilter(ImageRating.entries.filter { it != ImageRating.UNKNOWN }.toSet())
 
         // Place any future migrations above this line by checking the last used version code.
         if (getCurrentRunningVersionCode(packageInfo) >= lastUsedVersionCode)
@@ -178,7 +182,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         }
     }
 
-    private suspend fun updateFavouritesFilter(to: MutableSet<ImageSource>) {
+    private suspend fun updateFavouritesFilter(to: Set<ImageSource>) {
         dataStore.edit { preferences ->
             preferences[PreferenceKeys.FAVOURITES_FILTER] = to.mapTo(mutableSetOf()) { it.name }
         }
