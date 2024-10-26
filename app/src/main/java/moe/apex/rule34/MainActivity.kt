@@ -115,6 +115,7 @@ import moe.apex.rule34.ui.theme.searchField
 import moe.apex.rule34.util.CHIP_SPACING
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.NAV_BAR_HEIGHT
+import moe.apex.rule34.util.VerticalSpacer
 import moe.apex.rule34.util.withoutVertical
 import soup.compose.material.motion.animation.materialSharedAxisXIn
 import soup.compose.material.motion.animation.materialSharedAxisXOut
@@ -362,8 +363,6 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                                 .replace(" ", "_")
                             getSuggestions()
                         },
-                        //prefix = { Spacer(modifier = Modifier.size(8.dp)) },
-                        suffix = { Spacer(modifier = Modifier.size(8.dp)) },
                         placeholder = {
                             Text(
                                 text = "Search Tags",
@@ -417,7 +416,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                     }
                 }
 
-                Spacer(Modifier.height(12.dp))
+                VerticalSpacer()
 
                 AnimatedVisibility(showRatingFilter) {
                     Row(

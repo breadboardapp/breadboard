@@ -6,9 +6,11 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -138,6 +140,7 @@ fun MainScreenScaffold(
     }
 }
 
+
 @Composable
 fun Heading(
     modifier: Modifier = Modifier,
@@ -150,3 +153,16 @@ fun Heading(
         style = MaterialTheme.typography.titleMedium
     )
 }
+
+
+@Composable
+fun VerticalSpacer() {
+    Spacer(Modifier.height(12.dp))
+}
+
+
+@Composable
+fun LargeVerticalSpacer() {
+    Spacer(Modifier.height(24.dp))
+}
+

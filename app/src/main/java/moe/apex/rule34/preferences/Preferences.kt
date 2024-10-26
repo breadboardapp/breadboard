@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -45,7 +44,9 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import moe.apex.rule34.prefs
 import moe.apex.rule34.ui.theme.BreadboardTheme
+import moe.apex.rule34.util.VerticalSpacer
 import moe.apex.rule34.util.Heading
+import moe.apex.rule34.util.LargeVerticalSpacer
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.SaveDirectorySelection
 
@@ -182,7 +183,7 @@ private fun InfoSection(text: String) {
             contentDescription = null,
             tint = Color.Gray
         )
-        Spacer(Modifier.size(12.dp))
+        VerticalSpacer()
         Summary(text = text)
     }
 }
@@ -207,7 +208,7 @@ fun PreferencesScreen() {
                     .nestedScroll(scrollBehavior.nestedScrollConnection)
                     .verticalScroll(rememberScrollState())
             ) {
-                Spacer(Modifier.height(12.dp))
+                VerticalSpacer()
 
                 Heading(text = "Data saver")
                 EnumPref(
@@ -218,7 +219,7 @@ fun PreferencesScreen() {
                     onSelection = { scope.launch { preferencesRepository.updateDataSaver(it as DataSaver) } }
                 )
 
-                Spacer(Modifier.height(24.dp))
+                LargeVerticalSpacer()
 
                 Heading(text = "Downloads")
                 TitleSummary(
@@ -233,7 +234,7 @@ fun PreferencesScreen() {
                     SaveDirectorySelection(storageLocationPromptLaunched)
                 }
 
-                Spacer(Modifier.height(24.dp))
+                LargeVerticalSpacer()
 
                 Heading(text = "Searching")
                 EnumPref(

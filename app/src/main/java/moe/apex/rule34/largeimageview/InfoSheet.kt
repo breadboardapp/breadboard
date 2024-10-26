@@ -38,7 +38,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -51,7 +50,9 @@ import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import moe.apex.rule34.image.Image
+import moe.apex.rule34.util.CHIP_SPACING
 import moe.apex.rule34.util.Heading
+import moe.apex.rule34.util.LargeVerticalSpacer
 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -99,27 +100,26 @@ fun InfoSheet(image: Image, visibilityState: MutableState<Boolean>) {
             image.metadata.artist?.let {
                 Heading(text = "Artist")
                 PaddedText(it)
-                Spacer(Modifier.height(24.dp))
+                LargeVerticalSpacer()
             }
             image.metadata.source?.let {
                 Heading(text = "Source")
                 if (isValidUrl(it)) PaddedUrlText(it) else PaddedText(it)
-                Spacer(Modifier.height(24.dp))
+                LargeVerticalSpacer()
             }
             Heading(text = "Rating")
             PaddedText(image.metadata.rating.label)
-            Spacer(Modifier.height(24.dp))
+            LargeVerticalSpacer()
             image.metadata.pixivUrl?.let {
                 Heading(text = "Pixiv URL")
                 PaddedUrlText(it)
-                Spacer(Modifier.height(24.dp))
+                LargeVerticalSpacer()
             }
             Heading(text = "Tags")
             ContextualFlowRow(
                 itemCount = image.metadata.tags.size,
                 modifier = Modifier.padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.Start),
-                verticalArrangement = Arrangement.spacedBy(0.dp, Alignment.Top),
+                horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp, Alignment.Start)
             ) { index ->
                 val tag = image.metadata.tags[index]
                 SuggestionChip(
