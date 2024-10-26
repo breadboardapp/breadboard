@@ -6,7 +6,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Bundle
 import android.util.Log
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -116,6 +115,7 @@ import moe.apex.rule34.util.CHIP_SPACING
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.NAV_BAR_HEIGHT
 import moe.apex.rule34.util.VerticalSpacer
+import moe.apex.rule34.util.showToast
 import moe.apex.rule34.util.withoutVertical
 import soup.compose.material.motion.animation.materialSharedAxisXIn
 import soup.compose.material.motion.animation.materialSharedAxisXOut
@@ -185,7 +185,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
 
     fun danbooruLimitCheck(): Boolean {
         if (tagChipList.size == 2 && prefs.imageSource == ImageSource.DANBOORU) {
-            Toast.makeText(context, "Danbooru supports up to 2 tags", Toast.LENGTH_SHORT).show()
+            showToast(context, "Danbooru supports up to 2 tags")
             return false
         }
         return true
@@ -208,7 +208,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                     shouldShowSuggestions = true
                 } catch (e: Exception) {
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(context, "Error fetching results", Toast.LENGTH_SHORT).show()
+                        showToast(context, "Error fetching results")
                     }
                     Log.e("App", "Error fetching autocomplete results", e)
                 }
@@ -300,15 +300,17 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
 
     fun performSearch() {
         if (tagChipList.isEmpty()) {
-            Toast.makeText(
-                context,
-                "Please select some tags",
-                Toast.LENGTH_SHORT
-            ).show()
+            showToast(context, "Please select some tags")
+        } else if (prefs.ratingsFilter.isEmpty()) {
+            showToast(context, "Please select some ratings")
+        } else if (prefs.ratingsFilter.size != 4 && prefs.imageSource == ImageSource.DANBOORU) {
+            showToast(context, "Danbooru does not support rating filtering. Please enable all ratings or use a different source.")
+            // It does but it limits the number of tags to 2 and ratings are included in that limit.
         }
         else {
             val searchTags = currentSource.site.formatTagString(tagChipList)
-            navController.navigate("searchResults/${searchTags}")
+            val ratingsFilter = ImageRating.buildSearchStringFor(prefs.ratingsFilter)
+            navController.navigate("searchResults/$searchTags+$ratingsFilter}")
         }
     }
 
@@ -329,11 +331,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                 shouldShowSuggestions = false
             } else {
                 if (mostRecentSuggestions.isEmpty()) {
-                    Toast.makeText(
-                        context,
-                        "No matching tags",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    showToast(context, "No matching tags")
                 }
             }
         } else {

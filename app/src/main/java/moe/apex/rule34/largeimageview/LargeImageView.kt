@@ -7,7 +7,7 @@ import android.content.res.Configuration
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
-import android.widget.Toast
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -71,6 +71,7 @@ import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.DataSaver
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.prefs
+import moe.apex.rule34.util.showToast
 import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.util.FullscreenLoadingSpinner
 import moe.apex.rule34.util.MustSetLocation
@@ -241,7 +242,7 @@ fun LargeImageView(
                                 IconButton(onClick = {
                                     scope.launch {
                                         context.prefs.removeFavouriteImage(currentImage)
-                                        Toast.makeText(context, "Removed from your favourites", Toast.LENGTH_SHORT).show()
+                                        showToast(context, "Removed from your favourites")
                                     }
                                 }) {
                                     Icon(
@@ -253,7 +254,7 @@ fun LargeImageView(
                                 IconButton(onClick = {
                                     scope.launch {
                                         context.prefs.addFavouriteImage(currentImage)
-                                        Toast.makeText(context, "Added to your favourites", Toast.LENGTH_SHORT).show()
+                                        showToast(context, "Added to your favourites")
                                     }
                                 }) {
                                     Icon(
@@ -302,11 +303,7 @@ fun LargeImageView(
                                             )
 
                                             if (result.isSuccess) {
-                                                Toast.makeText(
-                                                    context,
-                                                    "Image saved.",
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
+                                                showToast(context, "Image saved.")
                                             } else {
                                                 val exc = result.exceptionOrNull()!!
                                                 exc.printStackTrace()
@@ -314,11 +311,8 @@ fun LargeImageView(
                                                 if (exc is MustSetLocation) {
                                                     storageLocationPromptLaunched.value = true
                                                 }
-                                                Toast.makeText(
-                                                    context,
-                                                    exc.message,
-                                                    Toast.LENGTH_LONG
-                                                ).show()
+                                                showToast(context, exc.message ?: "Unknown error")
+                                                Log.e("Downloader", exc.message ?: "Error downloading image", exc)
                                             }
                                             isDownloading = false
                                         }

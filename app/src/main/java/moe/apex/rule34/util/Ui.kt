@@ -7,10 +7,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -166,3 +169,12 @@ fun LargeVerticalSpacer() {
     Spacer(Modifier.height(24.dp))
 }
 
+
+@Composable
+fun NavBarHeightVerticalSpacer() {
+    Spacer(
+        modifier = Modifier.height(
+            WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+        )
+    )
+}

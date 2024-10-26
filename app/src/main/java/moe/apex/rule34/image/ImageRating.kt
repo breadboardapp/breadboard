@@ -40,7 +40,7 @@ enum class ImageRating(val label: String) {
             }
         }
 
-        fun buildSearchStringFor(vararg ratings: ImageRating): String {
+        fun buildSearchStringFor(ratings: List<ImageRating>): String {
             val currentFilter = mutableListOf(FILTER_SAFE, FILTER_SENSITIVE, FILTER_QUESTIONABLE, FILTER_EXPLICIT)
             for (rating in ratings) {
                 if (rating in mapping) {

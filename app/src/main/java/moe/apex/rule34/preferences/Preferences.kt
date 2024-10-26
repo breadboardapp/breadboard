@@ -1,6 +1,7 @@
 package moe.apex.rule34.preferences
 
 import android.net.Uri
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -48,6 +49,7 @@ import moe.apex.rule34.util.VerticalSpacer
 import moe.apex.rule34.util.Heading
 import moe.apex.rule34.util.LargeVerticalSpacer
 import moe.apex.rule34.util.MainScreenScaffold
+import moe.apex.rule34.util.NavBarHeightVerticalSpacer
 import moe.apex.rule34.util.SaveDirectorySelection
 
 
@@ -257,6 +259,18 @@ fun PreferencesScreen() {
 
                 InfoSection(text = "When data saver is enabled, images will load in a lower resolution " +
                                    "by default. Downloads will always be in the maximum resolution.")
+                AnimatedVisibility(currentSettings.imageSource == ImageSource.DANBOORU) {
+                    Column {
+                        LargeVerticalSpacer()
+                        InfoSection(
+                            text = "Danbooru limits searches to 2 tags (which includes ratings), " +
+                                    "so filtering by rating is not possible. Remember to enable all " +
+                                    "ratings if you're using Danbooru, or consider using a different " +
+                                    "source."
+                        )
+                    }
+                }
+                NavBarHeightVerticalSpacer()
             }
         }
     }

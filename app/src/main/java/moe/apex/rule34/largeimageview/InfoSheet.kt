@@ -4,7 +4,6 @@ package moe.apex.rule34.largeimageview
 import android.os.Build.VERSION.SDK_INT
 import android.os.Build.VERSION_CODES
 import android.webkit.URLUtil.isValidUrl
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ContextualFlowRow
@@ -50,6 +49,7 @@ import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import moe.apex.rule34.image.Image
+import moe.apex.rule34.util.showToast
 import moe.apex.rule34.util.CHIP_SPACING
 import moe.apex.rule34.util.Heading
 import moe.apex.rule34.util.LargeVerticalSpacer
@@ -126,7 +126,7 @@ fun InfoSheet(image: Image, visibilityState: MutableState<Boolean>) {
                     onClick = {
                         clip.setText(AnnotatedString(tag))
                         if (SDK_INT < VERSION_CODES.TIRAMISU) { // Android 13 has its own text copied popup
-                            Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+                            showToast(context, "Copied to clipboard")
                         }
                     },
                     label = { Text(tag) }
