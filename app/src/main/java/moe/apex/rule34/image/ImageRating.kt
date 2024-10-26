@@ -1,7 +1,6 @@
 package moe.apex.rule34.image
 
 import android.util.Log
-import moe.apex.rule34.preferences.ImageSource
 
 
 private const val FILTER_SAFE         = "-rating:safe+-rating:general+-rating:g"
@@ -21,6 +20,13 @@ enum class ImageRating(val label: String) {
        The Gelbooru help page doesn't mention "sensitive" at all but posts seem to regularly use it.
        Likewise, Safebooru seems to use both "general" and "safe" for some reason. */
     companion object {
+        private val mapping = mapOf(
+            SAFE to FILTER_SAFE,
+            SENSITIVE to FILTER_SENSITIVE,
+            QUESTIONABLE to FILTER_QUESTIONABLE,
+            EXPLICIT to FILTER_EXPLICIT
+        )
+
         fun fromString(label: String): ImageRating {
             return when (label.lowercase()) {
                 "safe", "general", "g" -> SAFE
@@ -33,19 +39,15 @@ enum class ImageRating(val label: String) {
                 }
             }
         }
-    }
 
-    /* These image boards are so inconsistent that it's actually more reliable to search by
-       unwanted tags than by wanted tags. I hate it too.
-       Danbooru and Gelbooru seem to be the only ones that use "sensitive" but there's also no real
-       harm in adding it to the filter for other sites. */
-    fun toSearchFilters(source: ImageSource): List<String> {
-        return when (this) {
-            SAFE         -> listOf(FILTER_SENSITIVE, FILTER_QUESTIONABLE, FILTER_EXPLICIT)
-            SENSITIVE    -> listOf(FILTER_SAFE, FILTER_QUESTIONABLE, FILTER_EXPLICIT)
-            QUESTIONABLE -> listOf(FILTER_SAFE, FILTER_SENSITIVE, FILTER_EXPLICIT)
-            EXPLICIT     -> listOf(FILTER_SAFE, FILTER_SENSITIVE, FILTER_QUESTIONABLE)
-            UNKNOWN      -> emptyList()
+        fun buildSearchStringFor(vararg ratings: ImageRating): String {
+            val currentFilter = mutableListOf(FILTER_SAFE, FILTER_SENSITIVE, FILTER_QUESTIONABLE, FILTER_EXPLICIT)
+            for (rating in ratings) {
+                if (rating in mapping) {
+                    currentFilter.remove(mapping[rating])
+                }
+            }
+            return currentFilter.joinToString("+")
         }
     }
 }
