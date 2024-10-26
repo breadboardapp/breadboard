@@ -25,12 +25,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -41,9 +39,9 @@ import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.sharp.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -55,9 +53,9 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -113,6 +111,7 @@ import moe.apex.rule34.tag.TagSuggestion
 import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.ui.theme.searchField
 import moe.apex.rule34.util.CHIP_SPACING
+import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.NAV_BAR_HEIGHT
 import moe.apex.rule34.util.VerticalSpacer
@@ -163,6 +162,8 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
     var forciblyAllowedAi by remember { mutableStateOf(false) }
     var showRatingFilter by remember { mutableStateOf(false) }
     val chevronRotation by animateFloatAsState(if (showRatingFilter) 180f else 0f)
+    var showSourceChangeDialog by remember { mutableStateOf(false) }
+    var sourceChangeDialogData by remember { mutableStateOf<SourceDialogData?>(null) }
 
     val context = LocalContext.current
     val prefs = LocalPreferences.current
@@ -319,6 +320,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
     fun addAiExcludedTag() {
         if (excludeAi && !forciblyAllowedAi && tagChipList.getIndexByName(currentSource.site.aiTagName) == null) {
             val tag = TagSuggestion("", currentSource.site.aiTagName, "", true)
+            tagChipList.clear()
             tagChipList.add(0, tag)
         }
     }
@@ -418,37 +420,45 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                 VerticalSpacer()
 
                 AnimatedVisibility(showRatingFilter) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = "Ratings",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 24.dp)
-                        )
-                        VerticalDivider(Modifier.height(FilterChipDefaults.Height))
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp),
-                            modifier = Modifier.horizontalScroll(rememberScrollState())
-                        ) {
-                            Spacer(Modifier.width(14.dp))
-                            for (rating in ImageRating.entries.filter { it != ImageRating.UNKNOWN }) {
-                                FilterChip(
-                                    selected = rating in prefs.ratingsFilter,
-                                    label = { Text(rating.label) },
-                                    onClick = {
-                                        scope.launch {
-                                            if (rating in prefs.ratingsFilter) context.prefs.removeRatingFilter(
-                                                rating
-                                            )
-                                            else context.prefs.addRatingFilter(rating)
-                                        }
+                    val sourceRows: List<@Composable () -> Unit> = ImageSource.entries.map { {
+                        FilterChip(
+                            selected = prefs.imageSource == it,
+                            label = { Text(it.description) },
+                            onClick = {
+                                fun confirm() {
+                                    scope.launch {
+                                        context.prefs.updateImageSource(it)
+                                        getSuggestions()
                                     }
+                                }
+                                if (tagChipList.isEmpty() || it == currentSource) return@FilterChip confirm()
+                                sourceChangeDialogData = SourceDialogData(
+                                    from = currentSource,
+                                    to = it,
+                                    onConfirm = ::confirm
                                 )
+                                showSourceChangeDialog = true
                             }
-                            Spacer(Modifier.width(8.dp))
-                        }
+                        )
+                    } }
+                    val ratingRows: List<@Composable () -> Unit> = ImageRating.entries.filter { it != ImageRating.UNKNOWN }.map { {
+                        FilterChip(
+                            selected = it in prefs.ratingsFilter,
+                            label = { Text(it.label) },
+                            onClick = {
+                                scope.launch {
+                                    if (it in prefs.ratingsFilter) context.prefs.removeRatingFilter(it)
+                                    else context.prefs.addRatingFilter(it)
+                                }
+                            }
+                        )
+                    } }
+                    Column(Modifier.padding(start = 32.dp)) {
+                        HorizontallyScrollingChipsWithLabels(
+                            labels = listOf("Source", "Ratings"),
+                            endPadding = ((16 - CHIP_SPACING).dp),
+                            content = listOf(sourceRows, ratingRows)
+                        )
                     }
                 }
 
@@ -480,6 +490,36 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                     AutoCompleteTagResults()
                 }
             }
+        }
+
+        if (showSourceChangeDialog) {
+            val data = sourceChangeDialogData!!
+            AlertDialog(
+                onDismissRequest = { showSourceChangeDialog = false },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            data.onConfirm()
+                            showSourceChangeDialog = false
+                        }
+                    ) {
+                        Text("Okay")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showSourceChangeDialog = false }) {
+                        Text("Cancel")
+                    }
+                },
+                title = { Text("Are you sure?") },
+                text = {
+                    Text(
+                        "Changing image source will clear your search query. " +
+                                "Are you sure you want to change the source from " +
+                                "${data.from.description} to ${data.to.description}?"
+                    )
+                }
+            )
         }
     }
 }
@@ -612,6 +652,13 @@ fun Navigation(navController: NavHostController) {
         }
     }
 }
+
+
+private data class SourceDialogData(
+    val from: ImageSource,
+    val to: ImageSource,
+    val onConfirm: () -> Unit,
+)
 
 
 private fun SnapshotStateList<TagSuggestion>.getIndexByName(name: String): Int? {
