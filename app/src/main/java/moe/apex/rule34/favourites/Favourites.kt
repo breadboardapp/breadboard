@@ -1,5 +1,6 @@
 package moe.apex.rule34.favourites
 
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.TopAppBarDefaults
@@ -15,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import moe.apex.rule34.detailview.ImageGrid
+import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
 import moe.apex.rule34.util.MainScreenScaffold
@@ -29,21 +31,27 @@ fun FavouritesPage(bottomBarVisibleState: MutableState<Boolean>) {
     val shouldShowLargeImage = remember { mutableStateOf(false) }
     var initialPage by remember { mutableIntStateOf(0) }
 
-    val images = prefs.favouriteImages.reversed().filter { it.imageSource in prefs.favouritesFilter }
+    val images = prefs.favouriteImages.reversed().filter {
+        it.imageSource in prefs.favouritesFilter
+        &&
+        if (it.metadata?.rating == null) ImageRating.UNKNOWN in prefs.favouritesRatingsFilter
+        else it.metadata.rating in prefs.favouritesRatingsFilter
+    }
 
     MainScreenScaffold("Favourite images", scrollBehavior) { padding ->
         ImageGrid(
             modifier = Modifier
                 .padding(padding)
-                .padding(horizontal = 16.dp)
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
-            showFilter = true,
             images = images,
             onImageClick = { index, image ->
                 bottomBarVisibleState.value = false
                 initialPage = index
                 shouldShowLargeImage.value = true
-            }
+            },
+            contentPadding = PaddingValues(top = 8.dp, start = 16.dp, end = 16.dp),
+            showSourceFilter = true,
+            showRatingFilter = true
         )
     }
     AnimatedVisibilityLargeImageView(shouldShowLargeImage, initialPage, images, bottomBarVisibleState)

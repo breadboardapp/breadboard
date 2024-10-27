@@ -9,9 +9,11 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -46,28 +48,35 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.offset
 import coil3.compose.SubcomposeAsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import kotlinx.coroutines.launch
 import moe.apex.rule34.image.Image
+import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.prefs
 import moe.apex.rule34.util.CHIP_SPACING
 import moe.apex.rule34.util.FullscreenLoadingSpinner
+import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.rule34.util.NavBarHeightVerticalSpacer
 
 
 @Composable
 fun ImageGrid(
     modifier: Modifier = Modifier,
-    showFilter: Boolean = false,
     images: List<Image>,
     onImageClick: (Int, Image) -> Unit,
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+    showSourceFilter: Boolean = false,
+    showRatingFilter: Boolean = false,
     initialLoad: (suspend () -> Unit)? = null,
     onEndReached: suspend () -> Unit = { }
 ) {
@@ -76,6 +85,40 @@ fun ImageGrid(
     val lazyGridState = rememberLazyGridState()
     val scope = rememberCoroutineScope()
     var doneInitialLoad by remember { mutableStateOf(initialLoad == null) }
+    val layoutDirection = LocalLayoutDirection.current
+
+    val labels = mutableListOf<String>()
+    val chips = mutableListOf<List<@Composable () -> Unit>>()
+    if (showSourceFilter) {
+        labels.add("Source")
+        chips.add(ImageSource.entries.map { {
+            FilterChip(
+                selected = it in prefs.favouritesFilter,
+                label = { Text(it.description) },
+                onClick = {
+                    scope.launch {
+                        if (it in prefs.favouritesFilter) preferencesRepository.removeFavouritesFilter(it)
+                        else preferencesRepository.addFavouritesFilter(it)
+                    }
+                }
+            )
+        } })
+    }
+    if (showRatingFilter) {
+        labels.add("Ratings")
+        chips.add(ImageRating.entries.map { {
+            FilterChip(
+                selected = it in prefs.favouritesRatingsFilter,
+                label = { Text(it.label) },
+                onClick = {
+                    scope.launch {
+                        if (it in prefs.favouritesRatingsFilter) preferencesRepository.removeFavouritesRatingFilter(it)
+                        else preferencesRepository.addFavouritesRatingFilter(it)
+                    }
+                }
+            )
+        } })
+    }
 
     if (!doneInitialLoad) {
         LaunchedEffect(Unit) {
@@ -85,7 +128,8 @@ fun ImageGrid(
         LinearProgressIndicator(
             modifier = modifier
                 .fillMaxWidth()
-                .padding(top = 12.dp)
+                .padding(top = 8.dp)
+                .padding(contentPadding)
         )
         return
     }
@@ -94,54 +138,35 @@ fun ImageGrid(
         columns = GridCells.Adaptive(128.dp),
         state = lazyGridState,
         modifier = modifier,
+        contentPadding = contentPadding,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        if (showFilter) {
-            val wantedSites = prefs.favouritesFilter
-            item(span = { GridItemSpan(maxLineSpan) }) { Spacer(Modifier.height(12.dp)) }
+        if (showSourceFilter || showRatingFilter) {
             item(span = { GridItemSpan(maxLineSpan) }) {
-                Row(
+                HorizontallyScrollingChipsWithLabels(
                     modifier = Modifier
-                        .height(FilterChipDefaults.Height)
-                        .clip(FilterChipDefaults.shape)
-                ) {
-                    Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp)
-                    ) {
-                        for (site in ImageSource.entries) {
-                            FilterChip(
-                                selected = site in wantedSites,
-                                onClick = {
-                                    scope.launch {
-                                        if (site in wantedSites) preferencesRepository.removeFavouritesFilter(site)
-                                        else preferencesRepository.addFavouritesFilter(site)
-                                    }
-                                },
-                                label = { Text(site.description) },
-                                leadingIcon = {
-                                    AnimatedVisibility(
-                                        visible = site in wantedSites,
-                                        enter = expandHorizontally(expandFrom = Alignment.Start),
-                                        exit = shrinkHorizontally(shrinkTowards = Alignment.Start)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Filled.Check,
-                                            contentDescription = "Selected",
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                }
-                            )
-                        }
-                    }
-                }
+                        .layout { measurable, constraints ->
+                            val sidePadding = contentPadding.calculateStartPadding(layoutDirection).roundToPx()
+                            val placeable = measurable.measure(constraints.offset(horizontal = sidePadding))
+                            layout (
+                                width = placeable.width - sidePadding,
+                                height = placeable.height
+                            ) {
+                                placeable.placeRelative(0, 0)
+                            }
+                        } // https://stackoverflow.com/a/75336645
+                        .padding(bottom = 4.dp),
+                    endPadding = ((16 - CHIP_SPACING).dp),
+                    labels = labels,
+                    content = chips
+                )
             }
         }
-
-        item(span = { GridItemSpan(maxLineSpan) }) {
-            Spacer(modifier = Modifier.height(12.dp))
+        else {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Spacer(modifier = Modifier.height(8.dp))
+            }
         }
 
         itemsIndexed(images, key = { _, image -> image.previewUrl }) { index, image ->

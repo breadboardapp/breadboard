@@ -455,8 +455,8 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                     } }
                     Column(Modifier.padding(start = 32.dp)) {
                         HorizontallyScrollingChipsWithLabels(
-                            labels = listOf("Source", "Ratings"),
                             endPadding = ((16 - CHIP_SPACING).dp),
+                            labels = listOf("Source", "Ratings"),
                             content = listOf(sourceRows, ratingRows)
                         )
                     }

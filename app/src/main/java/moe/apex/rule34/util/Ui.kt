@@ -193,18 +193,20 @@ fun NavBarHeightVerticalSpacer() {
 
 @Composable
 fun HorizontallyScrollingChipsWithLabels(
-    labels: List<String>,
+    modifier: Modifier = Modifier,
     endPadding: Dp = 0.dp,
+    labels: List<String>,
     content: List<List<@Composable () -> Unit>>
 ) {
     if (labels.size != content.size) {
         throw IllegalArgumentException("labels and content lists must be the same size")
     }
+    if (labels.isEmpty()) return
     val rows = labels.zip(content)
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.height(CHIP_TOTAL_HEIGHT * labels.size)
+        modifier = modifier.height(CHIP_TOTAL_HEIGHT * labels.size)
     ) {
         Column(
             verticalArrangement = Arrangement.SpaceAround,

@@ -52,6 +52,7 @@ data object PrefNames {
     const val FAVOURITES_FILTER = "favourites_filter"
     const val LAST_USED_VERSION_CODE = "last_used_version_code"
     const val RATINGS_FILTER = "ratings_filter"
+    const val FAVOURITES_RATING_FILTER = "favourites_rating_filter"
 }
 
 
@@ -70,7 +71,8 @@ data class Prefs(
     val imageSource: ImageSource,
     val favouritesFilter: List<ImageSource>,
     val lastUsedVersionCode: Int,
-    val ratingsFilter: List<ImageRating>
+    val ratingsFilter: List<ImageRating>,
+    val favouritesRatingsFilter: List<ImageRating>,
 ) {
     companion object {
         val DEFAULT = Prefs(
@@ -80,7 +82,8 @@ data class Prefs(
             false, ImageSource.SAFEBOORU,
             ImageSource.entries.toList(),
             0, // We'll update this later
-            listOf(ImageRating.SAFE)
+            listOf(ImageRating.SAFE),
+            listOf(ImageRating.SAFE),
         )
     }
 }
@@ -96,6 +99,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val FAVOURITES_FILTER = stringSetPreferencesKey(PrefNames.FAVOURITES_FILTER)
         val LAST_USED_VERSION_CODE = intPreferencesKey(PrefNames.LAST_USED_VERSION_CODE)
         val RATINGS_FILTER = stringSetPreferencesKey(PrefNames.RATINGS_FILTER)
+        val FAVOURITES_RATING_FILTER = stringSetPreferencesKey(PrefNames.FAVOURITES_RATING_FILTER)
     }
 
     val getPreferences: Flow<Prefs> = dataStore.data
@@ -131,8 +135,11 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
 
         /* Version code 240 introduced the ratings filter. Keep all ratings enabled for existing
            users. New users will get the default set of ratings (only SAFE). */
-        if (lastUsedVersionCode < 240)
-            updateRatingsFilter(ImageRating.entries.filter { it != ImageRating.UNKNOWN }.toSet())
+        if (lastUsedVersionCode < 240) {
+            val validSearchRatings = ImageRating.entries.filter { it != ImageRating.UNKNOWN }.toSet()
+            updateRatingsFilter(validSearchRatings)
+            updateFavouritesRatingFilter(ImageRating.entries.toSet())
+        }
 
         // Place any future migrations above this line by checking the last used version code.
         if (getCurrentRunningVersionCode(packageInfo) >= lastUsedVersionCode)
@@ -228,6 +235,22 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         updateRatingsFilter(ratings)
     }
 
+    private suspend fun updateFavouritesRatingFilter(to: Set<ImageRating>) {
+        dataStore.edit { preferences ->
+            preferences[PreferenceKeys.FAVOURITES_RATING_FILTER] = to.mapTo(mutableSetOf()) { it.name }
+        }
+    }
+
+    suspend fun addFavouritesRatingFilter(rating: ImageRating) {
+        val ratings = getPreferences.first().favouritesRatingsFilter.toMutableSet().apply { add(rating) }
+        updateFavouritesRatingFilter(ratings)
+    }
+
+    suspend fun removeFavouritesRatingFilter(rating: ImageRating) {
+        val ratings = getPreferences.first().favouritesRatingsFilter.toMutableSet().apply { remove(rating) }
+        updateFavouritesRatingFilter(ratings)
+    }
+
 
     @OptIn(ExperimentalSerializationApi::class)
     private fun mapUserPreferences(preferences: Preferences): Prefs {
@@ -246,6 +269,9 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val ratingsFilter = (
             preferences[PreferenceKeys.RATINGS_FILTER]?.map { ImageRating.valueOf(it) } ?: listOf(ImageRating.SAFE)
         )
+        val favouritesRatingFilter = (
+            preferences[PreferenceKeys.FAVOURITES_RATING_FILTER]?.map { ImageRating.valueOf(it) } ?: listOf(ImageRating.SAFE)
+        )
 
         return Prefs(
             dataSaver,
@@ -255,7 +281,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             imageSource,
             favouritesFilter,
             lastUsedVersionCode,
-            ratingsFilter
+            ratingsFilter,
+            favouritesRatingFilter,
         )
     }
 

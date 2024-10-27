@@ -1,5 +1,6 @@
 package moe.apex.rule34.detailview
 
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -58,13 +59,13 @@ fun SearchResults(navController: NavController, searchQuery: String) {
             ImageGrid(
                 modifier = Modifier
                     .padding(padding.withoutVertical(top = false))
-                    .padding(horizontal = 16.dp)
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
                 images = allImages,
                 onImageClick = { index, image ->
                     initialPage = index
                     shouldShowLargeImage.value = true
                 },
+                contentPadding = PaddingValues(top = 8.dp, start = 16.dp, end = 16.dp),
                 initialLoad = {
                     withContext(Dispatchers.IO) {
                         val newImages = imageSource.loadPage(searchQuery, pageNumber)
