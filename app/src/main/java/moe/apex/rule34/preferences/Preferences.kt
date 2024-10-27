@@ -254,6 +254,14 @@ fun PreferencesScreen() {
                 ) {
                     scope.launch { preferencesRepository.updateExcludeAi(it) }
                 }
+                SwitchPref(
+                    checked = currentSettings.filterRatingsLocally,
+                    title = "Filter ratings locally",
+                    summary = "Rather than appending the selected ratings to the search query, " +
+                              "filter the results by rating after searching."
+                ) {
+                    scope.launch { preferencesRepository.updateFilterRatingsLocally(it) }
+                }
 
                 HorizontalDivider(Modifier.padding(vertical = 48.dp))
 
@@ -264,12 +272,17 @@ fun PreferencesScreen() {
                         LargeVerticalSpacer()
                         InfoSection(
                             text = "Danbooru limits searches to 2 tags (which includes ratings), " +
-                                    "so filtering by rating is not possible. Remember to enable all " +
-                                    "ratings if you're using Danbooru, or consider using a different " +
-                                    "source."
+                                    "so filtering by rating is difficult. If you are using " +
+                                    "Danbooru, you should enable 'Filter ratings locally' if " +
+                                    "you wish to filter by rating."
                         )
                     }
                 }
+                LargeVerticalSpacer()
+                InfoSection(text = "Filtering ratings locally has the benefit of being able to " +
+                                   "adjust the filter after searching and allows filtering on " +
+                                   "otherwise unsupported sites like Danbooru, but may cause " +
+                                   "less results to be shown at once.")
                 NavBarHeightVerticalSpacer()
             }
         }

@@ -4,11 +4,14 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -17,15 +20,20 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import moe.apex.rule34.image.Image
+import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.preferences.LocalPreferences
+import moe.apex.rule34.prefs
 import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
+import moe.apex.rule34.util.CHIP_SPACING
+import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.rule34.util.TitleBar
 import moe.apex.rule34.util.withoutVertical
 
@@ -40,8 +48,30 @@ fun SearchResults(navController: NavController, searchQuery: String) {
     val allImages = remember { mutableStateListOf<Image>() }
     var shouldKeepSearching by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
-    val imageSource = LocalPreferences.current.imageSource.site
+
+    val prefs = LocalPreferences.current
+    val preferencesRepository = LocalContext.current.prefs
+    val imageSource = prefs.imageSource.site
+    val filterLocally = prefs.filterRatingsLocally
     var pageNumber by remember { mutableIntStateOf(imageSource.firstPageIndex) }
+
+    val ratingRows: List<@Composable () -> Unit> = ImageRating.entries.filter { it != ImageRating.UNKNOWN }.map { {
+        FilterChip(
+            selected = it in prefs.ratingsFilter,
+            label = { Text(it.label) },
+            onClick = {
+                scope.launch {
+                    if (it in prefs.ratingsFilter) preferencesRepository.removeRatingFilter(it)
+                    else preferencesRepository.addRatingFilter(it)
+                }
+            }
+        )
+    } }
+
+    val imagesToDisplay = allImages.filter {
+        if (prefs.filterRatingsLocally) it.metadata!!.rating in prefs.ratingsFilter
+        else true
+    }
 
     BreadboardTheme {
         Scaffold(
@@ -58,12 +88,19 @@ fun SearchResults(navController: NavController, searchQuery: String) {
                 modifier = Modifier
                     .padding(padding.withoutVertical(top = false))
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
-                images = allImages,
+                images = imagesToDisplay,
                 onImageClick = { index, image ->
                     initialPage = index
                     shouldShowLargeImage.value = true
                 },
                 contentPadding = PaddingValues(top = 8.dp, start = 16.dp, end = 16.dp),
+                filterComposable = if (filterLocally) { {
+                    HorizontallyScrollingChipsWithLabels(
+                        endPadding = (16 - CHIP_SPACING).dp,
+                        labels = listOf("Ratings"),
+                        content = listOf(ratingRows)
+                    )
+                } } else null,
                 initialLoad = {
                     withContext(Dispatchers.IO) {
                         val newImages = imageSource.loadPage(searchQuery, pageNumber)
@@ -86,5 +123,5 @@ fun SearchResults(navController: NavController, searchQuery: String) {
             }
         }
     }
-    AnimatedVisibilityLargeImageView(shouldShowLargeImage, initialPage, allImages)
+    AnimatedVisibilityLargeImageView(shouldShowLargeImage, initialPage, imagesToDisplay)
 }

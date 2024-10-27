@@ -53,6 +53,7 @@ data object PrefNames {
     const val LAST_USED_VERSION_CODE = "last_used_version_code"
     const val RATINGS_FILTER = "ratings_filter"
     const val FAVOURITES_RATING_FILTER = "favourites_rating_filter"
+    const val FILTER_RATINGS_LOCALLY = "filter_ratings_locally"
 }
 
 
@@ -73,17 +74,20 @@ data class Prefs(
     val lastUsedVersionCode: Int,
     val ratingsFilter: List<ImageRating>,
     val favouritesRatingsFilter: List<ImageRating>,
+    val filterRatingsLocally: Boolean
 ) {
     companion object {
         val DEFAULT = Prefs(
             DataSaver.AUTO,
             Uri.EMPTY,
             emptyList(),
-            false, ImageSource.SAFEBOORU,
+            false,
+            ImageSource.SAFEBOORU,
             ImageSource.entries.toList(),
             0, // We'll update this later
             listOf(ImageRating.SAFE),
             listOf(ImageRating.SAFE),
+            false,
         )
     }
 }
@@ -100,6 +104,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val LAST_USED_VERSION_CODE = intPreferencesKey(PrefNames.LAST_USED_VERSION_CODE)
         val RATINGS_FILTER = stringSetPreferencesKey(PrefNames.RATINGS_FILTER)
         val FAVOURITES_RATING_FILTER = stringSetPreferencesKey(PrefNames.FAVOURITES_RATING_FILTER)
+        val FILTER_RATINGS_LOCALLY = booleanPreferencesKey(PrefNames.FILTER_RATINGS_LOCALLY)
     }
 
     val getPreferences: Flow<Prefs> = dataStore.data
@@ -251,6 +256,12 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         updateFavouritesRatingFilter(ratings)
     }
 
+    suspend fun updateFilterRatingsLocally(to: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferenceKeys.FILTER_RATINGS_LOCALLY] = to
+        }
+    }
+
 
     @OptIn(ExperimentalSerializationApi::class)
     private fun mapUserPreferences(preferences: Preferences): Prefs {
@@ -272,6 +283,9 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val favouritesRatingFilter = (
             preferences[PreferenceKeys.FAVOURITES_RATING_FILTER]?.map { ImageRating.valueOf(it) } ?: listOf(ImageRating.SAFE)
         )
+        val filterRatingsLocally = (
+            preferences[PreferenceKeys.FILTER_RATINGS_LOCALLY] ?: false
+        )
 
         return Prefs(
             dataSaver,
@@ -283,6 +297,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             lastUsedVersionCode,
             ratingsFilter,
             favouritesRatingFilter,
+            filterRatingsLocally,
         )
     }
 

@@ -21,7 +21,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -46,15 +45,10 @@ import androidx.compose.ui.unit.offset
 import coil3.compose.SubcomposeAsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-import kotlinx.coroutines.launch
 import moe.apex.rule34.image.Image
-import moe.apex.rule34.image.ImageRating
-import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.prefs
-import moe.apex.rule34.util.CHIP_SPACING
 import moe.apex.rule34.util.FullscreenLoadingSpinner
-import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.rule34.util.NavBarHeightVerticalSpacer
 
 
@@ -64,8 +58,7 @@ fun ImageGrid(
     images: List<Image>,
     onImageClick: (Int, Image) -> Unit,
     contentPadding: PaddingValues = PaddingValues(0.dp),
-    showSourceFilter: Boolean = false,
-    showRatingFilter: Boolean = false,
+    filterComposable: (@Composable () -> Unit)? = null,
     initialLoad: (suspend () -> Unit)? = null,
     onEndReached: suspend () -> Unit = { }
 ) {
@@ -75,39 +68,6 @@ fun ImageGrid(
     val scope = rememberCoroutineScope()
     var doneInitialLoad by remember { mutableStateOf(initialLoad == null) }
     val layoutDirection = LocalLayoutDirection.current
-
-    val labels = mutableListOf<String>()
-    val chips = mutableListOf<List<@Composable () -> Unit>>()
-    if (showSourceFilter) {
-        labels.add("Source")
-        chips.add(ImageSource.entries.map { {
-            FilterChip(
-                selected = it in prefs.favouritesFilter,
-                label = { Text(it.description) },
-                onClick = {
-                    scope.launch {
-                        if (it in prefs.favouritesFilter) preferencesRepository.removeFavouritesFilter(it)
-                        else preferencesRepository.addFavouritesFilter(it)
-                    }
-                }
-            )
-        } })
-    }
-    if (showRatingFilter) {
-        labels.add("Ratings")
-        chips.add(ImageRating.entries.map { {
-            FilterChip(
-                selected = it in prefs.favouritesRatingsFilter,
-                label = { Text(it.label) },
-                onClick = {
-                    scope.launch {
-                        if (it in prefs.favouritesRatingsFilter) preferencesRepository.removeFavouritesRatingFilter(it)
-                        else preferencesRepository.addFavouritesRatingFilter(it)
-                    }
-                }
-            )
-        } })
-    }
 
     if (!doneInitialLoad) {
         LaunchedEffect(Unit) {
@@ -131,14 +91,16 @@ fun ImageGrid(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        if (showSourceFilter || showRatingFilter) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                HorizontallyScrollingChipsWithLabels(
+        if (filterComposable != null) {
+            item(span = { GridItemSpan(maxLineSpan) } ){
+                Box(
                     modifier = Modifier
                         .layout { measurable, constraints ->
-                            val sidePadding = contentPadding.calculateStartPadding(layoutDirection).roundToPx()
-                            val placeable = measurable.measure(constraints.offset(horizontal = sidePadding))
-                            layout (
+                            val sidePadding =
+                                contentPadding.calculateStartPadding(layoutDirection).roundToPx()
+                            val placeable =
+                                measurable.measure(constraints.offset(horizontal = sidePadding))
+                            layout(
                                 width = placeable.width - sidePadding,
                                 height = placeable.height
                             ) {
@@ -146,13 +108,11 @@ fun ImageGrid(
                             }
                         } // https://stackoverflow.com/a/75336645
                         .padding(bottom = 4.dp),
-                    endPadding = ((16 - CHIP_SPACING).dp),
-                    labels = labels,
-                    content = chips
-                )
+                ) {
+                    filterComposable()
+                }
             }
-        }
-        else {
+        } else {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Spacer(modifier = Modifier.height(8.dp))
             }
