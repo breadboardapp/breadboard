@@ -199,9 +199,10 @@ fun HorizontallyScrollingChipsWithLabels(
     content: List<List<@Composable () -> Unit>>
 ) {
     if (labels.size != content.size) {
-        println(labels.size)
-        println(content.size)
-        throw IllegalArgumentException("labels and content lists must be the same size")
+        throw IllegalArgumentException(
+            "labels and content lists must be the same size. " +
+            "labels: ${labels.size}, content: ${content.size}"
+        )
     }
     if (labels.isEmpty()) return
     val rows = labels.zip(content)
