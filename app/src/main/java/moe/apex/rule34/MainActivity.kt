@@ -194,13 +194,13 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
     }
 
 
-    fun getSuggestions() {
+    fun getSuggestions(bypassDelay: Boolean = false, source: ImageSource = currentSource) {
         searchJob?.cancel()
         searchJob = scope.launch(Dispatchers.IO) {
-            if (cleanedSearchString.isNotEmpty()) delay(200)
+            if (cleanedSearchString.isNotEmpty()) delay(if (bypassDelay) 0 else 200)
             if (cleanedSearchString !in listOf("", "-")) {
                 try {
-                    val suggestions = currentSource.site.loadAutoComplete(cleanedSearchString)
+                    val suggestions = source.site.loadAutoComplete(cleanedSearchString)
                     /* This check shouldn't be needed but avoids a race condition whereby clearing
                        the query in the time between getting suggestions and displaying them will cause
                        the old suggestions to be displayed. */
@@ -428,8 +428,10 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                                 fun confirm() {
                                     scope.launch {
                                         context.prefs.updateImageSource(it)
-                                        getSuggestions()
                                     }
+                                    tagChipList.clear()
+                                    addAiExcludedTag()
+                                    getSuggestions(bypassDelay = true, source = it)
                                 }
                                 if (tagChipList.isEmpty() || it == currentSource) return@FilterChip confirm()
                                 sourceChangeDialogData = SourceDialogData(
@@ -511,12 +513,12 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                         Text("Cancel")
                     }
                 },
-                title = { Text("Are you sure?") },
+                title = { Text("Change image source") },
                 text = {
                     Text(
-                        "Changing image source will clear your search query. " +
-                                "Are you sure you want to change the source from " +
-                                "${data.from.description} to ${data.to.description}?"
+                        text = "Changing image source will clear your search tags. " +
+                               "Are you sure you want to change the source from " +
+                               "${data.from.description} to ${data.to.description}?"
                     )
                 }
             )
