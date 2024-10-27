@@ -38,8 +38,6 @@ fun SearchResults(navController: NavController, searchQuery: String) {
     val shouldShowLargeImage = remember { mutableStateOf(false) }
     var initialPage by remember { mutableIntStateOf(0) }
     val allImages = remember { mutableStateListOf<Image>() }
-    var doneInitialLoad by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(false) }
     var shouldKeepSearching by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
     val imageSource = LocalPreferences.current.imageSource.site
