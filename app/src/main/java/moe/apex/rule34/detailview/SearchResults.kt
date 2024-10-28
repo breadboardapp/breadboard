@@ -121,7 +121,7 @@ fun SearchResults(navController: NavController, searchQuery: String) {
                             val newImages = imageSource.loadPage(searchQuery, pageNumber)
                             if (newImages.isNotEmpty()) {
                                 pageNumber++
-                                allImages.addAll(newImages)
+                                allImages.addAll(newImages.filter { it !in allImages })
                             } else {
                                 shouldKeepSearching = false
                             }
