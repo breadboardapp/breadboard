@@ -1,5 +1,6 @@
 package moe.apex.rule34.detailview
 
+import android.util.Log
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -102,19 +103,29 @@ fun SearchResults(navController: NavController, searchQuery: String) {
                 } } else null,
                 initialLoad = {
                     withContext(Dispatchers.IO) {
-                        val newImages = imageSource.loadPage(searchQuery, pageNumber)
-                        if (!allImages.addAll(newImages)) shouldKeepSearching = false
-                        pageNumber++
+                        try {
+                            val newImages = imageSource.loadPage(searchQuery, pageNumber)
+                            if (!allImages.addAll(newImages)) shouldKeepSearching = false
+                            pageNumber++
+                        } catch (e: Exception) {
+                            Log.e("SearchResults", "Error loading initial images", e)
+                            shouldKeepSearching = false
+                        }
                     }
                 }
             ) {
                 if (shouldKeepSearching) {
                     scope.launch(Dispatchers.IO) {
-                        val newImages = imageSource.loadPage(searchQuery, pageNumber)
-                        if (newImages.isNotEmpty()) {
-                            pageNumber++
-                            allImages.addAll(newImages)
-                        } else {
+                        try {
+                            val newImages = imageSource.loadPage(searchQuery, pageNumber)
+                            if (newImages.isNotEmpty()) {
+                                pageNumber++
+                                allImages.addAll(newImages)
+                            } else {
+                                shouldKeepSearching = false
+                            }
+                        } catch (e: Exception) {
+                            Log.e("SearchResults", "Error loading new images", e)
                             shouldKeepSearching = false
                         }
                     }
