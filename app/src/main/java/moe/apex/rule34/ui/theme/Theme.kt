@@ -46,7 +46,7 @@ fun BreadboardTheme(
         dynamicColor: Boolean = true,
         content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
+    var colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
@@ -55,6 +55,7 @@ fun BreadboardTheme(
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
+    colorScheme = colorScheme.copy(outline = colorScheme.outlineVariant)
     val view = LocalView.current
     val systemUiController = rememberSystemUiController()
     val darkIcons = !darkTheme

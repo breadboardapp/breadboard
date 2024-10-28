@@ -8,7 +8,6 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
 import android.util.Log
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
@@ -140,14 +139,12 @@ fun LargeImageView(
     val storageLocation = prefs.storageLocation
     val favouriteImages = prefs.favouriteImages
 
-    // Large image view is an overlay rather than a new screen entirely so we need to override
-    // the default back button behaviour so we don't get taken to the home page.
-    BackHandler(visible.value) {
-        visible.value = false
-    }
-
     if (popupVisibilityState.value) {
         InfoSheet(currentImage, popupVisibilityState)
+    }
+
+    LaunchedEffect(visible.value) {
+        if (visible.value) offset = 0.dp
     }
 
     PredictiveBackHandler(visible.value) { progress ->

@@ -92,25 +92,8 @@ fun ImageGrid(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         if (filterComposable != null) {
-            item(span = { GridItemSpan(maxLineSpan) } ){
-                Box(
-                    modifier = Modifier
-                        .layout { measurable, constraints ->
-                            val sidePadding =
-                                contentPadding.calculateStartPadding(layoutDirection).roundToPx()
-                            val placeable =
-                                measurable.measure(constraints.offset(horizontal = sidePadding))
-                            layout(
-                                width = placeable.width - sidePadding,
-                                height = placeable.height
-                            ) {
-                                placeable.placeRelative(0, 0)
-                            }
-                        } // https://stackoverflow.com/a/75336645
-                        .padding(bottom = 4.dp),
-                ) {
-                    filterComposable()
-                }
+            item(span = { GridItemSpan(maxLineSpan) } ) {
+                filterComposable()
             }
         } else {
             item(span = { GridItemSpan(maxLineSpan) }) {

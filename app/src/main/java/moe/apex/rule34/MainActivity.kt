@@ -7,6 +7,7 @@ import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
@@ -20,16 +21,19 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -42,6 +46,7 @@ import androidx.compose.material.icons.sharp.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -56,11 +61,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -69,8 +75,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -147,7 +154,7 @@ class MainActivity : ComponentActivity() {
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
@@ -237,7 +244,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                 }
         ) {
             Text(
-                modifier = Modifier.padding(horizontal = 20.dp),
+                modifier = Modifier.padding(horizontal = 16.dp),
                 text = tag.label,
                 fontSize = 16.sp,
                 lineHeight = 17.sp
@@ -245,7 +252,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
 
             tag.type?.let {
                 Text(
-                    modifier = Modifier.padding(horizontal = 20.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp),
                     text = it,
                     fontSize = 12.sp,
                     lineHeight = 13.sp
@@ -265,33 +272,29 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
             Surface(
                 modifier = Modifier
                     .padding(
-                        top = 12.dp,
                         start = 16.dp,
                         end = 16.dp,
                         bottom = 16.dp
-                    )
-                    .clip(MaterialTheme.shapes.large)
-                    .verticalScroll(rememberScrollState()),
-                tonalElevation = 4.dp
+                    ),
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surfaceContainer
             ) {
-                Spacer(Modifier.size(18.dp))
-
                 Column(
                     Modifier
-                        .clip(MaterialTheme.shapes.large)
+                        .verticalScroll(rememberScrollState())
                         .fillMaxWidth()
                         .animateContentSize(),
                 ) {
                     if (mostRecentSuggestions.isEmpty()) {
                         Text(
-                            modifier = Modifier.padding(20.dp),
+                            modifier = Modifier.padding(16.dp),
                             fontSize = 16.sp,
                             text = "No results :("
                         )
                     } else {
                         for (t in mostRecentSuggestions) {
                             TagListEntry(tag = t)
-                            HorizontalDivider()
+                            if (t != mostRecentSuggestions.last()) HorizontalDivider()
                         }
                     }
                 }
@@ -383,12 +386,8 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                         colors = TextFieldDefaults.colors().copy(
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(
-                                8.dp
-                            ),
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(
-                                8.dp
-                            )
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                         ),
                         trailingIcon = {
                             IconButton(modifier = Modifier.rotate(chevronRotation),
@@ -402,11 +401,12 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                         }
                     )
 
-                    Spacer(modifier = Modifier.size(10.dp))
+                    Spacer(modifier = Modifier.size(12.dp))
 
                     FloatingActionButton(
                         onClick = { performSearch() },
-                        elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp)
+                        elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
+                        shape = CircleShape
                     ) {
                         Icon(
                             imageVector = Icons.Sharp.Search,
@@ -418,6 +418,24 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                 VerticalSpacer()
 
                 AnimatedVisibility(showRatingFilter) {
+                    var opacity by remember { mutableFloatStateOf(1f) }
+                    var scale by remember { mutableFloatStateOf(1f) }
+                    LaunchedEffect(showRatingFilter) {
+                        if (showRatingFilter) {
+                            opacity = 1f
+                            scale = 1f
+                        }
+                    }
+                    PredictiveBackHandler(enabled = true) { progress ->
+                        try {
+                            progress.collect { backEvent ->
+                                opacity = (1 - backEvent.progress * 5).coerceAtLeast(0f)
+                                scale = 1 - (backEvent.progress / 2)
+                            }
+                           showRatingFilter = false
+                        }
+                        catch(_: Exception) { }
+                    }
                     val sourceRows: List<@Composable () -> Unit> = ImageSource.entries.map { {
                         FilterChip(
                             selected = prefs.imageSource == it,
@@ -453,37 +471,45 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                             }
                         )
                     } }
-                    Column(Modifier.padding(start = 32.dp)) {
+                    Column(Modifier.padding(horizontal = 16.dp)) {
                         HorizontallyScrollingChipsWithLabels(
-                            endPadding = ((16 - CHIP_SPACING).dp),
+                            modifier = Modifier
+                                .alpha(opacity)
+                                .scale(scale),
                             labels = listOf("Source", "Ratings"),
                             content = listOf(sourceRows, ratingRows)
                         )
+                        VerticalSpacer()
                     }
                 }
 
                 AnimatedVisibility(tagChipList.isNotEmpty()) {
-                    Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp)
-                    ) {
-                        Spacer(Modifier.size(8.dp))
+                    Column {
+                        Row(
+                            modifier = Modifier
+                                .height(FilterChipDefaults.Height)
+                                .padding(start = 16.dp)
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp)
+                        ) {
 
-                        for (t in tagChipList) {
-                            FilterChip(
-                                label = { Text(t.value) },
-                                selected = !t.isExcluded,
-                                onClick = {
-                                    if (t.value == prefs.imageSource.site.aiTagName) {
-                                        if (t.isExcluded) forciblyAllowedAi = true
-                                        else addAiExcludedTag()
+                            for (t in tagChipList) {
+                                FilterChip(
+                                    label = { Text(t.value) },
+                                    selected = !t.isExcluded,
+                                    onClick = {
+                                        if (t.value == prefs.imageSource.site.aiTagName) {
+                                            if (t.isExcluded) forciblyAllowedAi = true
+                                            else addAiExcludedTag()
+                                        }
+                                        tagChipList.remove(t)
                                     }
-                                    tagChipList.remove(t)
-                                }
-                            )
-                        }
+                                )
+                            }
 
-                        Spacer(modifier = Modifier.size(8.dp))
+                            Spacer(modifier = Modifier.size((16 - CHIP_SPACING).dp))
+                        }
+                        VerticalSpacer()
                     }
                 }
                 AnimatedVisibility(shouldShowSuggestions) {

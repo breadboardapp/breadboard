@@ -3,6 +3,7 @@ package moe.apex.rule34.util
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -30,9 +31,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.VerticalDivider
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -40,7 +43,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import moe.apex.rule34.image.Image
@@ -169,18 +171,21 @@ fun Heading(
 }
 
 
+/** A vertical spacer with 12dp height. */
 @Composable
 fun VerticalSpacer() {
     Spacer(Modifier.height(12.dp))
 }
 
 
+/** A vertical spacer with 24dp height. */
 @Composable
 fun LargeVerticalSpacer() {
     Spacer(Modifier.height(24.dp))
 }
 
 
+/** A vertical spacer with the height of the navigation bar. */
 @Composable
 fun NavBarHeightVerticalSpacer() {
     Spacer(
@@ -194,7 +199,6 @@ fun NavBarHeightVerticalSpacer() {
 @Composable
 fun HorizontallyScrollingChipsWithLabels(
     modifier: Modifier = Modifier,
-    endPadding: Dp = 0.dp,
     labels: List<String>,
     content: List<List<@Composable () -> Unit>>
 ) {
@@ -207,38 +211,47 @@ fun HorizontallyScrollingChipsWithLabels(
     if (labels.isEmpty()) return
     val rows = labels.zip(content)
 
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier.height(CHIP_TOTAL_HEIGHT * labels.size)
+    Surface(
+        modifier = modifier,
+        shape = MaterialTheme.shapes.large,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        tonalElevation = 2.dp
     ) {
-        Column(
-            verticalArrangement = Arrangement.SpaceAround,
-            modifier = Modifier.fillMaxHeight(),
-        ) {
-            for (item in rows) {
-                Text(
-                    text = item.first,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    lineHeight = MaterialTheme.typography.titleMedium.fontSize
-                )
-            }
-        }
-
-        VerticalDivider(
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .height(CHIP_TOTAL_HEIGHT * labels.size - CHIP_TOTAL_VERTICAL_PADDING)
-                .padding(start = VERTICAL_DIVIDER_SPACING.dp)
-        )
+                .padding(start = 16.dp, top = 8.dp, bottom = 8.dp)
+                .height(CHIP_TOTAL_HEIGHT * labels.size)
+        ) {
+            Column(
+                verticalArrangement = Arrangement.SpaceAround,
+                modifier = Modifier.fillMaxHeight(),
+            ) {
+                for (item in rows) {
+                    Text(
+                        text = item.first,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        lineHeight = MaterialTheme.typography.titleMedium.fontSize
+                    )
+                }
+            }
 
-        Column(Modifier.horizontalScroll(rememberScrollState())) {
-            for (item in rows) {
-                Row(horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp)) {
-                    Spacer(Modifier.width((VERTICAL_DIVIDER_SPACING - CHIP_SPACING).dp))
-                    for (chip in item.second) {
-                        chip()
+            VerticalDivider(
+                modifier = Modifier
+                    .height(CHIP_TOTAL_HEIGHT * labels.size - CHIP_TOTAL_VERTICAL_PADDING)
+                    .padding(start = VERTICAL_DIVIDER_SPACING.dp)
+            )
+
+            Column(Modifier.horizontalScroll(rememberScrollState())) {
+                for (item in rows) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp)) {
+                        Spacer(Modifier.width((VERTICAL_DIVIDER_SPACING - CHIP_SPACING).dp))
+                        for (chip in item.second) {
+                            chip()
+                        }
+                        Spacer(Modifier.width((16 - CHIP_SPACING).dp))
                     }
-                    Spacer(Modifier.width(endPadding))
                 }
             }
         }

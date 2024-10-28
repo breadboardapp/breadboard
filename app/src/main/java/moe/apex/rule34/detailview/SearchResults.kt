@@ -96,7 +96,6 @@ fun SearchResults(navController: NavController, searchQuery: String) {
                 contentPadding = PaddingValues(top = 8.dp, start = 16.dp, end = 16.dp),
                 filterComposable = if (filterLocally) { {
                     HorizontallyScrollingChipsWithLabels(
-                        endPadding = (16 - CHIP_SPACING).dp,
                         labels = listOf("Ratings"),
                         content = listOf(ratingRows)
                     )
