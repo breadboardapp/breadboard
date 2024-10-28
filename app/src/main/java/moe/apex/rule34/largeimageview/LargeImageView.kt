@@ -6,7 +6,6 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import android.os.Build
 import android.util.Log
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -40,7 +39,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -55,10 +53,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import coil3.ImageLoader
 import coil3.compose.SubcomposeAsyncImage
-import coil3.gif.AnimatedImageDecoder
-import coil3.gif.GifDecoder
 import coil3.request.ImageRequest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -109,17 +104,6 @@ fun LargeImageView(
     val isUsingWifi = isUsingWiFi(context)
     val storageLocationPromptLaunched = remember { mutableStateOf(false) }
     var isDownloading by remember { mutableStateOf(false) }
-    val loader = remember {
-        ImageLoader.Builder(context)
-            .components {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    add(AnimatedImageDecoder.Factory())
-                } else {
-                    add(GifDecoder.Factory())
-                }
-            }
-            .build()
-    }
 
     if (allImages.isEmpty()) {
         visible.value = false
@@ -172,14 +156,13 @@ fun LargeImageView(
         Suggestions welcome.
         */
 
-        val model = remember {
+        val model =
             ImageRequest.Builder(context)
                 .data(imageUrl)
                 .build()
-        }
+
         SubcomposeAsyncImage(
             model = model,
-            imageLoader = loader,
             contentDescription = "Image",
             loading = { Box(
                 modifier = modifier,
@@ -360,19 +343,11 @@ fun LargeImageView(
                             .padding(bottom = NAV_BAR_HEIGHT.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        key(allImages[index]) {
-                            if (imageAtIndex.preferHd) {
-                                LargeImage(
-                                    imageUrl = imageAtIndex.highestQualityFormatUrl,
-                                    previewImageUrl = imageAtIndex.previewUrl
-                                )
-                            } else {
-                                LargeImage(
-                                    imageUrl = imageAtIndex.sampleUrl,
-                                    previewImageUrl = imageAtIndex.previewUrl
-                                )
-                            }
-                        }
+                        LargeImage(
+                            imageUrl = if (imageAtIndex.preferHd) imageAtIndex.highestQualityFormatUrl
+                                       else imageAtIndex.sampleUrl,
+                            previewImageUrl = imageAtIndex.previewUrl
+                        )
                     }
                 }
             }
