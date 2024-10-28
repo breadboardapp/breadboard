@@ -282,7 +282,8 @@ fun PreferencesScreen() {
                 InfoSection(text = "Filtering ratings locally has the benefit of being able to " +
                                    "adjust the filter after searching and allows filtering on " +
                                    "otherwise unsupported sites like Danbooru, but may cause " +
-                                   "less results to be shown at once.")
+                                   "less results to be shown at once and result in higher data "+
+                                   "usage for the same number of visible images.")
                 NavBarHeightVerticalSpacer()
             }
         }
