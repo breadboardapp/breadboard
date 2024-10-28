@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,24 +29,18 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.offset
 import coil3.compose.SubcomposeAsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import moe.apex.rule34.image.Image
-import moe.apex.rule34.preferences.LocalPreferences
-import moe.apex.rule34.prefs
 import moe.apex.rule34.util.FullscreenLoadingSpinner
 import moe.apex.rule34.util.NavBarHeightVerticalSpacer
 
@@ -62,12 +55,8 @@ fun ImageGrid(
     initialLoad: (suspend () -> Unit)? = null,
     onEndReached: suspend () -> Unit = { }
 ) {
-    val preferencesRepository = LocalContext.current.prefs
-    val prefs = LocalPreferences.current
     val lazyGridState = rememberLazyGridState()
-    val scope = rememberCoroutineScope()
     var doneInitialLoad by remember { mutableStateOf(initialLoad == null) }
-    val layoutDirection = LocalLayoutDirection.current
 
     if (!doneInitialLoad) {
         LaunchedEffect(Unit) {
