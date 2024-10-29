@@ -6,9 +6,7 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import android.os.Build
-import android.widget.Toast
-import androidx.activity.compose.BackHandler
+import android.util.Log
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
@@ -19,19 +17,24 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -44,18 +47,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import coil3.ImageLoader
 import coil3.compose.SubcomposeAsyncImage
-import coil3.gif.AnimatedImageDecoder
-import coil3.gif.GifDecoder
 import coil3.request.ImageRequest
-import coil3.request.crossfade
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import me.saket.telephoto.zoomable.ZoomSpec
@@ -66,6 +65,7 @@ import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.DataSaver
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.prefs
+import moe.apex.rule34.util.showToast
 import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.util.FullscreenLoadingSpinner
 import moe.apex.rule34.util.MustSetLocation
@@ -116,16 +116,19 @@ fun LargeImageView(
     }
 
     val currentImage = allImages[pagerState.currentPage]
+    val popupVisibilityState = remember { mutableStateOf(false) }
 
     val prefs = LocalPreferences.current
     val dataSaver = prefs.dataSaver
     val storageLocation = prefs.storageLocation
     val favouriteImages = prefs.favouriteImages
 
-    // Large image view is an overlay rather than a new screen entirely so we need to override
-    // the default back button behaviour so we don't get taken to the home page.
-    BackHandler(visible.value) {
-        visible.value = false
+    if (popupVisibilityState.value) {
+        InfoSheet(currentImage, popupVisibilityState)
+    }
+
+    LaunchedEffect(visible.value) {
+        if (visible.value) offset = 0.dp
     }
 
     PredictiveBackHandler(visible.value) { progress ->
@@ -139,7 +142,7 @@ fun LargeImageView(
     }
 
     @Composable
-    fun LargeImage(imageUrl: String) {
+    fun LargeImage(imageUrl: String, previewImageUrl: String) {
         val modifier =
             if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT) {
                 Modifier.fillMaxWidth()
@@ -153,30 +156,32 @@ fun LargeImageView(
         Suggestions welcome.
         */
 
-        /* These need to be remembered otherwise recompositions (like when zooming) will cause
-           them to flash. */
-        val loader = remember {
-            ImageLoader.Builder(context)
-                .components {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                        add(AnimatedImageDecoder.Factory())
-                    } else {
-                        add(GifDecoder.Factory())
-                    }
-                }
-                .build()
-        }
-        val model = remember {
+        val model =
             ImageRequest.Builder(context)
                 .data(imageUrl)
-                .crossfade(true)
                 .build()
-        }
+
         SubcomposeAsyncImage(
             model = model,
-            imageLoader = loader,
             contentDescription = "Image",
-            loading = { FullscreenLoadingSpinner() },
+            loading = { Box(
+                modifier = modifier,
+                contentAlignment = Alignment.Center
+            ) {
+                SubcomposeAsyncImage(
+                    model = previewImageUrl,
+                    contentDescription = "Image",
+                    contentScale = ContentScale.Fit,
+                    modifier = modifier.clip(RoundedCornerShape(24.dp))
+                )
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = CircleShape,
+                    modifier = Modifier.size(72.dp)
+                ) {
+                    FullscreenLoadingSpinner()
+                }
+            } },
             modifier = modifier
                 .scale(0.95f)
                 .clip(RoundedCornerShape(24.dp))
@@ -208,8 +213,8 @@ fun LargeImageView(
                                     R.drawable.ic_hd_disabled
                                 }
                                 Icon(
-                                    ImageVector.vectorResource(id = vectorIcon),
-                                    "Toggle HD",
+                                    painter = painterResource(vectorIcon),
+                                    contentDescription = "Toggle HD",
                                     modifier = Modifier.scale(1.2F)
                                 )
                             }
@@ -217,11 +222,11 @@ fun LargeImageView(
                                 IconButton(onClick = {
                                     scope.launch {
                                         context.prefs.removeFavouriteImage(currentImage)
-                                        Toast.makeText(context, "Removed from your favourites", Toast.LENGTH_SHORT).show()
+                                        showToast(context, "Removed from your favourites")
                                     }
                                 }) {
                                     Icon(
-                                        imageVector = ImageVector.vectorResource(id = R.drawable.ic_star_filled),
+                                        painter = painterResource(R.drawable.ic_star_filled),
                                         contentDescription = "Remove from favourites"
                                     )
                                 }
@@ -229,11 +234,11 @@ fun LargeImageView(
                                 IconButton(onClick = {
                                     scope.launch {
                                         context.prefs.addFavouriteImage(currentImage)
-                                        Toast.makeText(context, "Added to your favourites", Toast.LENGTH_SHORT).show()
+                                        showToast(context, "Added to your favourites")
                                     }
                                 }) {
                                     Icon(
-                                        imageVector = ImageVector.vectorResource(id = R.drawable.ic_star_hollow),
+                                        painter = painterResource(R.drawable.ic_star_hollow),
                                         contentDescription = "Add to favourites"
                                     )
                                 }
@@ -254,6 +259,16 @@ fun LargeImageView(
                                     "Share"
                                 )
                             }
+                            if (currentImage.metadata != null) {
+                                IconButton(
+                                    onClick = { popupVisibilityState.value = true }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Info,
+                                        contentDescription = "Info"
+                                    )
+                                }
+                            }
                         },
                         floatingActionButton = {
                             FloatingActionButton(
@@ -268,11 +283,7 @@ fun LargeImageView(
                                             )
 
                                             if (result.isSuccess) {
-                                                Toast.makeText(
-                                                    context,
-                                                    "Image saved.",
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
+                                                showToast(context, "Image saved.")
                                             } else {
                                                 val exc = result.exceptionOrNull()!!
                                                 exc.printStackTrace()
@@ -280,11 +291,8 @@ fun LargeImageView(
                                                 if (exc is MustSetLocation) {
                                                     storageLocationPromptLaunched.value = true
                                                 }
-                                                Toast.makeText(
-                                                    context,
-                                                    exc.message,
-                                                    Toast.LENGTH_LONG
-                                                ).show()
+                                                showToast(context, exc.message ?: "Unknown error")
+                                                Log.e("Downloader", exc.message ?: "Error downloading image", exc)
                                             }
                                             isDownloading = false
                                         }
@@ -297,7 +305,7 @@ fun LargeImageView(
                                 }
                                 else {
                                     Icon(
-                                        imageVector = ImageVector.vectorResource(id = R.drawable.ic_download),
+                                        painter = painterResource(R.drawable.ic_download),
                                         contentDescription = "Save"
                                     )
                                 }
@@ -311,14 +319,14 @@ fun LargeImageView(
                 state = pagerState,
                 userScrollEnabled = canChangePage,
                 beyondViewportPageCount = 1
-            ) {index ->
-                val currentImg = allImages[index]
+            ) { index ->
+                val imageAtIndex = allImages[index]
 
-                if (currentImg.hdQualityOverride == null) {
+                if (imageAtIndex.hdQualityOverride == null) {
                     when (dataSaver) {
-                        DataSaver.ON -> currentImg.preferHd = false
-                        DataSaver.OFF -> currentImg.preferHd = true
-                        DataSaver.AUTO -> currentImg.preferHd = isUsingWifi
+                        DataSaver.ON -> imageAtIndex.preferHd = false
+                        DataSaver.OFF -> imageAtIndex.preferHd = true
+                        DataSaver.AUTO -> imageAtIndex.preferHd = isUsingWifi
                     }
                 }
 
@@ -335,11 +343,11 @@ fun LargeImageView(
                             .padding(bottom = NAV_BAR_HEIGHT.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (currentImg.preferHd) {
-                            LargeImage(imageUrl = currentImg.highestQualityFormatUrl)
-                        } else {
-                            LargeImage(imageUrl = currentImg.sampleUrl)
-                        }
+                        LargeImage(
+                            imageUrl = if (imageAtIndex.preferHd) imageAtIndex.highestQualityFormatUrl
+                                       else imageAtIndex.sampleUrl,
+                            previewImageUrl = imageAtIndex.previewUrl
+                        )
                     }
                 }
             }

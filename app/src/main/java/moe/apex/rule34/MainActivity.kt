@@ -4,14 +4,16 @@ package moe.apex.rule34
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -20,42 +22,52 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.sharp.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -64,9 +76,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -86,6 +101,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import coil3.ImageLoader
+import coil3.PlatformContext
+import coil3.SingletonImageLoader
+import coil3.gif.AnimatedImageDecoder
+import coil3.gif.GifDecoder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -95,6 +115,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import moe.apex.rule34.detailview.SearchResults
 import moe.apex.rule34.favourites.FavouritesPage
+import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.PreferencesScreen
@@ -102,8 +123,12 @@ import moe.apex.rule34.preferences.UserPreferencesRepository
 import moe.apex.rule34.tag.TagSuggestion
 import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.ui.theme.searchField
+import moe.apex.rule34.util.CHIP_SPACING
+import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.NAV_BAR_HEIGHT
+import moe.apex.rule34.util.VerticalSpacer
+import moe.apex.rule34.util.showToast
 import moe.apex.rule34.util.withoutVertical
 import soup.compose.material.motion.animation.materialSharedAxisXIn
 import soup.compose.material.motion.animation.materialSharedAxisXOut
@@ -115,7 +140,19 @@ val Context.prefs: UserPreferencesRepository
     get() = UserPreferencesRepository(dataStore)
 
 
-class MainActivity : ComponentActivity() {
+class MainActivity : SingletonImageLoader.Factory, ComponentActivity() {
+    override fun newImageLoader(context: PlatformContext): ImageLoader {
+        return ImageLoader.Builder(context)
+            .components {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    add(AnimatedImageDecoder.Factory())
+                } else {
+                    add(GifDecoder.Factory())
+                }
+            }
+            .build()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
@@ -135,7 +172,7 @@ class MainActivity : ComponentActivity() {
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
@@ -148,6 +185,10 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
     var cleanedSearchString by remember { mutableStateOf("") }
     val mostRecentSuggestions = remember { mutableStateListOf<TagSuggestion>() }
     var forciblyAllowedAi by remember { mutableStateOf(false) }
+    var showRatingFilter by remember { mutableStateOf(false) }
+    val chevronRotation by animateFloatAsState(if (showRatingFilter) 180f else 0f)
+    var showSourceChangeDialog by remember { mutableStateOf(false) }
+    var sourceChangeDialogData by remember { mutableStateOf<SourceDialogData?>(null) }
 
     val context = LocalContext.current
     val prefs = LocalPreferences.current
@@ -171,20 +212,20 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
 
     fun danbooruLimitCheck(): Boolean {
         if (tagChipList.size == 2 && prefs.imageSource == ImageSource.DANBOORU) {
-            Toast.makeText(context, "Danbooru supports up to 2 tags", Toast.LENGTH_SHORT).show()
+            showToast(context, "Danbooru supports up to 2 tags")
             return false
         }
         return true
     }
 
 
-    fun getSuggestions() {
+    fun getSuggestions(bypassDelay: Boolean = false, source: ImageSource = currentSource) {
         searchJob?.cancel()
         searchJob = scope.launch(Dispatchers.IO) {
-            if (cleanedSearchString.isNotEmpty()) delay(200)
+            if (cleanedSearchString.isNotEmpty()) delay(if (bypassDelay) 0 else 200)
             if (cleanedSearchString !in listOf("", "-")) {
                 try {
-                    val suggestions = currentSource.site.loadAutoComplete(cleanedSearchString)
+                    val suggestions = source.site.loadAutoComplete(cleanedSearchString)
                     /* This check shouldn't be needed but avoids a race condition whereby clearing
                        the query in the time between getting suggestions and displaying them will cause
                        the old suggestions to be displayed. */
@@ -194,7 +235,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                     shouldShowSuggestions = true
                 } catch (e: Exception) {
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(context, "Error fetching results", Toast.LENGTH_SHORT).show()
+                        showToast(context, "Error fetching results")
                     }
                     Log.e("App", "Error fetching autocomplete results", e)
                 }
@@ -221,7 +262,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                 }
         ) {
             Text(
-                modifier = Modifier.padding(horizontal = 20.dp),
+                modifier = Modifier.padding(horizontal = 16.dp),
                 text = tag.label,
                 fontSize = 16.sp,
                 lineHeight = 17.sp
@@ -229,7 +270,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
 
             tag.type?.let {
                 Text(
-                    modifier = Modifier.padding(horizontal = 20.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp),
                     text = it,
                     fontSize = 12.sp,
                     lineHeight = 13.sp
@@ -249,33 +290,29 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
             Surface(
                 modifier = Modifier
                     .padding(
-                        top = 10.dp,
-                        start = 12.dp,
-                        end = 12.dp,
+                        start = 16.dp,
+                        end = 16.dp,
                         bottom = 16.dp
-                    )
-                    .clip(RoundedCornerShape(16.dp))
-                    .verticalScroll(rememberScrollState()),
-                tonalElevation = 4.dp
+                    ),
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surfaceContainer
             ) {
-                Spacer(Modifier.size(18.dp))
-
                 Column(
                     Modifier
-                        .clip(RoundedCornerShape(20.dp))
+                        .verticalScroll(rememberScrollState())
                         .fillMaxWidth()
                         .animateContentSize(),
                 ) {
                     if (mostRecentSuggestions.isEmpty()) {
                         Text(
-                            modifier = Modifier.padding(20.dp),
+                            modifier = Modifier.padding(16.dp),
                             fontSize = 16.sp,
                             text = "No results :("
                         )
                     } else {
                         for (t in mostRecentSuggestions) {
                             TagListEntry(tag = t)
-                            HorizontalDivider()
+                            if (t != mostRecentSuggestions.last()) HorizontalDivider()
                         }
                     }
                 }
@@ -283,24 +320,26 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
         }
     }
 
-
     fun performSearch() {
         if (tagChipList.isEmpty()) {
-            Toast.makeText(
-                context,
-                "Please select some tags",
-                Toast.LENGTH_SHORT
-            ).show()
+            showToast(context, "Please select some tags")
+        } else if (prefs.ratingsFilter.isEmpty()) {
+            showToast(context, "Please select some ratings")
+        } else if (!prefs.filterRatingsLocally && prefs.ratingsFilter.size != 4 && prefs.imageSource == ImageSource.DANBOORU) {
+            showToast(context, "To filter ratings on Danbooru, enable the 'Filter ratings locally' option")
         }
         else {
             val searchTags = currentSource.site.formatTagString(tagChipList)
-            navController.navigate("searchResults/${searchTags}")
+            val ratingsFilter = if (prefs.filterRatingsLocally) "" else ImageRating.buildSearchStringFor(prefs.ratingsFilter)
+            val searchRoute = searchTags + if (ratingsFilter.isNotEmpty()) "+$ratingsFilter" else ""
+            navController.navigate("searchResults/$searchRoute")
         }
     }
 
     fun addAiExcludedTag() {
         if (excludeAi && !forciblyAllowedAi && tagChipList.getIndexByName(currentSource.site.aiTagName) == null) {
             val tag = TagSuggestion("", currentSource.site.aiTagName, "", true)
+            tagChipList.clear()
             tagChipList.add(0, tag)
         }
     }
@@ -315,11 +354,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                 shouldShowSuggestions = false
             } else {
                 if (mostRecentSuggestions.isEmpty()) {
-                    Toast.makeText(
-                        context,
-                        "No matching tags",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    showToast(context, "No matching tags")
                 }
             }
         } else {
@@ -333,10 +368,10 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp)
+                        .padding(horizontal = 16.dp)
                         .align(Alignment.CenterHorizontally)
                 ) {
-                    OutlinedTextField(
+                    TextField(
                         modifier = Modifier
                             .weight(1f, true)
                             .focusRequester(focusRequester),
@@ -349,11 +384,13 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                                 .replace(" ", "_")
                             getSuggestions()
                         },
-                        placeholder = { Text(
-                                text = "Search Tags",
+                        placeholder = {
+                            Text(
+                                text = "Search ${prefs.imageSource.description}",
                                 style = MaterialTheme.typography.searchField
-                        ) },
-                        shape = RoundedCornerShape(16.dp),
+                            )
+                        },
+                        shape = MaterialTheme.shapes.large,
                         singleLine = true,
                         keyboardOptions = KeyboardOptions.Default.copy(
                             capitalization = KeyboardCapitalization.None,
@@ -364,13 +401,30 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                             onDone = { beginSearch() },
                             onSearch = { beginSearch() }
                         ),
+                        colors = TextFieldDefaults.colors().copy(
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        ),
+                        trailingIcon = {
+                            IconButton(modifier = Modifier.rotate(chevronRotation),
+                                onClick = { showRatingFilter = !showRatingFilter }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.KeyboardArrowDown,
+                                    contentDescription = "Filter"
+                                )
+                            }
+                        }
                     )
 
                     Spacer(modifier = Modifier.size(12.dp))
 
                     FloatingActionButton(
                         onClick = { performSearch() },
-                        elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp)
+                        elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
+                        shape = CircleShape
                     ) {
                         Icon(
                             imageVector = Icons.Sharp.Search,
@@ -379,15 +433,83 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                     }
                 }
 
-                Spacer(Modifier.size(8.dp))
+                VerticalSpacer()
 
-                Column {
-                    AnimatedVisibility(tagChipList.isNotEmpty()) {
+                AnimatedVisibility(showRatingFilter) {
+                    var opacity by remember { mutableFloatStateOf(1f) }
+                    var scale by remember { mutableFloatStateOf(1f) }
+                    LaunchedEffect(showRatingFilter) {
+                        if (showRatingFilter) {
+                            opacity = 1f
+                            scale = 1f
+                        }
+                    }
+                    PredictiveBackHandler(enabled = true) { progress ->
+                        try {
+                            progress.collect { backEvent ->
+                                opacity = (1 - backEvent.progress * 5).coerceAtLeast(0f)
+                                scale = 1 - (backEvent.progress / 2)
+                            }
+                           showRatingFilter = false
+                        }
+                        catch(_: Exception) { }
+                    }
+                    val sourceRows: List<@Composable () -> Unit> = ImageSource.entries.map { {
+                        FilterChip(
+                            selected = prefs.imageSource == it,
+                            label = { Text(it.description) },
+                            onClick = {
+                                fun confirm() {
+                                    scope.launch {
+                                        context.prefs.updateImageSource(it)
+                                    }
+                                    tagChipList.clear()
+                                    addAiExcludedTag()
+                                    getSuggestions(bypassDelay = true, source = it)
+                                }
+                                if (tagChipList.isEmpty() || it == currentSource) return@FilterChip confirm()
+                                sourceChangeDialogData = SourceDialogData(
+                                    from = currentSource,
+                                    to = it,
+                                    onConfirm = ::confirm
+                                )
+                                showSourceChangeDialog = true
+                            }
+                        )
+                    } }
+                    val ratingRows: List<@Composable () -> Unit> = ImageRating.entries.filter { it != ImageRating.UNKNOWN }.map { {
+                        FilterChip(
+                            selected = it in prefs.ratingsFilter,
+                            label = { Text(it.label) },
+                            onClick = {
+                                scope.launch {
+                                    if (it in prefs.ratingsFilter) context.prefs.removeRatingFilter(it)
+                                    else context.prefs.addRatingFilter(it)
+                                }
+                            }
+                        )
+                    } }
+                    Column(Modifier.padding(horizontal = 16.dp)) {
+                        HorizontallyScrollingChipsWithLabels(
+                            modifier = Modifier
+                                .alpha(opacity)
+                                .scale(scale),
+                            labels = listOf("Source", "Ratings"),
+                            content = listOf(sourceRows, ratingRows)
+                        )
+                        VerticalSpacer()
+                    }
+                }
+
+                AnimatedVisibility(tagChipList.isNotEmpty()) {
+                    Column {
                         Row(
-                            modifier = Modifier.horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            modifier = Modifier
+                                .height(FilterChipDefaults.Height)
+                                .padding(start = 16.dp)
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp)
                         ) {
-                            Spacer(Modifier.size(8.dp))
 
                             for (t in tagChipList) {
                                 FilterChip(
@@ -403,14 +525,45 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                                 )
                             }
 
-                            Spacer(modifier = Modifier.size(8.dp))
+                            Spacer(modifier = Modifier.size((16 - CHIP_SPACING).dp))
                         }
-                    }
-                    AnimatedVisibility(shouldShowSuggestions) {
-                        AutoCompleteTagResults()
+                        VerticalSpacer()
                     }
                 }
+                AnimatedVisibility(shouldShowSuggestions) {
+                    AutoCompleteTagResults()
+                }
             }
+        }
+
+        if (showSourceChangeDialog) {
+            val data = sourceChangeDialogData!!
+            AlertDialog(
+                onDismissRequest = { showSourceChangeDialog = false },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            data.onConfirm()
+                            showSourceChangeDialog = false
+                        }
+                    ) {
+                        Text("Okay")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showSourceChangeDialog = false }) {
+                        Text("Cancel")
+                    }
+                },
+                title = { Text("Change image source") },
+                text = {
+                    Text(
+                        text = "Changing image source will clear your search tags. " +
+                               "Are you sure you want to change the source from " +
+                               "${data.from.description} to ${data.to.description}?"
+                    )
+                }
+            )
         }
     }
 }
@@ -543,6 +696,13 @@ fun Navigation(navController: NavHostController) {
         }
     }
 }
+
+
+private data class SourceDialogData(
+    val from: ImageSource,
+    val to: ImageSource,
+    val onConfirm: () -> Unit,
+)
 
 
 private fun SnapshotStateList<TagSuggestion>.getIndexByName(name: String): Int? {

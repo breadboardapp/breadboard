@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.runtime.Composable
@@ -47,7 +46,7 @@ fun SaveDirectorySelection(storageLocationPromptLaunched: MutableState<Boolean>)
                     scope.launch(Dispatchers.IO) { preferencesRepository.updateStorageLocation(tree) }
                 }
             } else {
-                Toast.makeText(context, "Nothing selected.", Toast.LENGTH_SHORT).show()
+                showToast(context, "Nothing selected.")
             }
             storageLocationPromptLaunched.value = false
         }

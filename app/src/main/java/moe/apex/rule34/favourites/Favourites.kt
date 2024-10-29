@@ -1,7 +1,10 @@
 package moe.apex.rule34.favourites
 
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
@@ -10,13 +13,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import moe.apex.rule34.detailview.ImageGrid
+import moe.apex.rule34.image.ImageRating
+import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
+import moe.apex.rule34.prefs
 import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
+import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.rule34.util.MainScreenScaffold
 
 
@@ -24,25 +34,64 @@ import moe.apex.rule34.util.MainScreenScaffold
 @Composable
 fun FavouritesPage(bottomBarVisibleState: MutableState<Boolean>) {
     val prefs = LocalPreferences.current
+    val preferencesRepository = LocalContext.current.prefs
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
     val shouldShowLargeImage = remember { mutableStateOf(false) }
     var initialPage by remember { mutableIntStateOf(0) }
+    val scope = rememberCoroutineScope()
 
-    val images = prefs.favouriteImages.reversed().filter { it.imageSource in prefs.favouritesFilter }
+    val images = prefs.favouriteImages.reversed().filter {
+        it.imageSource in prefs.favouritesFilter
+        &&
+        if (it.metadata?.rating == null) ImageRating.UNKNOWN in prefs.favouritesRatingsFilter
+        else it.metadata.rating in prefs.favouritesRatingsFilter
+    }
+
+    val chips = mutableListOf<List<@Composable () -> Unit>>()
+    chips.add(ImageSource.entries.map { {
+        FilterChip(
+            selected = it in prefs.favouritesFilter,
+            label = { Text(it.description) },
+            onClick = {
+                scope.launch {
+                    if (it in prefs.favouritesFilter) preferencesRepository.removeFavouritesFilter(it)
+                    else preferencesRepository.addFavouritesFilter(it)
+                }
+            }
+        )
+    } })
+    chips.add(ImageRating.entries.map { {
+        FilterChip(
+            selected = it in prefs.favouritesRatingsFilter,
+            label = { Text(it.label) },
+            onClick = {
+                scope.launch {
+                    if (it in prefs.favouritesRatingsFilter) preferencesRepository.removeFavouritesRatingFilter(it)
+                    else preferencesRepository.addFavouritesRatingFilter(it)
+                }
+            }
+        )
+    } })
 
     MainScreenScaffold("Favourite images", scrollBehavior) { padding ->
         ImageGrid(
             modifier = Modifier
                 .padding(padding)
-                .padding(horizontal = 16.dp)
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
-            showFilter = true,
             images = images,
             onImageClick = { index, image ->
                 bottomBarVisibleState.value = false
                 initialPage = index
                 shouldShowLargeImage.value = true
+            },
+            contentPadding = PaddingValues(top = 16.dp, start = 16.dp, end = 16.dp),
+            filterComposable = {
+                HorizontallyScrollingChipsWithLabels(
+                    modifier = Modifier.padding(bottom = 4.dp),
+                    labels = listOf("Sources", "Ratings"),
+                    content = chips
+                )
             }
         )
     }

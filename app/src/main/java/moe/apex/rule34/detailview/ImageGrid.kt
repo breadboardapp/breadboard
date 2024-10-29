@@ -1,25 +1,17 @@
 package moe.apex.rule34.detailview
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandHorizontally
-import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -27,18 +19,17 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,79 +40,54 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.SubcomposeAsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-import kotlinx.coroutines.launch
 import moe.apex.rule34.image.Image
-import moe.apex.rule34.preferences.ImageSource
-import moe.apex.rule34.preferences.LocalPreferences
-import moe.apex.rule34.prefs
 import moe.apex.rule34.util.FullscreenLoadingSpinner
+import moe.apex.rule34.util.NavBarHeightVerticalSpacer
 
 
 @Composable
 fun ImageGrid(
     modifier: Modifier = Modifier,
-    showFilter: Boolean = false,
     images: List<Image>,
     onImageClick: (Int, Image) -> Unit,
-    onEndReached: () -> Unit = { }
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+    filterComposable: (@Composable () -> Unit)? = null,
+    initialLoad: (suspend () -> Unit)? = null,
+    onEndReached: suspend () -> Unit = { }
 ) {
-    val preferencesRepository = LocalContext.current.prefs
-    val prefs = LocalPreferences.current
     val lazyGridState = rememberLazyGridState()
-    val scope = rememberCoroutineScope()
+    var doneInitialLoad by remember { mutableStateOf(initialLoad == null) }
+
+    if (!doneInitialLoad) {
+        LaunchedEffect(Unit) {
+            initialLoad!!.invoke()
+            doneInitialLoad = true
+        }
+        LinearProgressIndicator(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp)
+                .padding(contentPadding)
+        )
+        return
+    }
 
     LazyVerticalGrid(
         columns = GridCells.Adaptive(128.dp),
         state = lazyGridState,
         modifier = modifier,
+        contentPadding = contentPadding,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        if (showFilter) {
-            val wantedSites = prefs.favouritesFilter
-            item(span = { GridItemSpan(maxLineSpan) }) { Spacer(Modifier.height(12.dp)) }
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Row(
-                    modifier = Modifier
-                        .height(FilterChipDefaults.Height)
-                        .clip(FilterChipDefaults.shape)
-                ) {
-                    Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        for (site in ImageSource.entries) {
-                            FilterChip(
-                                selected = site in wantedSites,
-                                onClick = {
-                                    scope.launch {
-                                        if (site in wantedSites) preferencesRepository.removeFavouritesFilter(site)
-                                        else preferencesRepository.addFavouritesFilter(site)
-                                    }
-                                },
-                                label = { Text(site.description) },
-                                leadingIcon = {
-                                    AnimatedVisibility(
-                                        visible = site in wantedSites,
-                                        enter = expandHorizontally(expandFrom = Alignment.Start),
-                                        exit = shrinkHorizontally(shrinkTowards = Alignment.Start)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Filled.Check,
-                                            contentDescription = "Selected",
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                }
-                            )
-                        }
-                    }
-                }
+        if (filterComposable != null) {
+            item(span = { GridItemSpan(maxLineSpan) } ) {
+                filterComposable()
             }
-        }
-
-        item(span = { GridItemSpan(maxLineSpan) }) {
-            Spacer(modifier = Modifier.height(12.dp))
+        } else {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Spacer(modifier = Modifier.height(8.dp))
+            }
         }
 
         itemsIndexed(images, key = { _, image -> image.previewUrl }) { index, image ->
@@ -171,7 +137,7 @@ fun ImageGrid(
             }
         }
 
-        item { onEndReached() }
+        item { LaunchedEffect(Unit) { onEndReached() } }
 
         if (images.isEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }) {
@@ -184,12 +150,7 @@ fun ImageGrid(
         }
 
         item(span = { GridItemSpan(maxLineSpan) }) {
-            Spacer(
-                modifier = Modifier.height(
-                    WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                )
-            )
+            NavBarHeightVerticalSpacer()
         }
     }
 }
-

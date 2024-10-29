@@ -6,6 +6,20 @@ import androidx.compose.runtime.setValue
 import kotlinx.serialization.Serializable
 import moe.apex.rule34.preferences.ImageSource
 
+
+@Serializable
+data class ImageMetadata(
+    val artist: String?,
+    val source: String?,
+    val tags: List<String>,
+    val rating: ImageRating,
+    val pixivId: Int? = null,
+) {
+    val pixivUrl: String?
+        get() = pixivId?.let { "https://www.pixiv.net/en/artworks/$it" }
+}
+
+
 @Serializable
 data class Image(
     val fileName: String,
@@ -13,7 +27,8 @@ data class Image(
     val previewUrl: String,
     val fileUrl: String,
     val sampleUrl: String,
-    val imageSource: ImageSource = ImageSource.R34 // Backwards compatibility
+    val imageSource: ImageSource = ImageSource.R34, // Backwards compatibility
+    val metadata: ImageMetadata? = null
 ) {
     val highestQualityFormatUrl = fileUrl.takeIf { it.isNotEmpty() } ?: sampleUrl
     var preferHd by mutableStateOf(false)

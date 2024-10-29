@@ -1,11 +1,11 @@
 package moe.apex.rule34.preferences
 
 import android.net.Uri
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -45,22 +45,12 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import moe.apex.rule34.prefs
 import moe.apex.rule34.ui.theme.BreadboardTheme
+import moe.apex.rule34.util.VerticalSpacer
+import moe.apex.rule34.util.Heading
+import moe.apex.rule34.util.LargeVerticalSpacer
 import moe.apex.rule34.util.MainScreenScaffold
+import moe.apex.rule34.util.NavBarHeightVerticalSpacer
 import moe.apex.rule34.util.SaveDirectorySelection
-
-
-@Composable
-private fun Heading(
-    modifier: Modifier = Modifier,
-    text: String
-) {
-    Text(
-        modifier = modifier.padding(horizontal = 16.dp),
-        text = text,
-        color = MaterialTheme.colorScheme.primary,
-        style = MaterialTheme.typography.titleMedium
-    )
-}
 
 
 @Composable
@@ -195,7 +185,7 @@ private fun InfoSection(text: String) {
             contentDescription = null,
             tint = Color.Gray
         )
-        Spacer(Modifier.size(12.dp))
+        VerticalSpacer()
         Summary(text = text)
     }
 }
@@ -220,7 +210,7 @@ fun PreferencesScreen() {
                     .nestedScroll(scrollBehavior.nestedScrollConnection)
                     .verticalScroll(rememberScrollState())
             ) {
-                Spacer(Modifier.height(12.dp))
+                VerticalSpacer()
 
                 Heading(text = "Data saver")
                 EnumPref(
@@ -231,7 +221,7 @@ fun PreferencesScreen() {
                     onSelection = { scope.launch { preferencesRepository.updateDataSaver(it as DataSaver) } }
                 )
 
-                Spacer(Modifier.height(24.dp))
+                LargeVerticalSpacer()
 
                 Heading(text = "Downloads")
                 TitleSummary(
@@ -246,7 +236,7 @@ fun PreferencesScreen() {
                     SaveDirectorySelection(storageLocationPromptLaunched)
                 }
 
-                Spacer(Modifier.height(24.dp))
+                LargeVerticalSpacer()
 
                 Heading(text = "Searching")
                 EnumPref(
@@ -264,11 +254,37 @@ fun PreferencesScreen() {
                 ) {
                     scope.launch { preferencesRepository.updateExcludeAi(it) }
                 }
+                SwitchPref(
+                    checked = currentSettings.filterRatingsLocally,
+                    title = "Filter ratings locally",
+                    summary = "Rather than appending the selected ratings to the search query, " +
+                              "filter the results by rating after searching."
+                ) {
+                    scope.launch { preferencesRepository.updateFilterRatingsLocally(it) }
+                }
 
                 HorizontalDivider(Modifier.padding(vertical = 48.dp))
 
                 InfoSection(text = "When data saver is enabled, images will load in a lower resolution " +
                                    "by default. Downloads will always be in the maximum resolution.")
+                AnimatedVisibility(currentSettings.imageSource == ImageSource.DANBOORU) {
+                    Column {
+                        LargeVerticalSpacer()
+                        InfoSection(
+                            text = "Danbooru limits searches to 2 tags (which includes ratings), " +
+                                    "so filtering by rating is difficult. If you are using " +
+                                    "Danbooru, you should enable 'Filter ratings locally' if " +
+                                    "you wish to filter by rating."
+                        )
+                    }
+                }
+                LargeVerticalSpacer()
+                InfoSection(text = "Filtering ratings locally has the benefit of being able to " +
+                                   "adjust the filter after searching and allows filtering on " +
+                                   "otherwise unsupported sites like Danbooru, but may cause " +
+                                   "less results to be shown at once and result in higher data "+
+                                   "usage for the same number of visible images.")
+                NavBarHeightVerticalSpacer()
             }
         }
     }
