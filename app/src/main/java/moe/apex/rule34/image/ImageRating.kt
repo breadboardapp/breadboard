@@ -1,7 +1,5 @@
 package moe.apex.rule34.image
 
-import android.util.Log
-
 
 private const val FILTER_SAFE         = "-rating:safe+-rating:general+-rating:g"
 private const val FILTER_SENSITIVE    = "-rating:sensitive+-rating:s"
@@ -18,7 +16,12 @@ enum class ImageRating(val label: String) {
 
     /* Why are their naming schemes so inconsistent lol
        The Gelbooru help page doesn't mention "sensitive" at all but posts seem to regularly use it.
-       Likewise, Safebooru seems to use both "general" and "safe" for some reason. */
+       Likewise, Safebooru seems to use both "general" and "safe" for some reason.
+
+       Yande.re differs from other letter-based sources because "s" is safe rather than sensitive
+       and sensitive does not exist.
+       However, negative filtering by more than one rating doesn't work on Yande.re, so we're going
+       to enforce the local rating option. */
     companion object {
         private val mapping = mapOf(
             SAFE to FILTER_SAFE,
@@ -26,19 +29,6 @@ enum class ImageRating(val label: String) {
             QUESTIONABLE to FILTER_QUESTIONABLE,
             EXPLICIT to FILTER_EXPLICIT
         )
-
-        fun fromString(label: String): ImageRating {
-            return when (label.lowercase()) {
-                "safe", "general", "g" -> SAFE
-                "sensitive", "s"       -> SENSITIVE
-                "questionable", "q"    -> QUESTIONABLE
-                "explicit", "e"        -> EXPLICIT
-                else -> {
-                    Log.w("ImageRating", "Unknown rating label: $label")
-                    UNKNOWN
-                }
-            }
-        }
 
         fun buildSearchStringFor(ratings: List<ImageRating>): String {
             val currentFilter = mutableListOf(FILTER_SAFE, FILTER_SENSITIVE, FILTER_QUESTIONABLE, FILTER_EXPLICIT)

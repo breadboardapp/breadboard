@@ -30,6 +30,7 @@ import moe.apex.rule34.image.ImageBoard
 import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.image.Rule34
 import moe.apex.rule34.image.Safebooru
+import moe.apex.rule34.image.Yandere
 import java.io.IOException
 
 
@@ -314,5 +315,6 @@ enum class ImageSource(override val description: String, val site: ImageBoard) :
     SAFEBOORU("Safebooru", Safebooru()),
     DANBOORU("Danbooru", Danbooru()),
     GELBOORU("Gelbooru", Gelbooru()),
+    YANDERE("Yande.re", Yandere()),
     R34("Rule34", Rule34())
 }

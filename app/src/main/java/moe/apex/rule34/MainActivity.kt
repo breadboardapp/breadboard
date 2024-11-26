@@ -325,12 +325,14 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
             showToast(context, "Please select some tags")
         } else if (prefs.ratingsFilter.isEmpty()) {
             showToast(context, "Please select some ratings")
-        } else if (!prefs.filterRatingsLocally && prefs.ratingsFilter.size != 4 && prefs.imageSource == ImageSource.DANBOORU) {
-            showToast(context, "To filter ratings on Danbooru, enable the 'Filter ratings locally' option")
+        } else if (!prefs.filterRatingsLocally && prefs.ratingsFilter.size != 4 && prefs.imageSource in listOf(ImageSource.YANDERE, ImageSource.DANBOORU)) {
+            showToast(context, "To filter ratings on this source, enable the 'Filter ratings locally' option")
+            // Danbooru has the 2-tag limit and filtering by multiple negated tags simply does not work on Yande.re
         }
         else {
             val searchTags = currentSource.site.formatTagString(tagChipList)
-            val ratingsFilter = if (prefs.filterRatingsLocally) "" else ImageRating.buildSearchStringFor(prefs.ratingsFilter)
+            val ratingsFilter = if (prefs.filterRatingsLocally) ""
+                                else ImageRating.buildSearchStringFor(prefs.ratingsFilter)
             val searchRoute = searchTags + if (ratingsFilter.isNotEmpty()) "+$ratingsFilter" else ""
             navController.navigate("searchResults/$searchRoute")
         }
