@@ -79,6 +79,9 @@ interface GelbooruBasedImageBoard : ImageBoard {
             val fileUrl = e.getString("file_url")
             val sampleUrl = e.optString("sample_url", "")
             val previewUrl = e.getString("preview_url")
+            val imageWidth = e.optInt("width", 1)
+            val imageHeight = e.optInt("height", 1)
+            val aspectRatio = imageWidth.toFloat() / imageHeight.toFloat()
 
             if (fileFormat != "jpeg" && fileFormat != "jpg" && fileFormat != "png" && fileFormat != "gif") {
                 continue
@@ -90,7 +93,7 @@ interface GelbooruBasedImageBoard : ImageBoard {
             val metaPixivId = extractPixivId(metaSource)
             val metadata = ImageMetadata(null, metaSource, metaTags, metaRating, metaPixivId)
 
-            images.add(Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, source, metadata))
+            images.add(Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, source, aspectRatio, metadata))
         }
 
         return images
@@ -175,6 +178,9 @@ class Danbooru : ImageBoard {
             val fileUrl = e.getString("file_url")
             val sampleUrl = e.optString("large_file_url", "")
             val previewUrl = e.getString("preview_file_url")
+            val imageWidth = e.optInt("image_width", 1)
+            val imageHeight = e.optInt("image_height", 1)
+            val aspectRatio = imageWidth.toFloat() / imageHeight.toFloat()
 
             if (fileFormat != "jpeg" && fileFormat != "jpg" && fileFormat != "png" && fileFormat != "gif") {
                 continue
@@ -192,7 +198,7 @@ class Danbooru : ImageBoard {
             val metaPixivId = e.optInt("pixiv_id").takeIf { it != 0 }
             val metadata = ImageMetadata(metaArtist, metaSource, metaTags, metaRating, metaPixivId)
 
-            subjects.add(Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.DANBOORU, metadata))
+            subjects.add(Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.DANBOORU, aspectRatio, metadata))
         }
 
         return subjects.toList()
@@ -265,6 +271,9 @@ class Yandere : ImageBoard {
             val fileUrl = e.getString("file_url")
             val sampleUrl = e.getString("sample_url")
             val previewUrl = e.getString("preview_url")
+            val imageWidth = e.optInt("width", 1)
+            val imageHeight = e.optInt("height", 1)
+            val aspectRatio = imageWidth.toFloat() / imageHeight.toFloat()
 
             if (fileFormat != "jpeg" && fileFormat != "jpg" && fileFormat != "png" && fileFormat != "gif") {
                 continue
@@ -276,7 +285,7 @@ class Yandere : ImageBoard {
             val metaPixivId = extractPixivId(metaSource)
             val metadata = ImageMetadata(null, metaSource, metaTags, metaRating, metaPixivId)
 
-            subjects.add(Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.YANDERE, metadata))
+            subjects.add(Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.YANDERE, aspectRatio, metadata))
         }
 
         return subjects.toList()

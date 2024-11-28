@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -11,7 +12,10 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredHeightIn
+import androidx.compose.foundation.layout.requiredWidthIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -19,6 +23,11 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
+import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -41,8 +50,15 @@ import coil3.compose.SubcomposeAsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import moe.apex.rule34.image.Image
+import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.util.FullscreenLoadingSpinner
 import moe.apex.rule34.util.NavBarHeightVerticalSpacer
+
+
+private const val MIN_IMAGE_HEIGHT = 96
+private const val MAX_IMAGE_HEIGHT = 320
+private const val MIN_CELL_WIDTH   = 128
+private const val MAX_CELL_WIDTH   = 140
 
 
 @Composable
@@ -55,7 +71,7 @@ fun ImageGrid(
     initialLoad: (suspend () -> Unit)? = null,
     onEndReached: suspend () -> Unit = { }
 ) {
-    val lazyGridState = rememberLazyGridState()
+    val prefs = LocalPreferences.current
     var doneInitialLoad by remember { mutableStateOf(initialLoad == null) }
 
     if (!doneInitialLoad) {
@@ -72,85 +88,184 @@ fun ImageGrid(
         return
     }
 
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(128.dp),
-        state = lazyGridState,
-        modifier = modifier,
-        contentPadding = contentPadding,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        if (filterComposable != null) {
-            item(span = { GridItemSpan(maxLineSpan) } ) {
-                filterComposable()
+    if (prefs.useStaggeredGrid) {
+        LazyVerticalStaggeredGrid(
+            columns = StaggeredGridCells.Adaptive(MIN_CELL_WIDTH.dp),
+            state = rememberLazyStaggeredGridState(),
+            modifier = modifier,
+            contentPadding = contentPadding,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalItemSpacing = 8.dp
+        ) {
+            item(span = StaggeredGridItemSpan.FullLine ) {
+                if (filterComposable != null) filterComposable()
+                else Spacer(modifier = Modifier.height(8.dp))
             }
-        } else {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-        }
 
-        itemsIndexed(images, key = { _, image -> image.previewUrl }) { index, image ->
-            Surface(
-                Modifier
-                    .aspectRatio(1f)
-                    .widthIn(max = 144.dp)
-            ) {
-                Box(modifier = Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(12.dp))
-                ) {
-                    SubcomposeAsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(image.previewUrl)
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = "Image",
-                        contentScale = ContentScale.Crop,
-                        loading = { FullscreenLoadingSpinner() },
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clickable { onImageClick(index, image) },
-                    )
-                    if (image.fileFormat == "gif") {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(8.dp)
-                                .height(IntrinsicSize.Min)
-                                .width(IntrinsicSize.Min)
-                                .background(
-                                    MaterialTheme.colorScheme.primary,
-                                    RoundedCornerShape(4.dp)
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "GIF",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.padding(vertical = 2.dp, horizontal = 4.dp)
-                            )
-                        }
-                    }
+            itemsIndexed(images, key = { _, image -> image.previewUrl }) { index, image ->
+                StaggeredImagePreviewContainer(image, index, onImageClick)
+            }
+
+            item { LaunchedEffect(Unit) { onEndReached() } }
+
+            if (images.isEmpty()) {
+                item(span = StaggeredGridItemSpan.FullLine) {
+                    NoImages()
                 }
             }
-        }
 
-        item { LaunchedEffect(Unit) { onEndReached() } }
-
-        if (images.isEmpty()) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Text(
-                    text = "No images :(",
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
+            item(span = StaggeredGridItemSpan.FullLine) {
+                NavBarHeightVerticalSpacer()
             }
         }
+    }
+    else {
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(MIN_CELL_WIDTH.dp),
+            state = rememberLazyGridState(),
+            modifier = modifier,
+            contentPadding = contentPadding,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                if (filterComposable != null) filterComposable()
+                else Spacer(modifier = Modifier.height(8.dp))
+            }
 
-        item(span = { GridItemSpan(maxLineSpan) }) {
-            NavBarHeightVerticalSpacer()
+            itemsIndexed(images, key = { _, image -> image.previewUrl }) { index, image ->
+                ImagePreviewContainer(image, index, onImageClick)
+            }
+
+            item { LaunchedEffect(Unit) { onEndReached() } }
+
+            if (images.isEmpty()) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    NoImages()
+                }
+            }
+
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                NavBarHeightVerticalSpacer()
+            }
         }
+    }
+}
+
+
+@Composable
+private fun NoImages() {
+    Text(
+        text = "No images :(",
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth()
+    )
+}
+
+
+@Composable
+private fun ImagePreviewContainer(
+    image: Image,
+    index: Int,
+    onImageClick: (Int, Image) -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .widthIn(max = MAX_CELL_WIDTH.dp)
+            .aspectRatio(1f)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(12.dp))
+        ) {
+            ImagePreview(
+                image = image,
+                aspectRatio = 1f,
+                index = index,
+                onImageClick
+            )
+            if (image.fileFormat == "gif") {
+                GifBadge()
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun ImagePreview(
+    image: Image,
+    aspectRatio: Float = image.aspectRatio,
+    index: Int,
+    onImageClick: (Int, Image) -> Unit
+) {
+    SubcomposeAsyncImage(
+        model = ImageRequest.Builder(LocalContext.current)
+            .data(image.previewUrl)
+            .crossfade(true)
+            .build(),
+        contentDescription = "Image",
+        contentScale = ContentScale.Crop,
+        loading = { FullscreenLoadingSpinner() },
+        modifier = Modifier
+            .fillMaxWidth() // For exceptionally tall images
+            .aspectRatio(aspectRatio, true)
+            .requiredHeightIn(min = MIN_IMAGE_HEIGHT.dp, max = MAX_IMAGE_HEIGHT.dp)
+            .requiredWidthIn(max = MAX_CELL_WIDTH.dp)
+            .clickable { onImageClick(index, image) }
+        /* This is awkward but it seems like the only simple way to respect the aspect ratio of the
+           image while enforcing a minimum/maximum size for very tall or wide images.
+           Unlike heightIn/widthIn, requiredHeightIn and requiredWidthIn do not care about the
+           constraints of the parent, which allows this to work. */
+    )
+}
+
+
+@Composable
+private fun StaggeredImagePreviewContainer(
+    image: Image,
+    index: Int,
+    onImageClick: (Int, Image) -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .widthIn(min = MIN_CELL_WIDTH.dp, max = MAX_CELL_WIDTH.dp)
+            .heightIn(min = MIN_IMAGE_HEIGHT.dp, max = MAX_IMAGE_HEIGHT.dp)
+            .clip(RoundedCornerShape(12.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        ImagePreview(
+            image = image,
+            index = index,
+            onImageClick = onImageClick
+        )
+        if (image.fileFormat == "gif") {
+            GifBadge()
+        }
+    }
+}
+
+
+@Composable
+private fun BoxScope.GifBadge() {
+    Box(
+        modifier = Modifier.Companion
+            .align(Alignment.TopEnd)
+            .padding(8.dp)
+            .height(IntrinsicSize.Min)
+            .width(IntrinsicSize.Min)
+            .background(
+                MaterialTheme.colorScheme.primary,
+                RoundedCornerShape(4.dp)
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "GIF",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onPrimary,
+            modifier = Modifier.padding(vertical = 2.dp, horizontal = 4.dp)
+        )
     }
 }

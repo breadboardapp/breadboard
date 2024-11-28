@@ -263,6 +263,17 @@ fun PreferencesScreen() {
                     scope.launch { preferencesRepository.updateFilterRatingsLocally(it) }
                 }
 
+                LargeVerticalSpacer()
+
+                Heading(text = "Layout")
+                SwitchPref(
+                    checked = currentSettings.useStaggeredGrid,
+                    title = "Staggered grid",
+                    summary = "Use a staggered grid for images rather than a uniform grid."
+                ) {
+                    scope.launch { preferencesRepository.updateUseStaggeredGrid(it) }
+                }
+
                 HorizontalDivider(Modifier.padding(vertical = 48.dp))
 
                 InfoSection(text = "When data saver is enabled, images will load in a lower resolution " +

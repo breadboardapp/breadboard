@@ -28,6 +28,7 @@ data class Image(
     val fileUrl: String,
     val sampleUrl: String,
     val imageSource: ImageSource = ImageSource.R34, // Backwards compatibility
+    val aspectRatio: Float = 1f,
     val metadata: ImageMetadata? = null
 ) {
     val highestQualityFormatUrl = fileUrl.takeIf { it.isNotEmpty() } ?: sampleUrl
