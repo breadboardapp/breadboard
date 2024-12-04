@@ -9,7 +9,10 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -39,6 +42,20 @@ private val LightColorScheme = lightColorScheme(
     */
 )
 
+
+@Immutable
+data class ExtraColours(
+    val outlineStrong: Color
+)
+
+
+val LocalExtraColours = staticCompositionLocalOf {
+    ExtraColours(
+        outlineStrong = Color.Unspecified
+    )
+}
+
+
 @Composable
 fun BreadboardTheme(
         darkTheme: Boolean = isSystemInDarkTheme(),
@@ -55,6 +72,8 @@ fun BreadboardTheme(
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
+
+    val extraColours = ExtraColours(outlineStrong = colorScheme.outline.copy())
     colorScheme = colorScheme.copy(outline = colorScheme.outlineVariant)
     val view = LocalView.current
     val systemUiController = rememberSystemUiController()
@@ -69,9 +88,18 @@ fun BreadboardTheme(
         }
     }
 
-    MaterialTheme(
+    CompositionLocalProvider(LocalExtraColours provides extraColours) {
+        MaterialTheme(
             colorScheme = colorScheme,
             typography = Typography,
             content = content
-    )
+        )
+    }
+}
+
+
+object BreadboardTheme {
+    val colors: ExtraColours
+        @Composable
+        get() = LocalExtraColours.current
 }

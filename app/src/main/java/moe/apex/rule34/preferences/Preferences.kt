@@ -25,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
@@ -112,7 +113,15 @@ private fun SwitchPref(
         verticalAlignment = Alignment.CenterVertically
     ) {
         TitleSummary(Modifier.weight(1f), title, summary)
-        Switch(checked, onToggle, Modifier.padding(end = 16.dp))
+        Switch(
+            checked = checked,
+            onCheckedChange = onToggle,
+            modifier = Modifier.padding(end = 16.dp),
+            colors = SwitchDefaults.colors().copy(
+                uncheckedThumbColor = BreadboardTheme.colors.outlineStrong,
+                uncheckedBorderColor = BreadboardTheme.colors.outlineStrong
+            )
+        )
     }
 }
 
