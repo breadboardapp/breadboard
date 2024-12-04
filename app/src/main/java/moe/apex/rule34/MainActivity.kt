@@ -128,6 +128,7 @@ import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.NAV_BAR_HEIGHT
 import moe.apex.rule34.util.VerticalSpacer
+import moe.apex.rule34.util.availableRatingsForCurrentSource
 import moe.apex.rule34.util.showToast
 import moe.apex.rule34.util.withoutVertical
 import soup.compose.material.motion.animation.materialSharedAxisXIn
@@ -323,7 +324,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
     fun performSearch() {
         if (tagChipList.isEmpty()) {
             showToast(context, "Please select some tags")
-        } else if (prefs.ratingsFilter.isEmpty()) {
+        } else if (prefs.ratingsFilter.isEmpty() || ( prefs.ratingsFilter.size == 1 && prefs.ratingsFilter[0] == ImageRating.SENSITIVE && prefs.imageSource == ImageSource.YANDERE)) {
             showToast(context, "Please select some ratings")
         } else if (!prefs.filterRatingsLocally && prefs.ratingsFilter.size != 4 && prefs.imageSource in listOf(ImageSource.YANDERE, ImageSource.DANBOORU)) {
             showToast(context, "To filter ratings on this source, enable the 'Filter ratings locally' option")
@@ -479,7 +480,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                             }
                         )
                     } }
-                    val ratingRows: List<@Composable () -> Unit> = ImageRating.entries.filter { it != ImageRating.UNKNOWN }.map { {
+                    val ratingRows: List<@Composable () -> Unit> = availableRatingsForCurrentSource.map { {
                         FilterChip(
                             selected = it in prefs.ratingsFilter,
                             label = { Text(it.label) },

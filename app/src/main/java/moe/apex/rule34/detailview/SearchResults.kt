@@ -29,6 +29,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.image.ImageRating
+import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.prefs
 import moe.apex.rule34.ui.theme.BreadboardTheme
@@ -36,6 +37,7 @@ import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
 import moe.apex.rule34.util.CHIP_SPACING
 import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.rule34.util.TitleBar
+import moe.apex.rule34.util.availableRatingsForCurrentSource
 import moe.apex.rule34.util.withoutVertical
 
 
@@ -56,7 +58,7 @@ fun SearchResults(navController: NavController, searchQuery: String) {
     val filterLocally = prefs.filterRatingsLocally
     var pageNumber by remember { mutableIntStateOf(imageSource.firstPageIndex) }
 
-    val ratingRows: List<@Composable () -> Unit> = ImageRating.entries.filter { it != ImageRating.UNKNOWN }.map { {
+    val ratingRows: List<@Composable () -> Unit> = availableRatingsForCurrentSource.map { {
         FilterChip(
             selected = it in prefs.ratingsFilter,
             label = { Text(it.label) },
