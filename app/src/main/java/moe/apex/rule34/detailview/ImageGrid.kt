@@ -180,10 +180,10 @@ private fun ImagePreviewContainer(
                 .clip(RoundedCornerShape(12.dp))
         ) {
             ImagePreview(
+                modifier = Modifier.fillMaxSize(),
                 image = image,
-                aspectRatio = 1f,
                 index = index,
-                onImageClick
+                onImageClick = onImageClick
             )
             if (image.fileFormat == "gif") {
                 GifBadge()
@@ -195,8 +195,8 @@ private fun ImagePreviewContainer(
 
 @Composable
 private fun ImagePreview(
+    modifier: Modifier = Modifier,
     image: Image,
-    aspectRatio: Float = image.aspectRatio,
     index: Int,
     onImageClick: (Int, Image) -> Unit
 ) {
@@ -208,12 +208,7 @@ private fun ImagePreview(
         contentDescription = "Image",
         contentScale = ContentScale.Crop,
         loading = { FullscreenLoadingSpinner() },
-        modifier = Modifier
-            .fillMaxWidth() // For exceptionally tall images
-            .aspectRatio(aspectRatio, true)
-            .requiredHeightIn(min = MIN_IMAGE_HEIGHT.dp, max = MAX_IMAGE_HEIGHT.dp)
-            .requiredWidthIn(max = MAX_CELL_WIDTH.dp)
-            .clickable { onImageClick(index, image) }
+        modifier = modifier.clickable { onImageClick(index, image) }
         /* This is awkward but it seems like the only simple way to respect the aspect ratio of the
            image while enforcing a minimum/maximum size for very tall or wide images.
            Unlike heightIn/widthIn, requiredHeightIn and requiredWidthIn do not care about the
@@ -236,6 +231,11 @@ private fun StaggeredImagePreviewContainer(
         contentAlignment = Alignment.Center
     ) {
         ImagePreview(
+            modifier = Modifier
+                .fillMaxWidth() // For exceptionally tall images
+                .aspectRatio(image.aspectRatio, true)
+                .requiredHeightIn(min = MIN_IMAGE_HEIGHT.dp, max = MAX_IMAGE_HEIGHT.dp)
+                .requiredWidthIn(max = MAX_CELL_WIDTH.dp),
             image = image,
             index = index,
             onImageClick = onImageClick
