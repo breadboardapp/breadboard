@@ -134,7 +134,7 @@ fun LargeImageView(
     PredictiveBackHandler(visible.value) { progress ->
         try {
             progress.collect { backEvent ->
-                offset = (backEvent.progress * 200).dp
+                offset = (backEvent.progress * 300).dp
             }
             visible.value = false
         }
