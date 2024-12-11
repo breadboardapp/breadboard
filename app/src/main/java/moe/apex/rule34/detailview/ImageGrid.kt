@@ -4,9 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,8 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeightIn
-import androidx.compose.foundation.layout.requiredWidthIn
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -209,10 +206,6 @@ private fun ImagePreview(
         contentScale = ContentScale.Crop,
         loading = { FullscreenLoadingSpinner() },
         modifier = modifier.clickable { onImageClick(index, image) }
-        /* This is awkward but it seems like the only simple way to respect the aspect ratio of the
-           image while enforcing a minimum/maximum size for very tall or wide images.
-           Unlike heightIn/widthIn, requiredHeightIn and requiredWidthIn do not care about the
-           constraints of the parent, which allows this to work. */
     )
 }
 
@@ -228,18 +221,22 @@ private fun StaggeredImagePreviewContainer(
             .widthIn(min = MIN_CELL_WIDTH.dp, max = MAX_CELL_WIDTH.dp)
             .heightIn(min = MIN_IMAGE_HEIGHT.dp, max = MAX_IMAGE_HEIGHT.dp)
             .clip(RoundedCornerShape(12.dp)),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.TopEnd,
+        propagateMinConstraints = true
     ) {
         ImagePreview(
             modifier = Modifier
-                .fillMaxWidth() // For exceptionally tall images
-                .aspectRatio(image.aspectRatio, true)
-                .requiredHeightIn(min = MIN_IMAGE_HEIGHT.dp, max = MAX_IMAGE_HEIGHT.dp)
-                .requiredWidthIn(max = MAX_CELL_WIDTH.dp),
+                .aspectRatio(image.aspectRatio)
+                .requiredHeightIn(min = MIN_IMAGE_HEIGHT.dp)
+                .fillMaxWidth(),
             image = image,
             index = index,
             onImageClick = onImageClick
         )
+        /* This whole required/widthIn/heightIn thing is awkward but it seems like the only simple
+           way to respect the aspect ratio of the image while enforcing a minimum/maximum size for
+           very tall or wide images. While widthIn/heightIn cannot 'override' the aspectRatio,
+           requiredWidthIn/requiredHeightIn can. */
         if (image.fileFormat == "gif") {
             GifBadge()
         }
@@ -248,24 +245,23 @@ private fun StaggeredImagePreviewContainer(
 
 
 @Composable
-private fun BoxScope.GifBadge() {
-    Box(
-        modifier = Modifier.Companion
-            .align(Alignment.TopEnd)
-            .padding(8.dp)
-            .height(IntrinsicSize.Min)
-            .width(IntrinsicSize.Min)
-            .background(
-                MaterialTheme.colorScheme.primary,
-                RoundedCornerShape(4.dp)
-            ),
-        contentAlignment = Alignment.Center
+private fun GifBadge() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        horizontalArrangement = Arrangement.End
     ) {
         Text(
             text = "GIF",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onPrimary,
-            modifier = Modifier.padding(vertical = 2.dp, horizontal = 4.dp)
+            modifier = Modifier
+                .background(
+                    MaterialTheme.colorScheme.primary,
+                    RoundedCornerShape(4.dp)
+                )
+                .padding(vertical = 2.dp, horizontal = 4.dp)
         )
     }
 }
