@@ -215,7 +215,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
 
 
     fun danbooruLimitCheck(): Boolean {
-        if (tagChipList.size == 2 && prefs.imageSource == ImageSource.DANBOORU) {
+        if (tagChipList.size > 2 && prefs.imageSource == ImageSource.DANBOORU) {
             showToast(context, "Danbooru supports up to 2 tags")
             return false
         }
@@ -258,7 +258,6 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                 .heightIn(min = 72.dp)
                 .fillMaxWidth()
                 .clickable {
-                    if (!danbooruLimitCheck()) return@clickable
                     searchString = ""
                     cleanedSearchString = ""
                     shouldShowSuggestions = false
@@ -332,7 +331,8 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
         } else if (!prefs.filterRatingsLocally && prefs.ratingsFilter.size != 4 && prefs.imageSource in listOf(ImageSource.YANDERE, ImageSource.DANBOORU)) {
             showToast(context, "To filter ratings on this source, enable the 'Filter ratings locally' option")
             // Danbooru has the 2-tag limit and filtering by multiple negated tags simply does not work on Yande.re
-        }
+        } else if (!danbooruLimitCheck())
+            return
         else {
             val searchTags = currentSource.site.formatTagString(tagChipList)
             val ratingsFilter = if (prefs.filterRatingsLocally) ""
@@ -353,7 +353,6 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
     fun beginSearch() {
         if (searchString.isNotEmpty()) {
             if (mostRecentSuggestions.isNotEmpty()) {
-                if (!danbooruLimitCheck()) return
                 addToFilter(mostRecentSuggestions[0])
                 searchString = ""
                 shouldShowSuggestions = false
