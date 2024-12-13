@@ -73,7 +73,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -93,6 +92,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.datastore.preferences.preferencesDataStoreFile
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -131,6 +131,8 @@ import moe.apex.rule34.util.VerticalSpacer
 import moe.apex.rule34.util.availableRatingsForCurrentSource
 import moe.apex.rule34.util.showToast
 import moe.apex.rule34.util.withoutVertical
+import moe.apex.rule34.viewmodel.BreadboardViewModel
+import moe.apex.rule34.viewmodel.getIndexByName
 import soup.compose.material.motion.animation.materialSharedAxisXIn
 import soup.compose.material.motion.animation.materialSharedAxisXOut
 import soup.compose.material.motion.animation.rememberSlideDistance
@@ -165,8 +167,9 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity() {
         setContent {
             val navController = rememberNavController()
             val prefs = prefs.getPreferences.collectAsState(initialPrefs).value
+            val viewModel = viewModel(BreadboardViewModel::class.java)
             CompositionLocalProvider(LocalPreferences provides prefs) {
-                Navigation(navController)
+                Navigation(navController, viewModel)
             }
         }
     }
@@ -176,12 +179,12 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
+fun HomeScreen(navController: NavController, focusRequester: FocusRequester, viewModel: BreadboardViewModel) {
     /* We use shouldShowSuggestions for determining autocomplete section visibility because if we
        used mostRecentSuggestions.isNotEmpty(), it would temporarily show the "No results" message
        while disappearing and that looks bad. */
+    val tagChipList = viewModel.tagSuggestions
     var shouldShowSuggestions by remember { mutableStateOf(false) }
-    val tagChipList = remember { mutableStateListOf<TagSuggestion>() }
     var searchString by remember { mutableStateOf("") }
     var cleanedSearchString by remember { mutableStateOf("") }
     val mostRecentSuggestions = remember { mutableStateListOf<TagSuggestion>() }
@@ -342,7 +345,6 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
     fun addAiExcludedTag() {
         if (excludeAi && !forciblyAllowedAi && tagChipList.getIndexByName(currentSource.site.aiTagName) == null) {
             val tag = TagSuggestion("", currentSource.site.aiTagName, "", true)
-            tagChipList.clear()
             tagChipList.add(0, tag)
         }
     }
@@ -573,7 +575,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
 
 
 @Composable
-fun Navigation(navController: NavHostController) {
+fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel) {
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val slideDistance = rememberSlideDistance()
     val bottomBarVisibleState = remember { mutableStateOf(true) }
@@ -682,7 +684,7 @@ fun Navigation(navController: NavHostController) {
                         else fadeOut()
                     }
                 ) {
-                    composable("home") { HomeScreen(navController, focusRequester) }
+                    composable("home") { HomeScreen(navController, focusRequester, viewModel) }
                     composable(
                         route = "searchResults/{searchQuery}",
                         arguments = listOf(navArgument("searchQuery") { NavType.StringType })
@@ -692,7 +694,7 @@ fun Navigation(navController: NavHostController) {
                             navBackStackEntry.arguments?.getString("searchQuery") ?: ""
                         )
                     }
-                    composable("settings") { PreferencesScreen() }
+                    composable("settings") { PreferencesScreen(viewModel) }
                     composable("favourite_images") { FavouritesPage(bottomBarVisibleState) }
                 }
             }
@@ -706,11 +708,3 @@ private data class SourceDialogData(
     val to: ImageSource,
     val onConfirm: () -> Unit,
 )
-
-
-private fun SnapshotStateList<TagSuggestion>.getIndexByName(name: String): Int? {
-    this.forEachIndexed { index, tag ->
-        if (tag.value == name) return index
-    }
-    return null
-}

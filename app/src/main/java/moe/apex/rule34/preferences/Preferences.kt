@@ -52,6 +52,7 @@ import moe.apex.rule34.util.LargeVerticalSpacer
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.NavBarHeightVerticalSpacer
 import moe.apex.rule34.util.SaveDirectorySelection
+import moe.apex.rule34.viewmodel.BreadboardViewModel
 
 
 @Composable
@@ -202,7 +203,7 @@ private fun InfoSection(text: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PreferencesScreen() {
+fun PreferencesScreen(viewModel: BreadboardViewModel) {
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
     val scope = rememberCoroutineScope()
@@ -253,7 +254,10 @@ fun PreferencesScreen() {
                     summary = currentSettings.imageSource.description,
                     enumItems = ImageSource.entries.toTypedArray(),
                     selectedItem = currentSettings.imageSource,
-                    onSelection = { scope.launch { preferencesRepository.updateImageSource(it as ImageSource) } }
+                    onSelection = {
+                        scope.launch { preferencesRepository.updateImageSource(it as ImageSource) }
+                        viewModel.tagSuggestions.clear()
+                    }
                 )
                 SwitchPref(
                     checked = currentSettings.excludeAi,
@@ -262,6 +266,9 @@ fun PreferencesScreen() {
                               "'ai_generated' tag in search queries by default."
                 ) {
                     scope.launch { preferencesRepository.updateExcludeAi(it) }
+                    viewModel.tagSuggestions.removeIf { tag ->
+                        tag.value == currentSettings.imageSource.site.aiTagName && tag.isExcluded
+                    }
                 }
                 SwitchPref(
                     checked = currentSettings.filterRatingsLocally,
