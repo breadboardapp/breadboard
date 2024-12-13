@@ -226,7 +226,7 @@ private fun StaggeredImagePreviewContainer(
     ) {
         ImagePreview(
             modifier = Modifier
-                .aspectRatio(image.aspectRatio)
+                .aspectRatio(image.aspectRatio ?: 1f)
                 .requiredHeightIn(min = MIN_IMAGE_HEIGHT.dp)
                 .fillMaxWidth(),
             image = image,
