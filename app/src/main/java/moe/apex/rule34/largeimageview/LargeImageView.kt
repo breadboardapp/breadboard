@@ -12,6 +12,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -134,7 +135,7 @@ fun LargeImageView(
     PredictiveBackHandler(visible.value) { progress ->
         try {
             progress.collect { backEvent ->
-                offset = (backEvent.progress * 200).dp
+                offset = (backEvent.progress * 300).dp
             }
             visible.value = false
         }
@@ -142,19 +143,16 @@ fun LargeImageView(
     }
 
     @Composable
-    fun LargeImage(imageUrl: String, previewImageUrl: String) {
-        val modifier =
+    fun LargeImage(imageUrl: String, previewImageUrl: String, aspectRatio: Float?) {
+        /* Poor method of the preliminary work to get rounded corners for favourites saved before
+           we started saving the aspect ratio. */
+        val modifier = if (aspectRatio == null) {
             if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT) {
                 Modifier.fillMaxWidth()
-            } else { Modifier.fillMaxHeight() }
-        /*
-        This is not foolproof. On smaller displays or aspect ratios, this might cause corners
-        to appear wrongly clipped on very long or very wide images. We can use the
-        RoundedCornerTransformation to clip the image itself rather than the composable view
-        of it, but that bases corner radius on the dimensions of the image rather than the
-        display and arguably looks worse.
-        Suggestions welcome.
-        */
+            } else {
+                Modifier.fillMaxHeight()
+            }
+        } else Modifier.aspectRatio(aspectRatio)
 
         val model =
             ImageRequest.Builder(context)
@@ -346,7 +344,8 @@ fun LargeImageView(
                         LargeImage(
                             imageUrl = if (imageAtIndex.preferHd) imageAtIndex.highestQualityFormatUrl
                                        else imageAtIndex.sampleUrl,
-                            previewImageUrl = imageAtIndex.previewUrl
+                            previewImageUrl = imageAtIndex.previewUrl,
+                            aspectRatio = imageAtIndex.aspectRatio
                         )
                     }
                 }

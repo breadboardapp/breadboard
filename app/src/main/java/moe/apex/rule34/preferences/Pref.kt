@@ -30,6 +30,7 @@ import moe.apex.rule34.image.ImageBoard
 import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.image.Rule34
 import moe.apex.rule34.image.Safebooru
+import moe.apex.rule34.image.Yandere
 import java.io.IOException
 
 
@@ -54,6 +55,7 @@ data object PrefNames {
     const val RATINGS_FILTER = "ratings_filter"
     const val FAVOURITES_RATING_FILTER = "favourites_rating_filter"
     const val FILTER_RATINGS_LOCALLY = "filter_ratings_locally"
+    const val USE_STAGGERED_GRID = "use_staggered_grid"
 }
 
 
@@ -74,7 +76,8 @@ data class Prefs(
     val lastUsedVersionCode: Int,
     val ratingsFilter: List<ImageRating>,
     val favouritesRatingsFilter: List<ImageRating>,
-    val filterRatingsLocally: Boolean
+    val filterRatingsLocally: Boolean,
+    val useStaggeredGrid: Boolean
 ) {
     companion object {
         val DEFAULT = Prefs(
@@ -87,6 +90,7 @@ data class Prefs(
             0, // We'll update this later
             listOf(ImageRating.SAFE),
             listOf(ImageRating.SAFE),
+            false,
             false,
         )
     }
@@ -105,6 +109,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val RATINGS_FILTER = stringSetPreferencesKey(PrefNames.RATINGS_FILTER)
         val FAVOURITES_RATING_FILTER = stringSetPreferencesKey(PrefNames.FAVOURITES_RATING_FILTER)
         val FILTER_RATINGS_LOCALLY = booleanPreferencesKey(PrefNames.FILTER_RATINGS_LOCALLY)
+        val USE_STAGGERED_GRID = booleanPreferencesKey(PrefNames.USE_STAGGERED_GRID)
     }
 
     val getPreferences: Flow<Prefs> = dataStore.data
@@ -262,6 +267,12 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         }
     }
 
+    suspend fun updateUseStaggeredGrid(to: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferenceKeys.USE_STAGGERED_GRID] = to
+        }
+    }
+
 
     @OptIn(ExperimentalSerializationApi::class)
     private fun mapUserPreferences(preferences: Preferences): Prefs {
@@ -286,6 +297,9 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val filterRatingsLocally = (
             preferences[PreferenceKeys.FILTER_RATINGS_LOCALLY] ?: false
         )
+        val useStaggeredGrid = (
+            preferences[PreferenceKeys.USE_STAGGERED_GRID] ?: false
+        )
 
         return Prefs(
             dataSaver,
@@ -298,6 +312,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             ratingsFilter,
             favouritesRatingFilter,
             filterRatingsLocally,
+            useStaggeredGrid,
         )
     }
 
@@ -314,5 +329,6 @@ enum class ImageSource(override val description: String, val site: ImageBoard) :
     SAFEBOORU("Safebooru", Safebooru()),
     DANBOORU("Danbooru", Danbooru()),
     GELBOORU("Gelbooru", Gelbooru()),
+    YANDERE("Yande.re", Yandere()),
     R34("Rule34", Rule34())
 }

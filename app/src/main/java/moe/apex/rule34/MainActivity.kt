@@ -22,10 +22,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -45,6 +46,7 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.sharp.Search
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -73,7 +75,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -82,6 +83,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -93,6 +95,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.datastore.preferences.preferencesDataStoreFile
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -128,8 +131,13 @@ import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.NAV_BAR_HEIGHT
 import moe.apex.rule34.util.VerticalSpacer
+import moe.apex.rule34.util.availableRatingsForCurrentSource
+import moe.apex.rule34.util.copyText
+import moe.apex.rule34.util.pluralise
 import moe.apex.rule34.util.showToast
 import moe.apex.rule34.util.withoutVertical
+import moe.apex.rule34.viewmodel.BreadboardViewModel
+import moe.apex.rule34.viewmodel.getIndexByName
 import soup.compose.material.motion.animation.materialSharedAxisXIn
 import soup.compose.material.motion.animation.materialSharedAxisXOut
 import soup.compose.material.motion.animation.rememberSlideDistance
@@ -164,23 +172,24 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity() {
         setContent {
             val navController = rememberNavController()
             val prefs = prefs.getPreferences.collectAsState(initialPrefs).value
+            val viewModel = viewModel(BreadboardViewModel::class.java)
             CompositionLocalProvider(LocalPreferences provides prefs) {
-                Navigation(navController)
+                Navigation(navController, viewModel)
             }
         }
     }
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
+fun HomeScreen(navController: NavController, focusRequester: FocusRequester, viewModel: BreadboardViewModel) {
     /* We use shouldShowSuggestions for determining autocomplete section visibility because if we
        used mostRecentSuggestions.isNotEmpty(), it would temporarily show the "No results" message
        while disappearing and that looks bad. */
+    val tagChipList = viewModel.tagSuggestions
     var shouldShowSuggestions by remember { mutableStateOf(false) }
-    val tagChipList = remember { mutableStateListOf<TagSuggestion>() }
     var searchString by remember { mutableStateOf("") }
     var cleanedSearchString by remember { mutableStateOf("") }
     val mostRecentSuggestions = remember { mutableStateListOf<TagSuggestion>() }
@@ -191,6 +200,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
     var sourceChangeDialogData by remember { mutableStateOf<SourceDialogData?>(null) }
 
     val context = LocalContext.current
+    val clipboard = LocalClipboardManager.current
     val prefs = LocalPreferences.current
     val excludeAi = prefs.excludeAi
     val currentSource = prefs.imageSource
@@ -211,7 +221,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
 
 
     fun danbooruLimitCheck(): Boolean {
-        if (tagChipList.size == 2 && prefs.imageSource == ImageSource.DANBOORU) {
+        if (tagChipList.size > 2 && prefs.imageSource == ImageSource.DANBOORU) {
             showToast(context, "Danbooru supports up to 2 tags")
             return false
         }
@@ -254,7 +264,6 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                 .heightIn(min = 72.dp)
                 .fillMaxWidth()
                 .clickable {
-                    if (!danbooruLimitCheck()) return@clickable
                     searchString = ""
                     cleanedSearchString = ""
                     shouldShowSuggestions = false
@@ -323,32 +332,35 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
     fun performSearch() {
         if (tagChipList.isEmpty()) {
             showToast(context, "Please select some tags")
-        } else if (prefs.ratingsFilter.isEmpty()) {
+        } else if (prefs.ratingsFilter.isEmpty() || ( prefs.ratingsFilter.size == 1 && prefs.ratingsFilter[0] == ImageRating.SENSITIVE && prefs.imageSource == ImageSource.YANDERE)) {
             showToast(context, "Please select some ratings")
-        } else if (!prefs.filterRatingsLocally && prefs.ratingsFilter.size != 4 && prefs.imageSource == ImageSource.DANBOORU) {
-            showToast(context, "To filter ratings on Danbooru, enable the 'Filter ratings locally' option")
-        }
+        } else if (!prefs.filterRatingsLocally && prefs.ratingsFilter.size != 4 && prefs.imageSource in listOf(ImageSource.YANDERE, ImageSource.DANBOORU)) {
+            showToast(context, "To filter ratings on this source, enable the 'Filter ratings locally' option")
+            // Danbooru has the 2-tag limit and filtering by multiple negated tags simply does not work on Yande.re
+        } else if (!danbooruLimitCheck())
+            return
         else {
             val searchTags = currentSource.site.formatTagString(tagChipList)
-            val ratingsFilter = if (prefs.filterRatingsLocally) "" else ImageRating.buildSearchStringFor(prefs.ratingsFilter)
+            val ratingsFilter = if (prefs.filterRatingsLocally) ""
+                                else ImageRating.buildSearchStringFor(prefs.ratingsFilter)
             val searchRoute = searchTags + if (ratingsFilter.isNotEmpty()) "+$ratingsFilter" else ""
             navController.navigate("searchResults/$searchRoute")
         }
     }
 
-    fun addAiExcludedTag() {
+    fun addAiExcludedTag(source: ImageSource) {
         if (excludeAi && !forciblyAllowedAi && tagChipList.getIndexByName(currentSource.site.aiTagName) == null) {
-            val tag = TagSuggestion("", currentSource.site.aiTagName, "", true)
-            tagChipList.clear()
+            val tag = TagSuggestion("", source.site.aiTagName, "", true)
             tagChipList.add(0, tag)
         }
     }
-    addAiExcludedTag()
+    LaunchedEffect(Unit) {
+        addAiExcludedTag(source = prefs.imageSource)
+    }
 
     fun beginSearch() {
         if (searchString.isNotEmpty()) {
             if (mostRecentSuggestions.isNotEmpty()) {
-                if (!danbooruLimitCheck()) return
                 addToFilter(mostRecentSuggestions[0])
                 searchString = ""
                 shouldShowSuggestions = false
@@ -363,8 +375,8 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
     }
 
     BreadboardTheme {
-        MainScreenScaffold("Breadboard") {
-            Column(Modifier.padding(it)) {
+        MainScreenScaffold("Breadboard") { padding ->
+            Column(Modifier.padding(padding)) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -407,8 +419,35 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                             focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                             unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                         ),
-                        trailingIcon = {
-                            IconButton(modifier = Modifier.rotate(chevronRotation),
+                        trailingIcon = { Row {
+                            IconButton(
+                                onClick = {
+                                    val query = clipboard.getClip().takeIf { it?.clipData?.description?.getMimeType(0) == "text/plain" }
+                                    val tags = query?.clipData?.getItemAt(0)?.text?.split(" ")?.filter { it.trim().isNotEmpty() }
+                                    if (query == null || tags.isNullOrEmpty()) {
+                                        showToast(context, "No tags to paste")
+                                        return@IconButton
+                                    }
+                                    var count = 0
+                                    for (t in tags) {
+                                        val isExcluded = t.startsWith("-")
+                                        val tagName = t.removePrefix("-")
+                                        if (tagName.isNotEmpty()) {
+                                            val tag = TagSuggestion(tagName, tagName, "", isExcluded)
+                                            addToFilter(tag)
+                                            count += 1
+                                        }
+                                    }
+                                    showToast(context, "Pasted $count ${"tag".pluralise(count, "tags")}")
+                                }
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_paste),
+                                    contentDescription = "Paste"
+                                )
+                            }
+                            IconButton(
+                                modifier = Modifier.rotate(chevronRotation),
                                 onClick = { showRatingFilter = !showRatingFilter }
                             ) {
                                 Icon(
@@ -416,7 +455,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                                     contentDescription = "Filter"
                                 )
                             }
-                        }
+                        } }
                     )
 
                     Spacer(modifier = Modifier.size(12.dp))
@@ -464,8 +503,8 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                                         context.prefs.updateImageSource(it)
                                     }
                                     tagChipList.clear()
-                                    addAiExcludedTag()
-                                    getSuggestions(bypassDelay = true, source = it)
+                                    addAiExcludedTag(source = it)
+                                    if (shouldShowSuggestions) getSuggestions(bypassDelay = true, source = it)
                                 }
                                 if (tagChipList.isEmpty() || it == currentSource) return@FilterChip confirm()
                                 sourceChangeDialogData = SourceDialogData(
@@ -477,7 +516,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                             }
                         )
                     } }
-                    val ratingRows: List<@Composable () -> Unit> = ImageRating.entries.filter { it != ImageRating.UNKNOWN }.map { {
+                    val ratingRows: List<@Composable () -> Unit> = availableRatingsForCurrentSource.map { {
                         FilterChip(
                             selected = it in prefs.ratingsFilter,
                             label = { Text(it.label) },
@@ -506,11 +545,10 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                         Row(
                             modifier = Modifier
                                 .height(FilterChipDefaults.Height)
-                                .padding(start = 16.dp)
                                 .horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp)
                         ) {
-
+                            Spacer(Modifier.width((16 - CHIP_SPACING).dp))
                             for (t in tagChipList) {
                                 FilterChip(
                                     label = { Text(t.value) },
@@ -518,14 +556,34 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
                                     onClick = {
                                         if (t.value == prefs.imageSource.site.aiTagName) {
                                             if (t.isExcluded) forciblyAllowedAi = true
-                                            else addAiExcludedTag()
+                                            else addAiExcludedTag(prefs.imageSource)
                                         }
                                         tagChipList.remove(t)
                                     }
                                 )
                             }
+                            AssistChip(
+                                modifier = Modifier.aspectRatio(1f),
+                                onClick = {
+                                    if (tagChipList.isEmpty()) return@AssistChip // In case it's tapped during the exit animation
+                                    val tags = tagChipList.joinToString(" ") { it.formattedLabel }
+                                    copyText(
+                                        context = context,
+                                        clipboardManager = clipboard,
+                                        text = tags,
+                                        message = "Copied ${tagChipList.size} ${"tag".pluralise(tagChipList.size, "tags")}"
+                                    )
+                                },
+                                label = { },
+                                leadingIcon = {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_copy),
+                                        contentDescription = "Copy all",
+                                    )
+                                }
+                            )
 
-                            Spacer(modifier = Modifier.size((16 - CHIP_SPACING).dp))
+                            Spacer(modifier = Modifier.width((16 - CHIP_SPACING).dp))
                         }
                         VerticalSpacer()
                     }
@@ -570,7 +628,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester) {
 
 
 @Composable
-fun Navigation(navController: NavHostController) {
+fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel) {
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val slideDistance = rememberSlideDistance()
     val bottomBarVisibleState = remember { mutableStateOf(true) }
@@ -679,7 +737,7 @@ fun Navigation(navController: NavHostController) {
                         else fadeOut()
                     }
                 ) {
-                    composable("home") { HomeScreen(navController, focusRequester) }
+                    composable("home") { HomeScreen(navController, focusRequester, viewModel) }
                     composable(
                         route = "searchResults/{searchQuery}",
                         arguments = listOf(navArgument("searchQuery") { NavType.StringType })
@@ -689,7 +747,7 @@ fun Navigation(navController: NavHostController) {
                             navBackStackEntry.arguments?.getString("searchQuery") ?: ""
                         )
                     }
-                    composable("settings") { PreferencesScreen() }
+                    composable("settings") { PreferencesScreen(viewModel) }
                     composable("favourite_images") { FavouritesPage(bottomBarVisibleState) }
                 }
             }
@@ -703,11 +761,3 @@ private data class SourceDialogData(
     val to: ImageSource,
     val onConfirm: () -> Unit,
 )
-
-
-private fun SnapshotStateList<TagSuggestion>.getIndexByName(name: String): Int? {
-    this.forEachIndexed { index, tag ->
-        if (tag.value == name) return index
-    }
-    return null
-}

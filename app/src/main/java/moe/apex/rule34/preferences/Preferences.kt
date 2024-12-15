@@ -25,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
@@ -51,6 +52,7 @@ import moe.apex.rule34.util.LargeVerticalSpacer
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.NavBarHeightVerticalSpacer
 import moe.apex.rule34.util.SaveDirectorySelection
+import moe.apex.rule34.viewmodel.BreadboardViewModel
 
 
 @Composable
@@ -112,7 +114,15 @@ private fun SwitchPref(
         verticalAlignment = Alignment.CenterVertically
     ) {
         TitleSummary(Modifier.weight(1f), title, summary)
-        Switch(checked, onToggle, Modifier.padding(end = 16.dp))
+        Switch(
+            checked = checked,
+            onCheckedChange = onToggle,
+            modifier = Modifier.padding(end = 16.dp),
+            colors = SwitchDefaults.colors().copy(
+                uncheckedThumbColor = BreadboardTheme.colors.outlineStrong,
+                uncheckedBorderColor = BreadboardTheme.colors.outlineStrong
+            )
+        )
     }
 }
 
@@ -193,7 +203,7 @@ private fun InfoSection(text: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PreferencesScreen() {
+fun PreferencesScreen(viewModel: BreadboardViewModel) {
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
     val scope = rememberCoroutineScope()
@@ -244,7 +254,10 @@ fun PreferencesScreen() {
                     summary = currentSettings.imageSource.description,
                     enumItems = ImageSource.entries.toTypedArray(),
                     selectedItem = currentSettings.imageSource,
-                    onSelection = { scope.launch { preferencesRepository.updateImageSource(it as ImageSource) } }
+                    onSelection = {
+                        scope.launch { preferencesRepository.updateImageSource(it as ImageSource) }
+                        viewModel.tagSuggestions.clear()
+                    }
                 )
                 SwitchPref(
                     checked = currentSettings.excludeAi,
@@ -253,6 +266,9 @@ fun PreferencesScreen() {
                               "'ai_generated' tag in search queries by default."
                 ) {
                     scope.launch { preferencesRepository.updateExcludeAi(it) }
+                    viewModel.tagSuggestions.removeIf { tag ->
+                        tag.value == currentSettings.imageSource.site.aiTagName && tag.isExcluded
+                    }
                 }
                 SwitchPref(
                     checked = currentSettings.filterRatingsLocally,
@@ -261,6 +277,17 @@ fun PreferencesScreen() {
                               "filter the results by rating after searching."
                 ) {
                     scope.launch { preferencesRepository.updateFilterRatingsLocally(it) }
+                }
+
+                LargeVerticalSpacer()
+
+                Heading(text = "Layout")
+                SwitchPref(
+                    checked = currentSettings.useStaggeredGrid,
+                    title = "Staggered grid",
+                    summary = "Use a staggered grid for images rather than a uniform grid."
+                ) {
+                    scope.launch { preferencesRepository.updateUseStaggeredGrid(it) }
                 }
 
                 HorizontalDivider(Modifier.padding(vertical = 48.dp))

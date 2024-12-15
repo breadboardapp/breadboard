@@ -1,5 +1,6 @@
 package moe.apex.rule34.util
 
+import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -35,13 +36,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.VerticalDivider
-import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -256,4 +258,22 @@ fun HorizontallyScrollingChipsWithLabels(
             }
         }
     }
+}
+
+
+fun String.pluralise(count: Int, pluralised: String) : String {
+    return if (count == 1) this else pluralised
+}
+
+
+fun copyText(
+    context: Context,
+    clipboardManager: ClipboardManager,
+    text: String,
+    message: String = "Copied to clipboard"
+) {
+    clipboardManager.setText(AnnotatedString(text))
+    // if (SDK_INT < VERSION_CODES.TIRAMISU) { // Android 13 has its own text copied popup
+    showToast(context, message)
+    // }
 }
