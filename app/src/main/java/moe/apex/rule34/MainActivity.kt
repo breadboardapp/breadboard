@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -177,7 +178,7 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity() {
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun HomeScreen(navController: NavController, focusRequester: FocusRequester, viewModel: BreadboardViewModel) {
@@ -371,8 +372,8 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
     }
 
     BreadboardTheme {
-        MainScreenScaffold("Breadboard") {
-            Column(Modifier.padding(it)) {
+        MainScreenScaffold("Breadboard") { padding ->
+            Column(Modifier.padding(padding)) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -541,11 +542,10 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                         Row(
                             modifier = Modifier
                                 .height(FilterChipDefaults.Height)
-                                .padding(start = 16.dp)
                                 .horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp)
                         ) {
-
+                            Spacer(Modifier.width((16 - CHIP_SPACING).dp))
                             for (t in tagChipList) {
                                 FilterChip(
                                     label = { Text(t.value) },
@@ -560,7 +560,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                                 )
                             }
 
-                            Spacer(modifier = Modifier.size((16 - CHIP_SPACING).dp))
+                            Spacer(modifier = Modifier.width((16 - CHIP_SPACING).dp))
                         }
                         VerticalSpacer()
                     }
