@@ -81,6 +81,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -195,6 +196,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
     var sourceChangeDialogData by remember { mutableStateOf<SourceDialogData?>(null) }
 
     val context = LocalContext.current
+    val clipboard = LocalClipboardManager.current
     val prefs = LocalPreferences.current
     val excludeAi = prefs.excludeAi
     val currentSource = prefs.imageSource
@@ -413,8 +415,35 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                             focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                             unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                         ),
-                        trailingIcon = {
-                            IconButton(modifier = Modifier.rotate(chevronRotation),
+                        trailingIcon = { Row {
+                            IconButton(
+                                onClick = {
+                                    val query = clipboard.getClip().takeIf { it?.clipData?.description?.getMimeType(0) == "text/plain" }
+                                    val tags = query?.clipData?.getItemAt(0)?.text?.split(" ")?.filter { it.trim().isNotEmpty() }
+                                    if (query == null || tags.isNullOrEmpty()) {
+                                        showToast(context, "No tags to paste")
+                                        return@IconButton
+                                    }
+                                    var count = 0
+                                    for (t in tags) {
+                                        val isExcluded = t.startsWith("-")
+                                        val tagName = t.removePrefix("-")
+                                        if (tagName.isNotEmpty()) {
+                                            val tag = TagSuggestion(tagName, tagName, "", isExcluded)
+                                            addToFilter(tag)
+                                            count += 1
+                                        }
+                                    }
+                                    showToast(context, "Pasted $count tags")
+                                }
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_paste),
+                                    contentDescription = "Paste"
+                                )
+                            }
+                            IconButton(
+                                modifier = Modifier.rotate(chevronRotation),
                                 onClick = { showRatingFilter = !showRatingFilter }
                             ) {
                                 Icon(
@@ -422,7 +451,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                                     contentDescription = "Filter"
                                 )
                             }
-                        }
+                        } }
                     )
 
                     Spacer(modifier = Modifier.size(12.dp))
