@@ -22,10 +22,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -46,6 +46,7 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.sharp.Search
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -131,6 +132,8 @@ import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.NAV_BAR_HEIGHT
 import moe.apex.rule34.util.VerticalSpacer
 import moe.apex.rule34.util.availableRatingsForCurrentSource
+import moe.apex.rule34.util.copyText
+import moe.apex.rule34.util.pluralise
 import moe.apex.rule34.util.showToast
 import moe.apex.rule34.util.withoutVertical
 import moe.apex.rule34.viewmodel.BreadboardViewModel
@@ -435,7 +438,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                                             count += 1
                                         }
                                     }
-                                    showToast(context, "Pasted $count tags")
+                                    showToast(context, "Pasted $count ${"tag".pluralise(count, "tags")}")
                                 }
                             ) {
                                 Icon(
@@ -559,6 +562,26 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                                     }
                                 )
                             }
+                            AssistChip(
+                                modifier = Modifier.aspectRatio(1f),
+                                onClick = {
+                                    if (tagChipList.isEmpty()) return@AssistChip // In case it's tapped during the exit animation
+                                    val tags = tagChipList.joinToString(" ") { it.formattedLabel }
+                                    copyText(
+                                        context = context,
+                                        clipboardManager = clipboard,
+                                        text = tags,
+                                        message = "Copied ${tagChipList.size} ${"tag".pluralise(tagChipList.size, "tags")}"
+                                    )
+                                },
+                                label = { },
+                                leadingIcon = {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_copy),
+                                        contentDescription = "Copy all",
+                                    )
+                                }
+                            )
 
                             Spacer(modifier = Modifier.width((16 - CHIP_SPACING).dp))
                         }

@@ -1,9 +1,6 @@
 package moe.apex.rule34.largeimageview
 
 
-import android.content.Context
-import android.os.Build.VERSION.SDK_INT
-import android.os.Build.VERSION_CODES
 import android.webkit.URLUtil.isValidUrl
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -39,10 +36,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
@@ -52,10 +47,11 @@ import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import moe.apex.rule34.image.Image
-import moe.apex.rule34.util.showToast
 import moe.apex.rule34.util.CHIP_SPACING
 import moe.apex.rule34.util.Heading
 import moe.apex.rule34.util.LargeVerticalSpacer
+import moe.apex.rule34.util.copyText
+import moe.apex.rule34.util.pluralise
 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -134,7 +130,14 @@ fun InfoSheet(image: Image, visibilityState: MutableState<Boolean>) {
                 modifier = Modifier
                     .padding(top = 4.dp)
                     .align(Alignment.CenterHorizontally),
-                onClick = { copyText(context, clip, image.metadata.tags.joinToString(" ")) }
+                onClick = {
+                    copyText(
+                        context = context,
+                        clipboardManager = clip,
+                        text = image.metadata.tags.joinToString(" "),
+                        message = "Copied ${image.metadata.tags.size} ${"tag".pluralise(image.metadata.tags.size,"tags")}"
+                    )
+                }
             ) {
                 Text("Copy all")
             }
@@ -172,12 +175,4 @@ private fun PaddedUrlText(text: String) {
         text = annotatedString,
         modifier = Modifier.padding(horizontal = 16.dp)
     )
-}
-
-
-private fun copyText(context: Context, clipboardManager: ClipboardManager, text: String) {
-    clipboardManager.setText(AnnotatedString(text))
-    if (SDK_INT < VERSION_CODES.TIRAMISU) { // Android 13 has its own text copied popup
-        showToast(context, "Copied to clipboard")
-    }
 }
