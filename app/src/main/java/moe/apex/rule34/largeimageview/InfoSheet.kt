@@ -1,6 +1,7 @@
 package moe.apex.rule34.largeimageview
 
 
+import android.content.Context
 import android.os.Build.VERSION.SDK_INT
 import android.os.Build.VERSION_CODES
 import android.webkit.URLUtil.isValidUrl
@@ -27,6 +28,7 @@ import androidx.compose.material3.SheetState
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
@@ -37,6 +39,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -123,15 +126,19 @@ fun InfoSheet(image: Image, visibilityState: MutableState<Boolean>) {
             ) { index ->
                 val tag = image.metadata.tags[index]
                 SuggestionChip(
-                    onClick = {
-                        clip.setText(AnnotatedString(tag))
-                        if (SDK_INT < VERSION_CODES.TIRAMISU) { // Android 13 has its own text copied popup
-                            showToast(context, "Copied to clipboard")
-                        }
-                    },
+                    onClick = { copyText(context, clip, tag) },
                     label = { Text(tag) }
                 )
             }
+            TextButton(
+                modifier = Modifier
+                    .padding(top = 4.dp)
+                    .align(Alignment.CenterHorizontally),
+                onClick = { copyText(context, clip, image.metadata.tags.joinToString(" ")) }
+            ) {
+                Text("Copy all")
+            }
+
             Spacer(Modifier.height(WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() * 2))
         }
     }
@@ -165,4 +172,12 @@ private fun PaddedUrlText(text: String) {
         text = annotatedString,
         modifier = Modifier.padding(horizontal = 16.dp)
     )
+}
+
+
+private fun copyText(context: Context, clipboardManager: ClipboardManager, text: String) {
+    clipboardManager.setText(AnnotatedString(text))
+    if (SDK_INT < VERSION_CODES.TIRAMISU) { // Android 13 has its own text copied popup
+        showToast(context, "Copied to clipboard")
+    }
 }
