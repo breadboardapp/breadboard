@@ -342,13 +342,15 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
         }
     }
 
-    fun addAiExcludedTag() {
+    fun addAiExcludedTag(source: ImageSource) {
         if (excludeAi && !forciblyAllowedAi && tagChipList.getIndexByName(currentSource.site.aiTagName) == null) {
-            val tag = TagSuggestion("", currentSource.site.aiTagName, "", true)
+            val tag = TagSuggestion("", source.site.aiTagName, "", true)
             tagChipList.add(0, tag)
         }
     }
-    addAiExcludedTag()
+    LaunchedEffect(Unit) {
+        addAiExcludedTag(source = prefs.imageSource)
+    }
 
     fun beginSearch() {
         if (searchString.isNotEmpty()) {
@@ -468,8 +470,8 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                                         context.prefs.updateImageSource(it)
                                     }
                                     tagChipList.clear()
-                                    addAiExcludedTag()
-                                    getSuggestions(bypassDelay = true, source = it)
+                                    addAiExcludedTag(source = it)
+                                    if (shouldShowSuggestions) getSuggestions(bypassDelay = true, source = it)
                                 }
                                 if (tagChipList.isEmpty() || it == currentSource) return@FilterChip confirm()
                                 sourceChangeDialogData = SourceDialogData(
@@ -522,7 +524,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                                     onClick = {
                                         if (t.value == prefs.imageSource.site.aiTagName) {
                                             if (t.isExcluded) forciblyAllowedAi = true
-                                            else addAiExcludedTag()
+                                            else addAiExcludedTag(prefs.imageSource)
                                         }
                                         tagChipList.remove(t)
                                     }
