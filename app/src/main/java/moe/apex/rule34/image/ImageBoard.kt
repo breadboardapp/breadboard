@@ -13,6 +13,7 @@ interface ImageBoard {
     val imageSource: ImageSource
     val baseUrl: String
     val autoCompleteSearchUrl: String
+    val autoCompleteCategoryMapping: Map<Int, String>
     val imageSearchUrl: String
     val aiTagName: String
     val firstPageIndex: Int
@@ -30,10 +31,12 @@ interface ImageBoard {
 
         for (i in 0 until resultCount) {
             val suggestion = results.getJSONObject(i)
-            val label = suggestion.getString("label")
-            val value = suggestion.getString("value")
-            val type = suggestion.optString("type", suggestion.optString("category")).takeIf { it.isNotEmpty() }
-            suggestions.add(TagSuggestion(label, value, type, isExcluded))
+            val label = suggestion.optString("label", suggestion.optString("name"))
+            val value = suggestion.optString("value", suggestion.optString("name"))
+            val category = suggestion.optInt("category", suggestion.optInt("type")).let {
+                autoCompleteCategoryMapping[it]
+            }
+            suggestions.add(TagSuggestion(label, value, category, isExcluded))
         }
 
         return suggestions.toList()
@@ -53,9 +56,8 @@ interface GelbooruBasedImageBoard : ImageBoard {
     fun loadPage(tags: String, page: Int, source: ImageSource, postListKey: String? = null): List<Image> {
         val body = RequestUtil.get(imageSearchUrl.format(tags, page)).get()
 
-        if (body.isEmpty()) {
+        if (body.isEmpty())
             return emptyList()
-        }
 
         val posts: JSONArray
 
@@ -83,9 +85,8 @@ interface GelbooruBasedImageBoard : ImageBoard {
             val imageHeight = e.optInt("height", 1)
             val aspectRatio = imageWidth.toFloat() / imageHeight.toFloat()
 
-            if (fileFormat != "jpeg" && fileFormat != "jpg" && fileFormat != "png" && fileFormat != "gif") {
+            if (fileFormat != "jpeg" && fileFormat != "jpg" && fileFormat != "png" && fileFormat != "gif")
                 continue
-            }
 
             val metaSource = e.optString("source", "").takeIf { it.isNotEmpty() }
             val metaTags = e.getString("tags").split(" ")
@@ -116,6 +117,7 @@ class Rule34 : GelbooruBasedImageBoard {
     override val imageSource = ImageSource.R34
     override val baseUrl = "https://rule34.xxx/"
     override val autoCompleteSearchUrl = "${baseUrl}public/autocomplete.php?q=%s"
+    override val autoCompleteCategoryMapping = emptyMap<Int, String>()
     override val imageSearchUrl = "${baseUrl}index.php?page=dapi&json=1&s=post&q=index&limit=100&tags=%s&pid=%d"
     override val aiTagName = "ai_generated"
 
@@ -129,6 +131,7 @@ class Safebooru : GelbooruBasedImageBoard {
     override val imageSource = ImageSource.SAFEBOORU
     override val baseUrl = "https://safebooru.org/"
     override val autoCompleteSearchUrl = "${baseUrl}autocomplete.php?q=%s"
+    override val autoCompleteCategoryMapping = emptyMap<Int, String>()
     override val imageSearchUrl = "${baseUrl}index.php?page=dapi&json=1&s=post&q=index&limit=100&tags=%s&pid=%d"
     override val aiTagName = "ai-generated"
 
@@ -142,6 +145,7 @@ class Gelbooru : GelbooruBasedImageBoard {
     override val imageSource = ImageSource.GELBOORU
     override val baseUrl = "https://gelbooru.com/"
     override val autoCompleteSearchUrl = "${baseUrl}index.php?page=autocomplete2&term=%s&type=tag_query&limit=10"
+    override val autoCompleteCategoryMapping = emptyMap<Int, String>()
     override val imageSearchUrl = "${baseUrl}index.php?page=dapi&json=1&s=post&q=index&limit=100&tags=%s&pid=%d"
     override val aiTagName = "ai-generated"
 
@@ -155,6 +159,13 @@ class Danbooru : ImageBoard {
     override val imageSource = ImageSource.DANBOORU
     override val baseUrl = "https://danbooru.donmai.us/"
     override val autoCompleteSearchUrl = "${baseUrl}autocomplete.json?search[query]=%s&search[type]=tag_query&limit=10"
+    override val autoCompleteCategoryMapping = mapOf(
+        0 to "general",
+        1 to "artist",
+        3 to "copyright",
+        4 to "character",
+        5 to "meta",
+    )
     override val imageSearchUrl = "${baseUrl}posts.json?tags=%s&page=%d&limit=100"
     override val aiTagName = "ai-generated"
     override val firstPageIndex = 1
@@ -162,9 +173,8 @@ class Danbooru : ImageBoard {
     override fun loadPage(tags: String, page: Int): List<Image> {
         val body = RequestUtil.get(imageSearchUrl.format(tags, page)).get()
 
-        if (body.isEmpty()) {
+        if (body.isEmpty())
             return emptyList()
-        }
 
         val json = JSONArray(body)
         val subjects = mutableListOf<Image>()
@@ -182,12 +192,11 @@ class Danbooru : ImageBoard {
             val imageHeight = e.optInt("image_height", 1)
             val aspectRatio = imageWidth.toFloat() / imageHeight.toFloat()
 
-            if (fileFormat != "jpeg" && fileFormat != "jpg" && fileFormat != "png" && fileFormat != "gif") {
+            if (fileFormat != "jpeg" && fileFormat != "jpg" && fileFormat != "png" && fileFormat != "gif")
                 continue
-            }
 
-            val metaSource = e.optString("source", "").takeIf { it.isNotEmpty() }
-            val metaArtist = e.optString("tag_string_artist", "").takeIf { it.isNotEmpty() }
+            val metaSource = e.getString("source").takeIf { it.isNotEmpty() }
+            val metaArtist = e.getString("tag_string_artist").takeIf { it.isNotEmpty() }
             var metaTags = e.getString("tag_string").split(" ")
             if (metaArtist != null)
                 metaTags = metaTags
@@ -220,44 +229,23 @@ class Yandere : ImageBoard {
     override val imageSource = ImageSource.YANDERE
     override val baseUrl = "https://yande.re/"
     override val autoCompleteSearchUrl = "${baseUrl}tag.json?limit=10&order=count&name=%s"
-    override val imageSearchUrl = "${baseUrl}post.json?tags=%s&page=%d=limit=100"
-    override val aiTagName = "ai-generated" // Yande.re doesn't allow AI generated images but this tag appears in search
-    override val firstPageIndex = 1
-    private val tagMapping = mapOf(
+    override val autoCompleteCategoryMapping = mapOf(
         0 to "general",
         1 to "artist",
         3 to "copyright",
         4 to "character",
-        5 to "company", // Seems to be mostly game studios but "company" is a safer choice
-        6 to "meta" // Probably
-        // 2 just doesn't seem to exist?
+        5 to "circle",
+        6 to "faults",
     )
-
-    override fun loadAutoComplete(searchString: String): List<TagSuggestion> {
-        val suggestions = mutableListOf<TagSuggestion>()
-        val isExcluded = searchString.startsWith("-")
-        val query = searchString.replace("^-".toRegex(), "")
-        val body = RequestUtil.get(autoCompleteSearchUrl.format(query)).get()
-        val results = JSONArray(body)
-        val resultCount = results.length()
-
-        for (i in 0 until resultCount) {
-            val suggestion = results.getJSONObject(i)
-            val name = suggestion.getString("name")
-            // value doesn't exist
-            val type = tagMapping.getOrDefault(suggestion.getInt("type"), null)
-            suggestions.add(TagSuggestion(name, name, type, isExcluded))
-        }
-
-        return suggestions.toList()
-    }
+    override val imageSearchUrl = "${baseUrl}post.json?tags=%s&page=%d=limit=100"
+    override val aiTagName = "ai-generated" // Yande.re doesn't allow AI-generated images but this tag appears in search
+    override val firstPageIndex = 1
 
     override fun loadPage(tags: String, page: Int): List<Image> {
         val body = RequestUtil.get(imageSearchUrl.format(tags, page)).get()
 
-        if (body.isEmpty()) {
+        if (body.isEmpty())
             return emptyList()
-        }
 
         val json = JSONArray(body)
         val subjects = mutableListOf<Image>()
@@ -275,9 +263,8 @@ class Yandere : ImageBoard {
             val imageHeight = e.optInt("height", 1)
             val aspectRatio = imageWidth.toFloat() / imageHeight.toFloat()
 
-            if (fileFormat != "jpeg" && fileFormat != "jpg" && fileFormat != "png" && fileFormat != "gif") {
+            if (fileFormat != "jpeg" && fileFormat != "jpg" && fileFormat != "png" && fileFormat != "gif")
                 continue
-            }
 
             val metaSource = e.optString("source", "").takeIf { it.isNotEmpty() }
             val metaTags = e.getString("tags").split(" ")
@@ -297,7 +284,7 @@ class Yandere : ImageBoard {
             "q" -> ImageRating.QUESTIONABLE
             "e" -> ImageRating.EXPLICIT
             else -> ImageRating.UNKNOWN
-            // sensitive does not exist for yande.re
+            // Sensitive does not exist for Yande.re
         }
     }
 }

@@ -277,7 +277,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                 lineHeight = 17.sp
             )
 
-            tag.type?.let {
+            tag.category?.let {
                 Text(
                     modifier = Modifier.padding(horizontal = 16.dp),
                     text = it,
