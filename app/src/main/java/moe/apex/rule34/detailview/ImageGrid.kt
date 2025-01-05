@@ -130,7 +130,7 @@ fun ImageGrid(
                 else Spacer(modifier = Modifier.height(8.dp))
             }
 
-            itemsIndexed(images, key = { _, image -> image.previewUrl }) { index, image ->
+            itemsIndexed(images) { index, image ->
                 ImagePreviewContainer(image, index, onImageClick)
             }
 
