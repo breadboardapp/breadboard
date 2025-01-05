@@ -18,7 +18,7 @@ data class ImageMetadata(
     val pixivId: Int? = null,
 ) {
     val allTags: List<String>
-        get() = groupedTags.fold(emptyList()) { acc, tagGroup -> acc.plus(tagGroup.tags) }
+        get() = groupedTags.fold(emptyList()) { acc, tagGroup -> acc + tagGroup.tags }
     val pixivUrl: String?
         get() = pixivId?.let { "https://www.pixiv.net/en/artworks/$it" }
 }
