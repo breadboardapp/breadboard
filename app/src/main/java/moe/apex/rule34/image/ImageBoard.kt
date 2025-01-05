@@ -2,6 +2,7 @@ package moe.apex.rule34.image
 
 import moe.apex.rule34.RequestUtil
 import moe.apex.rule34.preferences.ImageSource
+import moe.apex.rule34.tag.TagCategory
 import moe.apex.rule34.tag.TagSuggestion
 import moe.apex.rule34.util.extractPixivId
 import org.json.JSONArray
@@ -88,13 +89,22 @@ interface GelbooruBasedImageBoard : ImageBoard {
             if (fileFormat != "jpeg" && fileFormat != "jpg" && fileFormat != "png" && fileFormat != "gif")
                 continue
 
-            val metaSource = e.optString("source", "").takeIf { it.isNotEmpty() }
-            val metaTags = e.getString("tags").split(" ")
+            val metaSource = e.getString("source").takeIf { it.isNotEmpty() }
+            val metaGroupedTags = listOf(
+                TagCategory.GENERAL.group(e.getString("tags").split(" ")),
+            )
             val metaRating = getRatingFromString(e.getString("rating"))
             val metaPixivId = extractPixivId(metaSource)
-            val metadata = ImageMetadata(null, metaSource, metaTags, metaRating, metaPixivId)
+            val metadata = ImageMetadata(
+                source = metaSource,
+                groupedTags = metaGroupedTags,
+                rating = metaRating,
+                pixivId = metaPixivId,
+            )
 
-            images.add(Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, source, aspectRatio, metadata))
+            images.add(
+                Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, source, aspectRatio, metadata),
+            )
         }
 
         return images
@@ -195,19 +205,34 @@ class Danbooru : ImageBoard {
             if (fileFormat != "jpeg" && fileFormat != "jpg" && fileFormat != "png" && fileFormat != "gif")
                 continue
 
+            val tagStringArtist = e.getString("tag_string_artist")
+            val tagCharacter = e.getString("tag_string_character").split(" ")
+            val tagCopyright = e.getString("tag_string_copyright").split(" ")
+            val tagGeneral = e.getString("tag_string_general").split(" ")
+            val tagMeta = e.getString("tag_string_meta").split(" ")
+
             val metaSource = e.getString("source").takeIf { it.isNotEmpty() }
-            val metaArtist = e.getString("tag_string_artist").takeIf { it.isNotEmpty() }
-            var metaTags = e.getString("tag_string").split(" ")
-            if (metaArtist != null)
-                metaTags = metaTags
-                    .toMutableList()
-                    .minus(metaArtist)
-                    .toList()
+            val metaArtist = tagStringArtist.takeIf { it.isNotEmpty() }
+            val metaGroupedTags = listOf(
+                    TagCategory.CHARACTER.group(tagCharacter),
+                    TagCategory.COPYRIGHT.group(tagCopyright),
+                    TagCategory.GENERAL.group(tagGeneral),
+                    TagCategory.META.group(tagMeta),
+                )
+                .filter { it.tags.isNotEmpty() }
             val metaRating = getRatingFromString(e.getString("rating"))
             val metaPixivId = e.optInt("pixiv_id").takeIf { it != 0 }
-            val metadata = ImageMetadata(metaArtist, metaSource, metaTags, metaRating, metaPixivId)
+            val metadata = ImageMetadata(
+                artist = metaArtist,
+                source = metaSource,
+                groupedTags = metaGroupedTags,
+                rating = metaRating,
+                pixivId = metaPixivId,
+            )
 
-            subjects.add(Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.DANBOORU, aspectRatio, metadata))
+            subjects.add(
+                Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.DANBOORU, aspectRatio, metadata),
+            )
         }
 
         return subjects.toList()
@@ -267,12 +292,21 @@ class Yandere : ImageBoard {
                 continue
 
             val metaSource = e.optString("source", "").takeIf { it.isNotEmpty() }
-            val metaTags = e.getString("tags").split(" ")
+            val metaGroupedTags = listOf(
+                TagCategory.GENERAL.group(e.getString("tags").split(" ")),
+            )
             val metaRating = getRatingFromString(e.getString("rating"))
             val metaPixivId = extractPixivId(metaSource)
-            val metadata = ImageMetadata(null, metaSource, metaTags, metaRating, metaPixivId)
+            val metadata = ImageMetadata(
+                source = metaSource,
+                groupedTags = metaGroupedTags,
+                rating = metaRating,
+                pixivId = metaPixivId,
+            )
 
-            subjects.add(Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.YANDERE, aspectRatio, metadata))
+            subjects.add(
+                Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.YANDERE, aspectRatio, metadata),
+            )
         }
 
         return subjects.toList()

@@ -27,10 +27,12 @@ import moe.apex.rule34.image.Danbooru
 import moe.apex.rule34.image.Gelbooru
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.image.ImageBoard
+import moe.apex.rule34.image.ImageMetadata
 import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.image.Rule34
 import moe.apex.rule34.image.Safebooru
 import moe.apex.rule34.image.Yandere
+import moe.apex.rule34.tag.TagCategory
 import java.io.IOException
 
 
@@ -132,9 +134,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val currentPreferences = dataStore.data.first()
         val lastUsedVersionCode = currentPreferences[PreferenceKeys.LAST_USED_VERSION_CODE] ?: 0
 
-        if (isOnFirstInstallVersion) {
+        if (isOnFirstInstallVersion)
             return updateLastUsedVersionCode(packageInfo)
-        }
 
         /* Version code 230 introduced app version tracking and also changed the default source from
            R34 to Safebooru but we don't want to change it for existing users.
@@ -151,11 +152,40 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             updateFavouritesRatingFilter(ImageRating.entries.toSet())
         }
 
+        /* Version code 251 introduced grouped tags, which use the new groupedTags property of ImageMetadata.
+           Move old tags of existing users' favourites to the new grouped tags. */
+        if (lastUsedVersionCode < 251) {
+            val images = getPreferences.first().favouriteImages.toMutableList().map { image ->
+                Image(
+                    fileName = image.fileName,
+                    fileFormat = image.fileFormat,
+                    previewUrl = image.previewUrl,
+                    fileUrl = image.fileUrl,
+                    sampleUrl = image.sampleUrl,
+                    imageSource = image.imageSource,
+                    aspectRatio = image.aspectRatio,
+                    metadata = image.metadata?.let {
+                        if (it.tags == null) {
+                            it
+                        } else {
+                            ImageMetadata(
+                                artist = it.artist,
+                                source = it.source,
+                                groupedTags = listOf(TagCategory.GENERAL.group(it.tags)),
+                                rating = it.rating,
+                                pixivId = it.pixivId,
+                            )
+                        }
+                    },
+                )
+            }
+            updateFavouriteImages(images)
+        }
+
         // Place any future migrations above this line by checking the last used version code.
         if (getCurrentRunningVersionCode(packageInfo) >= lastUsedVersionCode)
             updateLastUsedVersionCode(packageInfo)
     }
-
 
     suspend fun updateDataSaver(to: DataSaver) {
         // updateData handles data transactionally, ensuring that if the sort is updated at the same

@@ -114,17 +114,20 @@ fun InfoSheet(image: Image, visibilityState: MutableState<Boolean>) {
                 PaddedUrlText(it)
                 LargeVerticalSpacer()
             }
-            Heading(text = "Tags")
-            ContextualFlowRow(
-                itemCount = image.metadata.tags.size,
-                modifier = Modifier.padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp, Alignment.Start)
-            ) { index ->
-                val tag = image.metadata.tags[index]
-                SuggestionChip(
-                    onClick = { copyText(context, clip, tag) },
-                    label = { Text(tag) }
-                )
+            image.metadata.groupedTags.map {
+                Heading(text = it.category.label.pluralise(it.tags.size, it.category.pluralisedLabel))
+                ContextualFlowRow(
+                    itemCount = it.tags.size,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp, Alignment.Start)
+                ) { index ->
+                    val tag = it.tags[index]
+                    SuggestionChip(
+                        onClick = { copyText(context, clip, tag) },
+                        label = { Text(tag) }
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
             }
             TextButton(
                 modifier = Modifier
@@ -134,8 +137,8 @@ fun InfoSheet(image: Image, visibilityState: MutableState<Boolean>) {
                     copyText(
                         context = context,
                         clipboardManager = clip,
-                        text = image.metadata.tags.joinToString(" "),
-                        message = "Copied ${image.metadata.tags.size} ${"tag".pluralise(image.metadata.tags.size,"tags")}"
+                        text = image.metadata.allTags.joinToString(" "),
+                        message = "Copied ${image.metadata.allTags.size} ${"tag".pluralise(image.metadata.allTags.size, "tags")}"
                     )
                 }
             ) {
