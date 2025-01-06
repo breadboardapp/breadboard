@@ -562,26 +562,27 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                                     }
                                 )
                             }
-                            AssistChip(
-                                modifier = Modifier.aspectRatio(1f),
-                                onClick = {
-                                    if (tagChipList.isEmpty()) return@AssistChip // In case it's tapped during the exit animation
-                                    val tags = tagChipList.joinToString(" ") { it.formattedLabel }
-                                    copyText(
-                                        context = context,
-                                        clipboardManager = clipboard,
-                                        text = tags,
-                                        message = "Copied ${tagChipList.size} ${"tag".pluralise(tagChipList.size, "tags")}"
-                                    )
-                                },
-                                label = { },
-                                leadingIcon = {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.ic_copy),
-                                        contentDescription = "Copy all",
-                                    )
-                                }
-                            )
+                            if (tagChipList.isNotEmpty()) {
+                                AssistChip(
+                                    modifier = Modifier.aspectRatio(1f),
+                                    onClick = {
+                                        val tags = tagChipList.joinToString(" ") { it.formattedLabel }
+                                        copyText(
+                                            context = context,
+                                            clipboardManager = clipboard,
+                                            text = tags,
+                                            message = "Copied ${tagChipList.size} ${"tag".pluralise(tagChipList.size, "tags")}"
+                                        )
+                                    },
+                                    label = { },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_copy),
+                                            contentDescription = "Copy all",
+                                        )
+                                    }
+                                )
+                            }
 
                             Spacer(modifier = Modifier.width((16 - CHIP_SPACING).dp))
                         }
