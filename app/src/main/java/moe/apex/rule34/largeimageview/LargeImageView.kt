@@ -216,7 +216,7 @@ fun LargeImageView(
                                     modifier = Modifier.scale(1.2F)
                                 )
                             }
-                            if (currentImage in favouriteImages) {
+                            if (favouriteImages.any { it.fileName == currentImage.fileName }) {
                                 IconButton(onClick = {
                                     scope.launch {
                                         context.prefs.removeFavouriteImage(currentImage)
