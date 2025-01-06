@@ -132,6 +132,7 @@ import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.NAV_BAR_HEIGHT
 import moe.apex.rule34.util.VerticalSpacer
 import moe.apex.rule34.util.availableRatingsForCurrentSource
+import moe.apex.rule34.util.availableRatingsForSource
 import moe.apex.rule34.util.copyText
 import moe.apex.rule34.util.pluralise
 import moe.apex.rule34.util.showToast
@@ -332,9 +333,10 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
     fun performSearch() {
         if (tagChipList.isEmpty()) {
             showToast(context, "Please select some tags")
-        } else if (prefs.ratingsFilter.isEmpty() || ( prefs.ratingsFilter.size == 1 && prefs.ratingsFilter[0] == ImageRating.SENSITIVE && prefs.imageSource == ImageSource.YANDERE)) {
+        } else if (prefs.ratingsFilter.isEmpty() || (prefs.ratingsFilter.size == 1 && prefs.ratingsFilter[0] == ImageRating.SENSITIVE && prefs.imageSource == ImageSource.YANDERE)) {
             showToast(context, "Please select some ratings")
-        } else if (!prefs.filterRatingsLocally && prefs.ratingsFilter.size != 4 && prefs.imageSource in listOf(ImageSource.YANDERE, ImageSource.DANBOORU)) {
+        } else if (!prefs.filterRatingsLocally && !prefs.ratingsFilter.containsAll(availableRatingsForSource(prefs.imageSource)
+            ) && prefs.imageSource in listOf(ImageSource.YANDERE, ImageSource.DANBOORU)) {
             showToast(context, "To filter ratings on this source, enable the 'Filter ratings locally' option")
             // Danbooru has the 2-tag limit and filtering by multiple negated tags simply does not work on Yande.re
         } else if (!danbooruLimitCheck())
