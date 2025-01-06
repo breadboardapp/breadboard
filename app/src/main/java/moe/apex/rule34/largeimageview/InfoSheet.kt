@@ -129,20 +129,22 @@ fun InfoSheet(image: Image, visibilityState: MutableState<Boolean>) {
                 }
                 Spacer(modifier = Modifier.height(16.dp))
             }
-            TextButton(
-                modifier = Modifier
-                    .padding(top = 4.dp)
-                    .align(Alignment.CenterHorizontally),
-                onClick = {
-                    copyText(
-                        context = context,
-                        clipboardManager = clip,
-                        text = image.metadata.allTags.joinToString(" "),
-                        message = "Copied ${image.metadata.allTags.size} ${"tag".pluralise(image.metadata.allTags.size, "tags")}"
-                    )
+            if (image.metadata.allTags.isNotEmpty()) {
+                TextButton(
+                    modifier = Modifier
+                        .padding(top = 4.dp)
+                        .align(Alignment.CenterHorizontally),
+                    onClick = {
+                        copyText(
+                            context = context,
+                            clipboardManager = clip,
+                            text = image.metadata.allTags.joinToString(" "),
+                            message = "Copied ${image.metadata.allTags.size} ${"tag".pluralise(image.metadata.allTags.size, "tags")}"
+                        )
+                    }
+                ) {
+                    Text("Copy all")
                 }
-            ) {
-                Text("Copy all")
             }
 
             Spacer(Modifier.height(WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() * 2))
