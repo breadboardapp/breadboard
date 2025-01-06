@@ -221,7 +221,9 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
     }
 
     suspend fun removeFavouriteImage(image: Image) {
-        val images = getPreferences.first().favouriteImages.toMutableList().apply { remove(image) }
+        val images = getPreferences.first().favouriteImages.toMutableList().apply {
+            removeAll { it.fileName == image.fileName }
+        }
         updateFavouriteImages(images)
     }
 
