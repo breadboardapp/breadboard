@@ -12,7 +12,11 @@ import moe.apex.rule34.tag.TagGroup
 data class ImageMetadata(
     val artist: String? = null,
     val source: String? = null,
-    val tags: List<String>? = null, // Backwards compatibility. No longer used in newer versions
+    @Deprecated(
+        message = "Deprecated in version 251. Use `allTags` for identical functionality, or `groupedTags` to retrieve tags in categories.",
+        replaceWith = ReplaceWith("allTags")
+    )
+    val tags: List<String>? = null,
     val groupedTags: List<TagGroup> = emptyList(),
     val rating: ImageRating,
     val pixivId: Int? = null,

@@ -127,6 +127,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             mapUserPreferences(preferences)
         }
 
+    @Suppress("DEPRECATION")
     suspend fun handleMigration(context: Context) {
         val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
         val isOnFirstInstallVersion = packageInfo.firstInstallTime == packageInfo.lastUpdateTime
