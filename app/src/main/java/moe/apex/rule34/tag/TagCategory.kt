@@ -10,7 +10,7 @@ enum class TagCategory(val label: String, val pluralisedLabel: String) {
     META("Meta", "Meta");
 
     fun group(tags: List<String>): TagGroup {
-        return TagGroup(this, tags)
+        return TagGroup(this, tags.filter { it.isNotEmpty() })
     }
 }
 
