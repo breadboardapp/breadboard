@@ -92,7 +92,7 @@ data class Prefs(
             0, // We'll update this later
             listOf(ImageRating.SAFE),
             listOf(ImageRating.SAFE),
-            false,
+            true,
             false,
         )
     }
@@ -189,6 +189,17 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             }
 
             updateFavouriteImages(images)
+        }
+
+        /* Version code 251 updated the local filter setting (introduced in version 240) to be
+           enabled by default.
+           However, we don't want to change it for anyone who had access to the setting previously
+           and never toggled it. */
+        if (lastUsedVersionCode in 240 .. 250) {
+            val data = dataStore.data.first()
+            val filterRatingsLocally = data[PreferenceKeys.FILTER_RATINGS_LOCALLY]
+            if (filterRatingsLocally == null)
+                updateFilterRatingsLocally(false)
         }
 
         // Place any future migrations above this line by checking the last used version code.
@@ -336,7 +347,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             preferences[PreferenceKeys.FAVOURITES_RATING_FILTER]?.map { ImageRating.valueOf(it) } ?: listOf(ImageRating.SAFE)
         )
         val filterRatingsLocally = (
-            preferences[PreferenceKeys.FILTER_RATINGS_LOCALLY] ?: false
+            preferences[PreferenceKeys.FILTER_RATINGS_LOCALLY] ?: true
         )
         val useStaggeredGrid = (
             preferences[PreferenceKeys.USE_STAGGERED_GRID] ?: false
