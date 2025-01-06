@@ -153,32 +153,40 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         }
 
         /* Version code 251 introduced grouped tags, which use the new groupedTags property of ImageMetadata.
-           Move old tags of existing users' favourites to the new grouped tags. */
+           Move old tags of existing users' favourites to the new grouped tags.
+           This operation also removes duplicate images. */
         if (lastUsedVersionCode < 251) {
-            val images = getPreferences.first().favouriteImages.toMutableList().map { image ->
-                Image(
-                    fileName = image.fileName,
-                    fileFormat = image.fileFormat,
-                    previewUrl = image.previewUrl,
-                    fileUrl = image.fileUrl,
-                    sampleUrl = image.sampleUrl,
-                    imageSource = image.imageSource,
-                    aspectRatio = image.aspectRatio,
-                    metadata = image.metadata?.let {
-                        if (it.tags == null) {
-                            it
-                        } else {
-                            ImageMetadata(
-                                artist = it.artist,
-                                source = it.source,
-                                groupedTags = listOf(TagCategory.GENERAL.group(it.tags)),
-                                rating = it.rating,
-                                pixivId = it.pixivId,
-                            )
-                        }
-                    },
+            val images = mutableListOf<Image>()
+
+            for (image in getPreferences.first().favouriteImages) {
+                if (images.any { it.fileName == image.fileName }) continue
+
+                images.add(
+                    Image(
+                        fileName = image.fileName,
+                        fileFormat = image.fileFormat,
+                        previewUrl = image.previewUrl,
+                        fileUrl = image.fileUrl,
+                        sampleUrl = image.sampleUrl,
+                        imageSource = image.imageSource,
+                        aspectRatio = image.aspectRatio,
+                        metadata = image.metadata?.let {
+                            if (it.tags == null) {
+                                it
+                            } else {
+                                ImageMetadata(
+                                    artist = it.artist,
+                                    source = it.source,
+                                    groupedTags = listOf(TagCategory.GENERAL.group(it.tags)),
+                                    rating = it.rating,
+                                    pixivId = it.pixivId,
+                                )
+                            }
+                        },
+                    ),
                 )
             }
+
             updateFavouriteImages(images)
         }
 
