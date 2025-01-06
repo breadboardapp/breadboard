@@ -498,6 +498,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                             selected = prefs.imageSource == it,
                             label = { Text(it.description) },
                             onClick = {
+                                if (it == currentSource) return@FilterChip
                                 fun confirm() {
                                     scope.launch {
                                         context.prefs.updateImageSource(it)
@@ -506,7 +507,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                                     addAiExcludedTag(source = it)
                                     if (shouldShowSuggestions) getSuggestions(bypassDelay = true, source = it)
                                 }
-                                if (tagChipList.isEmpty() || it == currentSource) return@FilterChip confirm()
+                                if (tagChipList.isEmpty()) return@FilterChip confirm()
                                 sourceChangeDialogData = SourceDialogData(
                                     from = currentSource,
                                     to = it,
