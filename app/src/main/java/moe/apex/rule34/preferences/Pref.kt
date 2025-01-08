@@ -161,7 +161,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             val images = mutableListOf<Image>()
 
             for (image in getPreferences.first().favouriteImages) {
-                val existing = images.find { it.fileName == image.fileName }
+                val existing = images.find { it.fileName == image.fileName && it.imageSource == image.imageSource }
                 if (existing != null) {
                     /* As favouriteImages stores favourites in the order they were added, we can
                        safely remove the older duplicate as it will have the out-of-date metadata. */
