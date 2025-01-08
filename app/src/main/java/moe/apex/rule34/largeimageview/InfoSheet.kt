@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.BottomSheetDefaults
@@ -90,7 +91,7 @@ fun InfoSheet(image: Image, visibilityState: MutableState<Boolean>) {
     /* The padding and window insets allow the content to draw behind the nav bar while ensuring
        the sheet doesn't expand to behind the status bar. */
     ModalBottomSheet(
-        modifier = Modifier.padding(WindowInsets.statusBars.asPaddingValues()),
+        modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars),
         onDismissRequest = { visibilityState.value = false },
         sheetState = state,
         contentWindowInsets = { BottomSheetDefaults.windowInsets.only(WindowInsetsSides.Horizontal) }
