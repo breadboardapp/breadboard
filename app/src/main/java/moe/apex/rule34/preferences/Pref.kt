@@ -27,12 +27,12 @@ import moe.apex.rule34.image.Danbooru
 import moe.apex.rule34.image.Gelbooru
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.image.ImageBoard
-import moe.apex.rule34.image.ImageMetadata
 import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.image.Rule34
 import moe.apex.rule34.image.Safebooru
 import moe.apex.rule34.image.Yandere
 import moe.apex.rule34.tag.TagCategory
+import moe.apex.rule34.util.extractPixivId
 import java.io.IOException
 
 
@@ -154,37 +154,29 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         }
 
         /* Version code 251 introduced grouped tags, which use the new groupedTags property of ImageMetadata.
+           Additionally, it made the Pixiv ID extractor account for posts with multiple images.
            Move old tags of existing users' favourites to the new grouped tags.
-           This operation also removes duplicate images. */
+           Also remove older copies of duplicate images and try to extract Pixiv ID again. */
         if (lastUsedVersionCode < 251) {
             val images = mutableListOf<Image>()
 
             for (image in getPreferences.first().favouriteImages) {
-                if (images.any { it.fileName == image.fileName }) continue
+                val existing = images.find { it.fileName == image.fileName }
+                if (existing != null) {
+                    /* As favouriteImages stores favourites in the order they were added, we can
+                       safely remove the older duplicate as it will have the out-of-date metadata. */
+                    images.remove(existing)
+                }
 
                 images.add(
-                    Image(
-                        fileName = image.fileName,
-                        fileFormat = image.fileFormat,
-                        previewUrl = image.previewUrl,
-                        fileUrl = image.fileUrl,
-                        sampleUrl = image.sampleUrl,
-                        imageSource = image.imageSource,
-                        aspectRatio = image.aspectRatio,
-                        metadata = image.metadata?.let {
-                            if (it.tags == null) {
-                                it
-                            } else {
-                                ImageMetadata(
-                                    artist = it.artist,
-                                    source = it.source,
-                                    groupedTags = listOf(TagCategory.GENERAL.group(it.tags)),
-                                    rating = it.rating,
-                                    pixivId = it.pixivId,
-                                )
-                            }
-                        },
-                    ),
+                    image.copy(
+                        metadata = image.metadata?.copy(
+                            tags = null,
+                            groupedTags = if (!image.metadata.tags.isNullOrEmpty()) listOf(TagCategory.GENERAL.group(image.metadata.tags))
+                                          else emptyList(),
+                            pixivId = image.metadata.pixivId ?: extractPixivId(image.metadata.source)
+                        )
+                    )
                 )
             }
 
