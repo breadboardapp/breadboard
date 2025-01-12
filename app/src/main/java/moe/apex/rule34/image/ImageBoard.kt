@@ -11,7 +11,6 @@ import org.json.JSONObject
 
 
 interface ImageBoard {
-    val imageSource: ImageSource
     val baseUrl: String
     val autoCompleteSearchUrl: String
     val autoCompleteCategoryMapping: Map<String, String>
@@ -130,8 +129,7 @@ interface GelbooruBasedImageBoard : ImageBoard {
 }
 
 
-class Rule34 : GelbooruBasedImageBoard {
-    override val imageSource = ImageSource.R34
+object Rule34 : GelbooruBasedImageBoard {
     override val baseUrl = "https://rule34.xxx/"
     override val autoCompleteSearchUrl = "${baseUrl}public/autocomplete.php?q=%s"
     override val autoCompleteCategoryMapping = emptyMap<String, String>()
@@ -144,8 +142,7 @@ class Rule34 : GelbooruBasedImageBoard {
 }
 
 
-class Safebooru : GelbooruBasedImageBoard {
-    override val imageSource = ImageSource.SAFEBOORU
+object Safebooru : GelbooruBasedImageBoard {
     override val baseUrl = "https://safebooru.org/"
     override val autoCompleteSearchUrl = "${baseUrl}autocomplete.php?q=%s"
     override val autoCompleteCategoryMapping = emptyMap<String, String>()
@@ -158,8 +155,7 @@ class Safebooru : GelbooruBasedImageBoard {
 }
 
 
-class Gelbooru : GelbooruBasedImageBoard {
-    override val imageSource = ImageSource.GELBOORU
+object Gelbooru : GelbooruBasedImageBoard {
     override val baseUrl = "https://gelbooru.com/"
     override val autoCompleteSearchUrl = "${baseUrl}index.php?page=autocomplete2&term=%s&type=tag_query&limit=10"
     override val autoCompleteCategoryMapping = mapOf("tag" to "general")
@@ -172,8 +168,7 @@ class Gelbooru : GelbooruBasedImageBoard {
 }
 
 
-class Danbooru : ImageBoard {
-    override val imageSource = ImageSource.DANBOORU
+object Danbooru : ImageBoard {
     override val baseUrl = "https://danbooru.donmai.us/"
     override val autoCompleteSearchUrl = "${baseUrl}autocomplete.json?search[query]=%s&search[type]=tag_query&limit=10"
     override val autoCompleteCategoryMapping = mapOf(
@@ -257,8 +252,7 @@ class Danbooru : ImageBoard {
 }
 
 
-class Yandere : ImageBoard {
-    override val imageSource = ImageSource.YANDERE
+object Yandere : ImageBoard {
     override val baseUrl = "https://yande.re/"
     override val autoCompleteSearchUrl = "${baseUrl}tag.json?limit=10&order=count&name=%s"
     override val autoCompleteCategoryMapping = mapOf(

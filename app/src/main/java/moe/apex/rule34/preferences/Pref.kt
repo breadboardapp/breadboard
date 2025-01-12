@@ -370,9 +370,9 @@ private fun List<Image>.encodeToByteArray(): ByteArray {
 
 
 enum class ImageSource(override val description: String, val site: ImageBoard) : PrefEnum<ImageSource> {
-    SAFEBOORU("Safebooru", Safebooru()),
-    DANBOORU("Danbooru", Danbooru()),
-    GELBOORU("Gelbooru", Gelbooru()),
-    YANDERE("Yande.re", Yandere()),
-    R34("Rule34", Rule34())
+    SAFEBOORU("Safebooru", Safebooru),
+    DANBOORU("Danbooru", Danbooru),
+    GELBOORU("Gelbooru", Gelbooru),
+    YANDERE("Yande.re", Yandere),
+    R34("Rule34", Rule34)
 }
