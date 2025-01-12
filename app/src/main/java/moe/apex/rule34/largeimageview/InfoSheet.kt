@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.BottomSheetDefaults
@@ -90,7 +91,7 @@ fun InfoSheet(image: Image, visibilityState: MutableState<Boolean>) {
     /* The padding and window insets allow the content to draw behind the nav bar while ensuring
        the sheet doesn't expand to behind the status bar. */
     ModalBottomSheet(
-        modifier = Modifier.padding(WindowInsets.statusBars.asPaddingValues()),
+        modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars),
         onDismissRequest = { visibilityState.value = false },
         sheetState = state,
         contentWindowInsets = { BottomSheetDefaults.windowInsets.only(WindowInsetsSides.Horizontal) }
@@ -114,32 +115,37 @@ fun InfoSheet(image: Image, visibilityState: MutableState<Boolean>) {
                 PaddedUrlText(it)
                 LargeVerticalSpacer()
             }
-            Heading(text = "Tags")
-            ContextualFlowRow(
-                itemCount = image.metadata.tags.size,
-                modifier = Modifier.padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp, Alignment.Start)
-            ) { index ->
-                val tag = image.metadata.tags[index]
-                SuggestionChip(
-                    onClick = { copyText(context, clip, tag) },
-                    label = { Text(tag) }
-                )
-            }
-            TextButton(
-                modifier = Modifier
-                    .padding(top = 4.dp)
-                    .align(Alignment.CenterHorizontally),
-                onClick = {
-                    copyText(
-                        context = context,
-                        clipboardManager = clip,
-                        text = image.metadata.tags.joinToString(" "),
-                        message = "Copied ${image.metadata.tags.size} ${"tag".pluralise(image.metadata.tags.size,"tags")}"
+            image.metadata.groupedTags.map {
+                Heading(text = it.category.label.pluralise(it.tags.size, it.category.pluralisedLabel))
+                ContextualFlowRow(
+                    itemCount = it.tags.size,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp, Alignment.Start)
+                ) { index ->
+                    val tag = it.tags[index]
+                    SuggestionChip(
+                        onClick = { copyText(context, clip, tag) },
+                        label = { Text(tag) }
                     )
                 }
-            ) {
-                Text("Copy all")
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+            if (image.metadata.allTags.isNotEmpty()) {
+                TextButton(
+                    modifier = Modifier
+                        .padding(top = 4.dp)
+                        .align(Alignment.CenterHorizontally),
+                    onClick = {
+                        copyText(
+                            context = context,
+                            clipboardManager = clip,
+                            text = image.metadata.allTags.joinToString(" "),
+                            message = "Copied ${image.metadata.allTags.size} ${"tag".pluralise(image.metadata.allTags.size, "tags")}"
+                        )
+                    }
+                ) {
+                    Text("Copy all")
+                }
             }
 
             Spacer(Modifier.height(WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() * 2))

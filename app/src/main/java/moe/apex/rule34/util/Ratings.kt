@@ -8,8 +8,11 @@ import moe.apex.rule34.preferences.LocalPreferences
 
 val availableRatingsForCurrentSource: List<ImageRating>
     @Composable
-    get() =
-        ImageRating.entries.filter {
-            it != ImageRating.UNKNOWN &&
-            if (LocalPreferences.current.imageSource == ImageSource.YANDERE) it != ImageRating.SENSITIVE else true
-        }
+    get() = availableRatingsForSource(LocalPreferences.current.imageSource)
+
+
+fun availableRatingsForSource(source: ImageSource): List<ImageRating> {
+    return ImageRating.entries.filter {
+        it != ImageRating.UNKNOWN && if (source == ImageSource.YANDERE) it != ImageRating.SENSITIVE else true
+    }
+}

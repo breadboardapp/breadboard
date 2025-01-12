@@ -132,6 +132,7 @@ import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.NAV_BAR_HEIGHT
 import moe.apex.rule34.util.VerticalSpacer
 import moe.apex.rule34.util.availableRatingsForCurrentSource
+import moe.apex.rule34.util.availableRatingsForSource
 import moe.apex.rule34.util.copyText
 import moe.apex.rule34.util.pluralise
 import moe.apex.rule34.util.showToast
@@ -277,7 +278,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                 lineHeight = 17.sp
             )
 
-            tag.type?.let {
+            tag.category?.let {
                 Text(
                     modifier = Modifier.padding(horizontal = 16.dp),
                     text = it,
@@ -332,9 +333,10 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
     fun performSearch() {
         if (tagChipList.isEmpty()) {
             showToast(context, "Please select some tags")
-        } else if (prefs.ratingsFilter.isEmpty() || ( prefs.ratingsFilter.size == 1 && prefs.ratingsFilter[0] == ImageRating.SENSITIVE && prefs.imageSource == ImageSource.YANDERE)) {
+        } else if (prefs.ratingsFilter.isEmpty() || (prefs.ratingsFilter.size == 1 && prefs.ratingsFilter[0] == ImageRating.SENSITIVE && prefs.imageSource == ImageSource.YANDERE)) {
             showToast(context, "Please select some ratings")
-        } else if (!prefs.filterRatingsLocally && prefs.ratingsFilter.size != 4 && prefs.imageSource in listOf(ImageSource.YANDERE, ImageSource.DANBOORU)) {
+        } else if (!prefs.filterRatingsLocally && !prefs.ratingsFilter.containsAll(availableRatingsForSource(prefs.imageSource)
+            ) && prefs.imageSource in listOf(ImageSource.YANDERE, ImageSource.DANBOORU)) {
             showToast(context, "To filter ratings on this source, enable the 'Filter ratings locally' option")
             // Danbooru has the 2-tag limit and filtering by multiple negated tags simply does not work on Yande.re
         } else if (!danbooruLimitCheck())
@@ -498,6 +500,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                             selected = prefs.imageSource == it,
                             label = { Text(it.description) },
                             onClick = {
+                                if (it == currentSource) return@FilterChip
                                 fun confirm() {
                                     scope.launch {
                                         context.prefs.updateImageSource(it)
@@ -506,7 +509,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                                     addAiExcludedTag(source = it)
                                     if (shouldShowSuggestions) getSuggestions(bypassDelay = true, source = it)
                                 }
-                                if (tagChipList.isEmpty() || it == currentSource) return@FilterChip confirm()
+                                if (tagChipList.isEmpty()) return@FilterChip confirm()
                                 sourceChangeDialogData = SourceDialogData(
                                     from = currentSource,
                                     to = it,
@@ -562,26 +565,27 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                                     }
                                 )
                             }
-                            AssistChip(
-                                modifier = Modifier.aspectRatio(1f),
-                                onClick = {
-                                    if (tagChipList.isEmpty()) return@AssistChip // In case it's tapped during the exit animation
-                                    val tags = tagChipList.joinToString(" ") { it.formattedLabel }
-                                    copyText(
-                                        context = context,
-                                        clipboardManager = clipboard,
-                                        text = tags,
-                                        message = "Copied ${tagChipList.size} ${"tag".pluralise(tagChipList.size, "tags")}"
-                                    )
-                                },
-                                label = { },
-                                leadingIcon = {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.ic_copy),
-                                        contentDescription = "Copy all",
-                                    )
-                                }
-                            )
+                            if (tagChipList.isNotEmpty()) {
+                                AssistChip(
+                                    modifier = Modifier.aspectRatio(1f),
+                                    onClick = {
+                                        val tags = tagChipList.joinToString(" ") { it.formattedLabel }
+                                        copyText(
+                                            context = context,
+                                            clipboardManager = clipboard,
+                                            text = tags,
+                                            message = "Copied ${tagChipList.size} ${"tag".pluralise(tagChipList.size, "tags")}"
+                                        )
+                                    },
+                                    label = { },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_copy),
+                                            contentDescription = "Copy all",
+                                        )
+                                    }
+                                )
+                            }
 
                             Spacer(modifier = Modifier.width((16 - CHIP_SPACING).dp))
                         }

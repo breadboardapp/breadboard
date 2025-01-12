@@ -31,6 +31,8 @@ import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.image.Rule34
 import moe.apex.rule34.image.Safebooru
 import moe.apex.rule34.image.Yandere
+import moe.apex.rule34.tag.TagCategory
+import moe.apex.rule34.util.extractPixivId
 import java.io.IOException
 
 
@@ -90,7 +92,7 @@ data class Prefs(
             0, // We'll update this later
             listOf(ImageRating.SAFE),
             listOf(ImageRating.SAFE),
-            false,
+            true,
             false,
         )
     }
@@ -125,6 +127,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             mapUserPreferences(preferences)
         }
 
+    @Suppress("DEPRECATION")
     suspend fun handleMigration(context: Context) {
         val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
         val isOnFirstInstallVersion = packageInfo.firstInstallTime == packageInfo.lastUpdateTime
@@ -132,9 +135,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val currentPreferences = dataStore.data.first()
         val lastUsedVersionCode = currentPreferences[PreferenceKeys.LAST_USED_VERSION_CODE] ?: 0
 
-        if (isOnFirstInstallVersion) {
+        if (isOnFirstInstallVersion)
             return updateLastUsedVersionCode(packageInfo)
-        }
 
         /* Version code 230 introduced app version tracking and also changed the default source from
            R34 to Safebooru but we don't want to change it for existing users.
@@ -151,11 +153,51 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             updateFavouritesRatingFilter(ImageRating.entries.toSet())
         }
 
+        /* Version code 251 introduced grouped tags, which use the new groupedTags property of ImageMetadata.
+           Additionally, it made the Pixiv ID extractor account for posts with multiple images.
+           Move old tags of existing users' favourites to the new grouped tags.
+           Also remove older copies of duplicate images and try to extract Pixiv ID again. */
+        if (lastUsedVersionCode < 251) {
+            val images = mutableListOf<Image>()
+
+            for (image in getPreferences.first().favouriteImages) {
+                val existing = images.find { it.fileName == image.fileName && it.imageSource == image.imageSource }
+                if (existing != null) {
+                    /* As favouriteImages stores favourites in the order they were added, we can
+                       safely remove the older duplicate as it will have the out-of-date metadata. */
+                    images.remove(existing)
+                }
+
+                images.add(
+                    image.copy(
+                        metadata = image.metadata?.copy(
+                            tags = null,
+                            groupedTags = if (!image.metadata.tags.isNullOrEmpty()) listOf(TagCategory.GENERAL.group(image.metadata.tags))
+                                          else emptyList(),
+                            pixivId = image.metadata.pixivId ?: extractPixivId(image.metadata.source)
+                        )
+                    )
+                )
+            }
+
+            updateFavouriteImages(images)
+        }
+
+        /* Version code 251 updated the local filter setting (introduced in version 240) to be
+           enabled by default.
+           However, we don't want to change it for anyone who had access to the setting previously
+           and never toggled it. */
+        if (lastUsedVersionCode in 240 .. 250) {
+            val data = dataStore.data.first()
+            val filterRatingsLocally = data[PreferenceKeys.FILTER_RATINGS_LOCALLY]
+            if (filterRatingsLocally == null)
+                updateFilterRatingsLocally(false)
+        }
+
         // Place any future migrations above this line by checking the last used version code.
         if (getCurrentRunningVersionCode(packageInfo) >= lastUsedVersionCode)
             updateLastUsedVersionCode(packageInfo)
     }
-
 
     suspend fun updateDataSaver(to: DataSaver) {
         // updateData handles data transactionally, ensuring that if the sort is updated at the same
@@ -183,7 +225,9 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
     }
 
     suspend fun removeFavouriteImage(image: Image) {
-        val images = getPreferences.first().favouriteImages.toMutableList().apply { remove(image) }
+        val images = getPreferences.first().favouriteImages.toMutableList().apply {
+            removeAll { it.fileName == image.fileName }
+        }
         updateFavouriteImages(images)
     }
 
@@ -295,7 +339,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             preferences[PreferenceKeys.FAVOURITES_RATING_FILTER]?.map { ImageRating.valueOf(it) } ?: listOf(ImageRating.SAFE)
         )
         val filterRatingsLocally = (
-            preferences[PreferenceKeys.FILTER_RATINGS_LOCALLY] ?: false
+            preferences[PreferenceKeys.FILTER_RATINGS_LOCALLY] ?: true
         )
         val useStaggeredGrid = (
             preferences[PreferenceKeys.USE_STAGGERED_GRID] ?: false
@@ -326,9 +370,9 @@ private fun List<Image>.encodeToByteArray(): ByteArray {
 
 
 enum class ImageSource(override val description: String, val site: ImageBoard) : PrefEnum<ImageSource> {
-    SAFEBOORU("Safebooru", Safebooru()),
-    DANBOORU("Danbooru", Danbooru()),
-    GELBOORU("Gelbooru", Gelbooru()),
-    YANDERE("Yande.re", Yandere()),
-    R34("Rule34", Rule34())
+    SAFEBOORU("Safebooru", Safebooru),
+    DANBOORU("Danbooru", Danbooru),
+    GELBOORU("Gelbooru", Gelbooru),
+    YANDERE("Yande.re", Yandere),
+    R34("Rule34", Rule34)
 }

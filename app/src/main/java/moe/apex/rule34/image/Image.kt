@@ -5,16 +5,24 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import kotlinx.serialization.Serializable
 import moe.apex.rule34.preferences.ImageSource
+import moe.apex.rule34.tag.TagGroup
 
 
 @Serializable
 data class ImageMetadata(
-    val artist: String?,
-    val source: String?,
-    val tags: List<String>,
+    val artist: String? = null,
+    val source: String? = null,
+    @Deprecated(
+        message = "Deprecated in version 251. Use `allTags` for identical functionality, or `groupedTags` to retrieve tags in categories.",
+        replaceWith = ReplaceWith("allTags")
+    )
+    val tags: List<String>? = null,
+    val groupedTags: List<TagGroup> = emptyList(),
     val rating: ImageRating,
     val pixivId: Int? = null,
 ) {
+    val allTags: List<String>
+        get() = groupedTags.fold(emptyList()) { acc, tagGroup -> acc + tagGroup.tags }
     val pixivUrl: String?
         get() = pixivId?.let { "https://www.pixiv.net/en/artworks/$it" }
 }
