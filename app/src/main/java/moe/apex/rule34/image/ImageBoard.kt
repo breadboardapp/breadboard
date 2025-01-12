@@ -252,22 +252,21 @@ object Danbooru : ImageBoard {
 }
 
 
-object Yandere : ImageBoard {
-    override val baseUrl = "https://yande.re/"
-    override val autoCompleteSearchUrl = "${baseUrl}tag.json?limit=10&order=count&name=%s"
-    override val autoCompleteCategoryMapping = mapOf(
-        "0" to "general",
-        "1" to "artist",
-        "3" to "copyright",
-        "4" to "character",
-        "5" to "circle",
-        "6" to "faults",
-    )
-    override val imageSearchUrl = "${baseUrl}post.json?tags=%s&page=%d=limit=100"
-    override val aiTagName = "ai-generated" // Yande.re doesn't allow AI-generated images but this tag appears in search
-    override val firstPageIndex = 1
+interface MoebooruBasedImageBoard : ImageBoard {
+    override val autoCompleteSearchUrl get() = "${baseUrl}tag.json?limit=10&order=count&name=%s"
+    override val autoCompleteCategoryMapping
+        get() = mapOf(
+            "0" to "general",
+            "1" to "artist",
+            "3" to "copyright",
+            "4" to "character",
+            "5" to "circle",
+            "6" to "faults",
+        )
+    override val imageSearchUrl get() = "${Yandere.baseUrl}post.json?tags=%s&page=%d=limit=100"
+    override val firstPageIndex get() = 1
 
-    override fun loadPage(tags: String, page: Int): List<Image> {
+    fun loadPage(tags: String, page: Int, source: ImageSource): List<Image> {
         val body = RequestUtil.get(imageSearchUrl.format(tags, page)).get()
 
         if (body.isEmpty())
@@ -306,7 +305,7 @@ object Yandere : ImageBoard {
             )
 
             subjects.add(
-                Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.YANDERE, aspectRatio, metadata),
+                Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, source, aspectRatio, metadata),
             )
         }
 
@@ -319,7 +318,35 @@ object Yandere : ImageBoard {
             "q" -> ImageRating.QUESTIONABLE
             "e" -> ImageRating.EXPLICIT
             else -> ImageRating.UNKNOWN
-            // Sensitive does not exist for Yande.re
+            // Sensitive does not exist for Moebooru-based image boards
         }
+    }
+}
+
+
+object Yandere : MoebooruBasedImageBoard {
+    override val baseUrl = "https://yande.re/"
+    override val aiTagName = "ai-generated" // Yande.re doesn't allow AI-generated images but this tag appears in search
+
+    override fun loadPage(tags: String, page: Int): List<Image> {
+        return loadPage(tags, page, ImageSource.YANDERE)
+    }
+}
+
+object KonachanSFW : MoebooruBasedImageBoard {
+    override val baseUrl = "https://konachan.net/"
+    override val aiTagName = "ai-generated" // Konachan also doesn't allow AI-generated images but this tag appears in search
+
+    override fun loadPage(tags: String, page: Int): List<Image> {
+        return loadPage(tags, page, ImageSource.KONACHAN_SFW)
+    }
+}
+
+object KonachanNSFW : MoebooruBasedImageBoard {
+    override val baseUrl = "https://konachan.com/"
+    override val aiTagName = "ai-generated" // Konachan also doesn't allow AI-generated images but this tag appears in search
+
+    override fun loadPage(tags: String, page: Int): List<Image> {
+        return loadPage(tags, page, ImageSource.KONACHAN_NSFW)
     }
 }

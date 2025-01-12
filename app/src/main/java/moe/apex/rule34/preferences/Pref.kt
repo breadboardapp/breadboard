@@ -28,6 +28,8 @@ import moe.apex.rule34.image.Gelbooru
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.image.ImageBoard
 import moe.apex.rule34.image.ImageRating
+import moe.apex.rule34.image.KonachanNSFW
+import moe.apex.rule34.image.KonachanSFW
 import moe.apex.rule34.image.Rule34
 import moe.apex.rule34.image.Safebooru
 import moe.apex.rule34.image.Yandere
@@ -373,6 +375,8 @@ enum class ImageSource(override val description: String, val site: ImageBoard) :
     SAFEBOORU("Safebooru", Safebooru),
     DANBOORU("Danbooru", Danbooru),
     GELBOORU("Gelbooru", Gelbooru),
+    KONACHAN_SFW("Konachan (SFW)", KonachanSFW),
+    KONACHAN_NSFW("Konachan (NSFW)", KonachanNSFW),
+    R34("Rule34", Rule34),
     YANDERE("Yande.re", Yandere),
-    R34("Rule34", Rule34)
 }
