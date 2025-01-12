@@ -377,6 +377,6 @@ enum class ImageSource(override val description: String, val site: ImageBoard) :
     GELBOORU("Gelbooru", Gelbooru),
     KONACHAN_SFW("Konachan (SFW)", KonachanSFW),
     KONACHAN_NSFW("Konachan (NSFW)", KonachanNSFW),
-    R34("Rule34", Rule34),
     YANDERE("Yande.re", Yandere),
+    R34("Rule34", Rule34)
 }

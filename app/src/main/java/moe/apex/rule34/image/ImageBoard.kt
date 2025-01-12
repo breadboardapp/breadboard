@@ -253,7 +253,8 @@ object Danbooru : ImageBoard {
 
 
 interface MoebooruBasedImageBoard : ImageBoard {
-    override val autoCompleteSearchUrl get() = "${baseUrl}tag.json?limit=10&order=count&name=%s"
+    override val autoCompleteSearchUrl
+        get() = "${baseUrl}tag.json?limit=10&order=count&name=%s"
     override val autoCompleteCategoryMapping
         get() = mapOf(
             "0" to "general",
@@ -263,8 +264,10 @@ interface MoebooruBasedImageBoard : ImageBoard {
             "5" to "circle",
             "6" to "faults",
         )
-    override val imageSearchUrl get() = "${Yandere.baseUrl}post.json?tags=%s&page=%d=limit=100"
-    override val firstPageIndex get() = 1
+    override val imageSearchUrl
+        get() = "${baseUrl}post.json?tags=%s&page=%d=limit=100"
+    override val firstPageIndex
+        get() = 1
 
     fun loadPage(tags: String, page: Int, source: ImageSource): List<Image> {
         val body = RequestUtil.get(imageSearchUrl.format(tags, page)).get()
@@ -333,6 +336,7 @@ object Yandere : MoebooruBasedImageBoard {
     }
 }
 
+
 object KonachanSFW : MoebooruBasedImageBoard {
     override val baseUrl = "https://konachan.net/"
     override val aiTagName = "ai-generated" // Konachan also doesn't allow AI-generated images but this tag appears in search
@@ -341,6 +345,7 @@ object KonachanSFW : MoebooruBasedImageBoard {
         return loadPage(tags, page, ImageSource.KONACHAN_SFW)
     }
 }
+
 
 object KonachanNSFW : MoebooruBasedImageBoard {
     override val baseUrl = "https://konachan.com/"
