@@ -265,7 +265,7 @@ interface MoebooruBasedImageBoard : ImageBoard {
             "6" to "faults",
         )
     override val imageSearchUrl
-        get() = "${baseUrl}post.json?tags=%s&page=%d=limit=100"
+        get() = "${baseUrl}post.json?tags=%s&page=%d&limit=100"
     override val firstPageIndex
         get() = 1
 
