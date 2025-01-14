@@ -374,5 +374,18 @@ enum class ImageSource(override val description: String, val site: ImageBoard) :
     DANBOORU("Danbooru", Danbooru),
     GELBOORU("Gelbooru", Gelbooru),
     YANDERE("Yande.re", Yandere),
-    R34("Rule34", Rule34)
+    R34("Rule34", Rule34);
+
+    companion object {
+        fun getFromDomain(domain: String): ImageSource? {
+            return when (domain) {
+                "safebooru.org" -> ImageSource.SAFEBOORU
+                "danbooru.donmai.us" -> ImageSource.DANBOORU
+                "gelbooru.com" -> ImageSource.GELBOORU
+                "yande.re" -> ImageSource.YANDERE
+                "rule34.xxx" -> ImageSource.R34
+                else -> null
+            }
+        }
+    }
 }
