@@ -93,7 +93,8 @@ interface GelbooruBasedImageBoard : ImageBoard {
     }
 
     override fun loadImage(postId: String, postListKey: String?): Image? {
-        return loadPage("id:$postId", 0).getOrNull(0)
+        val parsedPostId = postId.toIntOrNull() ?: return null
+        return loadPage("id:$parsedPostId", 0).getOrNull(0)
     }
 
     override fun loadPage(tags: String, page: Int, postListKey: String?): List<Image> {
@@ -229,7 +230,8 @@ object Danbooru : ImageBoard {
     }
 
     override fun loadImage(postId: String, postListKey: String?): Image? {
-        return loadPage("id:$postId", 0).getOrNull(0)
+        val parsedPostId = postId.toIntOrNull() ?: return null
+        return loadPage("id:$parsedPostId", 0).getOrNull(0)
     }
 
     override fun loadPage(tags: String, page: Int, postListKey: String?): List<Image> {
@@ -306,7 +308,8 @@ object Yandere : ImageBoard {
     }
 
     override fun loadImage(postId: String, postListKey: String?): Image? {
-        return loadPage("id:$postId", 0).getOrNull(0)
+        val parsedPostId = postId.toIntOrNull() ?: return null
+        return loadPage("id:$parsedPostId", 0).getOrNull(0)
     }
 
     override fun loadPage(tags: String, page: Int, postListKey: String?): List<Image> {

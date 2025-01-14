@@ -182,16 +182,14 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity() {
             val prefs = prefs.getPreferences.collectAsState(initialPrefs).value
             val viewModel = viewModel(BreadboardViewModel::class.java)
             CompositionLocalProvider(LocalPreferences provides prefs) {
-                // Handle deep links while the app is running. This is required since the app's launchMode is singleTop
+                /* Handle deep links while the main activity is running.
+                   This is required since the application's launchMode is set to singleTop.*/
                 DisposableEffect(Unit) {
                     val listener = Consumer<Intent> { intent ->
                         val uri = intent.data
-                        if (uri != null) {
-                            val domain = uri.host
-                            val postId = uri.getQueryParameter("id")
-                                ?: uri.path?.trimEnd('/')?.split("/")?.last()
-                            navController.navigate("deepLink?domain=$domain&postId=$postId")
-                        }
+                        if (uri != null)
+                            try { navController.navigate(uri) }
+                            catch (_: Exception) { } // Ignore the exception for invalid URIs
                     }
                     addOnNewIntentListener(listener)
                     onDispose { removeOnNewIntentListener(listener) }
