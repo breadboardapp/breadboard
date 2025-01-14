@@ -365,8 +365,8 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
             val searchTags = currentSource.site.formatTagString(tagChipList)
             val ratingsFilter = if (prefs.filterRatingsLocally) ""
                                 else ImageRating.buildSearchStringFor(prefs.ratingsFilter)
-            val searchRoute = searchTags + if (ratingsFilter.isNotEmpty()) "+$ratingsFilter" else ""
-            navController.navigate("searchResults/$searchRoute")
+            val searchQuery = searchTags + if (ratingsFilter.isNotEmpty()) "+$ratingsFilter" else ""
+            navController.navigate("searchResults?query=$searchQuery")
         }
     }
 
@@ -795,7 +795,7 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel)
                         )
                     }
                     composable(
-                        route = "searchResults/{searchQuery}",
+                        route = "searchResults?query={searchQuery}",
                         arguments = listOf(navArgument("searchQuery") { NavType.StringType })
                     ) { navBackStackEntry ->
                         SearchResults(
