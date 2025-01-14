@@ -189,7 +189,7 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity() {
                         if (uri != null) {
                             val domain = uri.host
                             val postId = uri.getQueryParameter("id") ?: uri.path?.split("/")?.last()
-                            navController.navigate("deepLink/$domain/$postId")
+                            navController.navigate("deepLink?domain=$domain&postId=$postId")
                         }
                     }
                     addOnNewIntentListener(listener)
@@ -771,7 +771,7 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel)
                 ) {
                     composable("home") { HomeScreen(navController, focusRequester, viewModel) }
                     composable(
-                        route = "deepLink/{domain}/{postId}",
+                        route = "deepLink?domain={domain}&postId={postId}",
                         arguments = listOf(
                             navArgument("domain") { NavType.StringType },
                             navArgument("postId") { NavType.StringType }
