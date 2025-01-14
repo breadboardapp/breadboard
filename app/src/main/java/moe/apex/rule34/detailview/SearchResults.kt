@@ -88,7 +88,7 @@ fun SearchResults(navController: NavController, searchQuery: String) {
                     .padding(padding.withoutVertical(top = false))
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
                 images = imagesToDisplay,
-                onImageClick = { index, image ->
+                onImageClick = { index, _ ->
                     initialPage = index
                     shouldShowLargeImage.value = true
                 },
@@ -132,5 +132,10 @@ fun SearchResults(navController: NavController, searchQuery: String) {
             }
         }
     }
-    AnimatedVisibilityLargeImageView(shouldShowLargeImage, initialPage, imagesToDisplay)
+    AnimatedVisibilityLargeImageView(
+        navController,
+        shouldShowLargeImage,
+        initialPage,
+        imagesToDisplay
+    )
 }
