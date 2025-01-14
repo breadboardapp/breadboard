@@ -188,7 +188,8 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity() {
                         val uri = intent.data
                         if (uri != null) {
                             val domain = uri.host
-                            val postId = uri.getQueryParameter("id") ?: uri.path?.split("/")?.last()
+                            val postId = uri.getQueryParameter("id")
+                                ?: uri.path?.trimEnd('/')?.split("/")?.last()
                             navController.navigate("deepLink?domain=$domain&postId=$postId")
                         }
                     }
@@ -777,15 +778,13 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel)
                             navArgument("postId") { NavType.StringType }
                         ),
                         deepLinks = listOf(
-                            navDeepLink {
-                                uriPattern = "https://{domain}/index.php?id={postId}"
-                            },
-                            navDeepLink {
-                                uriPattern = "https://{domain}/posts/{postId}"
-                            },
-                            navDeepLink {
-                                uriPattern = "https://{domain}/post/show/{postId}"
-                            }
+                            navDeepLink { uriPattern = "{domain}/index.php?id={postId}" },
+
+                            navDeepLink { uriPattern = "{domain}/posts/{postId}" },
+                            navDeepLink { uriPattern = "{domain}/posts/{postId}/.*" },
+
+                            navDeepLink { uriPattern = "{domain}/post/show/{postId}" },
+                            navDeepLink { uriPattern = "{domain}/post/show/{postId}/.*" }
                         )
                     ) { navBackStackEntry ->
                         DeepLinkLargeImageView(
