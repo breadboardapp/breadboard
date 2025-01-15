@@ -752,7 +752,7 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel)
                         )
                     }
                     composable("settings") { PreferencesScreen(viewModel) }
-                    composable("favourite_images") { FavouritesPage(navController, bottomBarVisibleState) }
+                    composable("favourite_images") { FavouritesPage(bottomBarVisibleState) }
                 }
             }
         }
