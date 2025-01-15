@@ -88,7 +88,7 @@ private fun isUsingWiFi(context: Context): Boolean {
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun LargeImageView(
-    shouldShowLargeImage: MutableState<Boolean>,
+    visible: MutableState<Boolean>,
     initialPage: Int,
     allImages: List<Image>
 ) {
@@ -107,7 +107,7 @@ fun LargeImageView(
     var isDownloading by remember { mutableStateOf(false) }
 
     if (allImages.isEmpty()) {
-        shouldShowLargeImage.value = false
+        visible.value = false
         return
     }
 
@@ -128,20 +128,19 @@ fun LargeImageView(
         InfoSheet(currentImage, popupVisibilityState)
     }
 
-    LaunchedEffect(shouldShowLargeImage.value) {
-        if (shouldShowLargeImage.value) offset = 0.dp
+    LaunchedEffect(visible.value) {
+        if (visible.value) offset = 0.dp
     }
 
-    if (context is MainActivity)
-        PredictiveBackHandler(shouldShowLargeImage.value) { progress ->
-            try {
-                progress.collect { backEvent ->
-                    offset = (backEvent.progress * 300).dp
-                }
-                shouldShowLargeImage.value = false
+    PredictiveBackHandler(visible.value && context is MainActivity) { progress ->
+        try {
+            progress.collect { backEvent ->
+                offset = (backEvent.progress * 300).dp
             }
-            catch (_: Exception) { }
+            visible.value = false
         }
+        catch (_: Exception) { }
+    }
 
     @Composable
     fun LargeImage(imageUrl: String, previewImageUrl: String, aspectRatio: Float?) {
