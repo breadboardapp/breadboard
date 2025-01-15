@@ -1,29 +1,59 @@
 name: Build & Publish Debug APK
 
 on:
- push:
+  push:
     branches:
-        - '**'
-   
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-    - uses: actions/checkout@v1
-    - name: Setup JDK
-      uses: actions/setup-java@v3
-      with:
-        distribution: 'zulu'
-        java-version: '17'
-        java-package: jdk
-    - name: Make Gradle executable
-      run: chmod +x ./gradlew
-    - name: Configure BugSnag
-      run: echo "$(sed -e 's/API_KEY_HERE/${{ secrets.BUGSNAG }}/' app/src/main/AndroidManifest.xml)" > app/src/main/AndroidManifest.xml
-    - name: Build Debug APK
-      run: ./gradlew assembleDebug
-    - name: Upload Artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: r34-debug.apk
-        path: app/build/outputs/apk/debug/app-debug.apk
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Setup JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          cache: gradle
+
+      - name: Make Gradle executable
+        run: chmod +x ./gradlew
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        id: upload-apk
+        with:
+          name: breadboard-debug.apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+
+  comment:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Find Comment
+        uses: peter-evans/find-comment@v3
+        id: find-comment
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: 'Download Debug APK'
+
+      - name: Add or Update comment to PR
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ steps.find-comment.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            [Download Debug APK](${{ steps.upload-apk.outputs.artifact-url }})
+          edit-mode: replace
