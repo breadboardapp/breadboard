@@ -10,6 +10,7 @@ on:
 
 jobs:
   build:
+    name: Build Debug APK
     runs-on: ubuntu-latest
 
     steps:
@@ -37,6 +38,7 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
 
   comment:
+    name: Comment on PR
     needs: build
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
