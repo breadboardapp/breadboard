@@ -377,15 +377,25 @@ enum class ImageSource(override val description: String, val site: ImageBoard) :
     R34("Rule34", Rule34);
 
     companion object {
-        fun getFromDomain(domain: String): ImageSource? {
-            return when (domain) {
-                "safebooru.org" -> ImageSource.SAFEBOORU
-                "danbooru.donmai.us" -> ImageSource.DANBOORU
-                "gelbooru.com" -> ImageSource.GELBOORU
-                "yande.re" -> ImageSource.YANDERE
-                "rule34.xxx" -> ImageSource.R34
-                else -> null
+        fun loadImageFromUri(uri: Uri): Image? {
+            val imageSource = when (uri.host) {
+                "safebooru.org" -> SAFEBOORU
+                "danbooru.donmai.us" -> DANBOORU
+                "gelbooru.com" -> GELBOORU
+                "yande.re" -> YANDERE
+                "rule34.xxx" -> R34
+                else -> return null
             }
+
+            val postId = when (imageSource) {
+                SAFEBOORU,
+                GELBOORU,
+                R34 -> uri.getQueryParameter("id")
+                DANBOORU -> uri.path?.split('/')?.getOrNull(2)
+                YANDERE -> uri.path?.split('/')?.getOrNull(3)
+            } ?: return null
+
+            return imageSource.site.loadImage(postId)
         }
     }
 }

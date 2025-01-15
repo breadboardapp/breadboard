@@ -7,6 +7,7 @@ import android.content.res.Configuration
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
@@ -61,6 +62,7 @@ import kotlinx.coroutines.runBlocking
 import me.saket.telephoto.zoomable.ZoomSpec
 import me.saket.telephoto.zoomable.rememberZoomableState
 import me.saket.telephoto.zoomable.zoomable
+import moe.apex.rule34.MainActivity
 import moe.apex.rule34.R
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.DataSaver
@@ -131,15 +133,16 @@ fun LargeImageView(
         if (shouldShowLargeImage.value) offset = 0.dp
     }
 
-    PredictiveBackHandler(shouldShowLargeImage.value) { progress ->
-        try {
-            progress.collect { backEvent ->
-                offset = (backEvent.progress * 300).dp
+    if (context is MainActivity)
+        PredictiveBackHandler(shouldShowLargeImage.value) { progress ->
+            try {
+                progress.collect { backEvent ->
+                    offset = (backEvent.progress * 300).dp
+                }
+                shouldShowLargeImage.value = false
             }
-            shouldShowLargeImage.value = false
+            catch (_: Exception) { }
         }
-        catch(_: Exception) { }
-    }
 
     @Composable
     fun LargeImage(imageUrl: String, previewImageUrl: String, aspectRatio: Float?) {

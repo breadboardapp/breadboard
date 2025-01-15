@@ -15,13 +15,20 @@
         android:enableOnBackInvokedCallback="true">
         <activity
             android:name=".MainActivity"
-            android:launchMode="singleTop"
+            android:taskAffinity="BreadBoard.MainActivity"
             android:exported="true"
             android:theme="@style/Theme.Breadboard">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+        <activity
+            android:name=".DeepLinkActivity"
+            android:taskAffinity="BreadBoard.DeepLinkActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:theme="@style/Theme.Breadboard">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
