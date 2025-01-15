@@ -95,10 +95,5 @@ fun FavouritesPage(bottomBarVisibleState: MutableState<Boolean>) {
             }
         )
     }
-    AnimatedVisibilityLargeImageView(
-        shouldShowLargeImage,
-        initialPage,
-        images,
-        bottomBarVisibleState
-    )
+    AnimatedVisibilityLargeImageView(shouldShowLargeImage, initialPage, images, bottomBarVisibleState)
 }
