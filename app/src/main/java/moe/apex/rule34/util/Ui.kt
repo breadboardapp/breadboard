@@ -98,7 +98,6 @@ fun FullscreenLoadingSpinner() {
 
 @Composable
 fun AnimatedVisibilityLargeImageView(
-    navController: NavController,
     shouldShowLargeImage: MutableState<Boolean>,
     initialPage: Int,
     allImages: List<Image>,
@@ -115,7 +114,6 @@ fun AnimatedVisibilityLargeImageView(
         exit = slideOutVertically(targetOffsetY = { it })
     ) {
         LargeImageView(
-            navController,
             shouldShowLargeImage,
             initialPage,
             allImages

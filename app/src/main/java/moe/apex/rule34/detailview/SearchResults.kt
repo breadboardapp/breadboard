@@ -133,7 +133,6 @@ fun SearchResults(navController: NavController, searchQuery: String) {
         }
     }
     AnimatedVisibilityLargeImageView(
-        navController,
         shouldShowLargeImage,
         initialPage,
         imagesToDisplay

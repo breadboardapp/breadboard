@@ -11,9 +11,7 @@ import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -38,7 +36,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -57,7 +54,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import coil3.compose.SubcomposeAsyncImage
 import coil3.request.ImageRequest
 import kotlinx.coroutines.launch
@@ -68,18 +64,15 @@ import me.saket.telephoto.zoomable.zoomable
 import moe.apex.rule34.R
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.DataSaver
-import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.prefs
 import moe.apex.rule34.util.showToast
 import moe.apex.rule34.ui.theme.BreadboardTheme
-import moe.apex.rule34.ui.theme.Typography
 import moe.apex.rule34.util.FullscreenLoadingSpinner
 import moe.apex.rule34.util.MustSetLocation
 import moe.apex.rule34.util.NAV_BAR_HEIGHT
 import moe.apex.rule34.util.SaveDirectorySelection
 import moe.apex.rule34.util.downloadImage
-
 
 
 private fun isUsingWiFi(context: Context): Boolean {
@@ -94,7 +87,6 @@ private fun isUsingWiFi(context: Context): Boolean {
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun LargeImageView(
-    navController: NavController,
     shouldShowLargeImage: MutableState<Boolean>,
     initialPage: Int,
     allImages: List<Image>
@@ -144,10 +136,7 @@ fun LargeImageView(
             progress.collect { backEvent ->
                 offset = (backEvent.progress * 300).dp
             }
-            if (navController.currentBackStackEntry?.destination?.route?.startsWith("deepLink") == true)
-                navController.popBackStack()
-            else
-                shouldShowLargeImage.value = false
+            shouldShowLargeImage.value = false
         }
         catch(_: Exception) { }
     }
@@ -367,41 +356,6 @@ fun LargeImageView(
                 canChangePage = isZoomedOut
                 forciblyShowBottomBar = false
             }
-        }
-    }
-}
-
-
-@Composable
-fun DeepLinkLargeImageView(navController: NavController, domain: String?, postId: String?) {
-    if (domain == null || postId == null) return ImageNotFound()
-
-    val imageSource = ImageSource.getFromDomain(domain) ?: return ImageNotFound()
-
-    val image = remember { imageSource.site.loadImage(postId) }
-    if (image == null) return ImageNotFound()
-
-    LargeImageView(
-        navController,
-        mutableStateOf(true),
-        0,
-        listOf(image)
-    )
-}
-
-
-@Composable
-private fun ImageNotFound() {
-    BreadboardTheme {
-        Column(
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxSize()
-        ) {
-            Text(
-                text = "Image not found :(",
-                style = Typography.titleLarge
-            )
         }
     }
 }

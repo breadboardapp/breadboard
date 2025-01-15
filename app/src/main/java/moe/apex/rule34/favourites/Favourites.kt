@@ -97,7 +97,6 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
         )
     }
     AnimatedVisibilityLargeImageView(
-        navController,
         shouldShowLargeImage,
         initialPage,
         images,

@@ -4,7 +4,6 @@ package moe.apex.rule34
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -67,7 +66,6 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -95,7 +93,6 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.util.Consumer
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -107,7 +104,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import androidx.navigation.navDeepLink
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
@@ -123,7 +119,6 @@ import kotlinx.coroutines.withContext
 import moe.apex.rule34.detailview.SearchResults
 import moe.apex.rule34.favourites.FavouritesPage
 import moe.apex.rule34.image.ImageRating
-import moe.apex.rule34.largeimageview.DeepLinkLargeImageView
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.PreferencesScreen
@@ -146,8 +141,6 @@ import moe.apex.rule34.viewmodel.BreadboardViewModel
 import moe.apex.rule34.viewmodel.getIndexByName
 import soup.compose.material.motion.animation.materialSharedAxisXIn
 import soup.compose.material.motion.animation.materialSharedAxisXOut
-import soup.compose.material.motion.animation.materialSharedAxisYIn
-import soup.compose.material.motion.animation.materialSharedAxisYOut
 import soup.compose.material.motion.animation.rememberSlideDistance
 
 
@@ -182,18 +175,6 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity() {
             val prefs = prefs.getPreferences.collectAsState(initialPrefs).value
             val viewModel = viewModel(BreadboardViewModel::class.java)
             CompositionLocalProvider(LocalPreferences provides prefs) {
-                /* Handle deep links while the main activity is running.
-                   This is required since the application's launchMode is set to singleTop.*/
-                DisposableEffect(Unit) {
-                    val listener = Consumer<Intent> { intent ->
-                        val uri = intent.data
-                        if (uri != null)
-                            try { navController.navigate(uri) }
-                            catch (_: Exception) { } // Ignore the exception for invalid URIs
-                    }
-                    addOnNewIntentListener(listener)
-                    onDispose { removeOnNewIntentListener(listener) }
-                }
                 Navigation(navController, viewModel)
             }
         }
@@ -742,55 +723,25 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel)
                     enterTransition = {
                         if (targetState.destination.route?.startsWith("searchResults") == true)
                             materialSharedAxisXIn(!isRtl, slideDistance)
-                        else if (targetState.destination.route?.startsWith("deepLink") == true)
-                            materialSharedAxisYIn(false, slideDistance)
                         else fadeIn()
                     },
                     exitTransition = {
                         if (targetState.destination.route?.startsWith("searchResults") == true)
                             materialSharedAxisXOut(!isRtl, slideDistance)
-                        else if (targetState.destination.route?.startsWith("deepLink") == true)
-                            materialSharedAxisYOut(false, slideDistance)
                         else fadeOut()
                     },
                     popEnterTransition = {
                         if (initialState.destination.route?.startsWith("searchResults") == true)
                             materialSharedAxisXIn(isRtl, slideDistance)
-                        else if (initialState.destination.route?.startsWith("deepLink") == true)
-                            materialSharedAxisYIn(false, slideDistance)
                         else fadeIn()
                     },
                     popExitTransition = {
                         if (initialState.destination.route?.startsWith("searchResults") == true)
                             materialSharedAxisXOut(isRtl, slideDistance)
-                        else if (initialState.destination.route?.startsWith("deepLink") == true)
-                            materialSharedAxisYOut(false, slideDistance)
                         else fadeOut()
                     }
                 ) {
                     composable("home") { HomeScreen(navController, focusRequester, viewModel) }
-                    composable(
-                        route = "deepLink?domain={domain}&postId={postId}",
-                        arguments = listOf(
-                            navArgument("domain") { NavType.StringType },
-                            navArgument("postId") { NavType.StringType }
-                        ),
-                        deepLinks = listOf(
-                            navDeepLink { uriPattern = "{domain}/index.php?id={postId}" },
-
-                            navDeepLink { uriPattern = "{domain}/posts/{postId}" },
-                            navDeepLink { uriPattern = "{domain}/posts/{postId}/.*" },
-
-                            navDeepLink { uriPattern = "{domain}/post/show/{postId}" },
-                            navDeepLink { uriPattern = "{domain}/post/show/{postId}/.*" }
-                        )
-                    ) { navBackStackEntry ->
-                        DeepLinkLargeImageView(
-                            navController,
-                            navBackStackEntry.arguments?.getString("domain"),
-                            navBackStackEntry.arguments?.getString("postId")
-                        )
-                    }
                     composable(
                         route = "searchResults?query={searchQuery}",
                         arguments = listOf(navArgument("searchQuery") { NavType.StringType })
