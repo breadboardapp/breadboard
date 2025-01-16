@@ -51,9 +51,9 @@ interface ImageBoard {
 
     fun parseImage(e: JSONObject): Image?
 
-    fun loadImage(postId: String, postListKey: String? = null): Image?
+    fun loadImage(postId: String): Image?
 
-    fun loadPage(tags: String, page: Int, postListKey: String? = null): List<Image>
+    fun loadPage(tags: String, page: Int): List<Image>
 
     fun formatTagString(tags: List<TagSuggestion>): String {
         return tags.joinToString("+") { it.formattedLabel }
@@ -64,7 +64,7 @@ interface ImageBoard {
 
 
 interface GelbooruBasedImageBoard : ImageBoard {
-    override fun parseImage(e: JSONObject): Image? {
+    fun parseImage(e: JSONObject, imageSource: ImageSource): Image? {
         val (fileName, fileFormat) = e.getString("image").split('.', limit = 2)
         val fileUrl = e.getString("file_url")
         val sampleUrl = e.optString("sample_url", "")
@@ -89,15 +89,15 @@ interface GelbooruBasedImageBoard : ImageBoard {
             pixivId = metaPixivId,
         )
 
-        return Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.R34, aspectRatio, metadata)
+        return Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, imageSource, aspectRatio, metadata)
     }
 
-    override fun loadImage(postId: String, postListKey: String?): Image? {
+    fun loadImage(postId: String, postListKey: String?, imageSource: ImageSource): Image? {
         val parsedPostId = postId.toIntOrNull() ?: return null
-        return loadPage("id:$parsedPostId", 0).getOrNull(0)
+        return loadPage("id:$parsedPostId", 0, postListKey, imageSource).getOrNull(0)
     }
 
-    override fun loadPage(tags: String, page: Int, postListKey: String?): List<Image> {
+    fun loadPage(tags: String, page: Int, postListKey: String?, imageSource: ImageSource): List<Image> {
         val body = RequestUtil.get(imageSearchUrl.format(tags, page)).get()
         if (body.isEmpty()) return emptyList()
 
@@ -143,6 +143,18 @@ object Rule34 : GelbooruBasedImageBoard {
     override val autoCompleteCategoryMapping = emptyMap<String, String>()
     override val imageSearchUrl = "${baseUrl}index.php?page=dapi&json=1&s=post&q=index&limit=100&tags=%s&pid=%d"
     override val aiTagName = "ai_generated"
+
+    override fun parseImage(e: JSONObject): Image? {
+        return parseImage(e, ImageSource.R34)
+    }
+
+    override fun loadImage(postId: String): Image? {
+        return loadImage(postId, null, ImageSource.R34)
+    }
+
+    override fun loadPage(tags: String, page: Int): List<Image> {
+        return loadPage(tags, page, null, ImageSource.R34)
+    }
 }
 
 
@@ -152,6 +164,18 @@ object Safebooru : GelbooruBasedImageBoard {
     override val autoCompleteCategoryMapping = emptyMap<String, String>()
     override val imageSearchUrl = "${baseUrl}index.php?page=dapi&json=1&s=post&q=index&limit=100&tags=%s&pid=%d"
     override val aiTagName = "ai-generated"
+
+    override fun parseImage(e: JSONObject): Image? {
+        return parseImage(e, ImageSource.SAFEBOORU)
+    }
+
+    override fun loadImage(postId: String): Image? {
+        return loadImage(postId, null, ImageSource.SAFEBOORU)
+    }
+
+    override fun loadPage(tags: String, page: Int): List<Image> {
+        return loadPage(tags, page, null, ImageSource.SAFEBOORU)
+    }
 }
 
 
@@ -162,12 +186,16 @@ object Gelbooru : GelbooruBasedImageBoard {
     override val imageSearchUrl = "${baseUrl}index.php?page=dapi&json=1&s=post&q=index&limit=100&tags=%s&pid=%d"
     override val aiTagName = "ai-generated"
 
-    override fun loadImage(postId: String, postListKey: String?): Image? {
-        return super.loadImage(postId, "post")
+    override fun parseImage(e: JSONObject): Image? {
+        return parseImage(e, ImageSource.GELBOORU)
     }
 
-    override fun loadPage(tags: String, page: Int, postListKey: String?): List<Image> {
-        return super.loadPage(tags, page, "post")
+    override fun loadImage(postId: String): Image? {
+        return loadImage(postId, "post", ImageSource.GELBOORU)
+    }
+
+    override fun loadPage(tags: String, page: Int): List<Image> {
+        return loadPage(tags, page, "post", ImageSource.GELBOORU)
     }
 }
 
@@ -229,12 +257,12 @@ object Danbooru : ImageBoard {
         return Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.DANBOORU, aspectRatio, metadata)
     }
 
-    override fun loadImage(postId: String, postListKey: String?): Image? {
+    override fun loadImage(postId: String): Image? {
         val parsedPostId = postId.toIntOrNull() ?: return null
         return loadPage("id:$parsedPostId", 0).getOrNull(0)
     }
 
-    override fun loadPage(tags: String, page: Int, postListKey: String?): List<Image> {
+    override fun loadPage(tags: String, page: Int): List<Image> {
         val body = RequestUtil.get(imageSearchUrl.format(tags, page)).get()
         if (body.isEmpty()) return emptyList()
 
@@ -307,12 +335,12 @@ object Yandere : ImageBoard {
         return Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.YANDERE, aspectRatio, metadata)
     }
 
-    override fun loadImage(postId: String, postListKey: String?): Image? {
+    override fun loadImage(postId: String): Image? {
         val parsedPostId = postId.toIntOrNull() ?: return null
         return loadPage("id:$parsedPostId", 0).getOrNull(0)
     }
 
-    override fun loadPage(tags: String, page: Int, postListKey: String?): List<Image> {
+    override fun loadPage(tags: String, page: Int): List<Image> {
         val body = RequestUtil.get(imageSearchUrl.format(tags, page)).get()
         if (body.isEmpty()) return emptyList()
 
