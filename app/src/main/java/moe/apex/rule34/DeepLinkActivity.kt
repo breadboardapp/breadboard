@@ -16,6 +16,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.core.util.Consumer
@@ -57,7 +58,7 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity() {
 
         setContent {
             val prefs = prefs.getPreferences.collectAsState(initialPrefs).value
-            val uri = mutableStateOf(intent.data)
+            val uri = rememberSaveable { mutableStateOf(intent.data) }
             CompositionLocalProvider(LocalPreferences provides prefs) {
                 DisposableEffect(Unit) {
                     val listener = Consumer<Intent> { newIntent -> uri.value = newIntent.data }
