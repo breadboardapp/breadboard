@@ -9,14 +9,16 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.core.util.Consumer
@@ -58,15 +60,17 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity() {
 
         setContent {
             val prefs = prefs.getPreferences.collectAsState(initialPrefs).value
-            val uri = rememberSaveable { mutableStateOf(intent.data) }
+            var uri by rememberSaveable { mutableStateOf(intent.data) }
             CompositionLocalProvider(LocalPreferences provides prefs) {
                 DisposableEffect(Unit) {
-                    val listener = Consumer<Intent> { newIntent -> uri.value = newIntent.data }
+                    val listener = Consumer<Intent> { newIntent -> uri = newIntent.data }
                     addOnNewIntentListener(listener)
                     onDispose { removeOnNewIntentListener(listener) }
                 }
                 BreadboardTheme {
-                    DeepLinkLargeImageView(uri.value)
+                    Surface {
+                        DeepLinkLargeImageView(uri)
+                    }
                 }
             }
         }
@@ -80,24 +84,21 @@ fun DeepLinkLargeImageView(uri: Uri?) {
     if (image == null) return ImageNotFound()
 
     LargeImageView(
-        mutableStateOf(true),
-        0,
-        listOf(image)
+        initialPage = 0,
+        allImages = listOf(image)
     )
 }
 
 
 @Composable
 fun ImageNotFound() {
-    Scaffold {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "Image not found :(",
-                style = Typography.titleLarge
-            )
-        }
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "Image not found :(",
+            style = Typography.titleLarge
+        )
     }
 }

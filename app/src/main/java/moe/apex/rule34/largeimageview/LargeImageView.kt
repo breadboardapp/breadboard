@@ -61,7 +61,6 @@ import kotlinx.coroutines.runBlocking
 import me.saket.telephoto.zoomable.ZoomSpec
 import me.saket.telephoto.zoomable.rememberZoomableState
 import me.saket.telephoto.zoomable.zoomable
-import moe.apex.rule34.MainActivity
 import moe.apex.rule34.R
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.DataSaver
@@ -88,7 +87,7 @@ private fun isUsingWiFi(context: Context): Boolean {
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun LargeImageView(
-    visible: MutableState<Boolean>,
+    visible: MutableState<Boolean>? = null,
     initialPage: Int,
     allImages: List<Image>
 ) {
@@ -107,7 +106,7 @@ fun LargeImageView(
     var isDownloading by remember { mutableStateOf(false) }
 
     if (allImages.isEmpty()) {
-        visible.value = false
+        visible?.value = false
         return
     }
 
@@ -128,16 +127,16 @@ fun LargeImageView(
         InfoSheet(currentImage, popupVisibilityState)
     }
 
-    LaunchedEffect(visible.value) {
-        if (visible.value) offset = 0.dp
+    LaunchedEffect(visible?.value) {
+        if (visible?.value == true) offset = 0.dp
     }
 
-    PredictiveBackHandler(visible.value && context is MainActivity) { progress ->
+    PredictiveBackHandler(visible?.value == true) { progress ->
         try {
             progress.collect { backEvent ->
                 offset = (backEvent.progress * 300).dp
             }
-            visible.value = false
+            visible?.value = false
         }
         catch (_: Exception) { }
     }
