@@ -26,7 +26,7 @@
         <activity
             android:name=".DeepLinkActivity"
             android:taskAffinity="BreadBoard.DeepLinkActivity"
-            android:excludeFromRecents="true"
+            android:launchMode="singleTop"
             android:exported="true"
             android:theme="@style/Theme.Breadboard">
             <intent-filter>

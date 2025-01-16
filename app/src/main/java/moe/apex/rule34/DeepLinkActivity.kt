@@ -1,5 +1,6 @@
 package moe.apex.rule34
 
+import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -12,11 +13,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.core.util.Consumer
 import androidx.datastore.preferences.preferencesDataStoreFile
 import coil3.ImageLoader
 import coil3.PlatformContext
@@ -55,8 +57,16 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity() {
 
         setContent {
             val prefs = prefs.getPreferences.collectAsState(initialPrefs).value
+            val uri = mutableStateOf(intent.data)
             CompositionLocalProvider(LocalPreferences provides prefs) {
-                DeepLinkLargeImageView(intent.data)
+                DisposableEffect(Unit) {
+                    val listener = Consumer<Intent> { newIntent -> uri.value = newIntent.data }
+                    addOnNewIntentListener(listener)
+                    onDispose { removeOnNewIntentListener(listener) }
+                }
+                BreadboardTheme {
+                    DeepLinkLargeImageView(uri.value)
+                }
             }
         }
     }
@@ -65,34 +75,28 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity() {
 
 @Composable
 fun DeepLinkLargeImageView(uri: Uri?) {
-    if (uri == null) return ImageNotFound()
-
-    val image = remember { ImageSource.loadImageFromUri(uri) }
+    val image = uri?.let { ImageSource.loadImageFromUri(it) }
     if (image == null) return ImageNotFound()
 
-    BreadboardTheme {
-        LargeImageView(
-            mutableStateOf(true),
-            0,
-            listOf(image)
-        )
-    }
+    LargeImageView(
+        mutableStateOf(true),
+        0,
+        listOf(image)
+    )
 }
 
 
 @Composable
 fun ImageNotFound() {
-    BreadboardTheme {
-        Scaffold {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Image not found :(",
-                    style = Typography.titleLarge
-                )
-            }
+    Scaffold {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "Image not found :(",
+                style = Typography.titleLarge
+            )
         }
     }
 }
