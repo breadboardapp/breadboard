@@ -345,8 +345,8 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
             val searchTags = currentSource.site.formatTagString(tagChipList)
             val ratingsFilter = if (prefs.filterRatingsLocally) ""
                                 else ImageRating.buildSearchStringFor(prefs.ratingsFilter)
-            val searchRoute = searchTags + if (ratingsFilter.isNotEmpty()) "+$ratingsFilter" else ""
-            navController.navigate("searchResults/$searchRoute")
+            val searchQuery = searchTags + if (ratingsFilter.isNotEmpty()) "+$ratingsFilter" else ""
+            navController.navigate("searchResults?query=$searchQuery")
         }
     }
 
@@ -721,29 +721,29 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel)
                     navController = navController,
                     startDestination = "home",
                     enterTransition = {
-                        if (targetState.destination.route?.contains("searchResults") == true)
+                        if (targetState.destination.route?.startsWith("searchResults") == true)
                             materialSharedAxisXIn(!isRtl, slideDistance)
                         else fadeIn()
                     },
                     exitTransition = {
-                        if (targetState.destination.route?.contains("searchResults") == true)
+                        if (targetState.destination.route?.startsWith("searchResults") == true)
                             materialSharedAxisXOut(!isRtl, slideDistance)
                         else fadeOut()
                     },
                     popEnterTransition = {
-                        if (initialState.destination.route?.contains("searchResults") == true)
+                        if (initialState.destination.route?.startsWith("searchResults") == true)
                             materialSharedAxisXIn(isRtl, slideDistance)
                         else fadeIn()
                     },
                     popExitTransition = {
-                        if (initialState.destination.route?.contains("searchResults") == true)
+                        if (initialState.destination.route?.startsWith("searchResults") == true)
                             materialSharedAxisXOut(isRtl, slideDistance)
                         else fadeOut()
                     }
                 ) {
                     composable("home") { HomeScreen(navController, focusRequester, viewModel) }
                     composable(
-                        route = "searchResults/{searchQuery}",
+                        route = "searchResults?query={searchQuery}",
                         arguments = listOf(navArgument("searchQuery") { NavType.StringType })
                     ) { navBackStackEntry ->
                         SearchResults(

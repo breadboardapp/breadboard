@@ -104,9 +104,8 @@ fun AnimatedVisibilityLargeImageView(
     bottomBarVisibleState: MutableState<Boolean>? = null
 ) {
     LaunchedEffect(shouldShowLargeImage.value) {
-        if (bottomBarVisibleState != null) {
+        if (bottomBarVisibleState != null)
             bottomBarVisibleState.value = !shouldShowLargeImage.value
-        }
     }
 
     AnimatedVisibility(
@@ -115,8 +114,8 @@ fun AnimatedVisibilityLargeImageView(
         exit = slideOutVertically(targetOffsetY = { it })
     ) {
         LargeImageView(
-            initialPage,
             shouldShowLargeImage,
+            initialPage,
             allImages
         )
     }

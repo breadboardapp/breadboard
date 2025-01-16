@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
-
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -11,22 +11,56 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Breadboard"
-        tools:targetApi="26"
         android:windowSoftInputMode="adjustResize"
         android:enableOnBackInvokedCallback="true">
         <activity
             android:name=".MainActivity"
+            android:taskAffinity="BreadBoard.MainActivity"
             android:exported="true"
-            android:label="@string/app_name"
             android:theme="@style/Theme.Breadboard">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-    </application>
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+        <activity
+            android:name=".DeepLinkActivity"
+            android:taskAffinity="BreadBoard.DeepLinkActivity"
+            android:launchMode="singleTop"
+            android:exported="true"
+            android:theme="@style/Theme.Breadboard">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
 
+                <data android:scheme="https" />
+                <data android:host="safebooru.org" />
+                <data android:host="gelbooru.com" />
+                <data android:host="rule34.xxx" />
+                <data android:path="/index.php" />
+                <data android:queryAdvancedPattern="id=[0-9]+" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="https" />
+                <data android:host="danbooru.donmai.us" />
+                <data android:pathPattern="/posts/.*" />
+                <data android:pathAdvancedPattern="/posts/[0-9]+" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="https" />
+                <data android:host="yande.re" />
+                <data android:pathPattern="/post/show/.*" />
+                <data android:pathAdvancedPattern="/post/show/[0-9]+" />
+            </intent-filter>
+        </activity>
+    </application>
 </manifest>
