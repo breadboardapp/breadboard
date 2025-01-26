@@ -382,7 +382,7 @@ enum class ImageSource(override val description: String, val site: ImageBoard) :
                 "safebooru.org" -> SAFEBOORU
                 "danbooru.donmai.us" -> DANBOORU
                 "gelbooru.com" -> GELBOORU
-                "yande.re" -> YANDERE
+                "yande.re", "files.yande.re" -> YANDERE
                 "rule34.xxx" -> R34
                 else -> return null
             }
@@ -392,7 +392,10 @@ enum class ImageSource(override val description: String, val site: ImageBoard) :
                 GELBOORU,
                 R34 -> uri.getQueryParameter("id")
                 DANBOORU -> uri.path?.split('/')?.getOrNull(2)
-                YANDERE -> uri.path?.split('/')?.getOrNull(3)
+                YANDERE -> {
+                    val postId = uri.path?.split('/')?.getOrNull(3)
+                    if (uri.host == "files.yande.re") postId?.split(" ")?.getOrNull(1) else postId
+                }
             } ?: return null
 
             return imageSource.site.loadImage(postId)
