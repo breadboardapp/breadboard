@@ -43,6 +43,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       issues: write
+      pull-requests: write
     if: github.event_name == 'pull_request'
     steps:
       - name: Find Comment
