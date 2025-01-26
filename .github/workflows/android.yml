@@ -1,5 +1,9 @@
 name: Build & Publish Debug APK
 
+permissions:
+  pull-requests: write
+  issues: write
+
 on:
   push:
     branches:
@@ -41,9 +45,6 @@ jobs:
     name: Comment on PR
     needs: build
     runs-on: ubuntu-latest
-    permissions:
-      issues: write
-      pull-requests: write
     if: github.event_name == 'pull_request'
     steps:
       - name: Find Comment
