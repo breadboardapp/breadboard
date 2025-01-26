@@ -38,6 +38,7 @@
                 <data android:host="safebooru.org" />
                 <data android:host="gelbooru.com" />
                 <data android:host="rule34.xxx" />
+
                 <data android:path="/index.php" />
                 <data android:queryAdvancedPattern="id=[0-9]+" />
             </intent-filter>
@@ -48,6 +49,7 @@
 
                 <data android:scheme="https" />
                 <data android:host="danbooru.donmai.us" />
+
                 <data android:pathPattern="/posts/.*" />
                 <data android:pathAdvancedPattern="/posts/[0-9]+" />
             </intent-filter>
@@ -58,8 +60,13 @@
 
                 <data android:scheme="https" />
                 <data android:host="yande.re" />
+                <data android:host="files.yande.re" />
+
                 <data android:pathPattern="/post/show/.*" />
                 <data android:pathAdvancedPattern="/post/show/[0-9]+" />
+
+                <data android:pathPattern="/image/.*/yande.re .*" />
+                <data android:pathAdvancedPattern="/image/[a-z0-9]+/yande.re [0-9]+ .*" />
             </intent-filter>
         </activity>
     </application>
