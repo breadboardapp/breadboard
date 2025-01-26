@@ -41,6 +41,8 @@ jobs:
     name: Comment on PR
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
     if: github.event_name == 'pull_request'
     steps:
       - name: Find Comment
