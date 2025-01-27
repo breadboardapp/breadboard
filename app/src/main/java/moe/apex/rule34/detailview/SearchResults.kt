@@ -29,7 +29,6 @@ import kotlinx.coroutines.withContext
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.prefs
-import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
 import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.rule34.util.TitleBar
@@ -72,65 +71,64 @@ fun SearchResults(navController: NavController, searchQuery: String) {
         else true
     }
 
-    BreadboardTheme {
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            topBar = {
-                TitleBar(
-                    title = "Search results",
-                    scrollBehavior = scrollBehavior,
-                    navController = navController
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        topBar = {
+            TitleBar(
+                title = "Search results",
+                scrollBehavior = scrollBehavior,
+                navController = navController
+            )
+        }
+    ) { padding ->
+        ImageGrid(
+            modifier = Modifier
+                .padding(padding.withoutVertical(top = false))
+                .nestedScroll(scrollBehavior.nestedScrollConnection),
+            images = imagesToDisplay,
+            onImageClick = { index, _ ->
+                initialPage = index
+                shouldShowLargeImage.value = true
+            },
+            contentPadding = PaddingValues(top = 16.dp, start = 16.dp, end = 16.dp),
+            filterComposable = if (filterLocally) { {
+                HorizontallyScrollingChipsWithLabels(
+                    modifier = Modifier.padding(bottom = 4.dp),
+                    labels = listOf("Ratings"),
+                    content = listOf(ratingRows)
                 )
-            }
-        ) { padding ->
-            ImageGrid(
-                modifier = Modifier
-                    .padding(padding.withoutVertical(top = false))
-                    .nestedScroll(scrollBehavior.nestedScrollConnection),
-                images = imagesToDisplay,
-                onImageClick = { index, _ ->
-                    initialPage = index
-                    shouldShowLargeImage.value = true
-                },
-                contentPadding = PaddingValues(top = 16.dp, start = 16.dp, end = 16.dp),
-                filterComposable = if (filterLocally) { {
-                    HorizontallyScrollingChipsWithLabels(
-                        modifier = Modifier.padding(bottom = 4.dp),
-                        labels = listOf("Ratings"),
-                        content = listOf(ratingRows)
-                    )
-                } } else null,
-                initialLoad = {
-                    withContext(Dispatchers.IO) {
-                        try {
-                            val newImages = imageSource.loadPage(searchQuery, pageNumber)
-                            if (!allImages.addAll(newImages)) shouldKeepSearching = false
-                            pageNumber++
-                        } catch (e: Exception) {
-                            Log.e("SearchResults", "Error loading initial images", e)
-                            shouldKeepSearching = false
-                        }
+            } } else null,
+            initialLoad = {
+                withContext(Dispatchers.IO) {
+                    try {
+                        val newImages = imageSource.loadPage(searchQuery, pageNumber)
+                        if (!allImages.addAll(newImages)) shouldKeepSearching = false
+                        pageNumber++
+                    } catch (e: Exception) {
+                        Log.e("SearchResults", "Error loading initial images", e)
+                        shouldKeepSearching = false
                     }
                 }
-            ) {
-                if (shouldKeepSearching) {
-                    scope.launch(Dispatchers.IO) {
-                        try {
-                            val newImages = imageSource.loadPage(searchQuery, pageNumber)
-                            if (newImages.isNotEmpty()) {
-                                pageNumber++
-                                allImages.addAll(newImages.filter { it !in allImages })
-                            } else {
-                                shouldKeepSearching = false
-                            }
-                        } catch (e: Exception) {
-                            Log.e("SearchResults", "Error loading new images", e)
+            }
+        ) {
+            if (shouldKeepSearching) {
+                scope.launch(Dispatchers.IO) {
+                    try {
+                        val newImages = imageSource.loadPage(searchQuery, pageNumber)
+                        if (newImages.isNotEmpty()) {
+                            pageNumber++
+                            allImages.addAll(newImages.filter { it !in allImages })
+                        } else {
                             shouldKeepSearching = false
                         }
+                    } catch (e: Exception) {
+                        Log.e("SearchResults", "Error loading new images", e)
+                        shouldKeepSearching = false
                     }
                 }
             }
         }
     }
+
     AnimatedVisibilityLargeImageView(shouldShowLargeImage, initialPage, imagesToDisplay)
 }

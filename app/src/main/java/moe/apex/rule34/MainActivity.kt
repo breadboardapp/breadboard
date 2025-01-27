@@ -14,10 +14,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -40,10 +36,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.sharp.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -56,9 +49,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -85,25 +75,16 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.NavHostController
-import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
@@ -116,15 +97,13 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import moe.apex.rule34.detailview.SearchResults
-import moe.apex.rule34.favourites.FavouritesPage
 import moe.apex.rule34.image.ImageRating
+import moe.apex.rule34.navigation.Navigation
+import moe.apex.rule34.navigation.Results
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
-import moe.apex.rule34.preferences.PreferencesScreen
 import moe.apex.rule34.preferences.UserPreferencesRepository
 import moe.apex.rule34.tag.TagSuggestion
-import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.ui.theme.searchField
 import moe.apex.rule34.util.CHIP_SPACING
 import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
@@ -136,12 +115,8 @@ import moe.apex.rule34.util.availableRatingsForSource
 import moe.apex.rule34.util.copyText
 import moe.apex.rule34.util.pluralise
 import moe.apex.rule34.util.showToast
-import moe.apex.rule34.util.withoutVertical
 import moe.apex.rule34.viewmodel.BreadboardViewModel
 import moe.apex.rule34.viewmodel.getIndexByName
-import soup.compose.material.motion.animation.materialSharedAxisXIn
-import soup.compose.material.motion.animation.materialSharedAxisXOut
-import soup.compose.material.motion.animation.rememberSlideDistance
 
 
 val Context.dataStore by preferencesDataStore("preferences")
@@ -346,7 +321,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
             val ratingsFilter = if (prefs.filterRatingsLocally) ""
                                 else ImageRating.buildSearchStringFor(prefs.ratingsFilter)
             val searchQuery = searchTags + if (ratingsFilter.isNotEmpty()) "+$ratingsFilter" else ""
-            navController.navigate("searchResults?query=$searchQuery")
+            navController.navigate(Results(searchQuery))
         }
     }
 
@@ -376,386 +351,255 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
         }
     }
 
-    BreadboardTheme {
-        MainScreenScaffold("Breadboard") { padding ->
-            Column(Modifier.padding(padding)) {
-                Row(
+    MainScreenScaffold("Breadboard") { padding ->
+        Column(Modifier.padding(padding)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .align(Alignment.CenterHorizontally)
+            ) {
+                TextField(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .align(Alignment.CenterHorizontally)
-                ) {
-                    TextField(
-                        modifier = Modifier
-                            .weight(1f, true)
-                            .focusRequester(focusRequester),
-                        value = searchString,
-                        textStyle = MaterialTheme.typography.searchField,
-                        onValueChange = {
-                            searchString = it
-                            cleanedSearchString = searchString
-                                .trim()
-                                .replace(" ", "_")
-                            getSuggestions()
-                        },
-                        placeholder = {
-                            Text(
-                                text = "Search ${prefs.imageSource.description}",
-                                style = MaterialTheme.typography.searchField
-                            )
-                        },
-                        shape = MaterialTheme.shapes.large,
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions.Default.copy(
-                            capitalization = KeyboardCapitalization.None,
-                            imeAction = ImeAction.Search
-                            // Maybe also look into https://issuetracker.google.com/issues/359257538
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onDone = { beginSearch() },
-                            onSearch = { beginSearch() }
-                        ),
-                        colors = TextFieldDefaults.colors().copy(
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        ),
-                        trailingIcon = { Row {
-                            IconButton(
-                                onClick = {
-                                    val query = clipboard.getClip().takeIf { it?.clipData?.description?.getMimeType(0) == "text/plain" }
-                                    val tags = query?.clipData?.getItemAt(0)?.text?.split(" ")?.filter { it.trim().isNotEmpty() }
-                                    if (query == null || tags.isNullOrEmpty()) {
-                                        showToast(context, "No tags to paste")
-                                        return@IconButton
-                                    }
-                                    var count = 0
-                                    for (t in tags) {
-                                        val isExcluded = t.startsWith("-")
-                                        val tagName = t.removePrefix("-")
-                                        if (tagName.isNotEmpty()) {
-                                            val tag = TagSuggestion(tagName, tagName, "", isExcluded)
-                                            addToFilter(tag)
-                                            count += 1
-                                        }
-                                    }
-                                    showToast(context, "Pasted $count ${"tag".pluralise(count, "tags")}")
-                                }
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_paste),
-                                    contentDescription = "Paste"
-                                )
-                            }
-                            IconButton(
-                                modifier = Modifier.rotate(chevronRotation),
-                                onClick = { showRatingFilter = !showRatingFilter }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.KeyboardArrowDown,
-                                    contentDescription = "Filter"
-                                )
-                            }
-                        } }
-                    )
-
-                    Spacer(modifier = Modifier.size(12.dp))
-
-                    FloatingActionButton(
-                        onClick = { performSearch() },
-                        elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
-                        shape = CircleShape
-                    ) {
-                        Icon(
-                            imageVector = Icons.Sharp.Search,
-                            contentDescription = "Search"
+                        .weight(1f, true)
+                        .focusRequester(focusRequester),
+                    value = searchString,
+                    textStyle = MaterialTheme.typography.searchField,
+                    onValueChange = {
+                        searchString = it
+                        cleanedSearchString = searchString
+                            .trim()
+                            .replace(" ", "_")
+                        getSuggestions()
+                    },
+                    placeholder = {
+                        Text(
+                            text = "Search ${prefs.imageSource.description}",
+                            style = MaterialTheme.typography.searchField
                         )
-                    }
-                }
-
-                VerticalSpacer()
-
-                AnimatedVisibility(showRatingFilter) {
-                    var opacity by remember { mutableFloatStateOf(1f) }
-                    var scale by remember { mutableFloatStateOf(1f) }
-                    LaunchedEffect(showRatingFilter) {
-                        if (showRatingFilter) {
-                            opacity = 1f
-                            scale = 1f
-                        }
-                    }
-                    PredictiveBackHandler(enabled = true) { progress ->
-                        try {
-                            progress.collect { backEvent ->
-                                opacity = (1 - backEvent.progress * 5).coerceAtLeast(0f)
-                                scale = 1 - (backEvent.progress / 2)
-                            }
-                           showRatingFilter = false
-                        }
-                        catch(_: Exception) { }
-                    }
-                    val sourceRows: List<@Composable () -> Unit> = ImageSource.entries.map { {
-                        FilterChip(
-                            selected = prefs.imageSource == it,
-                            label = { Text(it.description) },
+                    },
+                    shape = MaterialTheme.shapes.large,
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        capitalization = KeyboardCapitalization.None,
+                        imeAction = ImeAction.Search
+                        // Maybe also look into https://issuetracker.google.com/issues/359257538
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = { beginSearch() },
+                        onSearch = { beginSearch() }
+                    ),
+                    colors = TextFieldDefaults.colors().copy(
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    ),
+                    trailingIcon = { Row {
+                        IconButton(
                             onClick = {
-                                if (it == currentSource) return@FilterChip
-                                fun confirm() {
-                                    scope.launch {
-                                        context.prefs.updateImageSource(it)
+                                val query = clipboard.getClip().takeIf { it?.clipData?.description?.getMimeType(0) == "text/plain" }
+                                val tags = query?.clipData?.getItemAt(0)?.text?.split(" ")?.filter { it.trim().isNotEmpty() }
+                                if (query == null || tags.isNullOrEmpty()) {
+                                    showToast(context, "No tags to paste")
+                                    return@IconButton
+                                }
+                                var count = 0
+                                for (t in tags) {
+                                    val isExcluded = t.startsWith("-")
+                                    val tagName = t.removePrefix("-")
+                                    if (tagName.isNotEmpty()) {
+                                        val tag = TagSuggestion(tagName, tagName, "", isExcluded)
+                                        addToFilter(tag)
+                                        count += 1
                                     }
-                                    tagChipList.clear()
-                                    addAiExcludedTag(source = it)
-                                    if (shouldShowSuggestions) getSuggestions(bypassDelay = true, source = it)
                                 }
-                                if (tagChipList.isEmpty()) return@FilterChip confirm()
-                                sourceChangeDialogData = SourceDialogData(
-                                    from = currentSource,
-                                    to = it,
-                                    onConfirm = ::confirm
-                                )
-                                showSourceChangeDialog = true
+                                showToast(context, "Pasted $count ${"tag".pluralise(count, "tags")}")
                             }
-                        )
-                    } }
-                    val ratingRows: List<@Composable () -> Unit> = availableRatingsForCurrentSource.map { {
-                        FilterChip(
-                            selected = it in prefs.ratingsFilter,
-                            label = { Text(it.label) },
-                            onClick = {
-                                scope.launch {
-                                    if (it in prefs.ratingsFilter) context.prefs.removeRatingFilter(it)
-                                    else context.prefs.addRatingFilter(it)
-                                }
-                            }
-                        )
-                    } }
-                    Column(Modifier.padding(horizontal = 16.dp)) {
-                        HorizontallyScrollingChipsWithLabels(
-                            modifier = Modifier
-                                .alpha(opacity)
-                                .scale(scale),
-                            labels = listOf("Source", "Ratings"),
-                            content = listOf(sourceRows, ratingRows)
-                        )
-                        VerticalSpacer()
-                    }
-                }
-
-                AnimatedVisibility(tagChipList.isNotEmpty()) {
-                    Column {
-                        Row(
-                            modifier = Modifier
-                                .height(FilterChipDefaults.Height)
-                                .horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp)
                         ) {
-                            Spacer(Modifier.width((16 - CHIP_SPACING).dp))
-                            for (t in tagChipList) {
-                                FilterChip(
-                                    label = { Text(t.value) },
-                                    selected = !t.isExcluded,
-                                    onClick = {
-                                        if (t.value == prefs.imageSource.site.aiTagName) {
-                                            if (t.isExcluded) forciblyAllowedAi = true
-                                            else addAiExcludedTag(prefs.imageSource)
-                                        }
-                                        tagChipList.remove(t)
-                                    }
-                                )
-                            }
-                            if (tagChipList.isNotEmpty()) {
-                                AssistChip(
-                                    modifier = Modifier.aspectRatio(1f),
-                                    onClick = {
-                                        val tags = tagChipList.joinToString(" ") { it.formattedLabel }
-                                        copyText(
-                                            context = context,
-                                            clipboardManager = clipboard,
-                                            text = tags,
-                                            message = "Copied ${tagChipList.size} ${"tag".pluralise(tagChipList.size, "tags")}"
-                                        )
-                                    },
-                                    label = { },
-                                    leadingIcon = {
-                                        Icon(
-                                            painter = painterResource(id = R.drawable.ic_copy),
-                                            contentDescription = "Copy all",
-                                        )
-                                    }
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.width((16 - CHIP_SPACING).dp))
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_paste),
+                                contentDescription = "Paste"
+                            )
                         }
-                        VerticalSpacer()
-                    }
-                }
-                AnimatedVisibility(shouldShowSuggestions) {
-                    AutoCompleteTagResults()
+                        IconButton(
+                            modifier = Modifier.rotate(chevronRotation),
+                            onClick = { showRatingFilter = !showRatingFilter }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.KeyboardArrowDown,
+                                contentDescription = "Filter"
+                            )
+                        }
+                    } }
+                )
+
+                Spacer(modifier = Modifier.size(12.dp))
+
+                FloatingActionButton(
+                    onClick = { performSearch() },
+                    elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
+                    shape = CircleShape
+                ) {
+                    Icon(
+                        imageVector = Icons.Sharp.Search,
+                        contentDescription = "Search"
+                    )
                 }
             }
-        }
 
-        if (showSourceChangeDialog) {
-            val data = sourceChangeDialogData!!
-            AlertDialog(
-                onDismissRequest = { showSourceChangeDialog = false },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            data.onConfirm()
-                            showSourceChangeDialog = false
-                        }
-                    ) {
-                        Text("Okay")
+            VerticalSpacer()
+
+            AnimatedVisibility(showRatingFilter) {
+                var opacity by remember { mutableFloatStateOf(1f) }
+                var scale by remember { mutableFloatStateOf(1f) }
+                LaunchedEffect(showRatingFilter) {
+                    if (showRatingFilter) {
+                        opacity = 1f
+                        scale = 1f
                     }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showSourceChangeDialog = false }) {
-                        Text("Cancel")
-                    }
-                },
-                title = { Text("Change image source") },
-                text = {
-                    Text(
-                        text = "Changing image source will clear your search tags. " +
-                               "Are you sure you want to change the source from " +
-                               "${data.from.description} to ${data.to.description}?"
-                    )
                 }
-            )
+                PredictiveBackHandler(enabled = true) { progress ->
+                    try {
+                        progress.collect { backEvent ->
+                            opacity = (1 - backEvent.progress * 5).coerceAtLeast(0f)
+                            scale = 1 - (backEvent.progress / 2)
+                        }
+                       showRatingFilter = false
+                    }
+                    catch(_: Exception) { }
+                }
+                val sourceRows: List<@Composable () -> Unit> = ImageSource.entries.map { {
+                    FilterChip(
+                        selected = prefs.imageSource == it,
+                        label = { Text(it.description) },
+                        onClick = {
+                            if (it == currentSource) return@FilterChip
+                            fun confirm() {
+                                scope.launch {
+                                    context.prefs.updateImageSource(it)
+                                }
+                                tagChipList.clear()
+                                addAiExcludedTag(source = it)
+                                if (shouldShowSuggestions) getSuggestions(bypassDelay = true, source = it)
+                            }
+                            if (tagChipList.isEmpty()) return@FilterChip confirm()
+                            sourceChangeDialogData = SourceDialogData(
+                                from = currentSource,
+                                to = it,
+                                onConfirm = ::confirm
+                            )
+                            showSourceChangeDialog = true
+                        }
+                    )
+                } }
+                val ratingRows: List<@Composable () -> Unit> = availableRatingsForCurrentSource.map { {
+                    FilterChip(
+                        selected = it in prefs.ratingsFilter,
+                        label = { Text(it.label) },
+                        onClick = {
+                            scope.launch {
+                                if (it in prefs.ratingsFilter) context.prefs.removeRatingFilter(it)
+                                else context.prefs.addRatingFilter(it)
+                            }
+                        }
+                    )
+                } }
+                Column(Modifier.padding(horizontal = 16.dp)) {
+                    HorizontallyScrollingChipsWithLabels(
+                        modifier = Modifier
+                            .alpha(opacity)
+                            .scale(scale),
+                        labels = listOf("Source", "Ratings"),
+                        content = listOf(sourceRows, ratingRows)
+                    )
+                    VerticalSpacer()
+                }
+            }
+
+            AnimatedVisibility(tagChipList.isNotEmpty()) {
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .height(FilterChipDefaults.Height)
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp)
+                    ) {
+                        Spacer(Modifier.width((16 - CHIP_SPACING).dp))
+                        for (t in tagChipList) {
+                            FilterChip(
+                                label = { Text(t.value) },
+                                selected = !t.isExcluded,
+                                onClick = {
+                                    if (t.value == prefs.imageSource.site.aiTagName) {
+                                        if (t.isExcluded) forciblyAllowedAi = true
+                                        else addAiExcludedTag(prefs.imageSource)
+                                    }
+                                    tagChipList.remove(t)
+                                }
+                            )
+                        }
+                        if (tagChipList.isNotEmpty()) {
+                            AssistChip(
+                                modifier = Modifier.aspectRatio(1f),
+                                onClick = {
+                                    val tags = tagChipList.joinToString(" ") { it.formattedLabel }
+                                    copyText(
+                                        context = context,
+                                        clipboardManager = clipboard,
+                                        text = tags,
+                                        message = "Copied ${tagChipList.size} ${"tag".pluralise(tagChipList.size, "tags")}"
+                                    )
+                                },
+                                label = { },
+                                leadingIcon = {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_copy),
+                                        contentDescription = "Copy all",
+                                    )
+                                }
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width((16 - CHIP_SPACING).dp))
+                    }
+                    VerticalSpacer()
+                }
+            }
+            AnimatedVisibility(shouldShowSuggestions) {
+                AutoCompleteTagResults()
+            }
         }
     }
-}
 
-
-@Composable
-fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel) {
-    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    val slideDistance = rememberSlideDistance()
-    val bottomBarVisibleState = remember { mutableStateOf(true) }
-    val currentBSE by navController.currentBackStackEntryAsState()
-    val currentRoute = currentBSE?.destination?.route
-    val focusRequester = remember { FocusRequester() }
-    val keyboard = LocalSoftwareKeyboardController.current
-
-    BreadboardTheme {
-        Surface {
-            Scaffold(
-                bottomBar = {
-                    AnimatedVisibility(
-                        visible = listOf("home", "settings", "favourite_images").contains(currentRoute)
-                            && bottomBarVisibleState.value,
-                        enter = expandVertically { 0 },
-                        exit = shrinkVertically { 0 }
-                    ) {
-                        NavigationBar {
-                            NavigationBarItem(
-                                label = { Text("Search") },
-                                selected = currentRoute == "home" || "searchResults" in currentRoute!!,
-                                icon = {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Search, // Outlined and Filled search are the same
-                                        contentDescription = "Search"
-                                    )
-                                },
-                                onClick = {
-                                    if (currentRoute != "home") {
-                                        navController.navigate("home") {
-                                            popUpTo("home") { inclusive = true }
-                                        }
-                                    } else {
-                                        focusRequester.requestFocus()
-                                        keyboard?.show() /* Not technically necessary but allows the keyboard to appear
-                                                            again if the user taps away while the search bar is still
-                                                            focused */
-                                    }
-                                }
-                            )
-                            NavigationBarItem(
-                                label = { Text("Favourites") },
-                                selected = currentRoute == "favourite_images",
-                                icon = {
-                                    Icon(
-                                        painter = painterResource(
-                                            if (currentRoute != "favourite_images") R.drawable.ic_star_hollow
-                                            else R.drawable.ic_star_filled
-                                        ),
-                                        contentDescription = "Favourite images"
-                                    )
-                                },
-                                onClick = {
-                                    if (currentRoute != "favourite_images") {
-                                        navController.navigate("favourite_images") {
-                                            popUpTo("favourite_images") { inclusive = true }
-                                        }
-                                    }
-                                }
-                            )
-                            NavigationBarItem(
-                                label = { Text("Settings") },
-                                selected = currentRoute == "settings",
-                                icon = {
-                                    Icon(
-                                        imageVector = if (currentRoute != "settings") Icons.Outlined.Settings
-                                        else Icons.Filled.Settings,
-                                        contentDescription = "Settings"
-                                    )
-                                },
-                                onClick = {
-                                    if (currentRoute != "settings") {
-                                        navController.navigate("settings") {
-                                            popUpTo("settings") { inclusive = true }
-                                        }
-                                    }
-                                }
-                            )
-                        }
-                    }
-                }
-            ) {
-                NavHost(
-                    modifier = Modifier.padding(it.withoutVertical()),
-                    navController = navController,
-                    startDestination = "home",
-                    enterTransition = {
-                        if (targetState.destination.route?.startsWith("searchResults") == true)
-                            materialSharedAxisXIn(!isRtl, slideDistance)
-                        else fadeIn()
-                    },
-                    exitTransition = {
-                        if (targetState.destination.route?.startsWith("searchResults") == true)
-                            materialSharedAxisXOut(!isRtl, slideDistance)
-                        else fadeOut()
-                    },
-                    popEnterTransition = {
-                        if (initialState.destination.route?.startsWith("searchResults") == true)
-                            materialSharedAxisXIn(isRtl, slideDistance)
-                        else fadeIn()
-                    },
-                    popExitTransition = {
-                        if (initialState.destination.route?.startsWith("searchResults") == true)
-                            materialSharedAxisXOut(isRtl, slideDistance)
-                        else fadeOut()
+    if (showSourceChangeDialog) {
+        val data = sourceChangeDialogData!!
+        AlertDialog(
+            onDismissRequest = { showSourceChangeDialog = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        data.onConfirm()
+                        showSourceChangeDialog = false
                     }
                 ) {
-                    composable("home") { HomeScreen(navController, focusRequester, viewModel) }
-                    composable(
-                        route = "searchResults?query={searchQuery}",
-                        arguments = listOf(navArgument("searchQuery") { NavType.StringType })
-                    ) { navBackStackEntry ->
-                        SearchResults(
-                            navController,
-                            navBackStackEntry.arguments?.getString("searchQuery") ?: ""
-                        )
-                    }
-                    composable("settings") { PreferencesScreen(viewModel) }
-                    composable("favourite_images") { FavouritesPage(bottomBarVisibleState) }
+                    Text("Okay")
                 }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSourceChangeDialog = false }) {
+                    Text("Cancel")
+                }
+            },
+            title = { Text("Change image source") },
+            text = {
+                Text(
+                    text = "Changing image source will clear your search tags. " +
+                           "Are you sure you want to change the source from " +
+                           "${data.from.description} to ${data.to.description}?"
+                )
             }
-        }
+        )
     }
 }
 

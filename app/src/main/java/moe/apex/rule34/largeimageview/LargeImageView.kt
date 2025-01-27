@@ -67,7 +67,6 @@ import moe.apex.rule34.preferences.DataSaver
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.prefs
 import moe.apex.rule34.util.showToast
-import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.util.FullscreenLoadingSpinner
 import moe.apex.rule34.util.MustSetLocation
 import moe.apex.rule34.util.NAV_BAR_HEIGHT
@@ -185,177 +184,175 @@ fun LargeImageView(
         )
     }
 
-    BreadboardTheme {
-        if (storageLocationPromptLaunched.value) {
-            SaveDirectorySelection(storageLocationPromptLaunched)
-        }
+    if (storageLocationPromptLaunched.value) {
+        SaveDirectorySelection(storageLocationPromptLaunched)
+    }
 
-        Scaffold(
-            modifier = Modifier.offset { IntOffset(y = offset.roundToPx(), x = 0) },
-            bottomBar = {
-                AnimatedVisibility(
-                    visible = ((zoomState.zoomFraction ?: 0f) < 0.15f) || forciblyShowBottomBar,
-                    enter = slideInVertically(initialOffsetY = { it }),
-                    exit = slideOutVertically(targetOffsetY = { it })
-                ) {
-                    BottomAppBar(
-                        actions = {
-                            IconButton(
-                                onClick = { currentImage.toggleHd() },
-                                modifier = Modifier.padding(start = 4.dp)
-                            ) {
-                                val vectorIcon = if (currentImage.preferHd) {
-                                    R.drawable.ic_hd_enabled
-                                } else {
-                                    R.drawable.ic_hd_disabled
-                                }
-                                Icon(
-                                    painter = painterResource(vectorIcon),
-                                    contentDescription = "Toggle HD",
-                                    modifier = Modifier.scale(1.2F)
-                                )
-                            }
-                            if (favouriteImages.any { it.fileName == currentImage.fileName && it.imageSource == currentImage.imageSource }) {
-                                IconButton(onClick = {
-                                    scope.launch {
-                                        context.prefs.removeFavouriteImage(currentImage)
-                                        showToast(context, "Removed from your favourites")
-                                    }
-                                }) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_star_filled),
-                                        contentDescription = "Remove from favourites"
-                                    )
-                                }
+    Scaffold(
+        modifier = Modifier.offset { IntOffset(y = offset.roundToPx(), x = 0) },
+        bottomBar = {
+            AnimatedVisibility(
+                visible = ((zoomState.zoomFraction ?: 0f) < 0.15f) || forciblyShowBottomBar,
+                enter = slideInVertically(initialOffsetY = { it }),
+                exit = slideOutVertically(targetOffsetY = { it })
+            ) {
+                BottomAppBar(
+                    actions = {
+                        IconButton(
+                            onClick = { currentImage.toggleHd() },
+                            modifier = Modifier.padding(start = 4.dp)
+                        ) {
+                            val vectorIcon = if (currentImage.preferHd) {
+                                R.drawable.ic_hd_enabled
                             } else {
-                                IconButton(onClick = {
-                                    scope.launch {
-                                        context.prefs.addFavouriteImage(currentImage)
-                                        showToast(context, "Added to your favourites")
-                                    }
-                                }) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_star_hollow),
-                                        contentDescription = "Add to favourites"
-                                    )
-                                }
+                                R.drawable.ic_hd_disabled
                             }
-                            IconButton(
-                                onClick = {
-                                    val sendIntent: Intent = Intent().apply {
-                                        action = Intent.ACTION_SEND
-                                        putExtra(Intent.EXTRA_TEXT, currentImage.highestQualityFormatUrl)
-                                        type = "text/plain"
-                                    }
-                                    val shareIntent = Intent.createChooser(sendIntent, null)
-                                    context.startActivity(shareIntent)
+                            Icon(
+                                painter = painterResource(vectorIcon),
+                                contentDescription = "Toggle HD",
+                                modifier = Modifier.scale(1.2F)
+                            )
+                        }
+                        if (favouriteImages.any { it.fileName == currentImage.fileName && it.imageSource == currentImage.imageSource }) {
+                            IconButton(onClick = {
+                                scope.launch {
+                                    context.prefs.removeFavouriteImage(currentImage)
+                                    showToast(context, "Removed from your favourites")
                                 }
-                            ) {
+                            }) {
                                 Icon(
-                                    Icons.Filled.Share,
-                                    "Share"
+                                    painter = painterResource(R.drawable.ic_star_filled),
+                                    contentDescription = "Remove from favourites"
                                 )
                             }
-                            if (currentImage.metadata != null) {
-                                IconButton(
-                                    onClick = { popupVisibilityState.value = true }
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Info,
-                                        contentDescription = "Info"
-                                    )
+                        } else {
+                            IconButton(onClick = {
+                                scope.launch {
+                                    context.prefs.addFavouriteImage(currentImage)
+                                    showToast(context, "Added to your favourites")
                                 }
-                            }
-                        },
-                        floatingActionButton = {
-                            FloatingActionButton(
-                                onClick = {
-                                    if (!isDownloading) {
-                                        scope.launch {
-                                            isDownloading = true
-                                            val result: Result<Boolean> = downloadImage(
-                                                context,
-                                                currentImage,
-                                                storageLocation
-                                            )
-
-                                            if (result.isSuccess) {
-                                                showToast(context, "Image saved.")
-                                            } else {
-                                                val exc = result.exceptionOrNull()!!
-                                                exc.printStackTrace()
-
-                                                if (exc is MustSetLocation) {
-                                                    storageLocationPromptLaunched.value = true
-                                                }
-                                                showToast(context, exc.message ?: "Unknown error")
-                                                Log.e("Downloader", exc.message ?: "Error downloading image", exc)
-                                            }
-                                            isDownloading = false
-                                        }
-                                    }
-                                },
-                                elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
-                            ) {
-                                if (isDownloading) {
-                                    CircularProgressIndicator(Modifier.scale(0.5F))
-                                }
-                                else {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_download),
-                                        contentDescription = "Save"
-                                    )
-                                }
+                            }) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_star_hollow),
+                                    contentDescription = "Add to favourites"
+                                )
                             }
                         }
+                        IconButton(
+                            onClick = {
+                                val sendIntent: Intent = Intent().apply {
+                                    action = Intent.ACTION_SEND
+                                    putExtra(Intent.EXTRA_TEXT, currentImage.highestQualityFormatUrl)
+                                    type = "text/plain"
+                                }
+                                val shareIntent = Intent.createChooser(sendIntent, null)
+                                context.startActivity(shareIntent)
+                            }
+                        ) {
+                            Icon(
+                                Icons.Filled.Share,
+                                "Share"
+                            )
+                        }
+                        if (currentImage.metadata != null) {
+                            IconButton(
+                                onClick = { popupVisibilityState.value = true }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Info,
+                                    contentDescription = "Info"
+                                )
+                            }
+                        }
+                    },
+                    floatingActionButton = {
+                        FloatingActionButton(
+                            onClick = {
+                                if (!isDownloading) {
+                                    scope.launch {
+                                        isDownloading = true
+                                        val result: Result<Boolean> = downloadImage(
+                                            context,
+                                            currentImage,
+                                            storageLocation
+                                        )
+
+                                        if (result.isSuccess) {
+                                            showToast(context, "Image saved.")
+                                        } else {
+                                            val exc = result.exceptionOrNull()!!
+                                            exc.printStackTrace()
+
+                                            if (exc is MustSetLocation) {
+                                                storageLocationPromptLaunched.value = true
+                                            }
+                                            showToast(context, exc.message ?: "Unknown error")
+                                            Log.e("Downloader", exc.message ?: "Error downloading image", exc)
+                                        }
+                                        isDownloading = false
+                                    }
+                                }
+                            },
+                            elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
+                        ) {
+                            if (isDownloading) {
+                                CircularProgressIndicator(Modifier.scale(0.5F))
+                            }
+                            else {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_download),
+                                    contentDescription = "Save"
+                                )
+                            }
+                        }
+                    }
+                )
+            }
+        }
+    ) {
+        HorizontalPager(
+            state = pagerState,
+            userScrollEnabled = canChangePage,
+            beyondViewportPageCount = 1
+        ) { index ->
+            val imageAtIndex = allImages[index]
+
+            if (imageAtIndex.hdQualityOverride == null) {
+                when (dataSaver) {
+                    DataSaver.ON -> imageAtIndex.preferHd = false
+                    DataSaver.OFF -> imageAtIndex.preferHd = true
+                    DataSaver.AUTO -> imageAtIndex.preferHd = isUsingWifi
+                }
+            }
+
+            Box(Modifier.zoomable(
+                zoomState,
+                onClick = {
+                    forciblyShowBottomBar = !forciblyShowBottomBar
+                }
+            )) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .systemBarsPadding()
+                        .padding(bottom = NAV_BAR_HEIGHT.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    LargeImage(
+                        imageUrl = if (imageAtIndex.preferHd) imageAtIndex.highestQualityFormatUrl
+                                   else imageAtIndex.sampleUrl,
+                        previewImageUrl = imageAtIndex.previewUrl,
+                        aspectRatio = imageAtIndex.aspectRatio
                     )
                 }
             }
-        ) {
-            HorizontalPager(
-                state = pagerState,
-                userScrollEnabled = canChangePage,
-                beyondViewportPageCount = 1
-            ) { index ->
-                val imageAtIndex = allImages[index]
+        }
 
-                if (imageAtIndex.hdQualityOverride == null) {
-                    when (dataSaver) {
-                        DataSaver.ON -> imageAtIndex.preferHd = false
-                        DataSaver.OFF -> imageAtIndex.preferHd = true
-                        DataSaver.AUTO -> imageAtIndex.preferHd = isUsingWifi
-                    }
-                }
-
-                Box(Modifier.zoomable(
-                    zoomState,
-                    onClick = {
-                        forciblyShowBottomBar = !forciblyShowBottomBar
-                    }
-                )) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .systemBarsPadding()
-                            .padding(bottom = NAV_BAR_HEIGHT.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        LargeImage(
-                            imageUrl = if (imageAtIndex.preferHd) imageAtIndex.highestQualityFormatUrl
-                                       else imageAtIndex.sampleUrl,
-                            previewImageUrl = imageAtIndex.previewUrl,
-                            aspectRatio = imageAtIndex.aspectRatio
-                        )
-                    }
-                }
-            }
-
-            val isZoomedOut = (zoomState.zoomFraction ?: 0f) < 0.15f
-            // Disable page changing while zoomed in and reset bottom bar state
-            LaunchedEffect(isZoomedOut) {
-                canChangePage = isZoomedOut
-                forciblyShowBottomBar = false
-            }
+        val isZoomedOut = (zoomState.zoomFraction ?: 0f) < 0.15f
+        // Disable page changing while zoomed in and reset bottom bar state
+        LaunchedEffect(isZoomedOut) {
+            canChangePage = isZoomedOut
+            forciblyShowBottomBar = false
         }
     }
 }
