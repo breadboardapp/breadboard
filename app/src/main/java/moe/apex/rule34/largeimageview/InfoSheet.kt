@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -177,8 +178,10 @@ private fun PaddedUrlText(text: String) {
         }
     }
 
-    Text(
-        text = annotatedString,
-        modifier = Modifier.padding(horizontal = 16.dp)
-    )
+    SelectionContainer {
+        Text(
+            text = annotatedString,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+    }
 }
