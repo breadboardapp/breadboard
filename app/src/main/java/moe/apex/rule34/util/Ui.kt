@@ -39,6 +39,7 @@ import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ClipboardManager
@@ -113,11 +114,13 @@ fun AnimatedVisibilityLargeImageView(
         enter = slideInVertically(initialOffsetY = { it }),
         exit = slideOutVertically(targetOffsetY = { it })
     ) {
-        LargeImageView(
-            shouldShowLargeImage,
-            initialPage,
-            allImages
-        )
+        key(initialPage) {
+            LargeImageView(
+                shouldShowLargeImage,
+                initialPage,
+                allImages
+            )
+        }
     }
 }
 
