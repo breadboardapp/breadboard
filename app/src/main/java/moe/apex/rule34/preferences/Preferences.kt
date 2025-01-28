@@ -259,6 +259,18 @@ fun PreferencesScreen(viewModel: BreadboardViewModel) {
                 }
             )
             SwitchPref(
+                checked = currentSettings.saveSearchHistory,
+                title = "Save search history",
+                summary = "Save your 10 most recent searches. When this is disabled, your " +
+                          "search history will be cleared and Breadboard will not save future " +
+                          "searches."
+            ) {
+                scope.launch {
+                    if (!it) preferencesRepository.clearSearchHistory()
+                    preferencesRepository.updateSaveSearchHistory(it)
+                }
+            }
+            SwitchPref(
                 checked = currentSettings.excludeAi,
                 title = "Hide AI-generated images",
                 summary = "Attempt to remove AI-generated images by excluding the " +

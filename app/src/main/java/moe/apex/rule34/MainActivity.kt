@@ -21,15 +21,22 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -40,6 +47,7 @@ import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.sharp.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -49,11 +57,13 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -64,6 +74,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -78,6 +89,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.preferencesDataStore
@@ -97,6 +109,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import moe.apex.rule34.history.SearchHistoryEntry
 import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.navigation.Navigation
 import moe.apex.rule34.navigation.Results
@@ -109,6 +122,8 @@ import moe.apex.rule34.util.CHIP_SPACING
 import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.NAV_BAR_HEIGHT
+import moe.apex.rule34.util.NavBarHeightVerticalSpacer
+import moe.apex.rule34.util.SearchHistoryListItem
 import moe.apex.rule34.util.VerticalSpacer
 import moe.apex.rule34.util.availableRatingsForCurrentSource
 import moe.apex.rule34.util.availableRatingsForSource
@@ -117,6 +132,7 @@ import moe.apex.rule34.util.pluralise
 import moe.apex.rule34.util.showToast
 import moe.apex.rule34.viewmodel.BreadboardViewModel
 import moe.apex.rule34.viewmodel.getIndexByName
+import java.util.Date
 
 
 val Context.dataStore by preferencesDataStore("preferences")
@@ -170,11 +186,14 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
     var cleanedSearchString by remember { mutableStateOf("") }
     val mostRecentSuggestions = remember { mutableStateListOf<TagSuggestion>() }
     var forciblyAllowedAi by remember { mutableStateOf(false) }
-    var showRatingFilter by remember { mutableStateOf(false) }
-    val chevronRotation by animateFloatAsState(if (showRatingFilter) 180f else 0f)
+
+    var showSearchHistoryPopup by rememberSaveable { mutableStateOf(false) }
     var showSourceChangeDialog by remember { mutableStateOf(false) }
     var sourceChangeDialogData by remember { mutableStateOf<SourceDialogData?>(null) }
+    var showSourceRatingBox by rememberSaveable { mutableStateOf(false) }
+    val chevronRotation by animateFloatAsState(if (showSourceRatingBox) 180f else 0f)
 
+    val historySheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
     val prefs = LocalPreferences.current
@@ -317,6 +336,18 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
         } else if (!danbooruLimitCheck())
             return
         else {
+            if (prefs.saveSearchHistory) {
+                scope.launch {
+                    context.prefs.addSearchHistoryEntry(
+                        SearchHistoryEntry(
+                            timestamp = Date().time,
+                            source = prefs.imageSource,
+                            tags = tagChipList.toSet(),
+                            ratings = prefs.ratingsFilter.toSet()
+                        )
+                    )
+                }
+            }
             val searchTags = currentSource.site.formatTagString(tagChipList)
             val ratingsFilter = if (prefs.filterRatingsLocally) ""
                                 else ImageRating.buildSearchStringFor(prefs.ratingsFilter)
@@ -351,7 +382,16 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
         }
     }
 
-    MainScreenScaffold("Breadboard") { padding ->
+    MainScreenScaffold(
+        title = "Breadboard",
+        additionalActions = { if (prefs.saveSearchHistory) {
+            IconButton(
+                onClick = { showSearchHistoryPopup = true }
+            ) {
+                Icon(painter = painterResource(R.drawable.ic_history), contentDescription = "Search history")
+            }
+        } }
+    ) { padding ->
         Column(Modifier.padding(padding)) {
             Row(
                 modifier = Modifier
@@ -424,7 +464,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                         }
                         IconButton(
                             modifier = Modifier.rotate(chevronRotation),
-                            onClick = { showRatingFilter = !showRatingFilter }
+                            onClick = { showSourceRatingBox = !showSourceRatingBox }
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.KeyboardArrowDown,
@@ -450,11 +490,11 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
 
             VerticalSpacer()
 
-            AnimatedVisibility(showRatingFilter) {
+            AnimatedVisibility(showSourceRatingBox) {
                 var opacity by remember { mutableFloatStateOf(1f) }
                 var scale by remember { mutableFloatStateOf(1f) }
-                LaunchedEffect(showRatingFilter) {
-                    if (showRatingFilter) {
+                LaunchedEffect(showSourceRatingBox) {
+                    if (showSourceRatingBox) {
                         opacity = 1f
                         scale = 1f
                     }
@@ -465,7 +505,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                             opacity = (1 - backEvent.progress * 5).coerceAtLeast(0f)
                             scale = 1 - (backEvent.progress / 2)
                         }
-                       showRatingFilter = false
+                       showSourceRatingBox = false
                     }
                     catch(_: Exception) { }
                 }
@@ -600,6 +640,54 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                 )
             }
         )
+    }
+
+    if (showSearchHistoryPopup) {
+        ModalBottomSheet(
+            modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars),
+            onDismissRequest = { showSearchHistoryPopup = false },
+            sheetState = historySheetState,
+            contentWindowInsets = { BottomSheetDefaults.windowInsets.only(WindowInsetsSides.Horizontal) }
+        ) {
+            Text(
+                text = "Search history",
+                style = MaterialTheme.typography.titleLarge,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            )
+            VerticalSpacer()
+            LazyColumn(
+                modifier = Modifier.animateContentSize(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                if (prefs.searchHistory.isEmpty()) {
+                   item {
+                       Text(
+                           text  = "Nothing to see here.",
+                           modifier = Modifier.padding(horizontal = 16.dp)
+                       )
+                   }
+                } else {
+                    items(prefs.searchHistory.reversed(), key = { it.timestamp }) {
+                        SearchHistoryListItem(item = it) {
+                            tagChipList.clear()
+                            tagChipList.addAll(it.tags)
+                            searchString = ""
+                            shouldShowSuggestions = false
+                            scope.launch {
+                                context.prefs.updateImageSource(it.source)
+                                context.prefs.updateRatingsFilter(it.ratings)
+                                historySheetState.hide()
+                                showSearchHistoryPopup = false
+                            }
+                        }
+                    }
+                }
+                item { NavBarHeightVerticalSpacer() }
+            }
+        }
     }
 }
 

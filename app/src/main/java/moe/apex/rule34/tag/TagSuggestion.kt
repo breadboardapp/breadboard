@@ -1,7 +1,9 @@
 package moe.apex.rule34.tag
 
+import kotlinx.serialization.Serializable
 import java.util.Objects
 
+@Serializable
 class TagSuggestion(
     val label: String,
     val value: String,

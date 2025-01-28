@@ -23,6 +23,8 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.cbor.Cbor
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToByteArray
+import moe.apex.rule34.history.SearchHistoryEntry
+import moe.apex.rule34.history.encodeToByteArray
 import moe.apex.rule34.image.Danbooru
 import moe.apex.rule34.image.Gelbooru
 import moe.apex.rule34.image.Image
@@ -32,6 +34,7 @@ import moe.apex.rule34.image.Rule34
 import moe.apex.rule34.image.Safebooru
 import moe.apex.rule34.image.Yandere
 import moe.apex.rule34.tag.TagCategory
+import moe.apex.rule34.util.availableRatingsForSource
 import moe.apex.rule34.util.extractPixivId
 import java.io.IOException
 
@@ -58,6 +61,8 @@ data object PrefNames {
     const val FAVOURITES_RATING_FILTER = "favourites_rating_filter"
     const val FILTER_RATINGS_LOCALLY = "filter_ratings_locally"
     const val USE_STAGGERED_GRID = "use_staggered_grid"
+    const val SAVE_SEARCH_HISTORY = "save_search_history"
+    const val SEARCH_HISTORY = "search_history"
 }
 
 
@@ -79,21 +84,25 @@ data class Prefs(
     val ratingsFilter: List<ImageRating>,
     val favouritesRatingsFilter: List<ImageRating>,
     val filterRatingsLocally: Boolean,
-    val useStaggeredGrid: Boolean
+    val useStaggeredGrid: Boolean,
+    val saveSearchHistory: Boolean,
+    val searchHistory: List<SearchHistoryEntry>
 ) {
     companion object {
         val DEFAULT = Prefs(
-            DataSaver.AUTO,
-            Uri.EMPTY,
-            emptyList(),
-            false,
-            ImageSource.SAFEBOORU,
-            ImageSource.entries.toList(),
-            0, // We'll update this later
-            listOf(ImageRating.SAFE),
-            listOf(ImageRating.SAFE),
-            true,
-            false,
+            dataSaver = DataSaver.AUTO,
+            storageLocation = Uri.EMPTY,
+            favouriteImages = emptyList(),
+            excludeAi = false,
+            imageSource = ImageSource.SAFEBOORU,
+            favouritesFilter = ImageSource.entries.toList(),
+            lastUsedVersionCode = 0, // We'll update this later
+            ratingsFilter = listOf(ImageRating.SAFE),
+            favouritesRatingsFilter = listOf(ImageRating.SAFE),
+            filterRatingsLocally = true,
+            useStaggeredGrid = false,
+            saveSearchHistory = true,
+            searchHistory = emptyList(),
         )
     }
 }
@@ -112,6 +121,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val FAVOURITES_RATING_FILTER = stringSetPreferencesKey(PrefNames.FAVOURITES_RATING_FILTER)
         val FILTER_RATINGS_LOCALLY = booleanPreferencesKey(PrefNames.FILTER_RATINGS_LOCALLY)
         val USE_STAGGERED_GRID = booleanPreferencesKey(PrefNames.USE_STAGGERED_GRID)
+        val SAVE_SEARCH_HISTORY = booleanPreferencesKey(PrefNames.SAVE_SEARCH_HISTORY)
+        val SEARCH_HISTORY = byteArrayPreferencesKey(PrefNames.SEARCH_HISTORY)
     }
 
     val getPreferences: Flow<Prefs> = dataStore.data
@@ -273,7 +284,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         }
     }
 
-    private suspend fun updateRatingsFilter(to: Set<ImageRating>) {
+    suspend fun updateRatingsFilter(to: Set<ImageRating>) {
         dataStore.edit { preferences ->
             preferences[PreferenceKeys.RATINGS_FILTER] = to.mapTo(mutableSetOf()) { it.name }
         }
@@ -317,6 +328,48 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         }
     }
 
+    suspend fun updateSaveSearchHistory(to: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferenceKeys.SAVE_SEARCH_HISTORY] = to
+        }
+    }
+
+    private suspend fun updateSearchHistory(to: List<SearchHistoryEntry>) {
+        dataStore.edit { preferences ->
+            preferences[PreferenceKeys.SEARCH_HISTORY] = to.encodeToByteArray()
+        }
+    }
+
+    suspend fun addSearchHistoryEntry(entry: SearchHistoryEntry) {
+        val history = getPreferences.first().searchHistory.toMutableList().apply {
+            val existing = find { it.source == entry.source && it.tags == entry.tags }
+            if (existing != null) {
+                /* Since not all ratings are available for all sources, we should only check the
+                   ones that are available when determining whether a search history entry is a
+                   duplicate and an existing one should be removed. */
+                val validRatings = availableRatingsForSource(entry.source)
+                if (existing.ratings.filter { it in validRatings } == entry.ratings.filter { it in validRatings })
+                    remove(existing)
+            }
+            add(entry)
+            if (size > 10) removeAt(0)
+        }
+        updateSearchHistory(history)
+    }
+
+
+
+    suspend fun removeSearchHistoryEntry(entry: SearchHistoryEntry) {
+        val history = getPreferences.first().searchHistory.toMutableList().apply {
+            removeIf { it == entry }
+        }
+        updateSearchHistory(history)
+    }
+
+    suspend fun clearSearchHistory() {
+        updateSearchHistory(emptyList())
+    }
+
 
     @OptIn(ExperimentalSerializationApi::class)
     private fun mapUserPreferences(preferences: Preferences): Prefs {
@@ -344,6 +397,11 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val useStaggeredGrid = (
             preferences[PreferenceKeys.USE_STAGGERED_GRID] ?: false
         )
+        val saveSearchHistory = (
+            preferences[PreferenceKeys.SAVE_SEARCH_HISTORY] ?: true
+        )
+        val searchHistoryRaw = preferences[PreferenceKeys.SEARCH_HISTORY]
+        val searchHistory: List<SearchHistoryEntry> = searchHistoryRaw?.let { Cbor.decodeFromByteArray(it) } ?: emptyList()
 
         return Prefs(
             dataSaver,
@@ -357,6 +415,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             favouritesRatingFilter,
             filterRatingsLocally,
             useStaggeredGrid,
+            saveSearchHistory,
+            searchHistory
         )
     }
 
