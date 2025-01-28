@@ -11,6 +11,11 @@ on:
       - opened
       - synchronize
 
+permissions:
+  pull-requests: write
+  issues: write
+  contents: read
+
 jobs:
   build:
     name: Build Debug APK
