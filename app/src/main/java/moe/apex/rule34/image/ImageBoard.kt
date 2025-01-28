@@ -49,6 +49,10 @@ interface ImageBoard {
         return suggestions.toList()
     }
 
+    fun parseImage(e: JSONObject): Image?
+
+    fun loadImage(postId: String): Image?
+
     fun loadPage(tags: String, page: Int): List<Image>
 
     fun formatTagString(tags: List<TagSuggestion>): String {
@@ -60,11 +64,42 @@ interface ImageBoard {
 
 
 interface GelbooruBasedImageBoard : ImageBoard {
-    fun loadPage(tags: String, page: Int, source: ImageSource, postListKey: String? = null): List<Image> {
-        val body = RequestUtil.get(imageSearchUrl.format(tags, page)).get()
+    fun parseImage(e: JSONObject, imageSource: ImageSource): Image? {
+        val (fileName, fileFormat) = e.getString("image").split('.', limit = 2)
+        val fileUrl = e.getString("file_url")
+        val sampleUrl = e.optString("sample_url", "")
+        val previewUrl = e.getString("preview_url")
+        val imageWidth = e.optInt("width", 1)
+        val imageHeight = e.optInt("height", 1)
+        val aspectRatio = imageWidth.toFloat() / imageHeight.toFloat()
 
-        if (body.isEmpty())
-            return emptyList()
+        if (fileFormat != "jpeg" && fileFormat != "jpg" && fileFormat != "png" && fileFormat != "gif")
+            return null
+
+        val metaSource = e.getString("source").takeIf { it.isNotEmpty() }
+        val metaGroupedTags = listOf(
+            TagCategory.GENERAL.group(e.getString("tags").split(" ")),
+        )
+        val metaRating = getRatingFromString(e.getString("rating"))
+        val metaPixivId = extractPixivId(metaSource)
+        val metadata = ImageMetadata(
+            source = metaSource,
+            groupedTags = metaGroupedTags,
+            rating = metaRating,
+            pixivId = metaPixivId,
+        )
+
+        return Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, imageSource, aspectRatio, metadata)
+    }
+
+    fun loadImage(postId: String, postListKey: String?, imageSource: ImageSource): Image? {
+        val parsedPostId = postId.toIntOrNull() ?: return null
+        return loadPage("id:$parsedPostId", 0, postListKey, imageSource).getOrNull(0)
+    }
+
+    fun loadPage(tags: String, page: Int, postListKey: String?, imageSource: ImageSource): List<Image> {
+        val body = RequestUtil.get(imageSearchUrl.format(tags, page)).get()
+        if (body.isEmpty()) return emptyList()
 
         val posts: JSONArray
 
@@ -83,34 +118,7 @@ interface GelbooruBasedImageBoard : ImageBoard {
 
         for (i in 0 until posts.length()) {
             val e = posts.getJSONObject(i)
-
-            val (fileName, fileFormat) = e.getString("image").split('.', limit = 2)
-            val fileUrl = e.getString("file_url")
-            val sampleUrl = e.optString("sample_url", "")
-            val previewUrl = e.getString("preview_url")
-            val imageWidth = e.optInt("width", 1)
-            val imageHeight = e.optInt("height", 1)
-            val aspectRatio = imageWidth.toFloat() / imageHeight.toFloat()
-
-            if (fileFormat != "jpeg" && fileFormat != "jpg" && fileFormat != "png" && fileFormat != "gif")
-                continue
-
-            val metaSource = e.getString("source").takeIf { it.isNotEmpty() }
-            val metaGroupedTags = listOf(
-                TagCategory.GENERAL.group(e.getString("tags").split(" ")),
-            )
-            val metaRating = getRatingFromString(e.getString("rating"))
-            val metaPixivId = extractPixivId(metaSource)
-            val metadata = ImageMetadata(
-                source = metaSource,
-                groupedTags = metaGroupedTags,
-                rating = metaRating,
-                pixivId = metaPixivId,
-            )
-
-            images.add(
-                Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, source, aspectRatio, metadata),
-            )
+            parseImage(e)?.let { images.add(it) }
         }
 
         return images
@@ -136,8 +144,16 @@ object Rule34 : GelbooruBasedImageBoard {
     override val imageSearchUrl = "${baseUrl}index.php?page=dapi&json=1&s=post&q=index&limit=100&tags=%s&pid=%d"
     override val aiTagName = "ai_generated"
 
+    override fun parseImage(e: JSONObject): Image? {
+        return parseImage(e, ImageSource.R34)
+    }
+
+    override fun loadImage(postId: String): Image? {
+        return loadImage(postId, null, ImageSource.R34)
+    }
+
     override fun loadPage(tags: String, page: Int): List<Image> {
-        return loadPage(tags, page, ImageSource.R34)
+        return loadPage(tags, page, null, ImageSource.R34)
     }
 }
 
@@ -149,8 +165,16 @@ object Safebooru : GelbooruBasedImageBoard {
     override val imageSearchUrl = "${baseUrl}index.php?page=dapi&json=1&s=post&q=index&limit=100&tags=%s&pid=%d"
     override val aiTagName = "ai-generated"
 
+    override fun parseImage(e: JSONObject): Image? {
+        return parseImage(e, ImageSource.SAFEBOORU)
+    }
+
+    override fun loadImage(postId: String): Image? {
+        return loadImage(postId, null, ImageSource.SAFEBOORU)
+    }
+
     override fun loadPage(tags: String, page: Int): List<Image> {
-        return loadPage(tags, page, ImageSource.SAFEBOORU)
+        return loadPage(tags, page, null, ImageSource.SAFEBOORU)
     }
 }
 
@@ -162,8 +186,16 @@ object Gelbooru : GelbooruBasedImageBoard {
     override val imageSearchUrl = "${baseUrl}index.php?page=dapi&json=1&s=post&q=index&limit=100&tags=%s&pid=%d"
     override val aiTagName = "ai-generated"
 
+    override fun parseImage(e: JSONObject): Image? {
+        return parseImage(e, ImageSource.GELBOORU)
+    }
+
+    override fun loadImage(postId: String): Image? {
+        return loadImage(postId, "post", ImageSource.GELBOORU)
+    }
+
     override fun loadPage(tags: String, page: Int): List<Image> {
-        return loadPage(tags, page, ImageSource.GELBOORU, "post")
+        return loadPage(tags, page, "post", ImageSource.GELBOORU)
     }
 }
 
@@ -182,59 +214,64 @@ object Danbooru : ImageBoard {
     override val aiTagName = "ai-generated"
     override val firstPageIndex = 1
 
+    override fun parseImage(e: JSONObject): Image? {
+        if (e.isNull("md5")) return null
+
+        val fileName = e.getString("md5")
+        val fileFormat = e.getString("file_ext")
+        val fileUrl = e.getString("file_url")
+        val sampleUrl = e.optString("large_file_url", "")
+        val previewUrl = e.getString("preview_file_url")
+        val imageWidth = e.optInt("image_width", 1)
+        val imageHeight = e.optInt("image_height", 1)
+        val aspectRatio = imageWidth.toFloat() / imageHeight.toFloat()
+
+        if (fileFormat != "jpeg" && fileFormat != "jpg" && fileFormat != "png" && fileFormat != "gif")
+            return null
+
+        val tagStringArtist = e.getString("tag_string_artist")
+        val tagCharacter = e.getString("tag_string_character").split(" ")
+        val tagCopyright = e.getString("tag_string_copyright").split(" ")
+        val tagGeneral = e.getString("tag_string_general").split(" ")
+        val tagMeta = e.getString("tag_string_meta").split(" ")
+
+        val metaSource = e.getString("source").takeIf { it.isNotEmpty() }
+        val metaArtist = tagStringArtist.takeIf { it.isNotEmpty() }
+        val metaGroupedTags = listOf(
+            TagCategory.CHARACTER.group(tagCharacter),
+            TagCategory.COPYRIGHT.group(tagCopyright),
+            TagCategory.GENERAL.group(tagGeneral),
+            TagCategory.META.group(tagMeta),
+        )
+            .filter { it.tags.isNotEmpty() }
+        val metaRating = getRatingFromString(e.getString("rating"))
+        val metaPixivId = e.optInt("pixiv_id").takeIf { it != 0 }
+        val metadata = ImageMetadata(
+            artist = metaArtist,
+            source = metaSource,
+            groupedTags = metaGroupedTags,
+            rating = metaRating,
+            pixivId = metaPixivId,
+        )
+
+        return Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.DANBOORU, aspectRatio, metadata)
+    }
+
+    override fun loadImage(postId: String): Image? {
+        val parsedPostId = postId.toIntOrNull() ?: return null
+        return loadPage("id:$parsedPostId", 0).getOrNull(0)
+    }
+
     override fun loadPage(tags: String, page: Int): List<Image> {
         val body = RequestUtil.get(imageSearchUrl.format(tags, page)).get()
-
-        if (body.isEmpty())
-            return emptyList()
+        if (body.isEmpty()) return emptyList()
 
         val json = JSONArray(body)
         val subjects = mutableListOf<Image>()
 
         for (i in 0 until json.length()) {
             val e = json.getJSONObject(i)
-            if (e.isNull("md5")) continue
-
-            val fileName = e.getString("md5")
-            val fileFormat = e.getString("file_ext")
-            val fileUrl = e.getString("file_url")
-            val sampleUrl = e.optString("large_file_url", "")
-            val previewUrl = e.getString("preview_file_url")
-            val imageWidth = e.optInt("image_width", 1)
-            val imageHeight = e.optInt("image_height", 1)
-            val aspectRatio = imageWidth.toFloat() / imageHeight.toFloat()
-
-            if (fileFormat != "jpeg" && fileFormat != "jpg" && fileFormat != "png" && fileFormat != "gif")
-                continue
-
-            val tagStringArtist = e.getString("tag_string_artist")
-            val tagCharacter = e.getString("tag_string_character").split(" ")
-            val tagCopyright = e.getString("tag_string_copyright").split(" ")
-            val tagGeneral = e.getString("tag_string_general").split(" ")
-            val tagMeta = e.getString("tag_string_meta").split(" ")
-
-            val metaSource = e.getString("source").takeIf { it.isNotEmpty() }
-            val metaArtist = tagStringArtist.takeIf { it.isNotEmpty() }
-            val metaGroupedTags = listOf(
-                    TagCategory.CHARACTER.group(tagCharacter),
-                    TagCategory.COPYRIGHT.group(tagCopyright),
-                    TagCategory.GENERAL.group(tagGeneral),
-                    TagCategory.META.group(tagMeta),
-                )
-                .filter { it.tags.isNotEmpty() }
-            val metaRating = getRatingFromString(e.getString("rating"))
-            val metaPixivId = e.optInt("pixiv_id").takeIf { it != 0 }
-            val metadata = ImageMetadata(
-                artist = metaArtist,
-                source = metaSource,
-                groupedTags = metaGroupedTags,
-                rating = metaRating,
-                pixivId = metaPixivId,
-            )
-
-            subjects.add(
-                Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.DANBOORU, aspectRatio, metadata),
-            )
+            parseImage(e)?.let { subjects.add(it) }
         }
 
         return subjects.toList()
@@ -264,50 +301,55 @@ object Yandere : ImageBoard {
         "6" to "faults",
     )
     override val imageSearchUrl = "${baseUrl}post.json?tags=%s&page=%d=limit=100"
-    override val aiTagName = "ai-generated" // Yande.re doesn't allow AI-generated images but this tag appears in search
+    override val aiTagName = "ai-generated" // Yande.re does not allow AI-generated images but this tag appears in search
     override val firstPageIndex = 1
+
+    override fun parseImage(e: JSONObject): Image? {
+        if (e.isNull("md5")) return null
+
+        val fileName = e.getString("md5")
+        val fileFormat = e.getString("file_ext")
+        val fileUrl = e.getString("file_url")
+        val sampleUrl = e.getString("sample_url")
+        val previewUrl = e.getString("preview_url")
+        val imageWidth = e.optInt("width", 1)
+        val imageHeight = e.optInt("height", 1)
+        val aspectRatio = imageWidth.toFloat() / imageHeight.toFloat()
+
+        if (fileFormat != "jpeg" && fileFormat != "jpg" && fileFormat != "png" && fileFormat != "gif")
+            return null
+
+        val metaSource = e.optString("source", "").takeIf { it.isNotEmpty() }
+        val metaGroupedTags = listOf(
+            TagCategory.GENERAL.group(e.getString("tags").split(" ")),
+        )
+        val metaRating = getRatingFromString(e.getString("rating"))
+        val metaPixivId = extractPixivId(metaSource)
+        val metadata = ImageMetadata(
+            source = metaSource,
+            groupedTags = metaGroupedTags,
+            rating = metaRating,
+            pixivId = metaPixivId,
+        )
+
+        return Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.YANDERE, aspectRatio, metadata)
+    }
+
+    override fun loadImage(postId: String): Image? {
+        val parsedPostId = postId.toIntOrNull() ?: return null
+        return loadPage("id:$parsedPostId", 0).getOrNull(0)
+    }
 
     override fun loadPage(tags: String, page: Int): List<Image> {
         val body = RequestUtil.get(imageSearchUrl.format(tags, page)).get()
-
-        if (body.isEmpty())
-            return emptyList()
+        if (body.isEmpty()) return emptyList()
 
         val json = JSONArray(body)
         val subjects = mutableListOf<Image>()
 
         for (i in 0 until json.length()) {
             val e = json.getJSONObject(i)
-            if (e.isNull("md5")) continue
-
-            val fileName = e.getString("md5")
-            val fileFormat = e.getString("file_ext")
-            val fileUrl = e.getString("file_url")
-            val sampleUrl = e.getString("sample_url")
-            val previewUrl = e.getString("preview_url")
-            val imageWidth = e.optInt("width", 1)
-            val imageHeight = e.optInt("height", 1)
-            val aspectRatio = imageWidth.toFloat() / imageHeight.toFloat()
-
-            if (fileFormat != "jpeg" && fileFormat != "jpg" && fileFormat != "png" && fileFormat != "gif")
-                continue
-
-            val metaSource = e.optString("source", "").takeIf { it.isNotEmpty() }
-            val metaGroupedTags = listOf(
-                TagCategory.GENERAL.group(e.getString("tags").split(" ")),
-            )
-            val metaRating = getRatingFromString(e.getString("rating"))
-            val metaPixivId = extractPixivId(metaSource)
-            val metadata = ImageMetadata(
-                source = metaSource,
-                groupedTags = metaGroupedTags,
-                rating = metaRating,
-                pixivId = metaPixivId,
-            )
-
-            subjects.add(
-                Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.YANDERE, aspectRatio, metadata),
-            )
+            parseImage(e)?.let { subjects.add(it) }
         }
 
         return subjects.toList()

@@ -80,8 +80,7 @@ fun FavouritesPage(bottomBarVisibleState: MutableState<Boolean>) {
                 .padding(padding)
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
             images = images,
-            onImageClick = { index, image ->
-                bottomBarVisibleState.value = false
+            onImageClick = { index, _ ->
                 initialPage = index
                 shouldShowLargeImage.value = true
             },

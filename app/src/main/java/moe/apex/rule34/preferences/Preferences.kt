@@ -211,108 +211,118 @@ fun PreferencesScreen(viewModel: BreadboardViewModel) {
     val preferencesRepository = LocalContext.current.prefs
     val currentSettings = LocalPreferences.current
 
-    BreadboardTheme {
-        MainScreenScaffold("Settings", scrollBehavior) {
-            Column(
-                Modifier
-                    .fillMaxSize()
-                    .padding(it)
-                    .nestedScroll(scrollBehavior.nestedScrollConnection)
-                    .verticalScroll(rememberScrollState())
-            ) {
-                VerticalSpacer()
+    MainScreenScaffold("Settings", scrollBehavior) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(it)
+                .nestedScroll(scrollBehavior.nestedScrollConnection)
+                .verticalScroll(rememberScrollState())
+        ) {
+            VerticalSpacer()
 
-                Heading(text = "Data saver")
-                EnumPref(
-                    title = "Data saver",
-                    summary = currentSettings.dataSaver.description,
-                    enumItems = DataSaver.entries.toTypedArray(),
-                    selectedItem = currentSettings.dataSaver,
-                    onSelection = { scope.launch { preferencesRepository.updateDataSaver(it as DataSaver) } }
-                )
+            Heading(text = "Data saver")
+            EnumPref(
+                title = "Data saver",
+                summary = currentSettings.dataSaver.description,
+                enumItems = DataSaver.entries.toTypedArray(),
+                selectedItem = currentSettings.dataSaver,
+                onSelection = { scope.launch { preferencesRepository.updateDataSaver(it as DataSaver) } }
+            )
 
-                LargeVerticalSpacer()
+            LargeVerticalSpacer()
 
-                Heading(text = "Downloads")
-                TitleSummary(
-                    modifier = Modifier
-                        .clickable { storageLocationPromptLaunched.value = true }
-                        .fillMaxWidth(),
-                    title = "Save downloads to",
-                    summary = if (currentSettings.storageLocation == Uri.EMPTY) "Tap to set"
-                    else currentSettings.storageLocation.toString()
-                )
-                if (storageLocationPromptLaunched.value) {
-                    SaveDirectorySelection(storageLocationPromptLaunched)
-                }
-
-                LargeVerticalSpacer()
-
-                Heading(text = "Searching")
-                EnumPref(
-                    title = "Image source",
-                    summary = currentSettings.imageSource.description,
-                    enumItems = ImageSource.entries.toTypedArray(),
-                    selectedItem = currentSettings.imageSource,
-                    onSelection = {
-                        scope.launch { preferencesRepository.updateImageSource(it as ImageSource) }
-                        viewModel.tagSuggestions.clear()
-                    }
-                )
-                SwitchPref(
-                    checked = currentSettings.excludeAi,
-                    title = "Hide AI-generated images",
-                    summary = "Attempt to remove AI-generated images by excluding the " +
-                              "'ai_generated' tag in search queries by default."
-                ) {
-                    scope.launch { preferencesRepository.updateExcludeAi(it) }
-                    viewModel.tagSuggestions.removeIf { tag ->
-                        tag.value == currentSettings.imageSource.site.aiTagName && tag.isExcluded
-                    }
-                }
-                SwitchPref(
-                    checked = currentSettings.filterRatingsLocally,
-                    title = "Filter ratings locally",
-                    summary = "Rather than appending the selected ratings to the search query, " +
-                              "filter the results by rating after searching."
-                ) {
-                    scope.launch { preferencesRepository.updateFilterRatingsLocally(it) }
-                }
-
-                LargeVerticalSpacer()
-
-                Heading(text = "Layout")
-                SwitchPref(
-                    checked = currentSettings.useStaggeredGrid,
-                    title = "Staggered grid",
-                    summary = "Use a staggered grid for images rather than a uniform grid."
-                ) {
-                    scope.launch { preferencesRepository.updateUseStaggeredGrid(it) }
-                }
-
-                HorizontalDivider(Modifier.padding(vertical = 48.dp))
-
-                InfoSection(text = "When data saver is enabled, images will load in a lower resolution " +
-                                   "by default. Downloads will always be in the maximum resolution.")
-                AnimatedVisibility(currentSettings.imageSource == ImageSource.DANBOORU) {
-                    Column {
-                        LargeVerticalSpacer()
-                        InfoSection(
-                            text = "Danbooru limits searches to 2 tags (which includes ratings), " +
-                                    "so filtering by rating is difficult. If you are using " +
-                                    "Danbooru, you should enable 'Filter ratings locally' if " +
-                                    "you wish to filter by rating."
-                        )
-                    }
-                }
-                LargeVerticalSpacer()
-                InfoSection(text = "Filtering ratings locally has the benefit of being able to " +
-                                   "adjust the filter after searching and allows filtering on " +
-                                   "otherwise unsupported sites like Danbooru, but may cause " +
-                                   "less results to be shown at once and result in higher data "+
-                                   "usage for the same number of visible images.")
-                NavBarHeightVerticalSpacer()
+            Heading(text = "Downloads")
+            TitleSummary(
+                modifier = Modifier
+                    .clickable { storageLocationPromptLaunched.value = true }
+                    .fillMaxWidth(),
+                title = "Save downloads to",
+                summary = if (currentSettings.storageLocation == Uri.EMPTY) "Tap to set"
+                else currentSettings.storageLocation.toString()
+            )
+            if (storageLocationPromptLaunched.value) {
+                SaveDirectorySelection(storageLocationPromptLaunched)
             }
+
+            LargeVerticalSpacer()
+
+            Heading(text = "Searching")
+            EnumPref(
+                title = "Image source",
+                summary = currentSettings.imageSource.description,
+                enumItems = ImageSource.entries.toTypedArray(),
+                selectedItem = currentSettings.imageSource,
+                onSelection = {
+                    scope.launch { preferencesRepository.updateImageSource(it as ImageSource) }
+                    viewModel.tagSuggestions.clear()
+                }
+            )
+            SwitchPref(
+                checked = currentSettings.saveSearchHistory,
+                title = "Save search history",
+                summary = "Save your 10 most recent searches. When this is disabled, your " +
+                          "search history will be cleared and Breadboard will not save future " +
+                          "searches."
+            ) {
+                scope.launch {
+                    if (!it) preferencesRepository.clearSearchHistory()
+                    preferencesRepository.updateSaveSearchHistory(it)
+                }
+            }
+            SwitchPref(
+                checked = currentSettings.excludeAi,
+                title = "Hide AI-generated images",
+                summary = "Attempt to remove AI-generated images by excluding the " +
+                          "'ai_generated' tag in search queries by default."
+            ) {
+                scope.launch { preferencesRepository.updateExcludeAi(it) }
+                viewModel.tagSuggestions.removeIf { tag ->
+                    tag.value == currentSettings.imageSource.site.aiTagName && tag.isExcluded
+                }
+            }
+            SwitchPref(
+                checked = currentSettings.filterRatingsLocally,
+                title = "Filter ratings locally",
+                summary = "Rather than appending the selected ratings to the search query, " +
+                          "filter the results by rating after searching."
+            ) {
+                scope.launch { preferencesRepository.updateFilterRatingsLocally(it) }
+            }
+
+            LargeVerticalSpacer()
+
+            Heading(text = "Layout")
+            SwitchPref(
+                checked = currentSettings.useStaggeredGrid,
+                title = "Staggered grid",
+                summary = "Use a staggered grid for images rather than a uniform grid."
+            ) {
+                scope.launch { preferencesRepository.updateUseStaggeredGrid(it) }
+            }
+
+            HorizontalDivider(Modifier.padding(vertical = 48.dp))
+
+            InfoSection(text = "When data saver is enabled, images will load in a lower resolution " +
+                               "by default. Downloads will always be in the maximum resolution.")
+            AnimatedVisibility(currentSettings.imageSource == ImageSource.DANBOORU) {
+                Column {
+                    LargeVerticalSpacer()
+                    InfoSection(
+                        text = "Danbooru limits searches to 2 tags (which includes ratings), " +
+                                "so filtering by rating is difficult. If you are using " +
+                                "Danbooru, you should enable 'Filter ratings locally' if " +
+                                "you wish to filter by rating."
+                    )
+                }
+            }
+            LargeVerticalSpacer()
+            InfoSection(text = "Filtering ratings locally has the benefit of being able to " +
+                               "adjust the filter after searching and allows filtering on " +
+                               "otherwise unsupported sites like Danbooru, but may cause " +
+                               "less results to be shown at once and result in higher data "+
+                               "usage for the same number of visible images.")
+            NavBarHeightVerticalSpacer()
         }
     }
 }

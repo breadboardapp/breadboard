@@ -115,8 +115,7 @@ fun ImageGrid(
                 NavBarHeightVerticalSpacer()
             }
         }
-    }
-    else {
+    } else {
         LazyVerticalGrid(
             columns = GridCells.Adaptive(MIN_CELL_WIDTH.dp),
             state = rememberLazyGridState(),
@@ -130,7 +129,7 @@ fun ImageGrid(
                 else Spacer(modifier = Modifier.height(8.dp))
             }
 
-            itemsIndexed(images) { index, image ->
+            itemsIndexed(images, key = { _, image -> image.previewUrl }) { index, image ->
                 ImagePreviewContainer(image, index, onImageClick)
             }
 
