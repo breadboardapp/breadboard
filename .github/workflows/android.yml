@@ -20,6 +20,8 @@ jobs:
   build:
     name: Build Debug APK
     runs-on: ubuntu-latest
+    outputs:
+      artifact_url: ${{ steps.upload-apk.outputs.artifact-url }}
 
     steps:
       - name: Checkout repository
@@ -65,5 +67,5 @@ jobs:
           comment-id: ${{ steps.find-comment.outputs.comment-id }}
           issue-number: ${{ github.event.pull_request.number }}
           body: |
-            [Download Debug APK](${{ steps.upload-apk.outputs.artifact-url }})
+            [Download Debug APK](${{ needs.build.outputs.artifact_url }})
           edit-mode: replace
