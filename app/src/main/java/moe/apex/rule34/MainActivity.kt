@@ -190,7 +190,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
     var showSearchHistoryPopup by rememberSaveable { mutableStateOf(false) }
     var showSourceChangeDialog by remember { mutableStateOf(false) }
     var sourceChangeDialogData by remember { mutableStateOf<SourceDialogData?>(null) }
-    var showSourceRatingBox by rememberSaveable { mutableStateOf(false) }
+    var showSourceRatingBox by remember { mutableStateOf(false) }
     val chevronRotation by animateFloatAsState(if (showSourceRatingBox) 180f else 0f)
 
     val historySheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
