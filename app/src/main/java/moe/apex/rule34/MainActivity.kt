@@ -343,8 +343,8 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                             timestamp = Date().time,
                             source = prefs.imageSource,
                             tags = tagChipList.toSet(),
-                            ratings = prefs.ratingsFilter.toSet()
-                        )
+                            ratings = ImageRating.entries.filter { it in prefs.ratingsFilter }.toSet()
+                        ) // Preserve the display order of ratings regardless of the order in search
                     )
                 }
             }

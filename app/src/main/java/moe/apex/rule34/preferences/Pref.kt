@@ -340,23 +340,38 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         }
     }
 
-    suspend fun addSearchHistoryEntry(entry: SearchHistoryEntry) {
-        val history = getPreferences.first().searchHistory.toMutableList().apply {
-            val existing = find { it.source == entry.source && it.tags == entry.tags }
-            if (existing != null) {
-                /* Since not all ratings are available for all sources, we should only check the
-                   ones that are available when determining whether a search history entry is a
-                   duplicate and an existing one should be removed. */
-                val validRatings = availableRatingsForSource(entry.source)
-                if (existing.ratings.filter { it in validRatings } == entry.ratings.filter { it in validRatings })
-                    remove(existing)
-            }
-            add(entry)
-            if (size > 10) removeAt(0)
+    private fun findDuplicate(incoming: SearchHistoryEntry, history: List<SearchHistoryEntry>): SearchHistoryEntry? {
+        /* Since not all ratings are available for all sources, we should only check the
+           ones that are available when determining whether a search history entry is a duplicate.
+
+           Additionally, check the formatted labels of tags rather than the objects themselves
+           as ones added from pasting will be missing metadata. */
+        val validRatings = availableRatingsForSource(incoming.source)
+        val incomingRatings = validRatings.filter { it in incoming.ratings }
+        val incomingTagLabels = incoming.tags.mapTo(mutableSetOf()) { it.formattedLabel }
+
+        for (existing in history) {
+            if (incoming.source != existing.source) continue
+            if (incomingRatings != validRatings.filter { it in existing.ratings }) continue
+
+            if (incomingTagLabels == existing.tags.mapTo(mutableSetOf()) { it.formattedLabel } )
+                return existing
         }
-        updateSearchHistory(history)
+        return null
     }
 
+    suspend fun addSearchHistoryEntry(entry: SearchHistoryEntry) {
+        val history = getPreferences.first().searchHistory.toMutableList()
+        val existing = findDuplicate(entry, history)
+
+        history.apply {
+            if (existing != null) remove(existing)
+            if (size == 10) removeAt(0)
+            add(entry)
+        }
+
+        updateSearchHistory(history)
+    }
 
 
     suspend fun removeSearchHistoryEntry(entry: SearchHistoryEntry) {
