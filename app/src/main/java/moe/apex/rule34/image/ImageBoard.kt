@@ -300,7 +300,7 @@ object Yandere : ImageBoard {
         "5" to "circle",
         "6" to "faults",
     )
-    override val imageSearchUrl = "${baseUrl}post.json?tags=%s&page=%d=limit=100"
+    override val imageSearchUrl = "${baseUrl}post.json?tags=%s&page=%d&limit=100"
     override val aiTagName = "ai-generated" // Yande.re does not allow AI-generated images but this tag appears in search
     override val firstPageIndex = 1
 
