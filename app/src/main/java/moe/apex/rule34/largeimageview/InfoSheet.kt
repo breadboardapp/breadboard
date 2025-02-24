@@ -125,7 +125,7 @@ fun InfoSheet(navController: NavController, image: Image, visibilityState: Mutab
                             navController.navigate(Results(image.imageSource.name, "parent:$it"))
                         }
                     ) {
-                        Text("View child images")
+                        Text("View related images")
                     }
                 }
             }
