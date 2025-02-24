@@ -65,6 +65,7 @@ interface ImageBoard {
 
 interface GelbooruBasedImageBoard : ImageBoard {
     fun parseImage(e: JSONObject, imageSource: ImageSource): Image? {
+        val id = e.getString("id")
         val (fileName, fileFormat) = e.getString("image").split('.', limit = 2)
         val fileUrl = e.getString("file_url")
         val sampleUrl = e.optString("sample_url", "")
@@ -76,6 +77,7 @@ interface GelbooruBasedImageBoard : ImageBoard {
         if (fileFormat != "jpeg" && fileFormat != "jpg" && fileFormat != "png" && fileFormat != "gif")
             return null
 
+        val metaParentId = e.getString("parent_id").takeIf { it != "0" }
         val metaSource = e.getString("source").takeIf { it.isNotEmpty() }
         val metaGroupedTags = listOf(
             TagCategory.GENERAL.group(e.getString("tags").split(" ")),
@@ -83,13 +85,15 @@ interface GelbooruBasedImageBoard : ImageBoard {
         val metaRating = getRatingFromString(e.getString("rating"))
         val metaPixivId = extractPixivId(metaSource)
         val metadata = ImageMetadata(
+            parentId = metaParentId,
+            hasChildren = null, // Not available for Gelbooru-based image boards
             source = metaSource,
             groupedTags = metaGroupedTags,
             rating = metaRating,
             pixivId = metaPixivId,
         )
 
-        return Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, imageSource, aspectRatio, metadata)
+        return Image(id, fileName, fileFormat, previewUrl, fileUrl, sampleUrl, imageSource, aspectRatio, metadata)
     }
 
     fun loadImage(postId: String, postListKey: String?, imageSource: ImageSource): Image? {
@@ -217,6 +221,7 @@ object Danbooru : ImageBoard {
     override fun parseImage(e: JSONObject): Image? {
         if (e.isNull("md5")) return null
 
+        val id = e.getString("id")
         val fileName = e.getString("md5")
         val fileFormat = e.getString("file_ext")
         val fileUrl = e.getString("file_url")
@@ -235,6 +240,8 @@ object Danbooru : ImageBoard {
         val tagGeneral = e.getString("tag_string_general").split(" ")
         val tagMeta = e.getString("tag_string_meta").split(" ")
 
+        val metaParentId = e.getString("parent_id").takeIf { it != "null" }
+        val metaHasChildren = e.getBoolean("has_children")
         val metaSource = e.getString("source").takeIf { it.isNotEmpty() }
         val metaArtist = tagStringArtist.takeIf { it.isNotEmpty() }
         val metaGroupedTags = listOf(
@@ -247,6 +254,8 @@ object Danbooru : ImageBoard {
         val metaRating = getRatingFromString(e.getString("rating"))
         val metaPixivId = e.optInt("pixiv_id").takeIf { it != 0 }
         val metadata = ImageMetadata(
+            parentId = metaParentId,
+            hasChildren = metaHasChildren,
             artist = metaArtist,
             source = metaSource,
             groupedTags = metaGroupedTags,
@@ -254,7 +263,7 @@ object Danbooru : ImageBoard {
             pixivId = metaPixivId,
         )
 
-        return Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.DANBOORU, aspectRatio, metadata)
+        return Image(id, fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.DANBOORU, aspectRatio, metadata)
     }
 
     override fun loadImage(postId: String): Image? {
@@ -307,6 +316,7 @@ object Yandere : ImageBoard {
     override fun parseImage(e: JSONObject): Image? {
         if (e.isNull("md5")) return null
 
+        val id = e.getString("id")
         val fileName = e.getString("md5")
         val fileFormat = e.getString("file_ext")
         val fileUrl = e.getString("file_url")
@@ -319,6 +329,8 @@ object Yandere : ImageBoard {
         if (fileFormat != "jpeg" && fileFormat != "jpg" && fileFormat != "png" && fileFormat != "gif")
             return null
 
+        val metaParentId = e.getString("parent_id").takeIf { it != "null" }
+        val metaHasChildren = e.getBoolean("has_children")
         val metaSource = e.optString("source", "").takeIf { it.isNotEmpty() }
         val metaGroupedTags = listOf(
             TagCategory.GENERAL.group(e.getString("tags").split(" ")),
@@ -326,13 +338,15 @@ object Yandere : ImageBoard {
         val metaRating = getRatingFromString(e.getString("rating"))
         val metaPixivId = extractPixivId(metaSource)
         val metadata = ImageMetadata(
+            parentId = metaParentId,
+            hasChildren = metaHasChildren,
             source = metaSource,
             groupedTags = metaGroupedTags,
             rating = metaRating,
             pixivId = metaPixivId,
         )
 
-        return Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.YANDERE, aspectRatio, metadata)
+        return Image(id, fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.YANDERE, aspectRatio, metadata)
     }
 
     override fun loadImage(postId: String): Image? {

@@ -36,6 +36,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -54,10 +55,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import coil3.compose.SubcomposeAsyncImage
 import coil3.request.ImageRequest
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import me.saket.telephoto.zoomable.ZoomSpec
 import me.saket.telephoto.zoomable.rememberZoomableState
 import me.saket.telephoto.zoomable.zoomable
@@ -66,6 +70,7 @@ import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.DataSaver
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.prefs
+import moe.apex.rule34.ui.theme.Typography
 import moe.apex.rule34.util.showToast
 import moe.apex.rule34.util.FullscreenLoadingSpinner
 import moe.apex.rule34.util.MustSetLocation
@@ -86,6 +91,7 @@ private fun isUsingWiFi(context: Context): Boolean {
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun LargeImageView(
+    navController: NavController,
     visible: MutableState<Boolean>? = null,
     initialPage: Int,
     allImages: List<Image>
@@ -123,7 +129,7 @@ fun LargeImageView(
     val favouriteImages = prefs.favouriteImages
 
     if (popupVisibilityState.value) {
-        InfoSheet(currentImage, popupVisibilityState)
+        InfoSheet(navController, currentImage, popupVisibilityState)
     }
 
     LaunchedEffect(visible?.value) {
@@ -160,24 +166,16 @@ fun LargeImageView(
         SubcomposeAsyncImage(
             model = model,
             contentDescription = "Image",
-            loading = { Box(
-                modifier = modifier,
-                contentAlignment = Alignment.Center
-            ) {
-                SubcomposeAsyncImage(
-                    model = previewImageUrl,
-                    contentDescription = "Image",
-                    contentScale = ContentScale.Fit,
-                    modifier = modifier.clip(RoundedCornerShape(24.dp))
-                )
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = CircleShape,
-                    modifier = Modifier.size(72.dp)
-                ) {
-                    FullscreenLoadingSpinner()
+            loading = {
+                LoadingSpinner(modifier) {
+                    SubcomposeAsyncImage(
+                        model = previewImageUrl,
+                        contentDescription = "Image",
+                        contentScale = ContentScale.Fit,
+                        modifier = modifier.clip(RoundedCornerShape(24.dp))
+                    )
                 }
-            } },
+            },
             modifier = modifier
                 .scale(0.95f)
                 .clip(RoundedCornerShape(24.dp))
@@ -353,6 +351,65 @@ fun LargeImageView(
         LaunchedEffect(isZoomedOut) {
             canChangePage = isZoomedOut
             forciblyShowBottomBar = false
+        }
+    }
+}
+
+
+@Composable
+fun LazyLargeImageView(
+    navController: NavController,
+    imageToLoad: () -> Image?
+) {
+    var image by remember { mutableStateOf<Image?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(imageToLoad) {
+        withContext(Dispatchers.IO) {
+            image = imageToLoad()
+            isLoading = false
+        }
+    }
+
+    if (isLoading)
+        LoadingSpinner(Modifier.fillMaxSize())
+    else if (image == null)
+        ImageNotFound()
+    else
+        LargeImageView(navController, null, 0, listOf(image!!))
+}
+
+
+@Composable
+fun ImageNotFound() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "Image not found :(",
+            style = Typography.titleLarge
+        )
+    }
+}
+
+
+@Composable
+fun LoadingSpinner(
+    modifier: Modifier,
+    content: (@Composable () -> Unit)? = null
+) {
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
+    ) {
+        content?.invoke()
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            shape = CircleShape,
+            modifier = Modifier.size(72.dp)
+        ) {
+            FullscreenLoadingSpinner()
         }
     }
 }

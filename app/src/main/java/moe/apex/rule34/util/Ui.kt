@@ -6,8 +6,10 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -43,6 +45,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarScrollBehavior
@@ -122,6 +125,7 @@ fun FullscreenLoadingSpinner() {
 
 @Composable
 fun AnimatedVisibilityLargeImageView(
+    navController: NavController,
     shouldShowLargeImage: MutableState<Boolean>,
     initialPage: Int,
     allImages: List<Image>,
@@ -139,6 +143,7 @@ fun AnimatedVisibilityLargeImageView(
     ) {
         key(initialPage) {
             LargeImageView(
+                navController,
                 shouldShowLargeImage,
                 initialPage,
                 allImages
@@ -302,6 +307,31 @@ fun copyText(
     // if (SDK_INT < VERSION_CODES.TIRAMISU) { // Android 13 has its own text copied popup
     showToast(context, message)
     // }
+}
+
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun CombinedClickableSuggestionChip(
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    label: @Composable () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+
+    Box {
+        SuggestionChip(onClick = { }, label = label, interactionSource = interactionSource)
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = onLongClick,
+                    interactionSource = interactionSource,
+                    indication = null
+                )
+        )
+    }
 }
 
 

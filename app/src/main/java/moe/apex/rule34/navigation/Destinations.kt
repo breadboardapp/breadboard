@@ -7,11 +7,23 @@ import kotlin.reflect.KClass
 
 
 @Serializable
+data class ImageView(
+    val source: String,
+    val id: String
+)
+
+@Serializable
+data class DeepLinkImageView(
+    val uri: String
+)
+
+@Serializable
 object Search
 
 @Serializable
 data class Results(
-    val searchQuery: String,
+    val source: String,
+    val query: String
 )
 
 @Serializable

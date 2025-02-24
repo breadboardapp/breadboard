@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import moe.apex.rule34.detailview.ImageGrid
 import moe.apex.rule34.image.ImageRating
@@ -32,7 +33,7 @@ import moe.apex.rule34.util.MainScreenScaffold
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FavouritesPage(bottomBarVisibleState: MutableState<Boolean>) {
+fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableState<Boolean>) {
     val prefs = LocalPreferences.current
     val preferencesRepository = LocalContext.current.prefs
     val topAppBarState = rememberTopAppBarState()
@@ -94,5 +95,6 @@ fun FavouritesPage(bottomBarVisibleState: MutableState<Boolean>) {
             }
         )
     }
-    AnimatedVisibilityLargeImageView(shouldShowLargeImage, initialPage, images, bottomBarVisibleState)
+
+    AnimatedVisibilityLargeImageView(navController, shouldShowLargeImage, initialPage, images, bottomBarVisibleState)
 }

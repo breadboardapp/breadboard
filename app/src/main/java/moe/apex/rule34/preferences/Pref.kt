@@ -452,6 +452,10 @@ enum class ImageSource(override val description: String, val site: ImageBoard) :
     R34("Rule34", Rule34);
 
     companion object {
+        fun get(name: String): ImageSource? {
+            return ImageSource.entries.find { it.name == name }
+        }
+
         fun loadImageFromUri(uri: Uri): Image? {
             val imageSource = when (uri.host) {
                 "safebooru.org" -> SAFEBOORU

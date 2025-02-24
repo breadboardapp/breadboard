@@ -1,5 +1,6 @@
 package moe.apex.rule34.navigation
 
+import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -24,6 +25,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.core.net.toUri
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -33,6 +35,8 @@ import moe.apex.rule34.HomeScreen
 import moe.apex.rule34.R
 import moe.apex.rule34.detailview.SearchResults
 import moe.apex.rule34.favourites.FavouritesPage
+import moe.apex.rule34.largeimageview.LazyLargeImageView
+import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.PreferencesScreen
 import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.util.withoutVertical
@@ -43,7 +47,7 @@ import soup.compose.material.motion.animation.rememberSlideDistance
 
 
 @Composable
-fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel) {
+fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel, uri: Uri? = null) {
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val slideDistance = rememberSlideDistance()
     val bottomBarVisibleState = remember { mutableStateOf(true) }
@@ -130,7 +134,8 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel)
                 NavHost(
                     modifier = Modifier.padding(it.withoutVertical()),
                     navController = navController,
-                    startDestination = Search,
+                    startDestination = if (uri == null) Search
+                                       else DeepLinkImageView(uri.toString()),
                     enterTransition = {
                         if (targetState.destination.routeIs(Results::class))
                             materialSharedAxisXIn(!isRtl, slideDistance)
@@ -152,12 +157,20 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel)
                         else fadeOut()
                     }
                 ) {
+                    composable<ImageView> {
+                        val args = it.toRoute<ImageView>()
+                        LazyLargeImageView(navController) { ImageSource.get(args.source)?.site?.loadImage(args.id) }
+                    }
+                    composable<DeepLinkImageView> {
+                        val args = it.toRoute<DeepLinkImageView>()
+                        LazyLargeImageView(navController) { ImageSource.loadImageFromUri(args.uri.toUri()) }
+                    }
                     composable<Search> { HomeScreen(navController, focusRequester, viewModel) }
                     composable<Results> {
                         val args = it.toRoute<Results>()
-                        SearchResults(navController, args.searchQuery)
+                        SearchResults(navController, args.source, args.query)
                     }
-                    composable<Favourites> { FavouritesPage(bottomBarVisibleState) }
+                    composable<Favourites> { FavouritesPage(navController, bottomBarVisibleState) }
                     composable<Settings> { PreferencesScreen(viewModel) }
                 }
             }

@@ -10,6 +10,8 @@ import moe.apex.rule34.tag.TagGroup
 
 @Serializable
 data class ImageMetadata(
+    val parentId: String? = null,
+    val hasChildren: Boolean? = null,
     val artist: String? = null,
     val source: String? = null,
     @Deprecated(
@@ -30,6 +32,7 @@ data class ImageMetadata(
 
 @Serializable
 data class Image(
+    val id: String? = null,
     val fileName: String,
     val fileFormat: String,
     val previewUrl: String,
