@@ -352,7 +352,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
             val ratingsFilter = if (prefs.filterRatingsLocally) ""
                                 else ImageRating.buildSearchStringFor(prefs.ratingsFilter)
             val query = searchTags + if (ratingsFilter.isNotEmpty()) "+$ratingsFilter" else ""
-            navController.navigate(Results(query, prefs.imageSource.name))
+            navController.navigate(Results(prefs.imageSource.name, query))
         }
     }
 

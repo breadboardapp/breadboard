@@ -108,7 +108,7 @@ fun InfoSheet(navController: NavController, image: Image, visibilityState: Mutab
                         .align(Alignment.CenterHorizontally),
                     onClick = {
                         visibilityState.value = false
-                        navController.navigate(ImageView(it, image.imageSource.name))
+                        navController.navigate(ImageView(image.imageSource.name, it))
                     }
                 ) {
                     Text("View parent image")
@@ -122,7 +122,7 @@ fun InfoSheet(navController: NavController, image: Image, visibilityState: Mutab
                             .align(Alignment.CenterHorizontally),
                         onClick = {
                             visibilityState.value = false
-                            navController.navigate(Results("parent:$it", image.imageSource.name))
+                            navController.navigate(Results(image.imageSource.name, "parent:$it"))
                         }
                     ) {
                         Text("View child images")
@@ -158,7 +158,7 @@ fun InfoSheet(navController: NavController, image: Image, visibilityState: Mutab
                     CombinedClickableSuggestionChip(
                         onClick = {
                             visibilityState.value = false
-                            navController.navigate(Results(tag, image.imageSource.name))
+                            navController.navigate(Results(image.imageSource.name, tag))
                         },
                         onLongClick = { copyText(context, clip, tag) },
                         label = { Text(tag) }
