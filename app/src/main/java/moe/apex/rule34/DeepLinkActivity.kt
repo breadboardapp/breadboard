@@ -55,7 +55,10 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity() {
                 DisposableEffect(Unit) {
                     val listener = Consumer<Intent> { newIntent ->
                         val uri = newIntent.data
-                        if (uri != null) ImageView.fromUri(uri)?.let { navController.navigate(it) }
+                        if (uri != null) ImageView.fromUri(uri)?.let {
+                            navController.popBackStack()
+                            navController.navigate(it)
+                        }
                     }
                     addOnNewIntentListener(listener)
                     onDispose { removeOnNewIntentListener(listener) }
