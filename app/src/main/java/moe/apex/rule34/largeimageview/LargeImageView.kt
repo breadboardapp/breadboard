@@ -77,6 +77,8 @@ import moe.apex.rule34.util.MustSetLocation
 import moe.apex.rule34.util.NAV_BAR_HEIGHT
 import moe.apex.rule34.util.SaveDirectorySelection
 import moe.apex.rule34.util.downloadImage
+import java.net.SocketTimeoutException
+import java.util.concurrent.ExecutionException
 
 
 private fun isUsingWiFi(context: Context): Boolean {
@@ -359,16 +361,23 @@ fun LargeImageView(
 @Composable
 fun LazyLargeImageView(
     navController: NavController,
-    imageToLoad: () -> Image?
+    onImageLoadRequest: () -> Image?
 ) {
+    val context = LocalContext.current
     var image by remember { mutableStateOf<Image?>(null) }
     var isLoading by remember { mutableStateOf(true) }
 
-    LaunchedEffect(imageToLoad) {
-        withContext(Dispatchers.IO) {
-            image = imageToLoad()
-            isLoading = false
+    LaunchedEffect(Unit) {
+        try {
+            withContext(Dispatchers.IO) {
+                image = onImageLoadRequest()
+            }
+        } catch (e: ExecutionException) {
+            if (e.cause is SocketTimeoutException) {
+                showToast(context, "Connection timed out")
+            }
         }
+        isLoading = false
     }
 
     if (isLoading)
