@@ -1,5 +1,6 @@
 package moe.apex.rule34.navigation
 
+import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -33,6 +34,7 @@ import moe.apex.rule34.HomeScreen
 import moe.apex.rule34.R
 import moe.apex.rule34.detailview.SearchResults
 import moe.apex.rule34.favourites.FavouritesPage
+import moe.apex.rule34.largeimageview.LazyLargeImageView
 import moe.apex.rule34.preferences.PreferencesScreen
 import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.util.withoutVertical
@@ -43,7 +45,7 @@ import soup.compose.material.motion.animation.rememberSlideDistance
 
 
 @Composable
-fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel) {
+fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel, uri: Uri? = null) {
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val slideDistance = rememberSlideDistance()
     val bottomBarVisibleState = remember { mutableStateOf(true) }
@@ -126,11 +128,11 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel)
                         }
                     }
                 }
-            ) {
+            ) { paddingValues ->
                 NavHost(
-                    modifier = Modifier.padding(it.withoutVertical()),
+                    modifier = Modifier.padding(paddingValues.withoutVertical()),
                     navController = navController,
-                    startDestination = Search,
+                    startDestination = uri?.let { ImageView.fromUri(it) } ?: Search,
                     enterTransition = {
                         if (targetState.destination.routeIs(Results::class))
                             materialSharedAxisXIn(!isRtl, slideDistance)
@@ -152,12 +154,16 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel)
                         else fadeOut()
                     }
                 ) {
+                    composable<ImageView> {
+                        val args = it.toRoute<ImageView>()
+                        LazyLargeImageView(navController) { args.source.site.loadImage(args.id) }
+                    }
                     composable<Search> { HomeScreen(navController, focusRequester, viewModel) }
                     composable<Results> {
                         val args = it.toRoute<Results>()
-                        SearchResults(navController, args.searchQuery)
+                        SearchResults(navController, args.source, args.tags)
                     }
-                    composable<Favourites> { FavouritesPage(bottomBarVisibleState) }
+                    composable<Favourites> { FavouritesPage(navController, bottomBarVisibleState) }
                     composable<Settings> { PreferencesScreen(viewModel) }
                 }
             }

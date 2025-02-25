@@ -25,7 +25,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.SheetValue
-import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -47,9 +46,13 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import moe.apex.rule34.image.Image
+import moe.apex.rule34.navigation.ImageView
+import moe.apex.rule34.navigation.Results
 import moe.apex.rule34.util.CHIP_SPACING
+import moe.apex.rule34.util.CombinedClickableSuggestionChip
 import moe.apex.rule34.util.Heading
 import moe.apex.rule34.util.LargeVerticalSpacer
 import moe.apex.rule34.util.copyText
@@ -58,7 +61,7 @@ import moe.apex.rule34.util.pluralise
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun InfoSheet(image: Image, visibilityState: MutableState<Boolean>) {
+fun InfoSheet(navController: NavController, image: Image, visibilityState: MutableState<Boolean>) {
     if (image.metadata == null) return
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -98,6 +101,34 @@ fun InfoSheet(image: Image, visibilityState: MutableState<Boolean>) {
         contentWindowInsets = { BottomSheetDefaults.windowInsets.only(WindowInsetsSides.Horizontal) }
     ) {
         Column(Modifier.verticalScroll(rememberScrollState())) {
+            image.metadata.parentId?.let {
+                TextButton(
+                    modifier = Modifier
+                        .padding(top = 4.dp)
+                        .align(Alignment.CenterHorizontally),
+                    onClick = {
+                        visibilityState.value = false
+                        navController.navigate(ImageView(image.imageSource, it))
+                    }
+                ) {
+                    Text("View parent image")
+                }
+            }
+            if (image.metadata.hasChildren == true) {
+                image.id?.let {
+                    TextButton(
+                        modifier = Modifier
+                            .padding(top = 4.dp)
+                            .align(Alignment.CenterHorizontally),
+                        onClick = {
+                            visibilityState.value = false
+                            navController.navigate(Results(image.imageSource, "parent:$it"))
+                        }
+                    ) {
+                        Text("View related images")
+                    }
+                }
+            }
             image.metadata.artist?.let {
                 Heading(text = "Artist")
                 PaddedText(it)
@@ -124,8 +155,12 @@ fun InfoSheet(image: Image, visibilityState: MutableState<Boolean>) {
                     horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp, Alignment.Start)
                 ) { index ->
                     val tag = it.tags[index]
-                    SuggestionChip(
-                        onClick = { copyText(context, clip, tag) },
+                    CombinedClickableSuggestionChip(
+                        onClick = {
+                            visibilityState.value = false
+                            navController.navigate(Results(image.imageSource, tag))
+                        },
+                        onLongClick = { copyText(context, clip, tag) },
                         label = { Text(tag) }
                     )
                 }
