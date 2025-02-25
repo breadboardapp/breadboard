@@ -33,6 +33,7 @@ import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.image.Rule34
 import moe.apex.rule34.image.Safebooru
 import moe.apex.rule34.image.Yandere
+import moe.apex.rule34.navigation.ImageView
 import moe.apex.rule34.tag.TagCategory
 import moe.apex.rule34.util.availableRatingsForSource
 import moe.apex.rule34.util.extractPixivId
@@ -452,11 +453,9 @@ enum class ImageSource(override val description: String, val site: ImageBoard) :
     R34("Rule34", Rule34);
 
     companion object {
-        fun get(name: String): ImageSource? {
-            return ImageSource.entries.find { it.name == name }
-        }
+        fun uriToImageView(uri: Uri?): ImageView? {
+            if (uri == null) return null
 
-        fun loadImageFromUri(uri: Uri): Image? {
             val imageSource = when (uri.host) {
                 "safebooru.org" -> SAFEBOORU
                 "danbooru.donmai.us" -> DANBOORU
@@ -477,7 +476,7 @@ enum class ImageSource(override val description: String, val site: ImageBoard) :
                 }
             } ?: return null
 
-            return imageSource.site.loadImage(postId)
+            return ImageView(imageSource, postId)
         }
     }
 }

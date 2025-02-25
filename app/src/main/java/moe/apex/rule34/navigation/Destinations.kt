@@ -3,18 +3,14 @@ package moe.apex.rule34.navigation
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import kotlinx.serialization.Serializable
+import moe.apex.rule34.preferences.ImageSource
 import kotlin.reflect.KClass
 
 
 @Serializable
 data class ImageView(
-    val source: String,
+    val source: ImageSource,
     val id: String
-)
-
-@Serializable
-data class DeepLinkImageView(
-    val uri: String
 )
 
 @Serializable
@@ -22,7 +18,7 @@ object Search
 
 @Serializable
 data class Results(
-    val source: String,
+    val source: ImageSource,
     val tags: String
 )
 

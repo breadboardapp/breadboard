@@ -39,7 +39,7 @@ import moe.apex.rule34.util.withoutVertical
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchResults(navController: NavController, source: String, tags: String) {
+fun SearchResults(navController: NavController, source: ImageSource, tags: String) {
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
     val shouldShowLargeImage = remember { mutableStateOf(false) }
@@ -50,7 +50,7 @@ fun SearchResults(navController: NavController, source: String, tags: String) {
 
     val prefs = LocalPreferences.current
     val preferencesRepository = LocalContext.current.prefs
-    val imageSource = ImageSource.get(source)?.site ?: prefs.imageSource.site
+    val imageSource = source.site
     val filterLocally = prefs.filterRatingsLocally
     var pageNumber by remember { mutableIntStateOf(imageSource.firstPageIndex) }
 

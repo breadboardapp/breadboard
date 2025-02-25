@@ -366,7 +366,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                             else ImageRating.buildSearchStringFor(prefs.ratingsFilter)
 
         val tags = searchTags + if (ratingsFilter.isNotEmpty()) "+$ratingsFilter" else ""
-        navController.navigate(Results(prefs.imageSource.name, tags))
+        navController.navigate(Results(prefs.imageSource, tags))
     }
 
     fun addAiExcludedTag(source: ImageSource) {

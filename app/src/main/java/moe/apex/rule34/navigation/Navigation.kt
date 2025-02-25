@@ -134,8 +134,7 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                 NavHost(
                     modifier = Modifier.padding(paddingValues.withoutVertical()),
                     navController = navController,
-                    startDestination = if (uri == null) Search
-                                       else DeepLinkImageView(uri.toString()),
+                    startDestination = ImageSource.uriToImageView(uri) ?: Search,
                     enterTransition = {
                         if (targetState.destination.routeIs(Results::class))
                             materialSharedAxisXIn(!isRtl, slideDistance)
@@ -159,11 +158,7 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                 ) {
                     composable<ImageView> {
                         val args = it.toRoute<ImageView>()
-                        LazyLargeImageView(navController) { ImageSource.get(args.source)?.site?.loadImage(args.id) }
-                    }
-                    composable<DeepLinkImageView> {
-                        val args = it.toRoute<DeepLinkImageView>()
-                        LazyLargeImageView(navController) { ImageSource.loadImageFromUri(args.uri.toUri()) }
+                        LazyLargeImageView(navController) { args.source.site.loadImage(args.id) }
                     }
                     composable<Search> { HomeScreen(navController, focusRequester, viewModel) }
                     composable<Results> {

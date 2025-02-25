@@ -20,8 +20,8 @@ import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import moe.apex.rule34.navigation.DeepLinkImageView
 import moe.apex.rule34.navigation.Navigation
+import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.viewmodel.BreadboardViewModel
 
@@ -54,8 +54,8 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity() {
             CompositionLocalProvider(LocalPreferences provides prefs) {
                 DisposableEffect(Unit) {
                     val listener = Consumer<Intent> { newIntent ->
-                        val uri = newIntent.data.toString()
-                        navController.navigate(DeepLinkImageView(uri))
+                        val destination = ImageSource.uriToImageView(newIntent.data)
+                        if (destination != null) navController.navigate(destination)
                     }
                     addOnNewIntentListener(listener)
                     onDispose { removeOnNewIntentListener(listener) }
