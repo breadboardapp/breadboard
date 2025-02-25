@@ -39,7 +39,7 @@ import moe.apex.rule34.util.withoutVertical
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchResults(navController: NavController, source: String, query: String) {
+fun SearchResults(navController: NavController, source: String, tags: String) {
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
     val shouldShowLargeImage = remember { mutableStateOf(false) }
@@ -102,7 +102,7 @@ fun SearchResults(navController: NavController, source: String, query: String) {
             initialLoad = {
                 withContext(Dispatchers.IO) {
                     try {
-                        val newImages = imageSource.loadPage(query, pageNumber)
+                        val newImages = imageSource.loadPage(tags, pageNumber)
                         if (!allImages.addAll(newImages)) shouldKeepSearching = false
                         pageNumber++
                     } catch (e: Exception) {
@@ -115,7 +115,7 @@ fun SearchResults(navController: NavController, source: String, query: String) {
             if (shouldKeepSearching) {
                 scope.launch(Dispatchers.IO) {
                     try {
-                        val newImages = imageSource.loadPage(query, pageNumber)
+                        val newImages = imageSource.loadPage(tags, pageNumber)
                         if (newImages.isNotEmpty()) {
                             pageNumber++
                             allImages.addAll(newImages.filter { it !in allImages })

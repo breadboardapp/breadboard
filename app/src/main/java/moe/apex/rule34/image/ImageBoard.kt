@@ -22,8 +22,8 @@ interface ImageBoard {
     fun loadAutoComplete(searchString: String): List<TagSuggestion> {
         val suggestions = mutableListOf<TagSuggestion>()
         val isExcluded = searchString.startsWith("-")
-        val query = searchString.replace("^-".toRegex(), "")
-        val body = RequestUtil.get(autoCompleteSearchUrl.format(query)) {
+        val tags = searchString.replace("^-".toRegex(), "")
+        val body = RequestUtil.get(autoCompleteSearchUrl.format(tags)) {
             addHeader("Referrer", baseUrl)
         }.get()
         val results = JSONArray(body)
@@ -51,7 +51,7 @@ interface ImageBoard {
 
     fun parseImage(e: JSONObject): Image?
 
-    fun loadImage(postId: String): Image?
+    fun loadImage(id: String): Image?
 
     fun loadPage(tags: String, page: Int): List<Image>
 
@@ -96,9 +96,9 @@ interface GelbooruBasedImageBoard : ImageBoard {
         return Image(id, fileName, fileFormat, previewUrl, fileUrl, sampleUrl, imageSource, aspectRatio, metadata)
     }
 
-    fun loadImage(postId: String, postListKey: String?, imageSource: ImageSource): Image? {
-        val parsedPostId = postId.toIntOrNull() ?: return null
-        return loadPage("id:$parsedPostId", 0, postListKey, imageSource).getOrNull(0)
+    fun loadImage(id: String, postListKey: String?, imageSource: ImageSource): Image? {
+        val parsedId = id.toIntOrNull() ?: return null
+        return loadPage("id:$parsedId", 0, postListKey, imageSource).getOrNull(0)
     }
 
     fun loadPage(tags: String, page: Int, postListKey: String?, imageSource: ImageSource): List<Image> {
@@ -152,8 +152,8 @@ object Rule34 : GelbooruBasedImageBoard {
         return parseImage(e, ImageSource.R34)
     }
 
-    override fun loadImage(postId: String): Image? {
-        return loadImage(postId, null, ImageSource.R34)
+    override fun loadImage(id: String): Image? {
+        return loadImage(id, null, ImageSource.R34)
     }
 
     override fun loadPage(tags: String, page: Int): List<Image> {
@@ -173,8 +173,8 @@ object Safebooru : GelbooruBasedImageBoard {
         return parseImage(e, ImageSource.SAFEBOORU)
     }
 
-    override fun loadImage(postId: String): Image? {
-        return loadImage(postId, null, ImageSource.SAFEBOORU)
+    override fun loadImage(id: String): Image? {
+        return loadImage(id, null, ImageSource.SAFEBOORU)
     }
 
     override fun loadPage(tags: String, page: Int): List<Image> {
@@ -194,8 +194,8 @@ object Gelbooru : GelbooruBasedImageBoard {
         return parseImage(e, ImageSource.GELBOORU)
     }
 
-    override fun loadImage(postId: String): Image? {
-        return loadImage(postId, "post", ImageSource.GELBOORU)
+    override fun loadImage(id: String): Image? {
+        return loadImage(id, "post", ImageSource.GELBOORU)
     }
 
     override fun loadPage(tags: String, page: Int): List<Image> {
@@ -266,9 +266,9 @@ object Danbooru : ImageBoard {
         return Image(id, fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.DANBOORU, aspectRatio, metadata)
     }
 
-    override fun loadImage(postId: String): Image? {
-        val parsedPostId = postId.toIntOrNull() ?: return null
-        return loadPage("id:$parsedPostId", 0).getOrNull(0)
+    override fun loadImage(id: String): Image? {
+        val parsedId = id.toIntOrNull() ?: return null
+        return loadPage("id:$parsedId", 0).getOrNull(0)
     }
 
     override fun loadPage(tags: String, page: Int): List<Image> {
@@ -349,9 +349,9 @@ object Yandere : ImageBoard {
         return Image(id, fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.YANDERE, aspectRatio, metadata)
     }
 
-    override fun loadImage(postId: String): Image? {
-        val parsedPostId = postId.toIntOrNull() ?: return null
-        return loadPage("id:$parsedPostId", 0).getOrNull(0)
+    override fun loadImage(id: String): Image? {
+        val parsedId = id.toIntOrNull() ?: return null
+        return loadPage("id:$parsedId", 0).getOrNull(0)
     }
 
     override fun loadPage(tags: String, page: Int): List<Image> {

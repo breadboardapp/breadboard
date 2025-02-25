@@ -130,9 +130,9 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                         }
                     }
                 }
-            ) {
+            ) { paddingValues ->
                 NavHost(
-                    modifier = Modifier.padding(it.withoutVertical()),
+                    modifier = Modifier.padding(paddingValues.withoutVertical()),
                     navController = navController,
                     startDestination = if (uri == null) Search
                                        else DeepLinkImageView(uri.toString()),
@@ -168,7 +168,7 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                     composable<Search> { HomeScreen(navController, focusRequester, viewModel) }
                     composable<Results> {
                         val args = it.toRoute<Results>()
-                        SearchResults(navController, args.source, args.query)
+                        SearchResults(navController, args.source, args.tags)
                     }
                     composable<Favourites> { FavouritesPage(navController, bottomBarVisibleState) }
                     composable<Settings> { PreferencesScreen(viewModel) }

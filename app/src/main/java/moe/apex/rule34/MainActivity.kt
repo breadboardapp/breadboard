@@ -206,12 +206,14 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
 
     fun addToFilter(tag: TagSuggestion) {
         val index = tagChipList.getIndexByName(tag.value)
-        if (index != null) {
+
+        if (index == null) {
+            tagChipList.add(tag)
+        } else {
             // For some reason `tagChipList[index] = tag` doesn't update in the UI
             tagChipList.removeAt(index)
             tagChipList.add(index, tag)
-            return
-        } else tagChipList.add(tag)
+        }
     }
 
 
@@ -305,7 +307,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                     Modifier
                         .verticalScroll(rememberScrollState())
                         .fillMaxWidth()
-                        .animateContentSize(),
+                        .animateContentSize()
                 ) {
                     if (mostRecentSuggestions.isEmpty()) {
                         Text(
@@ -315,7 +317,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                         )
                     } else {
                         for (t in mostRecentSuggestions) {
-                            TagListEntry(tag = t)
+                            TagListEntry(t)
                             if (t != mostRecentSuggestions.last()) HorizontalDivider()
                         }
                     }
@@ -325,35 +327,46 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
     }
 
     fun performSearch() {
-        if (tagChipList.isEmpty()) {
-            showToast(context, "Please select some tags")
-        } else if (prefs.ratingsFilter.isEmpty() || (prefs.ratingsFilter.size == 1 && prefs.ratingsFilter[0] == ImageRating.SENSITIVE && prefs.imageSource == ImageSource.YANDERE)) {
-            showToast(context, "Please select some ratings")
-        } else if (!prefs.filterRatingsLocally && !prefs.ratingsFilter.containsAll(availableRatingsForSource(prefs.imageSource)
-            ) && prefs.imageSource in listOf(ImageSource.YANDERE, ImageSource.DANBOORU)) {
-            showToast(context, "To filter ratings on this source, enable the 'Filter ratings locally' option")
-            // Danbooru has the 2-tag limit and filtering by multiple negated tags simply does not work on Yande.re
-        } else if (!danbooruLimitCheck())
+        if (tagChipList.isEmpty())
+            return showToast(context, "Please select some tags")
+
+        if (
+            prefs.ratingsFilter.isEmpty() ||
+            (prefs.ratingsFilter.size == 1 && prefs.ratingsFilter[0] == ImageRating.SENSITIVE && prefs.imageSource == ImageSource.YANDERE)
+        )
+            return showToast(context, "Please select some ratings")
+
+        if (
+            !prefs.filterRatingsLocally &&
+            !prefs.ratingsFilter.containsAll(availableRatingsForSource(prefs.imageSource)) &&
+            prefs.imageSource in listOf(ImageSource.YANDERE, ImageSource.DANBOORU)
+        )
+            return showToast(context, "To filter ratings on this source, enable the 'Filter ratings locally' option")
+
+        // Danbooru has the 2-tag limit and filtering by multiple negated tags simply does not work on Yande.re
+        if (!danbooruLimitCheck())
             return
-        else {
-            if (prefs.saveSearchHistory) {
-                scope.launch {
-                    context.prefs.addSearchHistoryEntry(
-                        SearchHistoryEntry(
-                            timestamp = Date().time,
-                            source = prefs.imageSource,
-                            tags = tagChipList.toSet(),
-                            ratings = ImageRating.entries.filter { it in prefs.ratingsFilter }.toSet()
-                        ) // Preserve the display order of ratings regardless of the order in search
+
+        if (prefs.saveSearchHistory) {
+            scope.launch {
+                context.prefs.addSearchHistoryEntry(
+                    SearchHistoryEntry(
+                        timestamp = Date().time,
+                        source = prefs.imageSource,
+                        tags = tagChipList.toSet(),
+                        // Preserve the display order of ratings regardless of the order in search
+                        ratings = ImageRating.entries.filter { it in prefs.ratingsFilter }.toSet()
                     )
-                }
+                )
             }
-            val searchTags = currentSource.site.formatTagString(tagChipList)
-            val ratingsFilter = if (prefs.filterRatingsLocally) ""
-                                else ImageRating.buildSearchStringFor(prefs.ratingsFilter)
-            val query = searchTags + if (ratingsFilter.isNotEmpty()) "+$ratingsFilter" else ""
-            navController.navigate(Results(prefs.imageSource.name, query))
         }
+
+        val searchTags = currentSource.site.formatTagString(tagChipList)
+        val ratingsFilter = if (prefs.filterRatingsLocally) ""
+                            else ImageRating.buildSearchStringFor(prefs.ratingsFilter)
+
+        val tags = searchTags + if (ratingsFilter.isNotEmpty()) "+$ratingsFilter" else ""
+        navController.navigate(Results(prefs.imageSource.name, tags))
     }
 
     fun addAiExcludedTag(source: ImageSource) {
@@ -362,24 +375,18 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
             tagChipList.add(0, tag)
         }
     }
+
     LaunchedEffect(Unit) {
         addAiExcludedTag(source = prefs.imageSource)
     }
 
     fun beginSearch() {
-        if (searchString.isNotEmpty()) {
-            if (mostRecentSuggestions.isNotEmpty()) {
-                addToFilter(mostRecentSuggestions[0])
-                searchString = ""
-                shouldShowSuggestions = false
-            } else {
-                if (mostRecentSuggestions.isEmpty()) {
-                    showToast(context, "No matching tags")
-                }
-            }
-        } else {
-            performSearch()
-        }
+        if (searchString.isEmpty()) return performSearch()
+        if (mostRecentSuggestions.isEmpty()) return showToast(context, "No matching tags")
+
+        addToFilter(mostRecentSuggestions[0])
+        searchString = ""
+        shouldShowSuggestions = false
     }
 
     MainScreenScaffold(
@@ -433,14 +440,16 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                     ),
                     trailingIcon = { Row {
                         IconButton(
                             onClick = {
-                                val query = clipboard.getClip().takeIf { it?.clipData?.description?.getMimeType(0) == "text/plain" }
-                                val tags = query?.clipData?.getItemAt(0)?.text?.split(" ")?.filter { it.trim().isNotEmpty() }
-                                if (query == null || tags.isNullOrEmpty()) {
+                                val tags = clipboard.getClip()
+                                    .takeIf { it?.clipData?.description?.getMimeType(0) == "text/plain" }
+                                    ?.clipData?.getItemAt(0)
+                                    ?.let { it.text.split(" ").filter { tag -> tag.trim().isNotEmpty() } }
+                                if (tags.isNullOrEmpty()) {
                                     showToast(context, "No tags to paste")
                                     return@IconButton
                                 }
@@ -451,7 +460,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                                     if (tagName.isNotEmpty()) {
                                         val tag = TagSuggestion(tagName, tagName, "", isExcluded)
                                         addToFilter(tag)
-                                        count += 1
+                                        count++
                                     }
                                 }
                                 showToast(context, "Pasted $count ${"tag".pluralise(count, "tags")}")
@@ -595,7 +604,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                                 leadingIcon = {
                                     Icon(
                                         painter = painterResource(id = R.drawable.ic_copy),
-                                        contentDescription = "Copy all",
+                                        contentDescription = "Copy all"
                                     )
                                 }
                             )

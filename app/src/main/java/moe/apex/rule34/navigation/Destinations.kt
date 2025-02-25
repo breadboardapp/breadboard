@@ -23,7 +23,7 @@ object Search
 @Serializable
 data class Results(
     val source: String,
-    val query: String
+    val tags: String
 )
 
 @Serializable
