@@ -33,7 +33,6 @@ import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.image.Rule34
 import moe.apex.rule34.image.Safebooru
 import moe.apex.rule34.image.Yandere
-import moe.apex.rule34.navigation.ImageView
 import moe.apex.rule34.tag.TagCategory
 import moe.apex.rule34.util.availableRatingsForSource
 import moe.apex.rule34.util.extractPixivId
@@ -450,33 +449,5 @@ enum class ImageSource(override val description: String, val site: ImageBoard) :
     DANBOORU("Danbooru", Danbooru),
     GELBOORU("Gelbooru", Gelbooru),
     YANDERE("Yande.re", Yandere),
-    R34("Rule34", Rule34);
-
-    companion object {
-        fun uriToImageView(uri: Uri?): ImageView? {
-            if (uri == null) return null
-
-            val imageSource = when (uri.host) {
-                "safebooru.org" -> SAFEBOORU
-                "danbooru.donmai.us" -> DANBOORU
-                "gelbooru.com" -> GELBOORU
-                "yande.re", "files.yande.re" -> YANDERE
-                "rule34.xxx" -> R34
-                else -> return null
-            }
-
-            val postId = when (imageSource) {
-                SAFEBOORU,
-                GELBOORU,
-                R34 -> uri.getQueryParameter("id")
-                DANBOORU -> uri.path?.split('/')?.getOrNull(2)
-                YANDERE -> {
-                    val postId = uri.path?.split('/')?.getOrNull(3)
-                    if (uri.host == "files.yande.re") postId?.split(" ")?.getOrNull(1) else postId
-                }
-            } ?: return null
-
-            return ImageView(imageSource, postId)
-        }
-    }
+    R34("Rule34", Rule34)
 }

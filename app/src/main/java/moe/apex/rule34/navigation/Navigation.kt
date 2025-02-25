@@ -25,7 +25,6 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.LayoutDirection
-import androidx.core.net.toUri
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -36,7 +35,6 @@ import moe.apex.rule34.R
 import moe.apex.rule34.detailview.SearchResults
 import moe.apex.rule34.favourites.FavouritesPage
 import moe.apex.rule34.largeimageview.LazyLargeImageView
-import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.PreferencesScreen
 import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.util.withoutVertical
@@ -134,7 +132,7 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                 NavHost(
                     modifier = Modifier.padding(paddingValues.withoutVertical()),
                     navController = navController,
-                    startDestination = ImageSource.uriToImageView(uri) ?: Search,
+                    startDestination = uri?.let { ImageView.fromUri(it) } ?: Search,
                     enterTransition = {
                         if (targetState.destination.routeIs(Results::class))
                             materialSharedAxisXIn(!isRtl, slideDistance)
