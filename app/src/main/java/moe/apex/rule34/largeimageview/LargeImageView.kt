@@ -169,7 +169,7 @@ fun LargeImageView(
             model = model,
             contentDescription = "Image",
             loading = {
-                LoadingSpinner(modifier) {
+                LoadingContentPlaceholder(modifier) {
                     SubcomposeAsyncImage(
                         model = previewImageUrl,
                         contentDescription = "Image",
@@ -381,7 +381,7 @@ fun LazyLargeImageView(
     }
 
     if (isLoading)
-        LoadingSpinner(Modifier.fillMaxSize())
+        FullscreenLoadingSpinner()
     else if (image == null)
         ImageNotFound()
     else
@@ -390,7 +390,7 @@ fun LazyLargeImageView(
 
 
 @Composable
-fun ImageNotFound() {
+private fun ImageNotFound() {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -404,7 +404,7 @@ fun ImageNotFound() {
 
 
 @Composable
-fun LoadingSpinner(
+private fun LoadingContentPlaceholder(
     modifier: Modifier,
     content: (@Composable () -> Unit)? = null
 ) {
