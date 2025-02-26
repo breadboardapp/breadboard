@@ -5,6 +5,7 @@ import android.content.pm.PackageInfo
 import android.net.Uri
 import android.os.Build
 import android.util.Log
+import androidx.annotation.Keep
 import androidx.compose.runtime.compositionLocalOf
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -444,6 +445,8 @@ private fun List<Image>.encodeToByteArray(): ByteArray {
 }
 
 
+// I don't know why Proguard is removing this.
+@Keep
 enum class ImageSource(override val description: String, val site: ImageBoard) : PrefEnum<ImageSource> {
     SAFEBOORU("Safebooru", Safebooru),
     DANBOORU("Danbooru", Danbooru),
