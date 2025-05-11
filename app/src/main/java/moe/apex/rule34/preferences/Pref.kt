@@ -67,6 +67,17 @@ data object PrefNames {
 }
 
 
+enum class PrefCategory(val label: String) {
+    BUILD("Build"),
+    SETTING("Settings"),
+    FAVOURITE_IMAGES("Favourite images"),
+    SEARCH_HISTORY("Search history")
+}
+
+
+data class PrefMeta(val category: PrefCategory, val exportable: Boolean = true)
+
+
 enum class DataSaver(override val description: String) : PrefEnum<DataSaver> {
     ON ("Always"),
     OFF ("Never"),
@@ -110,21 +121,40 @@ data class Prefs(
 
 
 class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
-    private object PreferenceKeys {
-        val DATA_SAVER = stringPreferencesKey(PrefNames.DATA_SAVER)
-        val STORAGE_LOCATION = stringPreferencesKey(PrefNames.STORAGE_LOCATION)
-        val FAVOURITE_IMAGES = byteArrayPreferencesKey(PrefNames.FAVOURITE_IMAGES)
-        val EXCLUDE_AI = booleanPreferencesKey(PrefNames.EXCLUDE_AI)
-        val IMAGE_SOURCE = stringPreferencesKey(PrefNames.IMAGE_SOURCE)
-        val FAVOURITES_FILTER = stringSetPreferencesKey(PrefNames.FAVOURITES_FILTER)
-        val LAST_USED_VERSION_CODE = intPreferencesKey(PrefNames.LAST_USED_VERSION_CODE)
-        val RATINGS_FILTER = stringSetPreferencesKey(PrefNames.RATINGS_FILTER)
-        val FAVOURITES_RATING_FILTER = stringSetPreferencesKey(PrefNames.FAVOURITES_RATING_FILTER)
-        val FILTER_RATINGS_LOCALLY = booleanPreferencesKey(PrefNames.FILTER_RATINGS_LOCALLY)
-        val USE_STAGGERED_GRID = booleanPreferencesKey(PrefNames.USE_STAGGERED_GRID)
-        val SAVE_SEARCH_HISTORY = booleanPreferencesKey(PrefNames.SAVE_SEARCH_HISTORY)
-        val SEARCH_HISTORY = byteArrayPreferencesKey(PrefNames.SEARCH_HISTORY)
+    companion object {
+        object PreferenceKeys {
+            val DATA_SAVER = stringPreferencesKey(PrefNames.DATA_SAVER)
+            val STORAGE_LOCATION = stringPreferencesKey(PrefNames.STORAGE_LOCATION)
+            val FAVOURITE_IMAGES = byteArrayPreferencesKey(PrefNames.FAVOURITE_IMAGES)
+            val EXCLUDE_AI = booleanPreferencesKey(PrefNames.EXCLUDE_AI)
+            val IMAGE_SOURCE = stringPreferencesKey(PrefNames.IMAGE_SOURCE)
+            val FAVOURITES_FILTER = stringSetPreferencesKey(PrefNames.FAVOURITES_FILTER)
+            val LAST_USED_VERSION_CODE = intPreferencesKey(PrefNames.LAST_USED_VERSION_CODE)
+            val RATINGS_FILTER = stringSetPreferencesKey(PrefNames.RATINGS_FILTER)
+            val FAVOURITES_RATING_FILTER = stringSetPreferencesKey(PrefNames.FAVOURITES_RATING_FILTER)
+            val FILTER_RATINGS_LOCALLY = booleanPreferencesKey(PrefNames.FILTER_RATINGS_LOCALLY)
+            val USE_STAGGERED_GRID = booleanPreferencesKey(PrefNames.USE_STAGGERED_GRID)
+            val SAVE_SEARCH_HISTORY = booleanPreferencesKey(PrefNames.SAVE_SEARCH_HISTORY)
+            val SEARCH_HISTORY = byteArrayPreferencesKey(PrefNames.SEARCH_HISTORY)
+        }
+
+        val keyMetaMapping = mapOf( // I am sorry
+            PreferenceKeys.DATA_SAVER to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.STORAGE_LOCATION to PrefMeta(PrefCategory.SETTING, exportable = false),
+            PreferenceKeys.FAVOURITE_IMAGES to PrefMeta(PrefCategory.FAVOURITE_IMAGES),
+            PreferenceKeys.EXCLUDE_AI to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.IMAGE_SOURCE to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.FAVOURITES_FILTER to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.LAST_USED_VERSION_CODE to PrefMeta(PrefCategory.BUILD),
+            PreferenceKeys.RATINGS_FILTER to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.FAVOURITES_RATING_FILTER to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.FILTER_RATINGS_LOCALLY to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.USE_STAGGERED_GRID to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.SAVE_SEARCH_HISTORY to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.SEARCH_HISTORY to PrefMeta(PrefCategory.SEARCH_HISTORY)
+        )
     }
+
 
     val getPreferences: Flow<Prefs> = dataStore.data
         .catch { exception ->

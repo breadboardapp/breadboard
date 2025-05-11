@@ -73,10 +73,12 @@ import moe.apex.rule34.prefs
 import moe.apex.rule34.ui.theme.Typography
 import moe.apex.rule34.util.showToast
 import moe.apex.rule34.util.FullscreenLoadingSpinner
+import moe.apex.rule34.util.PromptType
 import moe.apex.rule34.util.MustSetLocation
 import moe.apex.rule34.util.NAV_BAR_HEIGHT
-import moe.apex.rule34.util.SaveDirectorySelection
+import moe.apex.rule34.util.StorageLocationSelection
 import moe.apex.rule34.util.downloadImage
+import moe.apex.rule34.util.saveUriToPref
 import java.net.SocketTimeoutException
 import java.util.concurrent.ExecutionException
 
@@ -109,7 +111,7 @@ fun LargeImageView(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val isUsingWifi = isUsingWiFi(context)
-    val storageLocationPromptLaunched = remember { mutableStateOf(false) }
+    var storageLocationPromptLaunched by remember { mutableStateOf(false) }
     var isDownloading by remember { mutableStateOf(false) }
 
     if (allImages.isEmpty()) {
@@ -184,8 +186,14 @@ fun LargeImageView(
         )
     }
 
-    if (storageLocationPromptLaunched.value) {
-        SaveDirectorySelection(storageLocationPromptLaunched)
+    if (storageLocationPromptLaunched) {
+        StorageLocationSelection(
+            promptType = PromptType.DIRECTORY_PERMISSION,
+            onFailure = { storageLocationPromptLaunched = false }
+        ) {
+            saveUriToPref(context, scope, it)
+            storageLocationPromptLaunched = false
+        }
     }
 
     Scaffold(
@@ -284,7 +292,7 @@ fun LargeImageView(
                                             exc.printStackTrace()
 
                                             if (exc is MustSetLocation) {
-                                                storageLocationPromptLaunched.value = true
+                                                storageLocationPromptLaunched = true
                                             }
                                             showToast(context, exc.message ?: "Unknown error")
                                             Log.e("Downloader", exc.message ?: "Error downloading image", exc)
