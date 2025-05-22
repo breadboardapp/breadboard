@@ -63,7 +63,11 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity() {
                     addOnNewIntentListener(listener)
                     onDispose { removeOnNewIntentListener(listener) }
                 }
-                Navigation(navController, viewModel, intent.data)
+                Navigation(
+                    navController = navController,
+                    viewModel = viewModel,
+                    startDestination = intent.data?.let { ImageView.fromUri(it) } ?: finish()
+                )
             }
         }
     }

@@ -4,6 +4,7 @@ package moe.apex.rule34
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -66,6 +67,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -92,6 +94,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.util.Consumer
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -113,6 +116,7 @@ import moe.apex.rule34.history.SearchHistoryEntry
 import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.navigation.Navigation
 import moe.apex.rule34.navigation.Results
+import moe.apex.rule34.navigation.Search
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.UserPreferencesRepository
@@ -153,6 +157,14 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity() {
             .build()
     }
 
+
+    private fun maybePrepareResultsDestination(intent: Intent): Results? {
+        val searchSource = ImageSource.valueOf(intent.getStringExtra("source") ?: return null)
+        val searchQuery = intent.getStringExtra("query") ?: return null
+        return Results(searchSource, searchQuery)
+    }
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
@@ -161,12 +173,27 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity() {
         runBlocking { prefs.handleMigration(applicationContext) }
         val initialPrefs = runBlocking { prefs.getPreferences.first() }
 
+        Log.i("intent", intent.extras?.keySet()?.toSet().toString())
+
         setContent {
             val navController = rememberNavController()
             val prefs = prefs.getPreferences.collectAsState(initialPrefs).value
             val viewModel = viewModel(BreadboardViewModel::class.java)
+            val startDestination = Search
+
             CompositionLocalProvider(LocalPreferences provides prefs) {
-                Navigation(navController, viewModel)
+                /* When searching for a tag from the info sheet of a deep linked image, we want it
+                   to be done inside of this activity rather than the DeepLinkActivity. */
+                DisposableEffect(Unit) {
+                    val innerListener = Consumer<Intent> { intent ->
+                        maybePrepareResultsDestination(intent)?.let {
+                            navController.navigate(it)
+                        }
+                    }
+                    addOnNewIntentListener(innerListener)
+                    onDispose { removeOnNewIntentListener(innerListener) }
+                }
+                Navigation(navController, viewModel, maybePrepareResultsDestination(intent) ?: startDestination)
             }
         }
     }

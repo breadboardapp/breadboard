@@ -1,6 +1,5 @@
 package moe.apex.rule34.navigation
 
-import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -45,7 +44,7 @@ import soup.compose.material.motion.animation.rememberSlideDistance
 
 
 @Composable
-fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel, uri: Uri? = null) {
+fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel, startDestination: Any = Search) {
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val slideDistance = rememberSlideDistance()
     val bottomBarVisibleState = remember { mutableStateOf(true) }
@@ -132,7 +131,7 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                 NavHost(
                     modifier = Modifier.padding(paddingValues.withoutVertical()),
                     navController = navController,
-                    startDestination = uri?.let { ImageView.fromUri(it) } ?: Search,
+                    startDestination = startDestination,
                     enterTransition = {
                         if (targetState.destination.routeIs(Results::class))
                             materialSharedAxisXIn(!isRtl, slideDistance)

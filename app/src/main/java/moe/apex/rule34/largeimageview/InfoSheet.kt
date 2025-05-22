@@ -1,6 +1,8 @@
 package moe.apex.rule34.largeimageview
 
 
+import android.content.ComponentName
+import android.content.Intent
 import android.webkit.URLUtil.isValidUrl
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -48,6 +50,8 @@ import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
+import moe.apex.rule34.DeepLinkActivity
+import moe.apex.rule34.MainActivity
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.navigation.ImageView
 import moe.apex.rule34.navigation.Results
@@ -157,8 +161,19 @@ fun InfoSheet(navController: NavController, image: Image, visibilityState: Mutab
                     val tag = it.tags[index]
                     CombinedClickableSuggestionChip(
                         onClick = {
-                            visibilityState.value = false
-                            navController.navigate(Results(image.imageSource, tag))
+                            /* Don't do new searches inside the DeepLinkActivity. We should only
+                               ever do them inside the main one. */
+                            if (context is DeepLinkActivity) {
+                                val intent = Intent(Intent.ACTION_VIEW)
+                                intent.putExtra("source", image.imageSource.name)
+                                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                intent.putExtra("query", tag)
+                                intent.setComponent(ComponentName(context, MainActivity::class.java))
+                                context.startActivity(intent)
+                            } else {
+                                visibilityState.value = false
+                                navController.navigate(Results(image.imageSource, tag))
+                            }
                         },
                         onLongClick = { copyText(context, clip, tag) },
                         label = { Text(tag) }

@@ -1,5 +1,6 @@
 package moe.apex.rule34.util
 
+import android.app.Activity
 import android.content.Context
 import android.text.format.DateFormat
 import androidx.compose.animation.AnimatedVisibility
@@ -91,6 +92,7 @@ fun TitleBar(
     navController: NavController? = null,
     additionalActions: @Composable RowScope.() -> Unit = { }
 ) {
+    val context = LocalContext.current
     LargeTopAppBar(
         title = { Text(title, overflow = TextOverflow.Ellipsis) },
         scrollBehavior = scrollBehavior,
@@ -98,7 +100,13 @@ fun TitleBar(
         navigationIcon = {
             if (navController != null) {
                 IconButton(
-                    onClick = { navController.navigateUp() }
+                    onClick = {
+                        if (navController.previousBackStackEntry != null) {
+                            navController.navigateUp()
+                        } else {
+                            (context as Activity).finish()
+                        }
+                    }
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
