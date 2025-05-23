@@ -11,6 +11,7 @@ import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -454,6 +455,7 @@ private fun LoadingContentPlaceholder(
 }
 
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun CombinedClickableIconButton(
     modifier: Modifier = Modifier,
