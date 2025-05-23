@@ -68,7 +68,6 @@ dependencies {
     implementation 'io.coil-kt.coil3:coil-network-okhttp:3.0.0-rc01'
     implementation 'io.coil-kt.coil3:coil-gif:3.0.0-rc01'
     implementation 'me.saket.telephoto:zoomable:0.13.0'
-    implementation 'io.github.fornewid:material-motion-compose-core:1.2.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-core:1.6.3'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-cbor:1.6.3'
     testImplementation 'junit:junit:4.13.2'

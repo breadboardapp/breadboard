@@ -1,8 +1,12 @@
 package moe.apex.rule34.navigation
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
@@ -20,10 +24,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -38,20 +44,29 @@ import moe.apex.rule34.preferences.PreferencesScreen
 import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.util.withoutVertical
 import moe.apex.rule34.viewmodel.BreadboardViewModel
-import soup.compose.material.motion.animation.materialSharedAxisXIn
-import soup.compose.material.motion.animation.materialSharedAxisXOut
-import soup.compose.material.motion.animation.rememberSlideDistance
 
 
 @Composable
 fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel, startDestination: Any = Search) {
+    val density = LocalDensity.current
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    val slideDistance = rememberSlideDistance()
+
     val bottomBarVisibleState = remember { mutableStateOf(true) }
     val currentBSE by navController.currentBackStackEntryAsState()
     val currentRoute = currentBSE?.destination
     val focusRequester = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
+
+    val slideDistance = remember {
+        val distance = 70.let { if(isRtl) -it else it }.dp
+        with(density) { distance.roundToPx() }
+    }
+
+    val easing = CubicBezierEasing(0.4f, 0.0f, 0.0f, 1f)
+    val enterTransition = slideInHorizontally(tween(easing = easing), { slideDistance }) + fadeIn(tween(easing = easing))
+    val exitTransition = slideOutHorizontally(tween(easing = easing), { -slideDistance }) + fadeOut(tween(easing = easing))
+    val popExitTransition = slideOutHorizontally(tween(easing = easing),  { slideDistance }) + fadeOut( tween(easing = easing))
+    val popEnterTransition = slideInHorizontally(tween(easing = easing), { -slideDistance }) + fadeIn(tween(easing = easing))
 
     BreadboardTheme {
         Surface {
@@ -134,22 +149,22 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                     startDestination = startDestination,
                     enterTransition = {
                         if (targetState.destination.routeIs(Results::class))
-                            materialSharedAxisXIn(!isRtl, slideDistance)
+                            enterTransition
                         else fadeIn()
                     },
                     exitTransition = {
                         if (targetState.destination.routeIs(Results::class))
-                            materialSharedAxisXOut(!isRtl, slideDistance)
+                            exitTransition
                         else fadeOut()
                     },
                     popEnterTransition = {
                         if (initialState.destination.routeIs(Results::class))
-                            materialSharedAxisXIn(isRtl, slideDistance)
+                            popEnterTransition
                         else fadeIn()
                     },
                     popExitTransition = {
                         if (initialState.destination.routeIs(Results::class))
-                            materialSharedAxisXOut(isRtl, slideDistance)
+                            popExitTransition
                         else fadeOut()
                     }
                 ) {
