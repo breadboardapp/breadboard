@@ -16,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import moe.apex.rule34.image.Image
+import moe.apex.rule34.preferences.PreferenceKeys
 import moe.apex.rule34.prefs
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -42,7 +43,9 @@ fun saveUriToPref(context: Context, scope: CoroutineScope, uri: Uri) {
     val tree = DocumentsContract.buildDocumentUriUsingTree(
         uri, DocumentsContract.getTreeDocumentId(uri)
     )
-    scope.launch(Dispatchers.IO) { context.prefs.updateStorageLocation(tree) }
+    scope.launch(Dispatchers.IO) {
+        context.prefs.updatePref(PreferenceKeys.STORAGE_LOCATION, tree.toString())
+    }
 }
 
 

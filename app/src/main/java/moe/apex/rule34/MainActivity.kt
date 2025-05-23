@@ -119,6 +119,7 @@ import moe.apex.rule34.navigation.Results
 import moe.apex.rule34.navigation.Search
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
+import moe.apex.rule34.preferences.PreferenceKeys
 import moe.apex.rule34.preferences.UserPreferencesRepository
 import moe.apex.rule34.tag.TagSuggestion
 import moe.apex.rule34.ui.theme.searchField
@@ -449,7 +450,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                     },
                     placeholder = {
                         Text(
-                            text = "Search ${prefs.imageSource.description}",
+                            text = "Search ${prefs.imageSource.label}",
                             style = MaterialTheme.typography.searchField
                         )
                     },
@@ -549,12 +550,12 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                 val sourceRows: List<@Composable () -> Unit> = ImageSource.entries.map { {
                     FilterChip(
                         selected = prefs.imageSource == it,
-                        label = { Text(it.description) },
+                        label = { Text(it.label) },
                         onClick = {
                             if (it == currentSource) return@FilterChip
                             fun confirm() {
                                 scope.launch {
-                                    context.prefs.updateImageSource(it)
+                                    context.prefs.updatePref(PreferenceKeys.IMAGE_SOURCE, it)
                                 }
                                 tagChipList.clear()
                                 addAiExcludedTag(source = it)
@@ -576,8 +577,11 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                         label = { Text(it.label) },
                         onClick = {
                             scope.launch {
-                                if (it in prefs.ratingsFilter) context.prefs.removeRatingFilter(it)
-                                else context.prefs.addRatingFilter(it)
+                                if (it in prefs.ratingsFilter){
+                                    context.prefs.removeFromSet(PreferenceKeys.RATINGS_FILTER, it)
+                                } else {
+                                    context.prefs.addToSet(PreferenceKeys.RATINGS_FILTER, it)
+                                }
                             }
                         }
                     )
@@ -673,7 +677,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                 Text(
                     text = "Changing image source will clear your search tags. " +
                            "Are you sure you want to change the source from " +
-                           "${data.from.description} to ${data.to.description}?"
+                           "${data.from.label} to ${data.to.label}?"
                 )
             }
         )
@@ -709,8 +713,8 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                             searchString = ""
                             shouldShowSuggestions = false
                             scope.launch {
-                                context.prefs.updateImageSource(it.source)
-                                context.prefs.updateRatingsFilter(it.ratings)
+                                context.prefs.updatePref(PreferenceKeys.IMAGE_SOURCE, it.source)
+                                context.prefs.replaceImageRatings(it.ratings)
                                 historySheetState.hide()
                                 showSearchHistoryPopup = false
                             }

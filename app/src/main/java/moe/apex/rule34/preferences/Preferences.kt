@@ -14,7 +14,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -74,10 +73,10 @@ fun PreferencesScreen(viewModel: BreadboardViewModel) {
             Heading(text = "Data saver")
             EnumPref(
                 title = "Data saver",
-                summary = currentSettings.dataSaver.description,
+                summary = currentSettings.dataSaver.label,
                 enumItems = DataSaver.entries.toTypedArray(),
                 selectedItem = currentSettings.dataSaver,
-                onSelection = { scope.launch { preferencesRepository.updateDataSaver(it as DataSaver) } }
+                onSelection = { scope.launch { preferencesRepository.updatePref(PreferenceKeys.DATA_SAVER, it) } }
             )
 
             LargeVerticalSpacer()
@@ -106,11 +105,11 @@ fun PreferencesScreen(viewModel: BreadboardViewModel) {
             Heading(text = "Searching")
             EnumPref(
                 title = "Image source",
-                summary = currentSettings.imageSource.description,
+                summary = currentSettings.imageSource.label,
                 enumItems = ImageSource.entries.toTypedArray(),
                 selectedItem = currentSettings.imageSource,
                 onSelection = {
-                    scope.launch { preferencesRepository.updateImageSource(it as ImageSource) }
+                    scope.launch { preferencesRepository.updatePref(PreferenceKeys.IMAGE_SOURCE, it) }
                     viewModel.tagSuggestions.clear()
                 }
             )
@@ -123,7 +122,10 @@ fun PreferencesScreen(viewModel: BreadboardViewModel) {
             ) {
                 scope.launch {
                     if (!it) preferencesRepository.clearSearchHistory()
-                    preferencesRepository.updateSaveSearchHistory(it)
+                    preferencesRepository.updatePref(
+                        key = PreferenceKeys.SAVE_SEARCH_HISTORY,
+                        to = it
+                    )
                 }
             }
             SwitchPref(
@@ -132,7 +134,7 @@ fun PreferencesScreen(viewModel: BreadboardViewModel) {
                 summary = "Attempt to remove AI-generated images by excluding the " +
                           "'ai_generated' tag in search queries by default."
             ) {
-                scope.launch { preferencesRepository.updateExcludeAi(it) }
+                scope.launch { preferencesRepository.updatePref(PreferenceKeys.EXCLUDE_AI, it) }
                 viewModel.tagSuggestions.removeIf { tag ->
                     tag.value == currentSettings.imageSource.site.aiTagName && tag.isExcluded
                 }
@@ -143,7 +145,7 @@ fun PreferencesScreen(viewModel: BreadboardViewModel) {
                 summary = "Rather than appending the selected ratings to the search query, " +
                           "filter the results by rating after searching."
             ) {
-                scope.launch { preferencesRepository.updateFilterRatingsLocally(it) }
+                scope.launch { preferencesRepository.updatePref(PreferenceKeys.FILTER_RATINGS_LOCALLY, it) }
             }
 
             LargeVerticalSpacer()
@@ -154,7 +156,7 @@ fun PreferencesScreen(viewModel: BreadboardViewModel) {
                 title = "Staggered grid",
                 summary = "Use a staggered grid for images rather than a uniform grid."
             ) {
-                scope.launch { preferencesRepository.updateUseStaggeredGrid(it) }
+                scope.launch { preferencesRepository.updatePref(PreferenceKeys.USE_STAGGERED_GRID, it) }
             }
 
             LargeVerticalSpacer()

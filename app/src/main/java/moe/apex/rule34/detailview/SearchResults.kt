@@ -29,6 +29,7 @@ import kotlinx.coroutines.withContext
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
+import moe.apex.rule34.preferences.PreferenceKeys
 import moe.apex.rule34.prefs
 import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
 import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
@@ -60,8 +61,11 @@ fun SearchResults(navController: NavController, source: ImageSource, tags: Strin
             label = { Text(it.label) },
             onClick = {
                 scope.launch {
-                    if (it in prefs.ratingsFilter) preferencesRepository.removeRatingFilter(it)
-                    else preferencesRepository.addRatingFilter(it)
+                    if (it in prefs.ratingsFilter) {
+                        preferencesRepository.removeFromSet(PreferenceKeys.RATINGS_FILTER, it)
+                    } else {
+                        preferencesRepository.addToSet(PreferenceKeys.RATINGS_FILTER, it)
+                    }
                 }
             }
         )

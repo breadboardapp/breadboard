@@ -1,5 +1,7 @@
 package moe.apex.rule34.image
 
+import moe.apex.rule34.preferences.PrefEnum
+
 
 private const val FILTER_SAFE         = "-rating:safe+-rating:general+-rating:g"
 private const val FILTER_SENSITIVE    = "-rating:sensitive+-rating:s"
@@ -7,7 +9,7 @@ private const val FILTER_QUESTIONABLE = "-rating:questionable+-rating:q"
 private const val FILTER_EXPLICIT     = "-rating:explicit+-rating:e"
 
 
-enum class ImageRating(val label: String) {
+enum class ImageRating(override val label: String) : PrefEnum<ImageRating> {
     SAFE("Safe"),
     SENSITIVE("Sensitive"),
     QUESTIONABLE("Questionable"),

@@ -163,7 +163,7 @@ fun EnumPref(
                                 selected = selectedItem == setting,
                                 onClick = null
                             )
-                            Text(text = setting.description)
+                            Text(text = setting.label)
                         }
                     }
                 }

@@ -25,7 +25,6 @@ import kotlinx.serialization.cbor.Cbor
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToByteArray
 import moe.apex.rule34.history.SearchHistoryEntry
-import moe.apex.rule34.history.encodeToByteArray
 import moe.apex.rule34.image.Danbooru
 import moe.apex.rule34.image.Gelbooru
 import moe.apex.rule34.image.Image
@@ -38,6 +37,8 @@ import moe.apex.rule34.tag.TagCategory
 import moe.apex.rule34.util.availableRatingsForSource
 import moe.apex.rule34.util.extractPixivId
 import java.io.IOException
+import kotlin.collections.toSet
+import androidx.core.net.toUri
 
 
 val LocalPreferences = compositionLocalOf {
@@ -46,7 +47,7 @@ val LocalPreferences = compositionLocalOf {
 
 
 interface PrefEnum<T : Enum<T>> {
-    val description: String
+    val label: String
 }
 
 
@@ -64,6 +65,25 @@ data object PrefNames {
     const val USE_STAGGERED_GRID = "use_staggered_grid"
     const val SAVE_SEARCH_HISTORY = "save_search_history"
     const val SEARCH_HISTORY = "search_history"
+    const val USE_FIXED_LINKS = "use_fixed_links"
+}
+
+
+object PreferenceKeys {
+    val DATA_SAVER = stringPreferencesKey(PrefNames.DATA_SAVER)
+    val STORAGE_LOCATION = stringPreferencesKey(PrefNames.STORAGE_LOCATION)
+    val FAVOURITE_IMAGES = byteArrayPreferencesKey(PrefNames.FAVOURITE_IMAGES)
+    val EXCLUDE_AI = booleanPreferencesKey(PrefNames.EXCLUDE_AI)
+    val IMAGE_SOURCE = stringPreferencesKey(PrefNames.IMAGE_SOURCE)
+    val FAVOURITES_FILTER = stringSetPreferencesKey(PrefNames.FAVOURITES_FILTER)
+    val LAST_USED_VERSION_CODE = intPreferencesKey(PrefNames.LAST_USED_VERSION_CODE)
+    val RATINGS_FILTER = stringSetPreferencesKey(PrefNames.RATINGS_FILTER)
+    val FAVOURITES_RATING_FILTER = stringSetPreferencesKey(PrefNames.FAVOURITES_RATING_FILTER)
+    val FILTER_RATINGS_LOCALLY = booleanPreferencesKey(PrefNames.FILTER_RATINGS_LOCALLY)
+    val USE_STAGGERED_GRID = booleanPreferencesKey(PrefNames.USE_STAGGERED_GRID)
+    val SAVE_SEARCH_HISTORY = booleanPreferencesKey(PrefNames.SAVE_SEARCH_HISTORY)
+    val SEARCH_HISTORY = byteArrayPreferencesKey(PrefNames.SEARCH_HISTORY)
+    val USE_FIXED_LINKS = booleanPreferencesKey(PrefNames.USE_FIXED_LINKS)
 }
 
 
@@ -78,7 +98,7 @@ enum class PrefCategory(val label: String) {
 data class PrefMeta(val category: PrefCategory, val exportable: Boolean = true)
 
 
-enum class DataSaver(override val description: String) : PrefEnum<DataSaver> {
+enum class DataSaver(override val label: String) : PrefEnum<DataSaver> {
     ON ("Always"),
     OFF ("Never"),
     AUTO ("When using mobile data")
@@ -98,7 +118,8 @@ data class Prefs(
     val filterRatingsLocally: Boolean,
     val useStaggeredGrid: Boolean,
     val saveSearchHistory: Boolean,
-    val searchHistory: List<SearchHistoryEntry>
+    val searchHistory: List<SearchHistoryEntry>,
+    val useFixedLinks: Boolean,
 ) {
     companion object {
         val DEFAULT = Prefs(
@@ -115,6 +136,7 @@ data class Prefs(
             useStaggeredGrid = false,
             saveSearchHistory = true,
             searchHistory = emptyList(),
+            useFixedLinks = false,
         )
     }
 }
@@ -122,23 +144,8 @@ data class Prefs(
 
 class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
     companion object {
-        object PreferenceKeys {
-            val DATA_SAVER = stringPreferencesKey(PrefNames.DATA_SAVER)
-            val STORAGE_LOCATION = stringPreferencesKey(PrefNames.STORAGE_LOCATION)
-            val FAVOURITE_IMAGES = byteArrayPreferencesKey(PrefNames.FAVOURITE_IMAGES)
-            val EXCLUDE_AI = booleanPreferencesKey(PrefNames.EXCLUDE_AI)
-            val IMAGE_SOURCE = stringPreferencesKey(PrefNames.IMAGE_SOURCE)
-            val FAVOURITES_FILTER = stringSetPreferencesKey(PrefNames.FAVOURITES_FILTER)
-            val LAST_USED_VERSION_CODE = intPreferencesKey(PrefNames.LAST_USED_VERSION_CODE)
-            val RATINGS_FILTER = stringSetPreferencesKey(PrefNames.RATINGS_FILTER)
-            val FAVOURITES_RATING_FILTER = stringSetPreferencesKey(PrefNames.FAVOURITES_RATING_FILTER)
-            val FILTER_RATINGS_LOCALLY = booleanPreferencesKey(PrefNames.FILTER_RATINGS_LOCALLY)
-            val USE_STAGGERED_GRID = booleanPreferencesKey(PrefNames.USE_STAGGERED_GRID)
-            val SAVE_SEARCH_HISTORY = booleanPreferencesKey(PrefNames.SAVE_SEARCH_HISTORY)
-            val SEARCH_HISTORY = byteArrayPreferencesKey(PrefNames.SEARCH_HISTORY)
-        }
-
-        val keyMetaMapping = mapOf( // I am sorry
+        val keyMetaMapping = mapOf(
+            // I am sorry
             PreferenceKeys.DATA_SAVER to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.STORAGE_LOCATION to PrefMeta(PrefCategory.SETTING, exportable = false),
             PreferenceKeys.FAVOURITE_IMAGES to PrefMeta(PrefCategory.FAVOURITE_IMAGES),
@@ -151,7 +158,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             PreferenceKeys.FILTER_RATINGS_LOCALLY to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.USE_STAGGERED_GRID to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.SAVE_SEARCH_HISTORY to PrefMeta(PrefCategory.SETTING),
-            PreferenceKeys.SEARCH_HISTORY to PrefMeta(PrefCategory.SEARCH_HISTORY)
+            PreferenceKeys.SEARCH_HISTORY to PrefMeta(PrefCategory.SEARCH_HISTORY),
+            PreferenceKeys.USE_FIXED_LINKS to PrefMeta(PrefCategory.SETTING),
         )
     }
 
@@ -185,14 +193,14 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
            If the last used version code is below 230 (always 0 as we didn't save it before 230)
            and isFirstRun is false then it means the user has updated the app. */
         if (lastUsedVersionCode < 230)
-            updateImageSource(ImageSource.R34)
+            updatePref(PreferenceKeys.IMAGE_SOURCE, ImageSource.R34)
 
         /* Version code 240 introduced the ratings filter. Keep all ratings enabled for existing
            users. New users will get the default set of ratings (only SAFE). */
         if (lastUsedVersionCode < 240) {
-            val validSearchRatings = ImageRating.entries.filter { it != ImageRating.UNKNOWN }.toSet()
-            updateRatingsFilter(validSearchRatings)
-            updateFavouritesRatingFilter(ImageRating.entries.toSet())
+            val validSearchRatings = ImageRating.entries.filter { it != ImageRating.UNKNOWN }
+            updateSet(PreferenceKeys.RATINGS_FILTER, validSearchRatings.map { it.name })
+            updateSet(PreferenceKeys.FAVOURITES_RATING_FILTER, validSearchRatings.map { it.name })
         }
 
         /* Version code 251 introduced grouped tags, which use the new groupedTags property of ImageMetadata.
@@ -233,7 +241,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             val data = dataStore.data.first()
             val filterRatingsLocally = data[PreferenceKeys.FILTER_RATINGS_LOCALLY]
             if (filterRatingsLocally == null)
-                updateFilterRatingsLocally(false)
+                updatePref(PreferenceKeys.FILTER_RATINGS_LOCALLY, false)
         }
 
         // Place any future migrations above this line by checking the last used version code.
@@ -241,30 +249,82 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             updateLastUsedVersionCode(packageInfo)
     }
 
-    suspend fun updateDataSaver(to: DataSaver) {
-        // updateData handles data transactionally, ensuring that if the sort is updated at the same
-        // time from another thread, we won't have conflicts
+
+    private suspend fun <T> updatePrefMain(key: Preferences.Key<T>, to: T) {
         dataStore.edit { preferences ->
-            preferences[PreferenceKeys.DATA_SAVER] = to.name
+            preferences[key] = to
         }
     }
 
-    suspend fun updateStorageLocation(to: Uri) {
-        dataStore.edit { preferences ->
-            preferences[PreferenceKeys.STORAGE_LOCATION] = to.toString()
-        }
+
+    @Suppress("Deprecation")
+    private fun getCurrentRunningVersionCode(packageInfo: PackageInfo): Int {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) packageInfo.longVersionCode.toInt()
+        else packageInfo.versionCode
     }
 
-    private suspend fun updateFavouriteImages(to: List<Image>) {
-        dataStore.edit { preferences ->
-            preferences[PreferenceKeys.FAVOURITE_IMAGES] = to.encodeToByteArray()
-        }
+
+    private suspend fun updateLastUsedVersionCode(packageInfo: PackageInfo) {
+        val versionCode = getCurrentRunningVersionCode(packageInfo)
+        updatePrefMain(PreferenceKeys.LAST_USED_VERSION_CODE, versionCode)
     }
+
+
+    suspend fun updatePref(key: Preferences.Key<Boolean>, to: Boolean) {
+        updatePrefMain(key, to)
+    }
+
+
+    suspend fun updatePref(key: Preferences.Key<String>, to: PrefEnum<*>) {
+        updatePrefMain(key, (to as Enum<*>).name)
+    }
+
+
+    suspend fun updatePref(key: Preferences.Key<String>, to: String) {
+        updatePrefMain(key, to)
+    }
+
+
+    private suspend fun updateSet(key: Preferences.Key<Set<String>>, to: Collection<String>) {
+        updatePrefMain(key, to.toSet())
+    }
+
+
+    suspend fun addToSet(key: Preferences.Key<Set<String>>, item: PrefEnum<*>) {
+        val set = dataStore.data.first()[key]?.toMutableSet() ?: mutableSetOf()
+        set.add((item as Enum<*>).name)
+        updateSet(key, set)
+    }
+
+
+    suspend fun removeFromSet(key: Preferences.Key<Set<String>>, item: PrefEnum<*>) {
+        val set = dataStore.data.first()[key]?.toMutableSet() ?: mutableSetOf()
+        set.remove((item as Enum<*>).name)
+        updateSet(key, set)
+    }
+
+
+    suspend fun replaceImageRatings(newRatings: Set<ImageRating>) {
+        updateSet(PreferenceKeys.RATINGS_FILTER, newRatings.map { it.label })
+    }
+
+
+    @OptIn(ExperimentalSerializationApi::class)
+    private suspend inline fun <reified T> updateByteArray(key: Preferences.Key<ByteArray>, to: T) {
+        updatePrefMain(key, Cbor.encodeToByteArray(to))
+    }
+
+
+    private suspend fun updateFavouriteImages(images: List<Image>) {
+        updateByteArray(PreferenceKeys.FAVOURITE_IMAGES, images)
+    }
+
 
     suspend fun addFavouriteImage(image: Image) {
         val images = getPreferences.first().favouriteImages.toMutableList().apply { add(image) }
         updateFavouriteImages(images)
     }
+
 
     suspend fun removeFavouriteImage(image: Image) {
         val images = getPreferences.first().favouriteImages.toMutableList().apply {
@@ -273,103 +333,6 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         updateFavouriteImages(images)
     }
 
-    suspend fun updateExcludeAi(to: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[PreferenceKeys.EXCLUDE_AI] = to
-        }
-    }
-
-    suspend fun updateImageSource(to: ImageSource) {
-        dataStore.edit { preferences ->
-            preferences[PreferenceKeys.IMAGE_SOURCE] = to.name
-        }
-    }
-
-    private suspend fun updateFavouritesFilter(to: Set<ImageSource>) {
-        dataStore.edit { preferences ->
-            preferences[PreferenceKeys.FAVOURITES_FILTER] = to.mapTo(mutableSetOf()) { it.name }
-        }
-    }
-
-    suspend fun addFavouritesFilter(source: ImageSource) {
-        val sources = getPreferences.first().favouritesFilter.toMutableSet().apply { add(source) }
-        updateFavouritesFilter(sources)
-    }
-
-    suspend fun removeFavouritesFilter(source: ImageSource) {
-        val sources = getPreferences.first().favouritesFilter.toMutableSet().apply { remove(source) }
-        updateFavouritesFilter(sources)
-    }
-
-    @Suppress("Deprecation")
-    private fun getCurrentRunningVersionCode(packageInfo: PackageInfo): Int {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) packageInfo.longVersionCode.toInt()
-        else packageInfo.versionCode
-    }
-
-    private suspend fun updateLastUsedVersionCode(packageInfo: PackageInfo) {
-        val versionCode = getCurrentRunningVersionCode(packageInfo)
-
-        dataStore.edit { preferences ->
-            preferences[PreferenceKeys.LAST_USED_VERSION_CODE] = versionCode
-        }
-    }
-
-    suspend fun updateRatingsFilter(to: Set<ImageRating>) {
-        dataStore.edit { preferences ->
-            preferences[PreferenceKeys.RATINGS_FILTER] = to.mapTo(mutableSetOf()) { it.name }
-        }
-    }
-
-    suspend fun addRatingFilter(rating: ImageRating) {
-        val ratings = getPreferences.first().ratingsFilter.toMutableSet().apply { add(rating) }
-        updateRatingsFilter(ratings)
-    }
-
-    suspend fun removeRatingFilter(rating: ImageRating) {
-        val ratings = getPreferences.first().ratingsFilter.toMutableSet().apply { remove(rating) }
-        updateRatingsFilter(ratings)
-    }
-
-    private suspend fun updateFavouritesRatingFilter(to: Set<ImageRating>) {
-        dataStore.edit { preferences ->
-            preferences[PreferenceKeys.FAVOURITES_RATING_FILTER] = to.mapTo(mutableSetOf()) { it.name }
-        }
-    }
-
-    suspend fun addFavouritesRatingFilter(rating: ImageRating) {
-        val ratings = getPreferences.first().favouritesRatingsFilter.toMutableSet().apply { add(rating) }
-        updateFavouritesRatingFilter(ratings)
-    }
-
-    suspend fun removeFavouritesRatingFilter(rating: ImageRating) {
-        val ratings = getPreferences.first().favouritesRatingsFilter.toMutableSet().apply { remove(rating) }
-        updateFavouritesRatingFilter(ratings)
-    }
-
-    suspend fun updateFilterRatingsLocally(to: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[PreferenceKeys.FILTER_RATINGS_LOCALLY] = to
-        }
-    }
-
-    suspend fun updateUseStaggeredGrid(to: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[PreferenceKeys.USE_STAGGERED_GRID] = to
-        }
-    }
-
-    suspend fun updateSaveSearchHistory(to: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[PreferenceKeys.SAVE_SEARCH_HISTORY] = to
-        }
-    }
-
-    private suspend fun updateSearchHistory(to: List<SearchHistoryEntry>) {
-        dataStore.edit { preferences ->
-            preferences[PreferenceKeys.SEARCH_HISTORY] = to.encodeToByteArray()
-        }
-    }
 
     private fun findDuplicate(incoming: SearchHistoryEntry, history: List<SearchHistoryEntry>): SearchHistoryEntry? {
         /* Since not all ratings are available for all sources, we should only check the
@@ -390,6 +353,12 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         }
         return null
     }
+
+
+    private suspend fun updateSearchHistory(to: List<SearchHistoryEntry>) {
+        updateByteArray(PreferenceKeys.SEARCH_HISTORY, to)
+    }
+
 
     suspend fun addSearchHistoryEntry(entry: SearchHistoryEntry) {
         val history = getPreferences.first().searchHistory.toMutableList()
@@ -412,6 +381,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         updateSearchHistory(history)
     }
 
+
     suspend fun clearSearchHistory() {
         updateSearchHistory(emptyList())
     }
@@ -422,7 +392,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val dataSaver = DataSaver.valueOf(
             preferences[PreferenceKeys.DATA_SAVER] ?: DataSaver.AUTO.name
         )
-        val storageLocation = Uri.parse(preferences[PreferenceKeys.STORAGE_LOCATION] ?: "")
+        val storageLocation = (preferences[PreferenceKeys.STORAGE_LOCATION] ?: "").toUri()
         val favouriteImagesRaw = preferences[PreferenceKeys.FAVOURITE_IMAGES]
         val favouriteImages: List<Image> = favouriteImagesRaw?.let { Cbor.decodeFromByteArray(it) } ?: emptyList()
         val excludeAi = preferences[PreferenceKeys.EXCLUDE_AI] ?: false
@@ -448,6 +418,9 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         )
         val searchHistoryRaw = preferences[PreferenceKeys.SEARCH_HISTORY]
         val searchHistory: List<SearchHistoryEntry> = searchHistoryRaw?.let { Cbor.decodeFromByteArray(it) } ?: emptyList()
+        val useFixedLinks = (
+            preferences[PreferenceKeys.USE_FIXED_LINKS] ?: false
+        )
 
         return Prefs(
             dataSaver,
@@ -462,7 +435,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             filterRatingsLocally,
             useStaggeredGrid,
             saveSearchHistory,
-            searchHistory
+            searchHistory,
+            useFixedLinks,
         )
     }
 
@@ -477,7 +451,7 @@ private fun List<Image>.encodeToByteArray(): ByteArray {
 
 // I don't know why Proguard is removing this.
 @Keep
-enum class ImageSource(override val description: String, val site: ImageBoard) : PrefEnum<ImageSource> {
+enum class ImageSource(override val label: String, val site: ImageBoard) : PrefEnum<ImageSource> {
     SAFEBOORU("Safebooru", Safebooru),
     DANBOORU("Danbooru", Danbooru),
     GELBOORU("Gelbooru", Gelbooru),

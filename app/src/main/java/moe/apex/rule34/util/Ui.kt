@@ -399,7 +399,7 @@ fun SearchHistoryListItem(
             Column(Modifier.padding(top = 16.dp, bottom = 8.dp)) {
                 Heading(
                     modifier = Modifier.padding(start = 4.dp),
-                    text = "$formattedDate  \u2022  ${item.source.description}"
+                    text = "$formattedDate  \u2022  ${item.source.label}"
                 )
                 /* We're preventing the chips from consuming touch actions by placing the chips
                    column inside a Box, and then placing an invisible composable of the same

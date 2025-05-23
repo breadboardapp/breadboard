@@ -29,6 +29,7 @@ import moe.apex.rule34.dataStore
 import moe.apex.rule34.history.SearchHistoryEntry
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.PrefCategory
+import moe.apex.rule34.preferences.PreferenceKeys
 import moe.apex.rule34.preferences.Prefs
 import moe.apex.rule34.preferences.UserPreferencesRepository
 import moe.apex.rule34.prefs
@@ -128,14 +129,14 @@ private suspend fun importSettings(context: Context, data: JSONObject) {
 @OptIn(ExperimentalSerializationApi::class)
 private suspend fun importFavouriteImages(context: Context, data: JSONObject) {
     val images = Cbor.decodeFromHexString(data.getString(PrefCategory.FAVOURITE_IMAGES.name)) as List<Image>
-    updateByteArrayPref(context, data, UserPreferencesRepository.Companion.PreferenceKeys.FAVOURITE_IMAGES, PrefCategory.FAVOURITE_IMAGES.name, images)
+    updateByteArrayPref(context, data, PreferenceKeys.FAVOURITE_IMAGES, PrefCategory.FAVOURITE_IMAGES.name, images)
 }
 
 
 @OptIn(ExperimentalSerializationApi::class)
 private suspend fun importSearchHistory(context: Context, data: JSONObject) {
     val sh = Cbor.decodeFromHexString(data.getString(PrefCategory.SEARCH_HISTORY.name)) as List<SearchHistoryEntry>
-    updateByteArrayPref(context, data, UserPreferencesRepository.Companion.PreferenceKeys.SEARCH_HISTORY, PrefCategory.SEARCH_HISTORY.name, sh)
+    updateByteArrayPref(context, data, PreferenceKeys.SEARCH_HISTORY, PrefCategory.SEARCH_HISTORY.name, sh)
 }
 
 
@@ -162,20 +163,19 @@ suspend fun importData(context: Context, data: JSONObject, categories: Collectio
        currently and the user chooses not to import the settings, the history still gets imported
        but future searches while it's disabled won't be saved. Maybe I'll address that, maybe not. */
     Log.i("Importing", data.toString())
-    val pk = UserPreferencesRepository.Companion.PreferenceKeys
     val current = context.dataStore.data.first()
     val currentCopy = current.toPreferences()
 
     try {
         context.dataStore.edit {
-            it[pk.LAST_USED_VERSION_CODE] = context.packageManager.getPackageInfo(context.packageName, 0).versionCode
+            it[PreferenceKeys.LAST_USED_VERSION_CODE] = context.packageManager.getPackageInfo(context.packageName, 0).versionCode
         }
 
         for (category in categories) {
             when (category) {
                 PrefCategory.BUILD -> {
                     context.dataStore.edit {
-                        it[pk.LAST_USED_VERSION_CODE] = data.getInt(category.name)
+                        it[PreferenceKeys.LAST_USED_VERSION_CODE] = data.getInt(category.name)
                     }
                 }
                 PrefCategory.SETTING -> importSettings(context, data)

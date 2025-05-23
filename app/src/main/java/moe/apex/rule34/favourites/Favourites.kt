@@ -25,6 +25,7 @@ import moe.apex.rule34.detailview.ImageGrid
 import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
+import moe.apex.rule34.preferences.PreferenceKeys
 import moe.apex.rule34.prefs
 import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
 import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
@@ -53,11 +54,14 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
     chips.add(ImageSource.entries.map { {
         FilterChip(
             selected = it in prefs.favouritesFilter,
-            label = { Text(it.description) },
+            label = { Text(it.label) },
             onClick = {
                 scope.launch {
-                    if (it in prefs.favouritesFilter) preferencesRepository.removeFavouritesFilter(it)
-                    else preferencesRepository.addFavouritesFilter(it)
+                    if (it in prefs.favouritesFilter) {
+                        preferencesRepository.removeFromSet(PreferenceKeys.FAVOURITES_FILTER, it)
+                    } else {
+                        preferencesRepository.addToSet(PreferenceKeys.FAVOURITES_FILTER, it)
+                    }
                 }
             }
         )
@@ -68,8 +72,11 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
             label = { Text(it.label) },
             onClick = {
                 scope.launch {
-                    if (it in prefs.favouritesRatingsFilter) preferencesRepository.removeFavouritesRatingFilter(it)
-                    else preferencesRepository.addFavouritesRatingFilter(it)
+                    if (it in prefs.favouritesRatingsFilter) {
+                        preferencesRepository.removeFromSet(PreferenceKeys.FAVOURITES_RATING_FILTER, it)
+                    } else {
+                        preferencesRepository.addToSet(PreferenceKeys.FAVOURITES_RATING_FILTER, it)
+                    }
                 }
             }
         )
