@@ -50,7 +50,11 @@ fun saveUriToPref(context: Context, scope: CoroutineScope, uri: Uri) {
 
 
 @Composable
-fun StorageLocationSelection(promptType: PromptType, onFailure: () -> Unit, onSuccess: (Uri) -> Unit) {
+fun StorageLocationSelection(
+    promptType: PromptType,
+    onFailure: () -> Unit = { },
+    onSuccess: (Uri) -> Unit
+) {
     val context = LocalContext.current
 
     val requestPermissionLauncher =
@@ -62,8 +66,8 @@ fun StorageLocationSelection(promptType: PromptType, onFailure: () -> Unit, onSu
                 }
             } else {
                 showToast(context, "Nothing selected.")
+                onFailure()
             }
-            onFailure()
         }
 
     val intent = when (promptType) {

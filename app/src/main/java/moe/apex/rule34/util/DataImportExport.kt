@@ -212,14 +212,10 @@ fun ImportHandler(
 
 @Composable
 fun ExportDirectoryHandler(data: JSONObject, callback: () -> Unit) {
-    var directoryPickerVisibility by remember { mutableStateOf(true) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    StorageLocationSelection(
-        promptType = PromptType.CREATE_FILE,
-        onFailure = { directoryPickerVisibility = false }
-    ) { uri ->
+    StorageLocationSelection(PromptType.CREATE_FILE) { uri ->
         scope.launch(Dispatchers.IO) {
             context.contentResolver.openOutputStream(uri)?.use {
                 it.write(data.toString(4).toByteArray())
@@ -228,7 +224,6 @@ fun ExportDirectoryHandler(data: JSONObject, callback: () -> Unit) {
                 showToast(context, "Successfully exported data.")
             }
         }.invokeOnCompletion {
-            directoryPickerVisibility = false
             callback()
         }
     }
