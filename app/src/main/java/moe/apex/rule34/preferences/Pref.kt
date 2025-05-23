@@ -315,7 +315,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
 
 
     suspend fun replaceImageRatings(newRatings: Set<ImageRating>) {
-        updateSet(PreferenceKeys.RATINGS_FILTER, newRatings.map { it.label })
+        updateSet(PreferenceKeys.RATINGS_FILTER, newRatings.map { it.name })
     }
 
 
