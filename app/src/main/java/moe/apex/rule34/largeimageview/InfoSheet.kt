@@ -2,6 +2,7 @@ package moe.apex.rule34.largeimageview
 
 
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.webkit.URLUtil.isValidUrl
 import androidx.compose.foundation.layout.Arrangement
@@ -55,6 +56,7 @@ import moe.apex.rule34.MainActivity
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.navigation.ImageView
 import moe.apex.rule34.navigation.Results
+import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.util.CHIP_SPACING
 import moe.apex.rule34.util.CombinedClickableSuggestionChip
 import moe.apex.rule34.util.Heading
@@ -73,16 +75,22 @@ fun InfoSheet(navController: NavController, image: Image, visibilityState: Mutab
     val clip = LocalClipboardManager.current
     var previousSheetValue by remember { mutableStateOf(SheetValue.Hidden) }
 
+    fun hideAndThen(block: () -> Unit = { }) {
+        scope.launch {
+            state?.hide()
+        }.invokeOnCompletion {
+            visibilityState.value = false
+            block()
+        }
+    }
+
     // We want to bypass the partially expanded state when closing but not when opening.
     state = rememberModalBottomSheetState(
         skipPartiallyExpanded = false,
         confirmValueChange = { newValue ->
             if (newValue == SheetValue.PartiallyExpanded ) {
                 if (previousSheetValue == SheetValue.Expanded) {
-                    scope.launch {
-                        state?.hide()
-                        visibilityState.value = false
-                    }
+                    hideAndThen()
                     return@rememberModalBottomSheetState false
                 } else {
                     previousSheetValue = newValue
@@ -111,8 +119,9 @@ fun InfoSheet(navController: NavController, image: Image, visibilityState: Mutab
                         .padding(top = 4.dp)
                         .align(Alignment.CenterHorizontally),
                     onClick = {
-                        visibilityState.value = false
-                        navController.navigate(ImageView(image.imageSource, it))
+                        hideAndThen {
+                            navController.navigate(ImageView(image.imageSource, it))
+                        }
                     }
                 ) {
                     Text("View parent image")
@@ -125,8 +134,14 @@ fun InfoSheet(navController: NavController, image: Image, visibilityState: Mutab
                             .padding(top = 4.dp)
                             .align(Alignment.CenterHorizontally),
                         onClick = {
-                            visibilityState.value = false
-                            navController.navigate(Results(image.imageSource, "parent:$it"))
+                            hideAndThen {
+                                if (context is DeepLinkActivity) {
+                                    val intent = createSearchIntent(context, image.imageSource, "parent:$it")
+                                    context.startActivity(intent)
+                                } else {
+                                    navController.navigate(Results(image.imageSource, "parent:$it"))
+                                }
+                            }
                         }
                     ) {
                         Text("View related images")
@@ -161,18 +176,15 @@ fun InfoSheet(navController: NavController, image: Image, visibilityState: Mutab
                     val tag = it.tags[index]
                     CombinedClickableSuggestionChip(
                         onClick = {
-                            /* Don't do new searches inside the DeepLinkActivity. We should only
-                               ever do them inside the main one. */
-                            if (context is DeepLinkActivity) {
-                                val intent = Intent(Intent.ACTION_VIEW)
-                                intent.putExtra("source", image.imageSource.name)
-                                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                intent.putExtra("query", tag)
-                                intent.setComponent(ComponentName(context, MainActivity::class.java))
-                                context.startActivity(intent)
-                            } else {
-                                visibilityState.value = false
-                                navController.navigate(Results(image.imageSource, tag))
+                            hideAndThen {
+                                /* Don't do new searches inside the DeepLinkActivity. We should only
+                                   ever do them inside the main one. */
+                                if (context is DeepLinkActivity) {
+                                    val intent = createSearchIntent(context, image.imageSource, tag)
+                                    context.startActivity(intent)
+                                } else {
+                                    navController.navigate(Results(image.imageSource, tag))
+                                }
                             }
                         },
                         onLongClick = { copyText(context, clip, tag) },
@@ -234,4 +246,19 @@ private fun PaddedUrlText(text: String) {
             modifier = Modifier.padding(horizontal = 16.dp)
         )
     }
+}
+
+
+private fun createSearchIntent(context: Context, imageSource: ImageSource, query: String): Intent {
+    val intent = Intent(Intent.ACTION_VIEW)
+    intent.putExtra("source", imageSource.name)
+    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+    intent.putExtra("query", query)
+    intent.setComponent(
+        ComponentName(
+            context,
+            MainActivity::class.java
+        )
+    )
+    return intent
 }

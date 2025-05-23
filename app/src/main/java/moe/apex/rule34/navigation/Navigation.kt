@@ -148,22 +148,22 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                     navController = navController,
                     startDestination = startDestination,
                     enterTransition = {
-                        if (targetState.destination.routeIs(Results::class))
+                        if (targetState.destination.routeIs(Results::class, ImageView::class))
                             enterTransition
                         else fadeIn()
                     },
                     exitTransition = {
-                        if (targetState.destination.routeIs(Results::class))
+                        if (targetState.destination.routeIs(Results::class, ImageView::class))
                             exitTransition
                         else fadeOut()
                     },
                     popEnterTransition = {
-                        if (initialState.destination.routeIs(Results::class))
+                        if (initialState.destination.routeIs(Results::class, ImageView::class))
                             popEnterTransition
                         else fadeIn()
                     },
                     popExitTransition = {
-                        if (initialState.destination.routeIs(Results::class))
+                        if (initialState.destination.routeIs(Results::class, ImageView::class))
                             popExitTransition
                         else fadeOut()
                     }
