@@ -56,6 +56,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil3.compose.SubcomposeAsyncImage
 import coil3.request.ImageRequest
@@ -80,6 +82,7 @@ import moe.apex.rule34.util.NAV_BAR_HEIGHT
 import moe.apex.rule34.util.StorageLocationSelection
 import moe.apex.rule34.util.downloadImage
 import moe.apex.rule34.util.saveUriToPref
+import moe.apex.rule34.viewmodel.BreadboardViewModel
 import java.net.SocketTimeoutException
 import java.util.concurrent.ExecutionException
 
@@ -110,6 +113,7 @@ fun LargeImageView(
     var forciblyShowBottomBar by remember { mutableStateOf(false) }
     var offset by remember { mutableStateOf(0.dp) }
     val context = LocalContext.current
+    val viewModel = viewModel<BreadboardViewModel>()
     val scope = rememberCoroutineScope()
     val isUsingWifi = isUsingWiFi(context)
     var storageLocationPromptLaunched by remember { mutableStateOf(false) }
@@ -278,7 +282,7 @@ fun LargeImageView(
                         FloatingActionButton(
                             onClick = {
                                 if (!isDownloading) {
-                                    scope.launch {
+                                    viewModel.viewModelScope.launch {
                                         isDownloading = true
                                         val result: Result<Boolean> = downloadImage(
                                             context,
