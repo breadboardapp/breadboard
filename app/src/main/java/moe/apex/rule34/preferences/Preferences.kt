@@ -288,7 +288,7 @@ private operator fun JSONObject.contains(key: String): Boolean {
     return try {
         get(key)
         true
-    } catch (e: JSONException) {
+    } catch (_: JSONException) {
         false
     }
 }

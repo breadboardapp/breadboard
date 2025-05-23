@@ -98,7 +98,7 @@ private suspend fun importSettings(context: Context, data: JSONObject) {
 
             val prefValue = try {
                 thisCategory.get(key.name)
-            } catch (e: JSONException) {
+            } catch (_: JSONException) {
                 it.remove(key)
                 continue
             } // Pref has never been set in the backup, we should use the default.

@@ -443,12 +443,6 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
 }
 
 
-@OptIn(ExperimentalSerializationApi::class)
-private fun List<Image>.encodeToByteArray(): ByteArray {
-    return Cbor.encodeToByteArray(this)
-}
-
-
 // I don't know why Proguard is removing this.
 @Keep
 enum class ImageSource(override val label: String, val site: ImageBoard) : PrefEnum<ImageSource> {
