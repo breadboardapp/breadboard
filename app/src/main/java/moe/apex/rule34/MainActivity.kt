@@ -40,6 +40,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -81,6 +82,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
@@ -695,7 +697,10 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
             )
             VerticalSpacer()
             LazyColumn(
-                modifier = Modifier.animateContentSize(),
+                modifier = Modifier
+                    .animateContentSize()
+                    .padding(horizontal = 16.dp)
+                    .clip(RoundedCornerShape(16.dp, 16.dp)),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 if (prefs.searchHistory.isEmpty()) {
