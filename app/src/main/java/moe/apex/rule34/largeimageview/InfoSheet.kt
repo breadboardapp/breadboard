@@ -25,7 +25,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
@@ -61,6 +60,7 @@ import moe.apex.rule34.util.CHIP_SPACING
 import moe.apex.rule34.util.CombinedClickableSuggestionChip
 import moe.apex.rule34.util.Heading
 import moe.apex.rule34.util.LargeVerticalSpacer
+import moe.apex.rule34.util.TitledModalBottomSheet
 import moe.apex.rule34.util.copyText
 import moe.apex.rule34.util.pluralise
 
@@ -123,11 +123,12 @@ fun InfoSheet(navController: NavController, image: Image, visibilityState: Mutab
 
     /* The padding and window insets allow the content to draw behind the nav bar while ensuring
        the sheet doesn't expand to behind the status bar. */
-    ModalBottomSheet(
+    TitledModalBottomSheet(
         modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars),
         onDismissRequest = { visibilityState.value = false },
         sheetState = state,
-        contentWindowInsets = { BottomSheetDefaults.windowInsets.only(WindowInsetsSides.Horizontal) }
+        contentWindowInsets = { BottomSheetDefaults.windowInsets.only(WindowInsetsSides.Horizontal) },
+        title = "Image info"
     ) {
         Column(Modifier.verticalScroll(rememberScrollState())) {
             image.metadata.parentId?.let {

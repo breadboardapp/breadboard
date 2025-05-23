@@ -59,7 +59,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -93,7 +92,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.util.Consumer
@@ -130,6 +128,7 @@ import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.NAV_BAR_HEIGHT
 import moe.apex.rule34.util.NavBarHeightVerticalSpacer
 import moe.apex.rule34.util.SearchHistoryListItem
+import moe.apex.rule34.util.TitledModalBottomSheet
 import moe.apex.rule34.util.VerticalSpacer
 import moe.apex.rule34.util.availableRatingsForCurrentSource
 import moe.apex.rule34.util.availableRatingsForSource
@@ -681,21 +680,13 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
     }
 
     if (showSearchHistoryPopup) {
-        ModalBottomSheet(
+        TitledModalBottomSheet(
             modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars),
             onDismissRequest = { showSearchHistoryPopup = false },
             sheetState = historySheetState,
-            contentWindowInsets = { BottomSheetDefaults.windowInsets.only(WindowInsetsSides.Horizontal) }
+            contentWindowInsets = { BottomSheetDefaults.windowInsets.only(WindowInsetsSides.Horizontal) },
+            title = "Search history"
         ) {
-            Text(
-                text = "Search history",
-                style = MaterialTheme.typography.titleLarge,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            )
-            VerticalSpacer()
             LazyColumn(
                 modifier = Modifier
                     .animateContentSize()
