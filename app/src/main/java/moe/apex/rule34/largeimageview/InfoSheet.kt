@@ -84,6 +84,23 @@ fun InfoSheet(navController: NavController, image: Image, visibilityState: Mutab
         }
     }
 
+    fun chipClick(tag: String) {
+        hideAndThen {
+            /* Don't do new searches inside the DeepLinkActivity. We should only
+               ever do them inside the main one. */
+            if (context is DeepLinkActivity) {
+                val intent = createSearchIntent(context, image.imageSource, tag)
+                context.startActivity(intent)
+            } else {
+                navController.navigate(Results(image.imageSource, tag))
+            }
+        }
+    }
+
+    fun chipLongClick(tag: String) {
+        copyText(context, clip, tag)
+    }
+
     // We want to bypass the partially expanded state when closing but not when opening.
     state = rememberModalBottomSheetState(
         skipPartiallyExpanded = false,
@@ -150,7 +167,12 @@ fun InfoSheet(navController: NavController, image: Image, visibilityState: Mutab
             }
             image.metadata.artist?.let {
                 Heading(text = "Artist")
-                PaddedText(it)
+                CombinedClickableSuggestionChip(
+                    modifier = Modifier.padding(start = 16.dp),
+                    label = { Text(it) },
+                    onClick = { chipClick(it) },
+                    onLongClick = { chipLongClick(it) }
+                )
                 LargeVerticalSpacer()
             }
             image.metadata.source?.let {
@@ -175,40 +197,12 @@ fun InfoSheet(navController: NavController, image: Image, visibilityState: Mutab
                 ) { index ->
                     val tag = it.tags[index]
                     CombinedClickableSuggestionChip(
-                        onClick = {
-                            hideAndThen {
-                                /* Don't do new searches inside the DeepLinkActivity. We should only
-                                   ever do them inside the main one. */
-                                if (context is DeepLinkActivity) {
-                                    val intent = createSearchIntent(context, image.imageSource, tag)
-                                    context.startActivity(intent)
-                                } else {
-                                    navController.navigate(Results(image.imageSource, tag))
-                                }
-                            }
-                        },
-                        onLongClick = { copyText(context, clip, tag) },
-                        label = { Text(tag) }
+                        label = { Text(tag) },
+                        onClick = { chipClick(tag) },
+                        onLongClick = { chipLongClick(tag) }
                     )
                 }
                 Spacer(modifier = Modifier.height(16.dp))
-            }
-            if (image.metadata.allTags.isNotEmpty()) {
-                TextButton(
-                    modifier = Modifier
-                        .padding(top = 4.dp)
-                        .align(Alignment.CenterHorizontally),
-                    onClick = {
-                        copyText(
-                            context = context,
-                            clipboardManager = clip,
-                            text = image.metadata.allTags.joinToString(" "),
-                            message = "Copied ${image.metadata.allTags.size} ${"tag".pluralise(image.metadata.allTags.size, "tags")}"
-                        )
-                    }
-                ) {
-                    Text("Copy all")
-                }
             }
 
             Spacer(Modifier.height(WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() * 2))

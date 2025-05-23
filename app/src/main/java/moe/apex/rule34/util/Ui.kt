@@ -321,13 +321,14 @@ fun copyText(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CombinedClickableSuggestionChip(
+    modifier: Modifier = Modifier,
+    label: @Composable () -> Unit,
     onClick: () -> Unit,
-    onLongClick: () -> Unit,
-    label: @Composable () -> Unit
+    onLongClick: () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
 
-    Box {
+    Box(modifier = modifier) {
         SuggestionChip(onClick = { }, label = label, interactionSource = interactionSource)
         Box(
             modifier = Modifier
