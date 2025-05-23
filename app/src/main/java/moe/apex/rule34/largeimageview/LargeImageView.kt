@@ -253,9 +253,10 @@ fun LargeImageView(
                         }
                         IconButton(
                             onClick = {
+                                val shareLink = currentImage.metadata?.pixivUrl ?:currentImage.metadata?.source ?: currentImage.highestQualityFormatUrl
                                 val sendIntent: Intent = Intent().apply {
                                     action = Intent.ACTION_SEND
-                                    putExtra(Intent.EXTRA_TEXT, currentImage.highestQualityFormatUrl)
+                                    putExtra(Intent.EXTRA_TEXT, shareLink)
                                     type = "text/plain"
                                 }
                                 val shareIntent = Intent.createChooser(sendIntent, null)
