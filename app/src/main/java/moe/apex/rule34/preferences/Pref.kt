@@ -133,7 +133,7 @@ data class Prefs(
             ratingsFilter = listOf(ImageRating.SAFE),
             favouritesRatingsFilter = listOf(ImageRating.SAFE),
             filterRatingsLocally = true,
-            useStaggeredGrid = false,
+            useStaggeredGrid = true,
             saveSearchHistory = true,
             searchHistory = emptyList(),
             useFixedLinks = false,
@@ -185,15 +185,16 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val currentPreferences = dataStore.data.first()
         val lastUsedVersionCode = currentPreferences[PreferenceKeys.LAST_USED_VERSION_CODE] ?: 0
 
-        if (isOnFirstInstallVersion)
+        /* lastUsedVersionCode can be 0 if the user had it installed already but cleared the data.
+           In such a case, we can't reliably determine what their previous version was. Just load
+           the default settings. */
+        if (isOnFirstInstallVersion || lastUsedVersionCode == 0)
             return updateLastUsedVersionCode(packageInfo)
 
-        /* Version code 230 introduced app version tracking and also changed the default source from
-           R34 to Safebooru but we don't want to change it for existing users.
-           If the last used version code is below 230 (always 0 as we didn't save it before 230)
-           and isFirstRun is false then it means the user has updated the app. */
-        if (lastUsedVersionCode < 230)
-            updatePref(PreferenceKeys.IMAGE_SOURCE, ImageSource.R34)
+        /* As of version code 270, the migration to keep users on the R34 source if they updated
+           from older than 230 was removed. Users updating from below 230 straight to 270+ will have
+           their source reset to Safebooru and rating set to Safe, so they will no longer see NSFW
+           content without adjusting their settings. */
 
         /* Version code 240 introduced the ratings filter. Keep all ratings enabled for existing
            users. New users will get the default set of ratings (only SAFE). */
@@ -242,6 +243,15 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             val filterRatingsLocally = data[PreferenceKeys.FILTER_RATINGS_LOCALLY]
             if (filterRatingsLocally == null)
                 updatePref(PreferenceKeys.FILTER_RATINGS_LOCALLY, false)
+        }
+
+        /* Version code 270 enabled the staggered grid by default. Don't change it for people who
+           hadn't enabled it previously. */
+        if (lastUsedVersionCode < 270) {
+            val data = dataStore.data.first()
+            val useStaggeredGrid = data[PreferenceKeys.USE_STAGGERED_GRID]
+            if (useStaggeredGrid == null)
+                updatePref(PreferenceKeys.USE_STAGGERED_GRID, false)
         }
 
         // Place any future migrations above this line by checking the last used version code.
