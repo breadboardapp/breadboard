@@ -11,6 +11,9 @@ import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -33,11 +36,17 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonColors
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -54,6 +63,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
@@ -81,6 +91,7 @@ import moe.apex.rule34.util.MustSetLocation
 import moe.apex.rule34.util.NAV_BAR_HEIGHT
 import moe.apex.rule34.util.StorageLocationSelection
 import moe.apex.rule34.util.downloadImage
+import moe.apex.rule34.util.fixLink
 import moe.apex.rule34.util.saveUriToPref
 import moe.apex.rule34.viewmodel.BreadboardViewModel
 import java.net.SocketTimeoutException
@@ -251,14 +262,21 @@ fun LargeImageView(
                                 )
                             }
                         }
-                        IconButton(
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                        }
+                        CombinedClickableIconButton(
                             onClick = {
-                                val shareLink = currentImage.metadata?.pixivUrl ?:currentImage.metadata?.source ?: currentImage.highestQualityFormatUrl
-                                val intent = Intent(Intent.ACTION_SEND).apply {
-                                    putExtra(Intent.EXTRA_TEXT, shareLink)
-                                    type = "text/plain"
-                                }
-                                context.startActivity(Intent.createChooser(intent, null))
+                                var shareLink = currentImage.metadata?.pixivUrl
+                                    ?: currentImage.metadata?.source
+                                    ?: currentImage.highestQualityFormatUrl
+                                if (prefs.useFixedLinks) shareLink = fixLink(shareLink)
+                                shareIntent.putExtra(Intent.EXTRA_TEXT, shareLink)
+                                context.startActivity(Intent.createChooser(shareIntent, null))
+                            },
+                            onLongClick = {
+                                shareIntent.putExtra(Intent.EXTRA_TEXT, currentImage.highestQualityFormatUrl)
+                                context.startActivity(Intent.createChooser(shareIntent, null))
                             }
                         ) {
                             Icon(
@@ -432,5 +450,32 @@ private fun LoadingContentPlaceholder(
         ) {
             FullscreenLoadingSpinner()
         }
+    }
+}
+
+
+@Composable
+private fun CombinedClickableIconButton(
+    modifier: Modifier = Modifier,
+    colors: IconButtonColors = IconButtonDefaults.iconButtonColors(),
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .minimumInteractiveComponentSize()
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(colors.containerColor)
+            .combinedClickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple(false, 20.dp),
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
+    ) {
+        CompositionLocalProvider(LocalContentColor provides colors.contentColor, content = content)
     }
 }

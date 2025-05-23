@@ -161,6 +161,17 @@ fun PreferencesScreen(viewModel: BreadboardViewModel) {
 
             LargeVerticalSpacer()
 
+            Heading(text = "Sharing")
+            SwitchPref(
+                checked = currentSettings.useFixedLinks,
+                title = "Share fixed links",
+                summary = "When sharing an image, use a 'fixed' link where possible."
+            ) {
+                scope.launch { preferencesRepository.updatePref(PreferenceKeys.USE_FIXED_LINKS, it) }
+            }
+
+            LargeVerticalSpacer()
+
             Heading(text = "Import/export")
             var showExportDialog by remember { mutableStateOf(false) }
             var exportedData: JSONObject? by remember { mutableStateOf(null) }
@@ -278,6 +289,11 @@ fun PreferencesScreen(viewModel: BreadboardViewModel) {
                                "otherwise unsupported sites like Danbooru, but may cause " +
                                "less results to be shown at once and result in higher data "+
                                "usage for the same number of visible images.")
+            LargeVerticalSpacer()
+            InfoSection(text = "When fixed links are enabled, sharing an image may use an " +
+                               "alternative link depending on the source. Bluesky links are " +
+                               "transformed into fxbsky.app, Pixiv links are transformed into " +
+                               "phixiv.net, and Twitter links are transformed into fxtwitter.com.")
             NavBarHeightVerticalSpacer()
         }
     }
