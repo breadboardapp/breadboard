@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
@@ -130,12 +131,14 @@ fun InfoSheet(navController: NavController, image: Image, visibilityState: Mutab
         contentWindowInsets = { BottomSheetDefaults.windowInsets.only(WindowInsetsSides.Horizontal) },
         title = "Image info"
     ) {
-        Column(Modifier.verticalScroll(rememberScrollState())) {
+        Column(
+            modifier = Modifier
+                .verticalScroll(rememberScrollState())
+                .fillMaxWidth()
+        ) {
             image.metadata.parentId?.let {
                 TextButton(
-                    modifier = Modifier
-                        .padding(top = 4.dp)
-                        .align(Alignment.CenterHorizontally),
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
                     onClick = {
                         hideAndThen {
                             navController.navigate(ImageView(image.imageSource, it))
@@ -148,9 +151,7 @@ fun InfoSheet(navController: NavController, image: Image, visibilityState: Mutab
             if (image.metadata.hasChildren == true) {
                 image.id?.let {
                     TextButton(
-                        modifier = Modifier
-                            .padding(top = 4.dp)
-                            .align(Alignment.CenterHorizontally),
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
                         onClick = {
                             hideAndThen {
                                 if (context is DeepLinkActivity) {
