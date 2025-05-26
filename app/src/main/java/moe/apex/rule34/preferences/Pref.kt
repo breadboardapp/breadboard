@@ -177,6 +177,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             mapUserPreferences(preferences)
         }
 
+    @OptIn(ExperimentalSerializationApi::class)
     @Suppress("DEPRECATION")
     suspend fun handleMigration(context: Context) {
         val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
@@ -246,12 +247,31 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         }
 
         /* Version code 270 enabled the staggered grid by default. Don't change it for people who
-           hadn't enabled it previously. */
+           hadn't enabled it previously.
+           Additionally, fix Gelbooru favourite image links since their subdomain changed from img3
+           to img4. */
         if (lastUsedVersionCode < 270) {
             val data = dataStore.data.first()
             val useStaggeredGrid = data[PreferenceKeys.USE_STAGGERED_GRID]
             if (useStaggeredGrid == null)
                 updatePref(PreferenceKeys.USE_STAGGERED_GRID, false)
+
+            val brokenFavouritesByteArray = data[PreferenceKeys.FAVOURITE_IMAGES]
+            if (brokenFavouritesByteArray != null) {
+                val brokenFavourites: List<Image> = Cbor.decodeFromByteArray(brokenFavouritesByteArray)
+                val tempFavourites = brokenFavourites.toMutableList()
+                brokenFavourites.forEachIndexed { index, img ->
+                    if (img.imageSource == ImageSource.GELBOORU) {
+                        val fixedImage = img.copy(
+                            previewUrl = img.previewUrl.replace("img3.gelbooru", "img4.gelbooru"),
+                            fileUrl = img.fileUrl.replace("img3.gelbooru", "img4.gelbooru"),
+                            sampleUrl = img.sampleUrl.replace("img3.gelbooru", "img4.gelbooru")
+                        )
+                        tempFavourites[index] = fixedImage
+                    }
+                }
+                updateFavouriteImages(tempFavourites)
+            }
         }
 
         // Place any future migrations above this line by checking the last used version code.
