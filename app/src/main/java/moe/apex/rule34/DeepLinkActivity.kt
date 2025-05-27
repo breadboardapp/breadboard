@@ -2,9 +2,11 @@ package moe.apex.rule34
 
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.pm.ResolveInfo
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -54,6 +56,7 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity() {
             val navController = rememberNavController()
             val prefs = prefs.getPreferences.collectAsState(initialPrefs).value
             val viewModel = viewModel(BreadboardViewModel::class.java)
+
             CompositionLocalProvider(LocalPreferences provides prefs) {
                 DisposableEffect(Unit) {
                     val listener = Consumer<Intent> { newIntent ->
@@ -62,7 +65,7 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity() {
                             ImageView.fromUri(uri)?.let {
                                 navController.popBackStack()
                                 navController.navigate(it)
-                            } ?: openInBrowser(uri)
+                            } ?: openInBrowser(newIntent)
                         }
                     }
                     addOnNewIntentListener(listener)
@@ -75,24 +78,62 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity() {
                             viewModel = viewModel,
                             startDestination = iv
                         )
-                    } ?: openInBrowser(it)
+                    } ?: openInBrowser(intent)
                 } ?: finish()
             }
         }
     }
 
 
-    private fun openInBrowser(uri: Uri) {
-        /* Breadboard can't handle all types of links (for example search pages).
-           We'll open these ones in the browser instead. */
-        val browserIntent = Intent(Intent.ACTION_VIEW, "http://example.com".toUri())
-        val resolveInfo = packageManager.resolveActivity(browserIntent, PackageManager.MATCH_DEFAULT_ONLY)
-        if (resolveInfo != null) {
-            val realIntent = Intent(Intent.ACTION_VIEW, uri)
-            realIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            realIntent.setPackage(resolveInfo.activityInfo.packageName)
-            startActivity(realIntent)
+    private fun openInBrowser(intent: Intent) {
+        val uri = intent.data!!
+
+        // Chrome and Firefox seem to set this. We should use it if available.
+        val possibleBrowserPackage = intent.getStringExtra("com.android.browser.application_id")
+
+        if (possibleBrowserPackage != null) {
+            launchUriWithPackage(uri, possibleBrowserPackage)
+            return
+        }
+
+        /* Chrome sets the referrer to the address. Firefox uses its package name with this scheme.
+           If the referrer scheme is an android-app and the app can handle the URL,
+           we should use it to do so. */
+        referrer?.takeIf { it.scheme == "android-app" }?.host?.let { attemptingPackage ->
+            val relaunchIntent = createViewIntent(uri, attemptingPackage)
+            if (getResolveInfo(relaunchIntent) != null) {
+                startActivity(relaunchIntent)
+                finishAndRemoveTask()
+                return
+            }
+        }
+
+        // If all else fails, just open in the default browser.
+        val defaultBrowserIntent = Intent(Intent.ACTION_VIEW, "http://example.com".toUri())
+        val resolveInfo = getResolveInfo(defaultBrowserIntent)
+
+        if (resolveInfo?.activityInfo?.packageName != null) {
+            launchUriWithPackage(uri, resolveInfo.activityInfo.packageName)
+        } else {
+            Log.e("openInBrowser", "No browser found to handle URI: $uri")
         }
         finishAndRemoveTask()
+    }
+
+    private fun createViewIntent(uri: Uri, targetPackage: String? = null): Intent {
+        return Intent(Intent.ACTION_VIEW, uri).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            targetPackage?.let { setPackage(it) }
+        }
+    }
+
+    private fun launchUriWithPackage(uri: Uri, packageName: String) {
+        val launchIntent = createViewIntent(uri, packageName)
+        startActivity(launchIntent)
+        finishAndRemoveTask()
+    }
+
+    private fun getResolveInfo(intent: Intent): ResolveInfo? {
+        return packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
     }
 }
