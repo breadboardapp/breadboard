@@ -1,6 +1,8 @@
 package moe.apex.rule34
 
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -24,6 +26,7 @@ import moe.apex.rule34.navigation.ImageView
 import moe.apex.rule34.navigation.Navigation
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.viewmodel.BreadboardViewModel
+import androidx.core.net.toUri
 
 
 class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity() {
@@ -55,20 +58,41 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity() {
                 DisposableEffect(Unit) {
                     val listener = Consumer<Intent> { newIntent ->
                         val uri = newIntent.data
-                        if (uri != null) ImageView.fromUri(uri)?.let {
-                            navController.popBackStack()
-                            navController.navigate(it)
+                        if (uri != null) {
+                            ImageView.fromUri(uri)?.let {
+                                navController.popBackStack()
+                                navController.navigate(it)
+                            } ?: openInBrowser(uri)
                         }
                     }
                     addOnNewIntentListener(listener)
                     onDispose { removeOnNewIntentListener(listener) }
                 }
-                Navigation(
-                    navController = navController,
-                    viewModel = viewModel,
-                    startDestination = intent.data?.let { ImageView.fromUri(it) } ?: finish()
-                )
+                intent.data?.let {
+                    ImageView.fromUri(it)?.let { iv ->
+                        Navigation(
+                            navController = navController,
+                            viewModel = viewModel,
+                            startDestination = iv
+                        )
+                    } ?: openInBrowser(it)
+                } ?: finish()
             }
         }
+    }
+
+
+    private fun openInBrowser(uri: Uri) {
+        /* Breadboard can't handle all types of links (for example search pages).
+           We'll open these ones in the browser instead. */
+        val browserIntent = Intent(Intent.ACTION_VIEW, "http://example.com".toUri())
+        val resolveInfo = packageManager.resolveActivity(browserIntent, PackageManager.MATCH_DEFAULT_ONLY)
+        if (resolveInfo != null) {
+            val realIntent = Intent(Intent.ACTION_VIEW, uri)
+            realIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            realIntent.setPackage(resolveInfo.activityInfo.packageName)
+            startActivity(realIntent)
+        }
+        finishAndRemoveTask()
     }
 }
