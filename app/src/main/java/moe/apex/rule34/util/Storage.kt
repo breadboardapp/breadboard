@@ -8,15 +8,15 @@ import android.provider.DocumentsContract
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.documentfile.provider.DocumentFile
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import moe.apex.rule34.image.Image
+import moe.apex.rule34.preferences.PreferenceKeys
 import moe.apex.rule34.prefs
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -29,29 +29,60 @@ class MustSetLocation(message: String): Exception(message)
 class UnsupportedFileType(message: String): Exception(message)
 
 
+const val MIME_TYPE = "application/*"
+
+
+enum class PromptType {
+    DIRECTORY_PERMISSION,
+    READ_FILE,
+    CREATE_FILE
+}
+
+
+fun saveUriToPref(context: Context, scope: CoroutineScope, uri: Uri) {
+    val tree = DocumentsContract.buildDocumentUriUsingTree(
+        uri, DocumentsContract.getTreeDocumentId(uri)
+    )
+    scope.launch(Dispatchers.IO) {
+        context.prefs.updatePref(PreferenceKeys.STORAGE_LOCATION, tree.toString())
+    }
+}
+
+
 @Composable
-fun SaveDirectorySelection(storageLocationPromptLaunched: MutableState<Boolean>) {
+fun StorageLocationSelection(
+    promptType: PromptType,
+    onFailure: () -> Unit = { },
+    onSuccess: (Uri) -> Unit
+) {
     val context = LocalContext.current
-    val preferencesRepository = context.prefs
-    val scope = rememberCoroutineScope()
 
     val requestPermissionLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK) {
                 val selectedUri = result.data?.data
                 if (selectedUri != null) {
-                    val tree = DocumentsContract.buildDocumentUriUsingTree(
-                        selectedUri, DocumentsContract.getTreeDocumentId(selectedUri)
-                    )
-                    scope.launch(Dispatchers.IO) { preferencesRepository.updateStorageLocation(tree) }
+                    onSuccess(selectedUri)
                 }
             } else {
                 showToast(context, "Nothing selected.")
+                onFailure()
             }
-            storageLocationPromptLaunched.value = false
         }
 
-    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
+    val intent = when (promptType) {
+        PromptType.DIRECTORY_PERMISSION -> Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
+        PromptType.READ_FILE -> Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = MIME_TYPE
+        }
+        PromptType.CREATE_FILE -> Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            putExtra(Intent.EXTRA_TITLE, "breadboard_export.bread")
+            type = MIME_TYPE
+        }
+    }
+
     SideEffect {
         requestPermissionLauncher.launch(intent)
     }

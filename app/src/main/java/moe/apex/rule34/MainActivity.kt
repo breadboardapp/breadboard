@@ -4,6 +4,7 @@ package moe.apex.rule34
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -39,6 +40,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -57,7 +59,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -66,6 +67,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -79,6 +81,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
@@ -89,9 +92,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.util.Consumer
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -113,8 +116,10 @@ import moe.apex.rule34.history.SearchHistoryEntry
 import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.navigation.Navigation
 import moe.apex.rule34.navigation.Results
+import moe.apex.rule34.navigation.Search
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
+import moe.apex.rule34.preferences.PreferenceKeys
 import moe.apex.rule34.preferences.UserPreferencesRepository
 import moe.apex.rule34.tag.TagSuggestion
 import moe.apex.rule34.ui.theme.searchField
@@ -124,6 +129,7 @@ import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.NAV_BAR_HEIGHT
 import moe.apex.rule34.util.NavBarHeightVerticalSpacer
 import moe.apex.rule34.util.SearchHistoryListItem
+import moe.apex.rule34.util.TitledModalBottomSheet
 import moe.apex.rule34.util.VerticalSpacer
 import moe.apex.rule34.util.availableRatingsForCurrentSource
 import moe.apex.rule34.util.availableRatingsForSource
@@ -153,6 +159,14 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity() {
             .build()
     }
 
+
+    private fun maybePrepareResultsDestination(intent: Intent): Results? {
+        val searchSource = ImageSource.valueOf(intent.getStringExtra("source") ?: return null)
+        val searchQuery = intent.getStringExtra("query") ?: return null
+        return Results(searchSource, searchQuery)
+    }
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
@@ -161,12 +175,27 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity() {
         runBlocking { prefs.handleMigration(applicationContext) }
         val initialPrefs = runBlocking { prefs.getPreferences.first() }
 
+        Log.i("intent", intent.extras?.keySet()?.toSet().toString())
+
         setContent {
             val navController = rememberNavController()
             val prefs = prefs.getPreferences.collectAsState(initialPrefs).value
             val viewModel = viewModel(BreadboardViewModel::class.java)
+            val startDestination = Search
+
             CompositionLocalProvider(LocalPreferences provides prefs) {
-                Navigation(navController, viewModel)
+                /* When searching for a tag from the info sheet of a deep linked image, we want it
+                   to be done inside of this activity rather than the DeepLinkActivity. */
+                DisposableEffect(Unit) {
+                    val innerListener = Consumer<Intent> { intent ->
+                        maybePrepareResultsDestination(intent)?.let {
+                            navController.navigate(it)
+                        }
+                    }
+                    addOnNewIntentListener(innerListener)
+                    onDispose { removeOnNewIntentListener(innerListener) }
+                }
+                Navigation(navController, viewModel, maybePrepareResultsDestination(intent) ?: startDestination)
             }
         }
     }
@@ -206,12 +235,14 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
 
     fun addToFilter(tag: TagSuggestion) {
         val index = tagChipList.getIndexByName(tag.value)
-        if (index != null) {
+
+        if (index == null) {
+            tagChipList.add(tag)
+        } else {
             // For some reason `tagChipList[index] = tag` doesn't update in the UI
             tagChipList.removeAt(index)
             tagChipList.add(index, tag)
-            return
-        } else tagChipList.add(tag)
+        }
     }
 
 
@@ -305,7 +336,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                     Modifier
                         .verticalScroll(rememberScrollState())
                         .fillMaxWidth()
-                        .animateContentSize(),
+                        .animateContentSize()
                 ) {
                     if (mostRecentSuggestions.isEmpty()) {
                         Text(
@@ -315,7 +346,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                         )
                     } else {
                         for (t in mostRecentSuggestions) {
-                            TagListEntry(tag = t)
+                            TagListEntry(t)
                             if (t != mostRecentSuggestions.last()) HorizontalDivider()
                         }
                     }
@@ -325,35 +356,46 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
     }
 
     fun performSearch() {
-        if (tagChipList.isEmpty()) {
-            showToast(context, "Please select some tags")
-        } else if (prefs.ratingsFilter.isEmpty() || (prefs.ratingsFilter.size == 1 && prefs.ratingsFilter[0] == ImageRating.SENSITIVE && prefs.imageSource == ImageSource.YANDERE)) {
-            showToast(context, "Please select some ratings")
-        } else if (!prefs.filterRatingsLocally && !prefs.ratingsFilter.containsAll(availableRatingsForSource(prefs.imageSource)
-            ) && prefs.imageSource in listOf(ImageSource.YANDERE, ImageSource.DANBOORU)) {
-            showToast(context, "To filter ratings on this source, enable the 'Filter ratings locally' option")
-            // Danbooru has the 2-tag limit and filtering by multiple negated tags simply does not work on Yande.re
-        } else if (!danbooruLimitCheck())
+        if (tagChipList.isEmpty())
+            return showToast(context, "Please select some tags")
+
+        if (
+            prefs.ratingsFilter.isEmpty() ||
+            (prefs.ratingsFilter.size == 1 && prefs.ratingsFilter[0] == ImageRating.SENSITIVE && prefs.imageSource == ImageSource.YANDERE)
+        )
+            return showToast(context, "Please select some ratings")
+
+        if (
+            !prefs.filterRatingsLocally &&
+            !prefs.ratingsFilter.containsAll(availableRatingsForSource(prefs.imageSource)) &&
+            prefs.imageSource in listOf(ImageSource.YANDERE, ImageSource.DANBOORU)
+        )
+            return showToast(context, "To filter ratings on this source, enable the 'Filter ratings locally' option")
+
+        // Danbooru has the 2-tag limit and filtering by multiple negated tags simply does not work on Yande.re
+        if (!danbooruLimitCheck())
             return
-        else {
-            if (prefs.saveSearchHistory) {
-                scope.launch {
-                    context.prefs.addSearchHistoryEntry(
-                        SearchHistoryEntry(
-                            timestamp = Date().time,
-                            source = prefs.imageSource,
-                            tags = tagChipList.toSet(),
-                            ratings = ImageRating.entries.filter { it in prefs.ratingsFilter }.toSet()
-                        ) // Preserve the display order of ratings regardless of the order in search
+
+        if (prefs.saveSearchHistory) {
+            scope.launch {
+                context.prefs.addSearchHistoryEntry(
+                    SearchHistoryEntry(
+                        timestamp = Date().time,
+                        source = prefs.imageSource,
+                        tags = tagChipList.toSet(),
+                        // Preserve the display order of ratings regardless of the order in search
+                        ratings = ImageRating.entries.filter { it in prefs.ratingsFilter }.toSet()
                     )
-                }
+                )
             }
-            val searchTags = currentSource.site.formatTagString(tagChipList)
-            val ratingsFilter = if (prefs.filterRatingsLocally) ""
-                                else ImageRating.buildSearchStringFor(prefs.ratingsFilter)
-            val searchQuery = searchTags + if (ratingsFilter.isNotEmpty()) "+$ratingsFilter" else ""
-            navController.navigate(Results(searchQuery))
         }
+
+        val searchTags = currentSource.site.formatTagString(tagChipList)
+        val ratingsFilter = if (prefs.filterRatingsLocally) ""
+                            else ImageRating.buildSearchStringFor(prefs.ratingsFilter)
+
+        val tags = searchTags + if (ratingsFilter.isNotEmpty()) "+$ratingsFilter" else ""
+        navController.navigate(Results(prefs.imageSource, tags))
     }
 
     fun addAiExcludedTag(source: ImageSource) {
@@ -362,24 +404,18 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
             tagChipList.add(0, tag)
         }
     }
+
     LaunchedEffect(Unit) {
         addAiExcludedTag(source = prefs.imageSource)
     }
 
     fun beginSearch() {
-        if (searchString.isNotEmpty()) {
-            if (mostRecentSuggestions.isNotEmpty()) {
-                addToFilter(mostRecentSuggestions[0])
-                searchString = ""
-                shouldShowSuggestions = false
-            } else {
-                if (mostRecentSuggestions.isEmpty()) {
-                    showToast(context, "No matching tags")
-                }
-            }
-        } else {
-            performSearch()
-        }
+        if (searchString.isEmpty()) return performSearch()
+        if (mostRecentSuggestions.isEmpty()) return showToast(context, "No matching tags")
+
+        addToFilter(mostRecentSuggestions[0])
+        searchString = ""
+        shouldShowSuggestions = false
     }
 
     MainScreenScaffold(
@@ -414,7 +450,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                     },
                     placeholder = {
                         Text(
-                            text = "Search ${prefs.imageSource.description}",
+                            text = "Search ${prefs.imageSource.label}",
                             style = MaterialTheme.typography.searchField
                         )
                     },
@@ -433,14 +469,16 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                     ),
                     trailingIcon = { Row {
                         IconButton(
                             onClick = {
-                                val query = clipboard.getClip().takeIf { it?.clipData?.description?.getMimeType(0) == "text/plain" }
-                                val tags = query?.clipData?.getItemAt(0)?.text?.split(" ")?.filter { it.trim().isNotEmpty() }
-                                if (query == null || tags.isNullOrEmpty()) {
+                                val tags = clipboard.getClip()
+                                    .takeIf { it?.clipData?.description?.getMimeType(0) == "text/plain" }
+                                    ?.clipData?.getItemAt(0)
+                                    ?.let { it.text.split(" ").filter { tag -> tag.trim().isNotEmpty() } }
+                                if (tags.isNullOrEmpty()) {
                                     showToast(context, "No tags to paste")
                                     return@IconButton
                                 }
@@ -451,7 +489,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                                     if (tagName.isNotEmpty()) {
                                         val tag = TagSuggestion(tagName, tagName, "", isExcluded)
                                         addToFilter(tag)
-                                        count += 1
+                                        count++
                                     }
                                 }
                                 showToast(context, "Pasted $count ${"tag".pluralise(count, "tags")}")
@@ -512,12 +550,12 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                 val sourceRows: List<@Composable () -> Unit> = ImageSource.entries.map { {
                     FilterChip(
                         selected = prefs.imageSource == it,
-                        label = { Text(it.description) },
+                        label = { Text(it.label) },
                         onClick = {
                             if (it == currentSource) return@FilterChip
                             fun confirm() {
                                 scope.launch {
-                                    context.prefs.updateImageSource(it)
+                                    context.prefs.updatePref(PreferenceKeys.IMAGE_SOURCE, it)
                                 }
                                 tagChipList.clear()
                                 addAiExcludedTag(source = it)
@@ -539,8 +577,11 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                         label = { Text(it.label) },
                         onClick = {
                             scope.launch {
-                                if (it in prefs.ratingsFilter) context.prefs.removeRatingFilter(it)
-                                else context.prefs.addRatingFilter(it)
+                                if (it in prefs.ratingsFilter){
+                                    context.prefs.removeFromSet(PreferenceKeys.RATINGS_FILTER, it)
+                                } else {
+                                    context.prefs.addToSet(PreferenceKeys.RATINGS_FILTER, it)
+                                }
                             }
                         }
                     )
@@ -595,7 +636,7 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                                 leadingIcon = {
                                     Icon(
                                         painter = painterResource(id = R.drawable.ic_copy),
-                                        contentDescription = "Copy all",
+                                        contentDescription = "Copy all"
                                     )
                                 }
                             )
@@ -636,30 +677,25 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                 Text(
                     text = "Changing image source will clear your search tags. " +
                            "Are you sure you want to change the source from " +
-                           "${data.from.description} to ${data.to.description}?"
+                           "${data.from.label} to ${data.to.label}?"
                 )
             }
         )
     }
 
     if (showSearchHistoryPopup) {
-        ModalBottomSheet(
+        TitledModalBottomSheet(
             modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars),
             onDismissRequest = { showSearchHistoryPopup = false },
             sheetState = historySheetState,
-            contentWindowInsets = { BottomSheetDefaults.windowInsets.only(WindowInsetsSides.Horizontal) }
+            contentWindowInsets = { BottomSheetDefaults.windowInsets.only(WindowInsetsSides.Horizontal) },
+            title = "Search history"
         ) {
-            Text(
-                text = "Search history",
-                style = MaterialTheme.typography.titleLarge,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            )
-            VerticalSpacer()
             LazyColumn(
-                modifier = Modifier.animateContentSize(),
+                modifier = Modifier
+                    .animateContentSize()
+                    .padding(horizontal = 16.dp)
+                    .clip(RoundedCornerShape(16.dp, 16.dp)),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 if (prefs.searchHistory.isEmpty()) {
@@ -677,8 +713,8 @@ fun HomeScreen(navController: NavController, focusRequester: FocusRequester, vie
                             searchString = ""
                             shouldShowSuggestions = false
                             scope.launch {
-                                context.prefs.updateImageSource(it.source)
-                                context.prefs.updateRatingsFilter(it.ratings)
+                                context.prefs.updatePref(PreferenceKeys.IMAGE_SOURCE, it.source)
+                                context.prefs.replaceImageRatings(it.ratings)
                                 historySheetState.hide()
                                 showSearchHistoryPopup = false
                             }

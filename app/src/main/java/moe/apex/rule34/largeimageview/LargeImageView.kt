@@ -11,6 +11,10 @@ import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -33,16 +37,24 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonColors
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,10 +66,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import coil3.compose.SubcomposeAsyncImage
 import coil3.request.ImageRequest
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import me.saket.telephoto.zoomable.ZoomSpec
 import me.saket.telephoto.zoomable.rememberZoomableState
 import me.saket.telephoto.zoomable.zoomable
@@ -66,12 +83,19 @@ import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.DataSaver
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.prefs
+import moe.apex.rule34.ui.theme.Typography
 import moe.apex.rule34.util.showToast
 import moe.apex.rule34.util.FullscreenLoadingSpinner
+import moe.apex.rule34.util.PromptType
 import moe.apex.rule34.util.MustSetLocation
 import moe.apex.rule34.util.NAV_BAR_HEIGHT
-import moe.apex.rule34.util.SaveDirectorySelection
+import moe.apex.rule34.util.StorageLocationSelection
 import moe.apex.rule34.util.downloadImage
+import moe.apex.rule34.util.fixLink
+import moe.apex.rule34.util.saveUriToPref
+import moe.apex.rule34.viewmodel.BreadboardViewModel
+import java.net.SocketTimeoutException
+import java.util.concurrent.ExecutionException
 
 
 private fun isUsingWiFi(context: Context): Boolean {
@@ -86,6 +110,7 @@ private fun isUsingWiFi(context: Context): Boolean {
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun LargeImageView(
+    navController: NavController,
     visible: MutableState<Boolean>? = null,
     initialPage: Int,
     allImages: List<Image>
@@ -99,9 +124,10 @@ fun LargeImageView(
     var forciblyShowBottomBar by remember { mutableStateOf(false) }
     var offset by remember { mutableStateOf(0.dp) }
     val context = LocalContext.current
+    val viewModel = viewModel<BreadboardViewModel>()
     val scope = rememberCoroutineScope()
     val isUsingWifi = isUsingWiFi(context)
-    val storageLocationPromptLaunched = remember { mutableStateOf(false) }
+    var storageLocationPromptLaunched by remember { mutableStateOf(false) }
     var isDownloading by remember { mutableStateOf(false) }
 
     if (allImages.isEmpty()) {
@@ -115,7 +141,7 @@ fun LargeImageView(
     }
 
     val currentImage = allImages[pagerState.currentPage]
-    val popupVisibilityState = remember { mutableStateOf(false) }
+    val popupVisibilityState = rememberSaveable { mutableStateOf(false) }
 
     val prefs = LocalPreferences.current
     val dataSaver = prefs.dataSaver
@@ -123,7 +149,7 @@ fun LargeImageView(
     val favouriteImages = prefs.favouriteImages
 
     if (popupVisibilityState.value) {
-        InfoSheet(currentImage, popupVisibilityState)
+        InfoSheet(navController, currentImage, popupVisibilityState)
     }
 
     LaunchedEffect(visible?.value) {
@@ -160,32 +186,30 @@ fun LargeImageView(
         SubcomposeAsyncImage(
             model = model,
             contentDescription = "Image",
-            loading = { Box(
-                modifier = modifier,
-                contentAlignment = Alignment.Center
-            ) {
-                SubcomposeAsyncImage(
-                    model = previewImageUrl,
-                    contentDescription = "Image",
-                    contentScale = ContentScale.Fit,
-                    modifier = modifier.clip(RoundedCornerShape(24.dp))
-                )
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = CircleShape,
-                    modifier = Modifier.size(72.dp)
-                ) {
-                    FullscreenLoadingSpinner()
+            loading = {
+                LoadingContentPlaceholder(modifier) {
+                    SubcomposeAsyncImage(
+                        model = previewImageUrl,
+                        contentDescription = "Image",
+                        contentScale = ContentScale.Fit,
+                        modifier = modifier.clip(RoundedCornerShape(24.dp))
+                    )
                 }
-            } },
+            },
             modifier = modifier
                 .scale(0.95f)
                 .clip(RoundedCornerShape(24.dp))
         )
     }
 
-    if (storageLocationPromptLaunched.value) {
-        SaveDirectorySelection(storageLocationPromptLaunched)
+    if (storageLocationPromptLaunched) {
+        StorageLocationSelection(
+            promptType = PromptType.DIRECTORY_PERMISSION,
+            onFailure = { storageLocationPromptLaunched = false }
+        ) {
+            saveUriToPref(context, scope, it)
+            storageLocationPromptLaunched = false
+        }
     }
 
     Scaffold(
@@ -238,15 +262,21 @@ fun LargeImageView(
                                 )
                             }
                         }
-                        IconButton(
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                        }
+                        CombinedClickableIconButton(
                             onClick = {
-                                val sendIntent: Intent = Intent().apply {
-                                    action = Intent.ACTION_SEND
-                                    putExtra(Intent.EXTRA_TEXT, currentImage.highestQualityFormatUrl)
-                                    type = "text/plain"
-                                }
-                                val shareIntent = Intent.createChooser(sendIntent, null)
-                                context.startActivity(shareIntent)
+                                var shareLink = currentImage.metadata?.pixivUrl
+                                    ?: currentImage.metadata?.source
+                                    ?: currentImage.highestQualityFormatUrl
+                                if (prefs.useFixedLinks) shareLink = fixLink(shareLink)
+                                shareIntent.putExtra(Intent.EXTRA_TEXT, shareLink)
+                                context.startActivity(Intent.createChooser(shareIntent, null))
+                            },
+                            onLongClick = {
+                                shareIntent.putExtra(Intent.EXTRA_TEXT, currentImage.highestQualityFormatUrl)
+                                context.startActivity(Intent.createChooser(shareIntent, null))
                             }
                         ) {
                             Icon(
@@ -269,7 +299,7 @@ fun LargeImageView(
                         FloatingActionButton(
                             onClick = {
                                 if (!isDownloading) {
-                                    scope.launch {
+                                    viewModel.viewModelScope.launch {
                                         isDownloading = true
                                         val result: Result<Boolean> = downloadImage(
                                             context,
@@ -284,7 +314,7 @@ fun LargeImageView(
                                             exc.printStackTrace()
 
                                             if (exc is MustSetLocation) {
-                                                storageLocationPromptLaunched.value = true
+                                                storageLocationPromptLaunched = true
                                             }
                                             showToast(context, exc.message ?: "Unknown error")
                                             Log.e("Downloader", exc.message ?: "Error downloading image", exc)
@@ -354,5 +384,99 @@ fun LargeImageView(
             canChangePage = isZoomedOut
             forciblyShowBottomBar = false
         }
+    }
+}
+
+
+@Composable
+fun LazyLargeImageView(
+    navController: NavController,
+    onImageLoadRequest: () -> Image?
+) {
+    val context = LocalContext.current
+    var image by remember { mutableStateOf<Image?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        try {
+            withContext(Dispatchers.IO) {
+                image = onImageLoadRequest()
+            }
+        } catch (e: ExecutionException) {
+            if (e.cause is SocketTimeoutException) {
+                showToast(context, "Connection timed out")
+            }
+        }
+        isLoading = false
+    }
+
+    if (isLoading)
+        FullscreenLoadingSpinner()
+    else if (image == null)
+        ImageNotFound()
+    else
+        LargeImageView(navController, null, 0, listOf(image!!))
+}
+
+
+@Composable
+private fun ImageNotFound() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "Image not found :(",
+            style = Typography.titleLarge
+        )
+    }
+}
+
+
+@Composable
+private fun LoadingContentPlaceholder(
+    modifier: Modifier,
+    content: (@Composable () -> Unit)? = null
+) {
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
+    ) {
+        content?.invoke()
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            shape = CircleShape,
+            modifier = Modifier.size(72.dp)
+        ) {
+            FullscreenLoadingSpinner()
+        }
+    }
+}
+
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun CombinedClickableIconButton(
+    modifier: Modifier = Modifier,
+    colors: IconButtonColors = IconButtonDefaults.iconButtonColors(),
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .minimumInteractiveComponentSize()
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(colors.containerColor)
+            .combinedClickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple(false, 20.dp),
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
+    ) {
+        CompositionLocalProvider(LocalContentColor provides colors.contentColor, content = content)
     }
 }

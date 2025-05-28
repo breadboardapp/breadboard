@@ -1,18 +1,22 @@
 package moe.apex.rule34.util
 
+import android.app.Activity
 import android.content.Context
 import android.text.format.DateFormat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -34,6 +38,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -42,11 +47,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SheetState
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.VerticalDivider
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -60,6 +69,7 @@ import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -88,6 +98,7 @@ fun TitleBar(
     navController: NavController? = null,
     additionalActions: @Composable RowScope.() -> Unit = { }
 ) {
+    val context = LocalContext.current
     LargeTopAppBar(
         title = { Text(title, overflow = TextOverflow.Ellipsis) },
         scrollBehavior = scrollBehavior,
@@ -95,7 +106,13 @@ fun TitleBar(
         navigationIcon = {
             if (navController != null) {
                 IconButton(
-                    onClick = { navController.navigateUp() }
+                    onClick = {
+                        if (navController.previousBackStackEntry != null) {
+                            navController.navigateUp()
+                        } else {
+                            (context as Activity).finish()
+                        }
+                    }
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -122,6 +139,7 @@ fun FullscreenLoadingSpinner() {
 
 @Composable
 fun AnimatedVisibilityLargeImageView(
+    navController: NavController,
     shouldShowLargeImage: MutableState<Boolean>,
     initialPage: Int,
     allImages: List<Image>,
@@ -139,6 +157,7 @@ fun AnimatedVisibilityLargeImageView(
     ) {
         key(initialPage) {
             LargeImageView(
+                navController,
                 shouldShowLargeImage,
                 initialPage,
                 allImages
@@ -305,6 +324,32 @@ fun copyText(
 }
 
 
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun CombinedClickableSuggestionChip(
+    modifier: Modifier = Modifier,
+    label: @Composable () -> Unit,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+
+    Box(modifier = modifier) {
+        SuggestionChip(onClick = { }, label = label, interactionSource = interactionSource)
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = onLongClick,
+                    interactionSource = interactionSource,
+                    indication = null
+                )
+        )
+    }
+}
+
+
 @Composable
 private fun SpacePaddedChips(
     desiredPaddingDp: Int = 16,
@@ -337,8 +382,7 @@ fun SearchHistoryListItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(IntrinsicSize.Min)
-            .padding(horizontal = 16.dp),
+            .height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Surface(
@@ -355,7 +399,7 @@ fun SearchHistoryListItem(
             Column(Modifier.padding(top = 16.dp, bottom = 8.dp)) {
                 Heading(
                     modifier = Modifier.padding(start = 4.dp),
-                    text = "$formattedDate  \u2022  ${item.source.description}"
+                    text = "$formattedDate  \u2022  ${item.source.label}"
                 )
                 /* We're preventing the chips from consuming touch actions by placing the chips
                    column inside a Box, and then placing an invisible composable of the same
@@ -421,5 +465,35 @@ fun SearchHistoryListItem(
                 )
             }
         }
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TitledModalBottomSheet(
+    onDismissRequest: () -> Unit,
+    modifier: Modifier = Modifier,
+    sheetState: SheetState = rememberModalBottomSheetState(),
+    contentWindowInsets: @Composable () -> WindowInsets = { BottomSheetDefaults.windowInsets },
+    title: String,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        modifier = modifier,
+        sheetState = sheetState,
+        contentWindowInsets = contentWindowInsets,
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        )
+        VerticalSpacer()
+        content()
     }
 }

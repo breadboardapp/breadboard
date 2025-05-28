@@ -27,7 +27,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import moe.apex.rule34.image.Image
+import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
+import moe.apex.rule34.preferences.PreferenceKeys
 import moe.apex.rule34.prefs
 import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
 import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
@@ -38,7 +40,7 @@ import moe.apex.rule34.util.withoutVertical
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchResults(navController: NavController, searchQuery: String) {
+fun SearchResults(navController: NavController, source: ImageSource, tags: String) {
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
     val shouldShowLargeImage = remember { mutableStateOf(false) }
@@ -49,7 +51,7 @@ fun SearchResults(navController: NavController, searchQuery: String) {
 
     val prefs = LocalPreferences.current
     val preferencesRepository = LocalContext.current.prefs
-    val imageSource = prefs.imageSource.site
+    val imageSource = source.site
     val filterLocally = prefs.filterRatingsLocally
     var pageNumber by remember { mutableIntStateOf(imageSource.firstPageIndex) }
 
@@ -59,8 +61,11 @@ fun SearchResults(navController: NavController, searchQuery: String) {
             label = { Text(it.label) },
             onClick = {
                 scope.launch {
-                    if (it in prefs.ratingsFilter) preferencesRepository.removeRatingFilter(it)
-                    else preferencesRepository.addRatingFilter(it)
+                    if (it in prefs.ratingsFilter) {
+                        preferencesRepository.removeFromSet(PreferenceKeys.RATINGS_FILTER, it)
+                    } else {
+                        preferencesRepository.addToSet(PreferenceKeys.RATINGS_FILTER, it)
+                    }
                 }
             }
         )
@@ -101,7 +106,7 @@ fun SearchResults(navController: NavController, searchQuery: String) {
             initialLoad = {
                 withContext(Dispatchers.IO) {
                     try {
-                        val newImages = imageSource.loadPage(searchQuery, pageNumber)
+                        val newImages = imageSource.loadPage(tags, pageNumber)
                         if (!allImages.addAll(newImages)) shouldKeepSearching = false
                         pageNumber++
                     } catch (e: Exception) {
@@ -114,7 +119,7 @@ fun SearchResults(navController: NavController, searchQuery: String) {
             if (shouldKeepSearching) {
                 scope.launch(Dispatchers.IO) {
                     try {
-                        val newImages = imageSource.loadPage(searchQuery, pageNumber)
+                        val newImages = imageSource.loadPage(tags, pageNumber)
                         if (newImages.isNotEmpty()) {
                             pageNumber++
                             allImages.addAll(newImages.filter { it !in allImages })
@@ -130,5 +135,5 @@ fun SearchResults(navController: NavController, searchQuery: String) {
         }
     }
 
-    AnimatedVisibilityLargeImageView(shouldShowLargeImage, initialPage, imagesToDisplay)
+    AnimatedVisibilityLargeImageView(navController, shouldShowLargeImage, initialPage, imagesToDisplay)
 }

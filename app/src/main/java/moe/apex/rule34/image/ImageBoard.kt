@@ -22,8 +22,8 @@ interface ImageBoard {
     fun loadAutoComplete(searchString: String): List<TagSuggestion> {
         val suggestions = mutableListOf<TagSuggestion>()
         val isExcluded = searchString.startsWith("-")
-        val query = searchString.replace("^-".toRegex(), "")
-        val body = RequestUtil.get(autoCompleteSearchUrl.format(query)) {
+        val tags = searchString.replace("^-".toRegex(), "")
+        val body = RequestUtil.get(autoCompleteSearchUrl.format(tags)) {
             addHeader("Referrer", baseUrl)
         }.get()
         val results = JSONArray(body)
@@ -51,7 +51,7 @@ interface ImageBoard {
 
     fun parseImage(e: JSONObject): Image?
 
-    fun loadImage(postId: String): Image?
+    fun loadImage(id: String): Image?
 
     fun loadPage(tags: String, page: Int): List<Image>
 
@@ -65,6 +65,7 @@ interface ImageBoard {
 
 interface GelbooruBasedImageBoard : ImageBoard {
     fun parseImage(e: JSONObject, imageSource: ImageSource): Image? {
+        val id = e.getString("id")
         val (fileName, fileFormat) = e.getString("image").split('.', limit = 2)
         val fileUrl = e.getString("file_url")
         val sampleUrl = e.optString("sample_url", "")
@@ -76,6 +77,7 @@ interface GelbooruBasedImageBoard : ImageBoard {
         if (fileFormat != "jpeg" && fileFormat != "jpg" && fileFormat != "png" && fileFormat != "gif")
             return null
 
+        val metaParentId = e.getString("parent_id").takeIf { it != "0" }
         val metaSource = e.getString("source").takeIf { it.isNotEmpty() }
         val metaGroupedTags = listOf(
             TagCategory.GENERAL.group(e.getString("tags").split(" ")),
@@ -83,18 +85,20 @@ interface GelbooruBasedImageBoard : ImageBoard {
         val metaRating = getRatingFromString(e.getString("rating"))
         val metaPixivId = extractPixivId(metaSource)
         val metadata = ImageMetadata(
+            parentId = metaParentId,
+            hasChildren = null, // Not available for Gelbooru-based image boards
             source = metaSource,
             groupedTags = metaGroupedTags,
             rating = metaRating,
             pixivId = metaPixivId,
         )
 
-        return Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, imageSource, aspectRatio, metadata)
+        return Image(id, fileName, fileFormat, previewUrl, fileUrl, sampleUrl, imageSource, aspectRatio, metadata)
     }
 
-    fun loadImage(postId: String, postListKey: String?, imageSource: ImageSource): Image? {
-        val parsedPostId = postId.toIntOrNull() ?: return null
-        return loadPage("id:$parsedPostId", 0, postListKey, imageSource).getOrNull(0)
+    fun loadImage(id: String, postListKey: String?, imageSource: ImageSource): Image? {
+        val parsedId = id.toIntOrNull() ?: return null
+        return loadPage("id:$parsedId", 0, postListKey, imageSource).getOrNull(0)
     }
 
     fun loadPage(tags: String, page: Int, postListKey: String?, imageSource: ImageSource): List<Image> {
@@ -148,8 +152,8 @@ object Rule34 : GelbooruBasedImageBoard {
         return parseImage(e, ImageSource.R34)
     }
 
-    override fun loadImage(postId: String): Image? {
-        return loadImage(postId, null, ImageSource.R34)
+    override fun loadImage(id: String): Image? {
+        return loadImage(id, null, ImageSource.R34)
     }
 
     override fun loadPage(tags: String, page: Int): List<Image> {
@@ -169,8 +173,8 @@ object Safebooru : GelbooruBasedImageBoard {
         return parseImage(e, ImageSource.SAFEBOORU)
     }
 
-    override fun loadImage(postId: String): Image? {
-        return loadImage(postId, null, ImageSource.SAFEBOORU)
+    override fun loadImage(id: String): Image? {
+        return loadImage(id, null, ImageSource.SAFEBOORU)
     }
 
     override fun loadPage(tags: String, page: Int): List<Image> {
@@ -190,8 +194,8 @@ object Gelbooru : GelbooruBasedImageBoard {
         return parseImage(e, ImageSource.GELBOORU)
     }
 
-    override fun loadImage(postId: String): Image? {
-        return loadImage(postId, "post", ImageSource.GELBOORU)
+    override fun loadImage(id: String): Image? {
+        return loadImage(id, "post", ImageSource.GELBOORU)
     }
 
     override fun loadPage(tags: String, page: Int): List<Image> {
@@ -217,6 +221,7 @@ object Danbooru : ImageBoard {
     override fun parseImage(e: JSONObject): Image? {
         if (e.isNull("md5")) return null
 
+        val id = e.getString("id")
         val fileName = e.getString("md5")
         val fileFormat = e.getString("file_ext")
         val fileUrl = e.getString("file_url")
@@ -235,6 +240,8 @@ object Danbooru : ImageBoard {
         val tagGeneral = e.getString("tag_string_general").split(" ")
         val tagMeta = e.getString("tag_string_meta").split(" ")
 
+        val metaParentId = e.getString("parent_id").takeIf { it != "null" }
+        val metaHasChildren = e.getBoolean("has_children")
         val metaSource = e.getString("source").takeIf { it.isNotEmpty() }
         val metaArtist = tagStringArtist.takeIf { it.isNotEmpty() }
         val metaGroupedTags = listOf(
@@ -247,6 +254,8 @@ object Danbooru : ImageBoard {
         val metaRating = getRatingFromString(e.getString("rating"))
         val metaPixivId = e.optInt("pixiv_id").takeIf { it != 0 }
         val metadata = ImageMetadata(
+            parentId = metaParentId,
+            hasChildren = metaHasChildren,
             artist = metaArtist,
             source = metaSource,
             groupedTags = metaGroupedTags,
@@ -254,12 +263,12 @@ object Danbooru : ImageBoard {
             pixivId = metaPixivId,
         )
 
-        return Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.DANBOORU, aspectRatio, metadata)
+        return Image(id, fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.DANBOORU, aspectRatio, metadata)
     }
 
-    override fun loadImage(postId: String): Image? {
-        val parsedPostId = postId.toIntOrNull() ?: return null
-        return loadPage("id:$parsedPostId", 0).getOrNull(0)
+    override fun loadImage(id: String): Image? {
+        val parsedId = id.toIntOrNull() ?: return null
+        return loadPage("id:$parsedId", 0).getOrNull(0)
     }
 
     override fun loadPage(tags: String, page: Int): List<Image> {
@@ -307,6 +316,7 @@ object Yandere : ImageBoard {
     override fun parseImage(e: JSONObject): Image? {
         if (e.isNull("md5")) return null
 
+        val id = e.getString("id")
         val fileName = e.getString("md5")
         val fileFormat = e.getString("file_ext")
         val fileUrl = e.getString("file_url")
@@ -319,6 +329,8 @@ object Yandere : ImageBoard {
         if (fileFormat != "jpeg" && fileFormat != "jpg" && fileFormat != "png" && fileFormat != "gif")
             return null
 
+        val metaParentId = e.getString("parent_id").takeIf { it != "null" }
+        val metaHasChildren = e.getBoolean("has_children")
         val metaSource = e.optString("source", "").takeIf { it.isNotEmpty() }
         val metaGroupedTags = listOf(
             TagCategory.GENERAL.group(e.getString("tags").split(" ")),
@@ -326,18 +338,20 @@ object Yandere : ImageBoard {
         val metaRating = getRatingFromString(e.getString("rating"))
         val metaPixivId = extractPixivId(metaSource)
         val metadata = ImageMetadata(
+            parentId = metaParentId,
+            hasChildren = metaHasChildren,
             source = metaSource,
             groupedTags = metaGroupedTags,
             rating = metaRating,
             pixivId = metaPixivId,
         )
 
-        return Image(fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.YANDERE, aspectRatio, metadata)
+        return Image(id, fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.YANDERE, aspectRatio, metadata)
     }
 
-    override fun loadImage(postId: String): Image? {
-        val parsedPostId = postId.toIntOrNull() ?: return null
-        return loadPage("id:$parsedPostId", 0).getOrNull(0)
+    override fun loadImage(id: String): Image? {
+        val parsedId = id.toIntOrNull() ?: return null
+        return loadPage("id:$parsedId", 0).getOrNull(0)
     }
 
     override fun loadPage(tags: String, page: Int): List<Image> {

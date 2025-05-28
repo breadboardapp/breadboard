@@ -15,6 +15,7 @@
         android:enableOnBackInvokedCallback="true">
         <activity
             android:name=".MainActivity"
+            android:launchMode="singleTop"
             android:taskAffinity="moe.apex.rule34.MainActivity"
             android:exported="true"
             android:theme="@style/Theme.Breadboard">
@@ -70,4 +71,10 @@
             </intent-filter>
         </activity>
     </application>
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="http" />
+        </intent>
+    </queries>
 </manifest>
