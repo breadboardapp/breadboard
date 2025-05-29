@@ -35,7 +35,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.toRoute
-import moe.apex.rule34.HomeScreen
+import moe.apex.rule34.search.SearchScreen
 import moe.apex.rule34.R
 import moe.apex.rule34.detailview.SearchResults
 import moe.apex.rule34.favourites.FavouritesPage
@@ -172,7 +172,7 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                         val args = it.toRoute<ImageView>()
                         LazyLargeImageView(navController) { args.source.site.loadImage(args.id) }
                     }
-                    composable<Search> { HomeScreen(navController, focusRequester, viewModel) }
+                    composable<Search> { SearchScreen(navController, focusRequester, viewModel) }
                     composable<Results> {
                         val args = it.toRoute<Results>()
                         SearchResults(navController, args.source, args.tags)
