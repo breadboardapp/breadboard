@@ -199,7 +199,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
     fun TagListEntry(tag: TagSuggestion) {
         Column(
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.Companion
+            modifier = Modifier
                 .heightIn(min = 72.dp)
                 .fillMaxWidth()
                 .clickable {
@@ -210,7 +210,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                 }
         ) {
             Text(
-                modifier = Modifier.Companion.padding(horizontal = 16.dp),
+                modifier = Modifier.padding(horizontal = 16.dp),
                 text = tag.label,
                 fontSize = 16.sp,
                 lineHeight = 17.sp
@@ -218,7 +218,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
 
             tag.category?.let {
                 Text(
-                    modifier = Modifier.Companion.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp),
                     text = it,
                     fontSize = 12.sp,
                     lineHeight = 13.sp
@@ -231,12 +231,12 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
     @Composable
     fun AutoCompleteTagResults() {
         Column(
-            modifier = Modifier.Companion
+            modifier = Modifier
                 .consumeWindowInsets(PaddingValues(0.dp, 0.dp, 0.dp, (NAV_BAR_HEIGHT + 16).dp))
                 .imePadding()
         ) {
             Surface(
-                modifier = Modifier.Companion
+                modifier = Modifier
                     .padding(
                         start = 16.dp,
                         end = 16.dp,
@@ -246,14 +246,14 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                 color = MaterialTheme.colorScheme.surfaceContainer
             ) {
                 Column(
-                    Modifier.Companion
+                    Modifier
                         .verticalScroll(rememberScrollState())
                         .fillMaxWidth()
                         .animateContentSize()
                 ) {
                     if (mostRecentSuggestions.isEmpty()) {
                         Text(
-                            modifier = Modifier.Companion.padding(16.dp),
+                            modifier = Modifier.padding(16.dp),
                             fontSize = 16.sp,
                             text = "No results :("
                         )
@@ -308,7 +308,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
 
         val searchTags = currentSource.site.formatTagString(tagChipList)
         val ratingsFilter = if (prefs.filterRatingsLocally) ""
-                            else ImageRating.Companion.buildSearchStringFor(prefs.ratingsFilter)
+                            else ImageRating.buildSearchStringFor(prefs.ratingsFilter)
 
         val tags = searchTags + if (ratingsFilter.isNotEmpty()) "+$ratingsFilter" else ""
         navController.navigate(Results(prefs.imageSource, tags))
@@ -335,7 +335,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
     }
 
     MainScreenScaffold(
-        title = "Breadboard",
+        title = "Search",
         additionalActions = {
             if (prefs.saveSearchHistory) {
                 IconButton(
@@ -349,15 +349,15 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
             }
         }
     ) { padding ->
-        Column(Modifier.Companion.padding(padding)) {
+        Column(Modifier.padding(padding)) {
             Row(
-                modifier = Modifier.Companion
+                modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
-                    .align(Alignment.Companion.CenterHorizontally)
+                    .align(Alignment.CenterHorizontally)
             ) {
                 TextField(
-                    modifier = Modifier.Companion
+                    modifier = Modifier
                         .weight(1f, true)
                         .focusRequester(focusRequester),
                     value = searchString,
@@ -377,9 +377,9 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                     },
                     shape = MaterialTheme.shapes.large,
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions.Companion.Default.copy(
-                        capitalization = KeyboardCapitalization.Companion.None,
-                        imeAction = ImeAction.Companion.Search
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        capitalization = KeyboardCapitalization.None,
+                        imeAction = ImeAction.Search
                         // Maybe also look into https://issuetracker.google.com/issues/359257538
                     ),
                     keyboardActions = KeyboardActions(
@@ -387,8 +387,8 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                         onSearch = { beginSearch() }
                     ),
                     colors = TextFieldDefaults.colors().copy(
-                        focusedIndicatorColor = Color.Companion.Transparent,
-                        unfocusedIndicatorColor = Color.Companion.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                     ),
@@ -430,7 +430,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                                 )
                             }
                             IconButton(
-                                modifier = Modifier.Companion.rotate(chevronRotation),
+                                modifier = Modifier.rotate(chevronRotation),
                                 onClick = { showSourceRatingBox = !showSourceRatingBox }
                             ) {
                                 Icon(
@@ -442,7 +442,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                     }
                 )
 
-                Spacer(modifier = Modifier.Companion.size(12.dp))
+                Spacer(modifier = Modifier.size(12.dp))
 
                 FloatingActionButton(
                     onClick = { performSearch() },
@@ -530,9 +530,9 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                             )
                         }
                     }
-                Column(Modifier.Companion.padding(horizontal = 16.dp)) {
+                Column(Modifier.padding(horizontal = 16.dp)) {
                     HorizontallyScrollingChipsWithLabels(
-                        modifier = Modifier.Companion
+                        modifier = Modifier
                             .alpha(opacity)
                             .scale(scale),
                         labels = listOf("Source", "Ratings"),
@@ -545,12 +545,12 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
             AnimatedVisibility(tagChipList.isNotEmpty()) {
                 Column {
                     Row(
-                        modifier = Modifier.Companion
+                        modifier = Modifier
                             .height(FilterChipDefaults.Height)
                             .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp)
                     ) {
-                        Spacer(Modifier.Companion.width((16 - CHIP_SPACING).dp))
+                        Spacer(Modifier.width((16 - CHIP_SPACING).dp))
                         for (t in tagChipList) {
                             FilterChip(
                                 label = { Text(t.value) },
@@ -566,7 +566,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                         }
                         if (tagChipList.isNotEmpty()) {
                             AssistChip(
-                                modifier = Modifier.Companion.aspectRatio(1f),
+                                modifier = Modifier.aspectRatio(1f),
                                 onClick = {
                                     val tags = tagChipList.joinToString(" ") { it.formattedLabel }
                                     copyText(
@@ -591,7 +591,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                             )
                         }
 
-                        Spacer(modifier = Modifier.Companion.width((16 - CHIP_SPACING).dp))
+                        Spacer(modifier = Modifier.width((16 - CHIP_SPACING).dp))
                     }
                     VerticalSpacer()
                 }
@@ -634,14 +634,14 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
 
     if (showSearchHistoryPopup) {
         TitledModalBottomSheet(
-            modifier = Modifier.Companion.windowInsetsPadding(WindowInsets.Companion.statusBars),
+            modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars),
             onDismissRequest = { showSearchHistoryPopup = false },
             sheetState = historySheetState,
-            contentWindowInsets = { BottomSheetDefaults.windowInsets.only(WindowInsetsSides.Companion.Horizontal) },
+            contentWindowInsets = { BottomSheetDefaults.windowInsets.only(WindowInsetsSides.Horizontal) },
             title = "Search history"
         ) {
             LazyColumn(
-                modifier = Modifier.Companion
+                modifier = Modifier
                     .animateContentSize()
                     .padding(horizontal = 16.dp)
                     .clip(RoundedCornerShape(16.dp, 16.dp)),
@@ -651,7 +651,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                     item {
                         Text(
                             text = "Nothing to see here.",
-                            modifier = Modifier.Companion.padding(horizontal = 16.dp)
+                            modifier = Modifier.padding(horizontal = 16.dp)
                         )
                     }
                 } else {

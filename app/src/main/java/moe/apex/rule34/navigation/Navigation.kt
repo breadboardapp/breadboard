@@ -6,10 +6,14 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
@@ -39,6 +43,7 @@ import moe.apex.rule34.search.SearchScreen
 import moe.apex.rule34.R
 import moe.apex.rule34.detailview.SearchResults
 import moe.apex.rule34.favourites.FavouritesPage
+import moe.apex.rule34.home.HomeScreen
 import moe.apex.rule34.largeimageview.LazyLargeImageView
 import moe.apex.rule34.preferences.PreferencesScreen
 import moe.apex.rule34.ui.theme.BreadboardTheme
@@ -73,12 +78,30 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
             Scaffold(
                 bottomBar = {
                     AnimatedVisibility(
-                        visible = currentRoute.routeIs(Search::class, Settings::class, Favourites::class)
+                        visible = currentRoute.routeIs(Home::class, Search::class, Settings::class, Favourites::class)
                                 && bottomBarVisibleState.value,
-                        enter = fadeIn(),
-                        exit = fadeOut()
+                        enter = slideInVertically { it /3} + fadeIn(),
+                        exit = slideOutVertically { it/3 } + fadeOut()
                     ) {
                         NavigationBar {
+                            NavigationBarItem(
+                                label = { Text("Browse") },
+                                selected = currentRoute.routeIs(Home::class),
+                                icon = {
+                                    Icon(
+                                        imageVector = if (currentRoute.routeIs(Home::class)) Icons.Filled.Home
+                                        else Icons.Outlined.Home,
+                                        contentDescription = "Browse"
+                                    )
+                                },
+                                onClick = {
+                                    if (!currentRoute.routeIs(Home::class)) {
+                                        navController.navigate(Home) {
+                                            popUpTo(Home) { inclusive = true }
+                                        }
+                                    }
+                                }
+                            )
                             NavigationBarItem(
                                 label = { Text("Search") },
                                 selected = currentRoute.routeIs(Search::class, Results::class),
@@ -172,6 +195,7 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                         val args = it.toRoute<ImageView>()
                         LazyLargeImageView(navController) { args.source.site.loadImage(args.id) }
                     }
+                    composable<Home> { HomeScreen(navController, viewModel, bottomBarVisibleState) }
                     composable<Search> { SearchScreen(navController, focusRequester, viewModel) }
                     composable<Results> {
                         val args = it.toRoute<Results>()

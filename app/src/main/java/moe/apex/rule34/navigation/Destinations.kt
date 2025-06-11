@@ -46,6 +46,9 @@ data class ImageView(
 }
 
 @Serializable
+object Home
+
+@Serializable
 object Search
 
 @Serializable

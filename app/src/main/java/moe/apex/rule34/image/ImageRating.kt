@@ -32,7 +32,7 @@ enum class ImageRating(override val label: String) : PrefEnum<ImageRating> {
             EXPLICIT to FILTER_EXPLICIT
         )
 
-        fun buildSearchStringFor(ratings: List<ImageRating>): String {
+        fun buildSearchStringFor(vararg ratings: ImageRating): String {
             val currentFilter = mutableListOf(FILTER_SAFE, FILTER_SENSITIVE, FILTER_QUESTIONABLE, FILTER_EXPLICIT)
             for (rating in ratings) {
                 if (rating in mapping) {
@@ -40,6 +40,10 @@ enum class ImageRating(override val label: String) : PrefEnum<ImageRating> {
                 }
             }
             return currentFilter.joinToString("+")
+        }
+
+        fun buildSearchStringFor(ratings: Collection<ImageRating>): String {
+            return buildSearchStringFor(*ratings.toTypedArray())
         }
     }
 }

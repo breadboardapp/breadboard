@@ -53,6 +53,8 @@ import androidx.compose.material3.SheetState
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -71,6 +73,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
@@ -91,36 +94,58 @@ private val CHIP_TOTAL_HEIGHT = FilterChipDefaults.Height + 16.dp
 
 
 @Composable
+private fun NavigationIcon(navController: NavController? = null) {
+    val context = LocalContext.current
+    if (navController != null) {
+        IconButton(
+            onClick = {
+                if (navController.previousBackStackEntry != null) {
+                    navController.navigateUp()
+                } else {
+                    (context as Activity).finish()
+                }
+            }
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Discover"
+            )
+        }
+    }
+}
+
+
+@Composable
 @OptIn(ExperimentalMaterial3Api::class)
-fun TitleBar(
+fun LargeTitleBar(
     title: String,
     scrollBehavior: TopAppBarScrollBehavior?,
     navController: NavController? = null,
     additionalActions: @Composable RowScope.() -> Unit = { }
 ) {
-    val context = LocalContext.current
     LargeTopAppBar(
         title = { Text(title, overflow = TextOverflow.Ellipsis) },
         scrollBehavior = scrollBehavior,
         actions = additionalActions,
-        navigationIcon = {
-            if (navController != null) {
-                IconButton(
-                    onClick = {
-                        if (navController.previousBackStackEntry != null) {
-                            navController.navigateUp()
-                        } else {
-                            (context as Activity).finish()
-                        }
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Home"
-                    )
-                }
-            }
-        }
+        navigationIcon = { NavigationIcon(navController) }
+    )
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SmallTitleBar(
+    title: String,
+    scrollBehavior: TopAppBarScrollBehavior? = null,
+    navController: NavController? = null,
+    additionalActions: @Composable RowScope.() -> Unit = { }
+) {
+    TopAppBar(
+        title = { Text(title) },
+        scrollBehavior = scrollBehavior,
+        actions = additionalActions,
+        navigationIcon = { NavigationIcon(navController) },
+        colors = TopAppBarDefaults.topAppBarColors().copy(containerColor = TopAppBarDefaults.topAppBarColors().scrolledContainerColor)
     )
 }
 
@@ -184,12 +209,22 @@ fun PaddingValues.withoutVertical(top: Boolean = true, bottom: Boolean = true) :
 fun MainScreenScaffold(
     title: String,
     scrollBehavior: TopAppBarScrollBehavior? = null,
+    largeTopBar: Boolean = true,
+    addBottomPadding: Boolean = true,
     additionalActions: @Composable RowScope.() -> Unit = { },
     content: @Composable (PaddingValues) -> Unit
 ) {
     Scaffold(
         topBar = {
-            TitleBar(title, scrollBehavior, additionalActions = additionalActions)
+            if (largeTopBar) {
+                LargeTitleBar(title, scrollBehavior, additionalActions = additionalActions)
+            } else {
+                SmallTitleBar(
+                    title,
+                    scrollBehavior = scrollBehavior,
+                    additionalActions = additionalActions
+                )
+            }
         }
     ) {
         val lld = LocalLayoutDirection.current
@@ -197,7 +232,7 @@ fun MainScreenScaffold(
             start = it.calculateStartPadding(lld),
             end = it.calculateEndPadding(lld),
             top = it.calculateTopPadding(),
-            bottom = it.calculateBottomPadding() + NAV_BAR_HEIGHT.dp
+            bottom = if (addBottomPadding) it.calculateBottomPadding() + NAV_BAR_HEIGHT.dp else 0.dp
         )
         content(newPadding)
     }
@@ -497,3 +532,7 @@ fun TitledModalBottomSheet(
         content()
     }
 }
+
+val bottomAppBarAndNavBarHeight: Dp
+    @Composable
+    get() = NAV_BAR_HEIGHT.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()

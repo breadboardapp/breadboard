@@ -59,6 +59,10 @@ interface ImageBoard {
         return tags.joinToString("+") { it.formattedLabel }
     }
 
+    fun formatTagNameString(tags: List<String>): String {
+        return tags.joinToString("+")
+    }
+
     fun getRatingFromString(rating: String): ImageRating
 }
 

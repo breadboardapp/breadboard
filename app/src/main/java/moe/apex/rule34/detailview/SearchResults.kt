@@ -33,7 +33,7 @@ import moe.apex.rule34.preferences.PreferenceKeys
 import moe.apex.rule34.prefs
 import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
 import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
-import moe.apex.rule34.util.TitleBar
+import moe.apex.rule34.util.LargeTitleBar
 import moe.apex.rule34.util.availableRatingsForCurrentSource
 import moe.apex.rule34.util.withoutVertical
 
@@ -79,7 +79,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tags: Strin
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TitleBar(
+            LargeTitleBar(
                 title = "Search results",
                 scrollBehavior = scrollBehavior,
                 navController = navController

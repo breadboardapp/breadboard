@@ -13,6 +13,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.core.util.Consumer
 import androidx.datastore.preferences.preferencesDataStore
@@ -26,9 +27,9 @@ import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import moe.apex.rule34.navigation.Home
 import moe.apex.rule34.navigation.Navigation
 import moe.apex.rule34.navigation.Results
-import moe.apex.rule34.navigation.Search
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.UserPreferencesRepository
@@ -75,7 +76,11 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity() {
             val navController = rememberNavController()
             val prefs = prefs.getPreferences.collectAsState(initialPrefs).value
             val viewModel = viewModel(BreadboardViewModel::class.java)
-            val startDestination = Search
+            val startDestination = Home
+
+            LaunchedEffect(prefs.imageSource) {
+                viewModel.recommendationsProvider = null
+            }
 
             CompositionLocalProvider(LocalPreferences provides prefs) {
                 /* When searching for a tag from the info sheet of a deep linked image, we want it

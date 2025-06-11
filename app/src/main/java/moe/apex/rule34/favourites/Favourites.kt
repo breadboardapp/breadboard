@@ -2,6 +2,8 @@ package moe.apex.rule34.favourites
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Text
@@ -30,6 +32,8 @@ import moe.apex.rule34.prefs
 import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
 import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.rule34.util.MainScreenScaffold
+import moe.apex.rule34.util.bottomAppBarAndNavBarHeight
+import moe.apex.rule34.util.onScroll
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,6 +46,9 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
     val shouldShowLargeImage = remember { mutableStateOf(false) }
     var initialPage by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
+
+    val staggeredGridState = rememberLazyStaggeredGridState()
+    val uniformGridState = rememberLazyGridState()
 
     val images = prefs.favouriteImages.reversed().filter {
         it.imageSource in prefs.favouritesFilter
@@ -82,17 +89,21 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
         )
     } })
 
-    MainScreenScaffold("Favourite images", scrollBehavior) { padding ->
+    MainScreenScaffold("Favourite images", scrollBehavior, addBottomPadding = false) { padding ->
         ImageGrid(
             modifier = Modifier
                 .padding(padding)
-                .nestedScroll(scrollBehavior.nestedScrollConnection),
+                .nestedScroll(scrollBehavior.nestedScrollConnection)
+                .onScroll(staggeredGridState) { bottomBarVisibleState.value = !it.lastScrolledForward }
+                .onScroll(uniformGridState) { bottomBarVisibleState.value = !it.lastScrolledForward },
+            staggeredGridState = staggeredGridState,
+            uniformGridState = uniformGridState,
             images = images,
             onImageClick = { index, _ ->
                 initialPage = index
                 shouldShowLargeImage.value = true
             },
-            contentPadding = PaddingValues(top = 16.dp, start = 16.dp, end = 16.dp),
+            contentPadding = PaddingValues(top = 16.dp, start = 16.dp, end = 16.dp, bottom = bottomAppBarAndNavBarHeight),
             filterComposable = {
                 HorizontallyScrollingChipsWithLabels(
                     modifier = Modifier.padding(bottom = 4.dp),
