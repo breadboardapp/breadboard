@@ -92,6 +92,7 @@ import moe.apex.rule34.util.NAV_BAR_HEIGHT
 import moe.apex.rule34.util.StorageLocationSelection
 import moe.apex.rule34.util.downloadImage
 import moe.apex.rule34.util.fixLink
+import moe.apex.rule34.util.isWebLink
 import moe.apex.rule34.util.saveUriToPref
 import moe.apex.rule34.viewmodel.BreadboardViewModel
 import java.net.SocketTimeoutException
@@ -268,7 +269,7 @@ fun LargeImageView(
                         CombinedClickableIconButton(
                             onClick = {
                                 var shareLink = currentImage.metadata?.pixivUrl
-                                    ?: currentImage.metadata?.source
+                                    ?: currentImage.metadata?.source.let { if (it?.isWebLink() == true) it else null }
                                     ?: currentImage.highestQualityFormatUrl
                                 if (prefs.useFixedLinks) shareLink = fixLink(shareLink)
                                 shareIntent.putExtra(Intent.EXTRA_TEXT, shareLink)

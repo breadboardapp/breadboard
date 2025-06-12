@@ -17,3 +17,8 @@ fun fixLink(link: String): String {
     }
     return link
 }
+
+
+fun String.isWebLink(): Boolean {
+    return this.startsWith("http://") || this.startsWith("https://")
+}
