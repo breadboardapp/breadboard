@@ -4,7 +4,6 @@ package moe.apex.rule34.largeimageview
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.webkit.URLUtil.isValidUrl
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ContextualFlowRow
@@ -63,6 +62,7 @@ import moe.apex.rule34.util.Heading
 import moe.apex.rule34.util.LargeVerticalSpacer
 import moe.apex.rule34.util.TitledModalBottomSheet
 import moe.apex.rule34.util.copyText
+import moe.apex.rule34.util.isWebLink
 import moe.apex.rule34.util.pluralise
 
 
@@ -179,7 +179,7 @@ fun InfoSheet(navController: NavController, image: Image, visibilityState: Mutab
             }
             image.metadata.source?.let {
                 Heading(text = "Source")
-                if (isValidUrl(it)) PaddedUrlText(it) else PaddedText(it)
+                if (it.isWebLink()) PaddedUrlText(it) else PaddedText(it)
                 LargeVerticalSpacer()
             }
             Heading(text = "Rating")
