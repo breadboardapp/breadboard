@@ -129,7 +129,7 @@ fun InfoSheet(navController: NavController, image: Image, visibilityState: Mutab
         onDismissRequest = { visibilityState.value = false },
         sheetState = state,
         contentWindowInsets = { BottomSheetDefaults.windowInsets.only(WindowInsetsSides.Horizontal) },
-        title = "Image info"
+        title = "About this image"
     ) {
         Column(
             modifier = Modifier
