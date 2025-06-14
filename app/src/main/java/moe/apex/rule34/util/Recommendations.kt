@@ -117,16 +117,19 @@ class RecommendationsProvider(
                     tags = searchQuery,
                     page = pageNumber
                 )
-                pageNumber++
                 val wantedResults = results.filter {
                     it !in recommendedImages &&
                     if (filterLocally) it.metadata!!.rating == ImageRating.SAFE else true
+                }
+                if (pageNumber == imageSource.site.firstPageIndex) {
+                    recommendedImages.clear()
                 }
                 if (results.isEmpty() || wantedResults.isEmpty()) {
                     shouldKeepSearching = false
                 } else {
                     recommendedImages.addAll(wantedResults)
                 }
+                pageNumber++
             } catch (e: Exception) {
                 Log.e(
                     "Recommendations",

@@ -1,6 +1,5 @@
 package moe.apex.rule34.home
 
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -109,16 +108,11 @@ fun HomeScreen(
                     bottomBarVisibleState.value = !it.lastScrolledForward
                 },
             onPullToRefresh = {
-                Log.i("isRefreshing", "started ${it.value}")
                 it.value = true
-                Log.i("isRefreshing", "set to ${it.value}")
                 recommendationsProvider.prepareRecommendedTags()
                 scope.launch {
                     recommendationsProvider.recommendImages()
                     it.value = false
-                    Log.i("isRefreshing", "load finished as ${it.value}")
-                }.invokeOnCompletion { _ ->
-                    Log.i("isRefreshing", "finished as ${it.value}")
                 }
             },
             staggeredGridState = staggeredGridState,
