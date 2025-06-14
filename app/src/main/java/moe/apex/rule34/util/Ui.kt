@@ -204,6 +204,18 @@ fun PaddingValues.withoutVertical(top: Boolean = true, bottom: Boolean = true) :
 }
 
 
+@Composable
+operator fun PaddingValues.plus(other: PaddingValues): PaddingValues {
+    val lld = LocalLayoutDirection.current
+    return PaddingValues(
+        top = calculateTopPadding() + other.calculateTopPadding(),
+        bottom = calculateBottomPadding() + other.calculateBottomPadding(),
+        start = calculateStartPadding(lld) + other.calculateStartPadding(lld),
+        end = calculateEndPadding(lld) + other.calculateEndPadding(lld)
+    )
+}
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreenScaffold(

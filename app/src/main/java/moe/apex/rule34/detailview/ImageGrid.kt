@@ -6,11 +6,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeightIn
@@ -56,6 +54,7 @@ import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.util.FullscreenLoadingSpinner
 import moe.apex.rule34.util.NavBarHeightVerticalSpacer
+import moe.apex.rule34.util.plus
 
 
 private const val MIN_IMAGE_HEIGHT = 96
@@ -81,6 +80,7 @@ fun ImageGrid(
 ) {
     val prefs = LocalPreferences.current
     var doneInitialLoad by remember { mutableStateOf(initialLoad == null || images.isNotEmpty()) }
+    val contentPadding = if (filterComposable != null) contentPadding else contentPadding + PaddingValues(top = 16.dp)
 
     if (!doneInitialLoad) {
         LaunchedEffect(Unit) {
@@ -90,7 +90,6 @@ fun ImageGrid(
         LinearProgressIndicator(
             modifier = modifier
                 .fillMaxWidth()
-                .padding(top = 8.dp)
                 .padding(contentPadding)
         )
         return
@@ -162,9 +161,8 @@ private fun StaggeredImageGrid(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalItemSpacing = 8.dp
     ) {
-        item(span = StaggeredGridItemSpan.FullLine ) {
-            if (filterComposable != null) filterComposable()
-            else Spacer(modifier = Modifier.height(8.dp))
+        filterComposable?.let {
+            item(span = StaggeredGridItemSpan.FullLine ) { it() }
         }
 
         itemsIndexed(images, key = { _, image -> image.previewUrl }) { index, image ->
@@ -205,9 +203,8 @@ private fun UniformImageGrid(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        item(span = { GridItemSpan(maxLineSpan) }) {
-            if (filterComposable != null) filterComposable()
-            else Spacer(modifier = Modifier.height(8.dp))
+        filterComposable?.let {
+            item(span = { GridItemSpan(maxLineSpan) }) { it() }
         }
 
         itemsIndexed(images, key = { _, image -> image.previewUrl }) { index, image ->
