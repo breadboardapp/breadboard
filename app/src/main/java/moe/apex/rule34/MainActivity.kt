@@ -79,7 +79,9 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity() {
             val startDestination = Home
 
             LaunchedEffect(prefs.imageSource) {
-                viewModel.recommendationsProvider = null
+                if (viewModel.recommendationsProvider?.imageSource != prefs.imageSource) {
+                    viewModel.recommendationsProvider = null
+                }
             }
 
             CompositionLocalProvider(LocalPreferences provides prefs) {

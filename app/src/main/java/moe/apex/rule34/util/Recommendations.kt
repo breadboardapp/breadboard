@@ -15,7 +15,7 @@ import moe.apex.rule34.preferences.ImageSource
 
 class RecommendationsProvider(
     private val seedImages: List<Image>,
-    private val imageSource: ImageSource,
+    val imageSource: ImageSource,
     private val filterRatingsLocally: Boolean,
     //private val excludeAi: Boolean TODO: Won't actually be used. Migrate to incoming blocked tags feature.
 ) {
