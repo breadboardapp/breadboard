@@ -8,12 +8,14 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -119,6 +121,7 @@ fun HomeScreen(
             uniformGridState = uniformGridState,
             images = recommendationsProvider.recommendedImages,
             noImagesContent = {
+                var isRefreshing by remember { mutableStateOf(false) }
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -126,11 +129,24 @@ fun HomeScreen(
                     Text("No recommendations right now.")
                     TextButton(
                         onClick = {
+                            if (isRefreshing) return@TextButton
+                            isRefreshing = true
                             recommendationsProvider.prepareRecommendedTags()
-                            scope.launch { recommendationsProvider.prepareRecommendedTags() }
+                            scope.launch {
+                                recommendationsProvider.recommendImages()
+                                isRefreshing = false
+                            }
                         }
                     ) {
-                        Icon(Icons.Default.Refresh, contentDescription = null)
+                        if (isRefreshing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .padding(3.dp)
+                            )
+                        } else {
+                            Icon(Icons.Default.Refresh, contentDescription = null)
+                        }
                         Spacer(Modifier.width(8.dp))
                         Text("Refresh")
                     }
