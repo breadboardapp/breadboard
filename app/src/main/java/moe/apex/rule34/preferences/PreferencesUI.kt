@@ -4,11 +4,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -18,6 +20,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -36,14 +39,92 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import moe.apex.rule34.ui.theme.BreadboardTheme
+import moe.apex.rule34.ui.theme.prefTitle
+import moe.apex.rule34.util.Heading
 import moe.apex.rule34.util.VerticalSpacer
+
+
+private const val LARGE_CORNER_DP = 20
+private const val SMALL_CORNER_DP = 4
 
 
 private enum class ImportExport {
     IMPORT,
     EXPORT
+}
+
+
+private enum class PrefPosition(val topSize: Dp, val bottomSize: Dp) {
+    TOP(LARGE_CORNER_DP.dp, SMALL_CORNER_DP.dp),
+    MIDDLE(SMALL_CORNER_DP.dp, SMALL_CORNER_DP.dp),
+    BOTTOM(SMALL_CORNER_DP.dp, LARGE_CORNER_DP.dp),
+    SINGLE_ELEMENT(LARGE_CORNER_DP.dp, LARGE_CORNER_DP.dp)
+}
+
+
+@Composable
+private fun ExpressivePreferenceContainer(
+    position: PrefPosition,
+    content: @Composable () -> Unit
+) {
+    Surface(
+        modifier = Modifier.padding(horizontal = 12.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = RoundedCornerShape(
+            topStart = position.topSize,
+            topEnd = position.topSize,
+            bottomStart = position.bottomSize,
+            bottomEnd = position.bottomSize
+        )
+    ) {
+        content()
+    }
+}
+
+
+interface PreferencesGroupScope {
+    fun item(content: @Composable () -> Unit)
+}
+
+
+private class PreferencesGroupScopeImpl : PreferencesGroupScope {
+    val items = mutableListOf<@Composable () -> Unit>()
+
+    override fun item(content: @Composable () -> Unit) {
+        items.add(content)
+    }
+}
+
+
+@Composable
+fun PreferencesGroup(
+    title: String,
+    content: @Composable PreferencesGroupScope.() -> Unit
+) {
+    val scope = PreferencesGroupScopeImpl()
+    scope.content()
+
+    Heading(
+        modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
+        text = title
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        scope.items.forEachIndexed { index, itemContent ->
+            ExpressivePreferenceContainer(
+                position = when {
+                    scope.items.size == 1 -> PrefPosition.SINGLE_ELEMENT
+                    index == 0 -> PrefPosition.TOP
+                    index == scope.items.lastIndex -> PrefPosition.BOTTOM
+                    else -> PrefPosition.MIDDLE
+                }
+            ) {
+                itemContent()
+            }
+        }
+    }
 }
 
 
@@ -68,7 +149,7 @@ fun TitleSummary(
     summary: String? = null,
     onClick: (() -> Unit)? = null
 ) {
-    val baseModifier = modifier.heightIn(min = 72.dp)
+    val baseModifier = modifier.heightIn(min = 76.dp)
     val finalModifier = onClick?.let { baseModifier.clickable { it() } } ?: baseModifier
 
     Column(
@@ -77,21 +158,20 @@ fun TitleSummary(
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.prefTitle,
             modifier = Modifier
                 .padding(
                     start = 16.dp,
                     end = 16.dp,
-                    top = 14.dp,
-                    bottom = (if (summary == null) 14.dp else 2.dp)
+                    top = 16.dp,
+                    bottom = (if (summary == null) 16.dp else 2.dp)
                 )
         )
 
         if (summary != null) {
             Summary(
                 text = summary,
-                modifier = Modifier.padding(bottom = 14.dp, start = 16.dp, end = 16.dp)
-
+                modifier = Modifier.padding(bottom = 16.dp, start = 16.dp, end = 16.dp)
             )
         }
     }
@@ -113,6 +193,7 @@ fun SwitchPref(
         verticalAlignment = Alignment.CenterVertically
     ) {
         TitleSummary(Modifier.weight(1f), title, summary)
+        Spacer(Modifier.width(16.dp))
         Switch(
             checked = checked,
             onCheckedChange = onToggle,

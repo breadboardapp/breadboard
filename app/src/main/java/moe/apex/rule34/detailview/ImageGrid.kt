@@ -54,7 +54,6 @@ import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.util.FullscreenLoadingSpinner
 import moe.apex.rule34.util.NavBarHeightVerticalSpacer
-import moe.apex.rule34.util.plus
 
 
 private const val MIN_IMAGE_HEIGHT = 96
@@ -80,7 +79,6 @@ fun ImageGrid(
 ) {
     val prefs = LocalPreferences.current
     var doneInitialLoad by remember { mutableStateOf(initialLoad == null || images.isNotEmpty()) }
-    val contentPadding = if (filterComposable != null) contentPadding else contentPadding + PaddingValues(top = 16.dp)
 
     if (!doneInitialLoad) {
         LaunchedEffect(Unit) {

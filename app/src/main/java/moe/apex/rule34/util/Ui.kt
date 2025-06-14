@@ -34,17 +34,19 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -75,6 +77,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import moe.apex.rule34.history.SearchHistoryEntry
@@ -97,7 +100,9 @@ private val CHIP_TOTAL_HEIGHT = FilterChipDefaults.Height + 16.dp
 private fun NavigationIcon(navController: NavController? = null) {
     val context = LocalContext.current
     if (navController != null) {
-        IconButton(
+        FilledIconButton(
+            modifier = Modifier.padding(horizontal = 8.dp),
+            colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
             onClick = {
                 if (navController.previousBackStackEntry != null) {
                     navController.navigateUp()
@@ -107,7 +112,7 @@ private fun NavigationIcon(navController: NavController? = null) {
             }
         ) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                 contentDescription = "Discover"
             )
         }
@@ -127,7 +132,10 @@ fun LargeTitleBar(
         title = { Text(title, overflow = TextOverflow.Ellipsis) },
         scrollBehavior = scrollBehavior,
         actions = additionalActions,
-        navigationIcon = { NavigationIcon(navController) }
+        navigationIcon = { NavigationIcon(navController) },
+        colors = TopAppBarDefaults.largeTopAppBarColors().copy(
+            scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        )
     )
 }
 
@@ -200,18 +208,6 @@ fun PaddingValues.withoutVertical(top: Boolean = true, bottom: Boolean = true) :
         end = calculateEndPadding(lld),
         top = if (top) 0.dp else calculateTopPadding(),
         bottom = if (bottom) 0.dp else calculateBottomPadding()
-    )
-}
-
-
-@Composable
-operator fun PaddingValues.plus(other: PaddingValues): PaddingValues {
-    val lld = LocalLayoutDirection.current
-    return PaddingValues(
-        top = calculateTopPadding() + other.calculateTopPadding(),
-        bottom = calculateBottomPadding() + other.calculateBottomPadding(),
-        start = calculateStartPadding(lld) + other.calculateStartPadding(lld),
-        end = calculateEndPadding(lld) + other.calculateEndPadding(lld)
     )
 }
 
@@ -326,7 +322,7 @@ fun HorizontallyScrollingChipsWithLabels(
                         text = item.first,
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
-                        lineHeight = MaterialTheme.typography.titleMedium.fontSize
+                        fontSize = 14.sp
                     )
                 }
             }
@@ -506,7 +502,7 @@ fun SearchHistoryListItem(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.Delete,
+                    imageVector = Icons.Rounded.Delete,
                     contentDescription = "Delete",
                     tint = MaterialTheme.colorScheme.primary
                 )
@@ -544,6 +540,40 @@ fun TitledModalBottomSheet(
         content()
     }
 }
+
+
+@Composable
+fun HorizontalFloatingToolbar(
+    modifier: Modifier = Modifier,
+    floatingActionButton: (@Composable () -> Unit)? = null,
+    actions: @Composable RowScope.() -> Unit
+) {
+    // TODO: When Material3 1.4 drops, switch to the native implementation
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            shape = CircleShape,
+            modifier = Modifier.height(64.dp),
+            shadowElevation = 3.dp
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                actions()
+            }
+        }
+        floatingActionButton?.let {
+            Spacer(Modifier.width(8.dp))
+            floatingActionButton()
+        }
+    }
+}
+
 
 val bottomAppBarAndNavBarHeight: Dp
     @Composable

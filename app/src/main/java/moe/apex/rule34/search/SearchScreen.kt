@@ -375,7 +375,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                             style = MaterialTheme.typography.searchField
                         )
                     },
-                    shape = MaterialTheme.shapes.large,
+                    shape = CircleShape,
                     singleLine = true,
                     keyboardOptions = KeyboardOptions.Default.copy(
                         capitalization = KeyboardCapitalization.None,
@@ -393,7 +393,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                     ),
                     trailingIcon = {
-                        Row {
+                        Row(Modifier.padding(end = 4.dp)) {
                             IconButton(
                                 onClick = {
                                     val tags = clipboard.getClip()
@@ -442,12 +442,11 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                     }
                 )
 
-                Spacer(modifier = Modifier.size(12.dp))
+                Spacer(modifier = Modifier.size(8.dp))
 
                 FloatingActionButton(
                     onClick = { performSearch() },
-                    elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
-                    shape = CircleShape
+                    elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
                 ) {
                     Icon(
                         imageVector = Icons.Sharp.Search,

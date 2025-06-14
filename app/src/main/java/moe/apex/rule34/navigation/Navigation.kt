@@ -16,6 +16,9 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -28,6 +31,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -89,8 +93,7 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                                 selected = currentRoute.routeIs(Home::class),
                                 icon = {
                                     Icon(
-                                        imageVector = if (currentRoute.routeIs(Home::class)) Icons.Filled.Home
-                                        else Icons.Outlined.Home,
+                                        painter = painterResource(if (currentRoute.routeIs(Home::class)) R.drawable.ic_home_filled else R.drawable.ic_home_hollow),
                                         contentDescription = "Browse"
                                     )
                                 },
@@ -107,7 +110,7 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                                 selected = currentRoute.routeIs(Search::class, Results::class),
                                 icon = {
                                     Icon(
-                                        imageVector = Icons.Outlined.Search, // Outlined and Filled search are the same
+                                        imageVector = Icons.Rounded.Search,
                                         contentDescription = "Search"
                                     )
                                 },
@@ -129,10 +132,7 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                                 selected = currentRoute.routeIs(Favourites::class),
                                 icon = {
                                     Icon(
-                                        painter = painterResource(
-                                            if (currentRoute.routeIs(Favourites::class)) R.drawable.ic_star_filled
-                                            else R.drawable.ic_star_hollow
-                                        ),
+                                        painter = painterResource(if (currentRoute.routeIs(Favourites::class)) R.drawable.ic_heart_filled else R.drawable.ic_heart_hollow),
                                         contentDescription = "Favourite images"
                                     )
                                 },
@@ -149,8 +149,7 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                                 selected = currentRoute.routeIs(Settings::class),
                                 icon = {
                                     Icon(
-                                        imageVector = if (currentRoute.routeIs(Settings::class)) Icons.Filled.Settings
-                                        else Icons.Outlined.Settings,
+                                        painter = if (currentRoute.routeIs(Settings::class)) rememberVectorPainter(Icons.Filled.Settings) else painterResource(R.drawable.ic_settings_hollow),
                                         contentDescription = "Settings"
                                     )
                                 },

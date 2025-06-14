@@ -74,7 +74,13 @@ fun BreadboardTheme(
     }
 
     val extraColours = ExtraColours(outlineStrong = colorScheme.outline.copy())
-    colorScheme = colorScheme.copy(outline = colorScheme.outlineVariant)
+    colorScheme = colorScheme.copy(
+        outline = colorScheme.outlineVariant,
+        background = colorScheme.surfaceContainerLow,
+        surface = colorScheme.surfaceContainerLow,
+        surfaceContainerLowest = colorScheme.surfaceContainerLow,
+        surfaceContainerLow = colorScheme.surfaceContainer,
+    )
     val view = LocalView.current
     val systemUiController = rememberSystemUiController()
     val darkIcons = !darkTheme

@@ -30,7 +30,6 @@ import kotlinx.coroutines.withContext
 import moe.apex.rule34.prefs
 import moe.apex.rule34.util.ExportDirectoryHandler
 import moe.apex.rule34.util.VerticalSpacer
-import moe.apex.rule34.util.Heading
 import moe.apex.rule34.util.LargeVerticalSpacer
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.NavBarHeightVerticalSpacer
@@ -56,7 +55,13 @@ fun PreferencesScreen(viewModel: BreadboardViewModel) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
     var storageLocationPromptLaunched by remember { mutableStateOf(false) }
+    var showExportDialog by remember { mutableStateOf(false) }
+    var exportedData: JSONObject? by remember { mutableStateOf(null) }
+    var importedData: JSONObject? by remember { mutableStateOf(null) }
+    var importingStarted by rememberSaveable { mutableStateOf(false) }
+
     val preferencesRepository = LocalContext.current.prefs
     val currentSettings = LocalPreferences.current
 
@@ -70,26 +75,40 @@ fun PreferencesScreen(viewModel: BreadboardViewModel) {
         ) {
             VerticalSpacer()
 
-            Heading(text = "Data saver")
-            EnumPref(
-                title = "Data saver",
-                summary = currentSettings.dataSaver.label,
-                enumItems = DataSaver.entries.toTypedArray(),
-                selectedItem = currentSettings.dataSaver,
-                onSelection = { scope.launch { preferencesRepository.updatePref(PreferenceKeys.DATA_SAVER, it) } }
-            )
+            PreferencesGroup("Data saver") {
+                item {
+                    EnumPref(
+                        title = "Data saver",
+                        summary = currentSettings.dataSaver.label,
+                        enumItems = DataSaver.entries.toTypedArray(),
+                        selectedItem = currentSettings.dataSaver,
+                        onSelection = {
+                            scope.launch {
+                                preferencesRepository.updatePref(
+                                    PreferenceKeys.DATA_SAVER,
+                                    it
+                                )
+                            }
+                        }
+                    )
+                }
+            }
 
             LargeVerticalSpacer()
 
-            Heading(text = "Downloads")
-            TitleSummary(
-                modifier = Modifier.fillMaxWidth(),
-                title = "Save downloads to",
-                summary = if (currentSettings.storageLocation == Uri.EMPTY) "Tap to set"
-                else currentSettings.storageLocation.toString()
-            ) {
-                storageLocationPromptLaunched = true
+            PreferencesGroup("Downloads") {
+                item {
+                    TitleSummary(
+                        modifier = Modifier.fillMaxWidth(),
+                        title = "Save downloads to",
+                        summary = if (currentSettings.storageLocation == Uri.EMPTY) "Tap to set"
+                        else currentSettings.storageLocation.toString()
+                    ) {
+                        storageLocationPromptLaunched = true
+                    }
+                }
             }
+
             if (storageLocationPromptLaunched) {
                 StorageLocationSelection(
                     promptType = PromptType.DIRECTORY_PERMISSION,
@@ -102,90 +121,115 @@ fun PreferencesScreen(viewModel: BreadboardViewModel) {
 
             LargeVerticalSpacer()
 
-            Heading(text = "Searching")
-            EnumPref(
-                title = "Image source",
-                summary = currentSettings.imageSource.label,
-                enumItems = ImageSource.entries.toTypedArray(),
-                selectedItem = currentSettings.imageSource,
-                onSelection = {
-                    scope.launch { preferencesRepository.updatePref(PreferenceKeys.IMAGE_SOURCE, it) }
-                    viewModel.tagSuggestions.clear()
-                }
-            )
-            SwitchPref(
-                checked = currentSettings.saveSearchHistory,
-                title = "Save search history",
-                summary = "Save your 10 most recent searches. When this is disabled, your " +
-                          "search history will be cleared and Breadboard will not save future " +
-                          "searches."
-            ) {
-                scope.launch {
-                    if (!it) preferencesRepository.clearSearchHistory()
-                    preferencesRepository.updatePref(
-                        key = PreferenceKeys.SAVE_SEARCH_HISTORY,
-                        to = it
+            PreferencesGroup(title = "Searching") {
+                item {
+                    EnumPref(
+                        title = "Image source",
+                        summary = currentSettings.imageSource.label,
+                        enumItems = ImageSource.entries.toTypedArray(),
+                        selectedItem = currentSettings.imageSource,
+                        onSelection = {
+                            scope.launch {
+                                preferencesRepository.updatePref(
+                                    PreferenceKeys.IMAGE_SOURCE,
+                                    it
+                                )
+                            }
+                            viewModel.tagSuggestions.clear()
+                        }
                     )
                 }
-            }
-            SwitchPref(
-                checked = currentSettings.excludeAi,
-                title = "Hide AI-generated images",
-                summary = "Attempt to remove AI-generated images by excluding the " +
-                          "'ai_generated' tag in search queries by default."
-            ) {
-                scope.launch { preferencesRepository.updatePref(PreferenceKeys.EXCLUDE_AI, it) }
-                viewModel.tagSuggestions.removeIf { tag ->
-                    tag.value == currentSettings.imageSource.site.aiTagName && tag.isExcluded
+                item {
+                    SwitchPref(
+                        checked = currentSettings.saveSearchHistory,
+                        title = "Save search history",
+                        summary = "Save your 10 most recent searches. When this is disabled, your " +
+                                "search history will be cleared and Breadboard will not save future " +
+                                "searches."
+                    ) {
+                        scope.launch {
+                            if (!it) preferencesRepository.clearSearchHistory()
+                            preferencesRepository.updatePref(
+                                key = PreferenceKeys.SAVE_SEARCH_HISTORY,
+                                to = it
+                            )
+                        }
+                    }
+                }
+                item {
+                    SwitchPref(
+                        checked = currentSettings.excludeAi,
+                        title = "Hide AI-generated images",
+                        summary = "Attempt to remove AI-generated images by excluding the " +
+                                "'ai_generated' tag in search queries by default."
+                    ) {
+                        scope.launch {
+                            preferencesRepository.updatePref(
+                                PreferenceKeys.EXCLUDE_AI,
+                                it
+                            )
+                        }
+                        viewModel.tagSuggestions.removeIf { tag ->
+                            tag.value == currentSettings.imageSource.site.aiTagName && tag.isExcluded
+                        }
+                    }
+                }
+                item {
+                    SwitchPref(
+                        checked = currentSettings.filterRatingsLocally,
+                        title = "Filter ratings locally",
+                        summary = "Rather than appending the selected ratings to the search query, " +
+                                "filter the results by rating after searching."
+                    ) {
+                        scope.launch {
+                            preferencesRepository.updatePref(
+                                PreferenceKeys.FILTER_RATINGS_LOCALLY,
+                                it
+                            )
+                        }
+                    }
                 }
             }
-            SwitchPref(
-                checked = currentSettings.filterRatingsLocally,
-                title = "Filter ratings locally",
-                summary = "Rather than appending the selected ratings to the search query, " +
-                          "filter the results by rating after searching."
-            ) {
-                scope.launch { preferencesRepository.updatePref(PreferenceKeys.FILTER_RATINGS_LOCALLY, it) }
+
+            LargeVerticalSpacer()
+
+            PreferencesGroup(title = "Layout") {
+                item {
+                    SwitchPref(
+                        checked = currentSettings.useStaggeredGrid,
+                        title = "Staggered grid",
+                        summary = "Use a staggered grid for images rather than a uniform grid."
+                    ) {
+                        scope.launch {
+                            preferencesRepository.updatePref(
+                                PreferenceKeys.USE_STAGGERED_GRID,
+                                it
+                            )
+                        }
+                    }
+                }
             }
 
             LargeVerticalSpacer()
 
-            Heading(text = "Layout")
-            SwitchPref(
-                checked = currentSettings.useStaggeredGrid,
-                title = "Staggered grid",
-                summary = "Use a staggered grid for images rather than a uniform grid."
-            ) {
-                scope.launch { preferencesRepository.updatePref(PreferenceKeys.USE_STAGGERED_GRID, it) }
+            PreferencesGroup(title = "Sharing") {
+                item {
+                    SwitchPref(
+                        checked = currentSettings.useFixedLinks,
+                        title = "Share fixed links",
+                        summary = "When sharing an image, use a 'fixed' link where possible."
+                    ) {
+                        scope.launch {
+                            preferencesRepository.updatePref(
+                                PreferenceKeys.USE_FIXED_LINKS,
+                                it
+                            )
+                        }
+                    }
+                }
             }
 
             LargeVerticalSpacer()
-
-            Heading(text = "Sharing")
-            SwitchPref(
-                checked = currentSettings.useFixedLinks,
-                title = "Share fixed links",
-                summary = "When sharing an image, use a 'fixed' link where possible."
-            ) {
-                scope.launch { preferencesRepository.updatePref(PreferenceKeys.USE_FIXED_LINKS, it) }
-            }
-
-            LargeVerticalSpacer()
-
-            Heading(text = "Import/export")
-            var showExportDialog by remember { mutableStateOf(false) }
-            var exportedData: JSONObject? by remember { mutableStateOf(null) }
-            var importedData: JSONObject? by remember { mutableStateOf(null) }
-            var importingStarted by rememberSaveable { mutableStateOf(false) }
-
-            TitleSummary(
-                modifier = Modifier.fillMaxWidth(),
-                title = "Export data",
-                summary = "Export a backup file containing your current settings, favourite images, " +
-                          "and search history."
-            ) {
-                showExportDialog = true
-            }
 
             if (showExportDialog) {
                 val categories = PrefCategory.entries.toMutableStateList()
@@ -202,14 +246,6 @@ fun PreferencesScreen(viewModel: BreadboardViewModel) {
 
             if (exportedData != null) {
                 ExportDirectoryHandler(exportedData!!) { exportedData = null }
-            }
-
-            TitleSummary(
-                modifier = Modifier.fillMaxWidth(),
-                title = "Import data",
-                summary = "Import a Breadboard backup file."
-            ) {
-                importingStarted = true
             }
 
             if (importingStarted) {
@@ -264,6 +300,28 @@ fun PreferencesScreen(viewModel: BreadboardViewModel) {
                             }
                         }
                         importedData = null
+                    }
+                }
+            }
+
+            PreferencesGroup(title = "Import/export") {
+                item {
+                    TitleSummary(
+                        modifier = Modifier.fillMaxWidth(),
+                        title = "Export data",
+                        summary = "Export a backup file containing your current settings, favourite images, " +
+                                "and search history."
+                    ) {
+                        showExportDialog = true
+                    }
+                }
+                item {
+                    TitleSummary(
+                        modifier = Modifier.fillMaxWidth(),
+                        title = "Import data",
+                        summary = "Import a Breadboard backup file."
+                    ) {
+                        importingStarted = true
                     }
                 }
             }
