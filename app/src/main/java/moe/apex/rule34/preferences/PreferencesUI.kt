@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
@@ -201,7 +203,14 @@ fun SwitchPref(
             colors = SwitchDefaults.colors().copy(
                 uncheckedThumbColor = BreadboardTheme.colors.outlineStrong,
                 uncheckedBorderColor = BreadboardTheme.colors.outlineStrong
-            )
+            ),
+            thumbContent = {
+                Icon(
+                    imageVector = if (checked) Icons.Default.Check else Icons.Default.Clear,
+                    contentDescription = if (checked) "Enabled" else "Disabled",
+                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                )
+            }
         )
     }
 }

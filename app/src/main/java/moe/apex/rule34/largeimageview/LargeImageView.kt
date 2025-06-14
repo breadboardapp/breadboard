@@ -50,6 +50,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -108,6 +109,13 @@ private fun isUsingWiFi(context: Context): Boolean {
 }
 
 
+private enum class ToolbarState {
+    DEFAULT,
+    FORCE_SHOW,
+    FORCE_HIDE
+}
+
+
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun LargeImageView(
@@ -122,7 +130,7 @@ fun LargeImageView(
     ) { allImages.size }
     var canChangePage by remember { mutableStateOf(false) }
     val zoomState = rememberZoomableState(ZoomSpec(maxZoomFactor = 3.5f))
-    var forciblyShowBottomBar by remember { mutableStateOf(false) }
+    var toolbarState by remember { mutableStateOf(ToolbarState.DEFAULT) }
     var offset by remember { mutableStateOf(0.dp) }
     val context = LocalContext.current
     val viewModel = viewModel<BreadboardViewModel>()
@@ -130,6 +138,8 @@ fun LargeImageView(
     val isUsingWifi = isUsingWiFi(context)
     var storageLocationPromptLaunched by remember { mutableStateOf(false) }
     var isDownloading by remember { mutableStateOf(false) }
+
+    val isZoomedOut by remember { derivedStateOf { (zoomState.zoomFraction ?: 0f) < 0.15f } }
 
     if (allImages.isEmpty()) {
         visible?.value = false
@@ -234,14 +244,21 @@ fun LargeImageView(
                     Modifier.zoomable(
                         zoomState,
                         onClick = {
-                            forciblyShowBottomBar = !forciblyShowBottomBar
+                            Log.i("toolbar", toolbarState.toString())
+                            Log.i("is zoomed out", isZoomedOut.toString())
+                            Log.i("zoom fraction", zoomState.zoomFraction.toString())
+                            toolbarState = when (toolbarState) {
+                                ToolbarState.DEFAULT -> if (isZoomedOut) ToolbarState.FORCE_HIDE else ToolbarState.FORCE_SHOW
+                                ToolbarState.FORCE_SHOW -> ToolbarState.FORCE_HIDE
+                                ToolbarState.FORCE_HIDE -> if (isZoomedOut) ToolbarState.DEFAULT else ToolbarState.FORCE_SHOW
+                            }
+                            Log.i("toolbar", toolbarState.toString())
                         }
                     )) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .systemBarsPadding()
-                            .padding(bottom = 70.dp),
+                            .systemBarsPadding(),
                         contentAlignment = Alignment.Center
                     ) {
                         LargeImage(
@@ -254,15 +271,15 @@ fun LargeImageView(
                 }
             }
 
-            val isZoomedOut = (zoomState.zoomFraction ?: 0f) < 0.15f
             // Disable page changing while zoomed in and reset bottom bar state
-            LaunchedEffect(isZoomedOut) {
+            LaunchedEffect(isZoomedOut, pagerState.currentPage) {
                 canChangePage = isZoomedOut
-                forciblyShowBottomBar = false
+                toolbarState = ToolbarState.DEFAULT
             }
+
             Box(Modifier.align(Alignment.BottomCenter)) {
                 AnimatedVisibility(
-                    visible = ((zoomState.zoomFraction ?: 0f) < 0.15f) || forciblyShowBottomBar,
+                    visible = toolbarState == ToolbarState.FORCE_SHOW || (isZoomedOut && toolbarState != ToolbarState.FORCE_HIDE),
                     enter = slideInVertically(initialOffsetY = { it }),
                     exit = slideOutVertically(targetOffsetY = { it })
                 ) {
