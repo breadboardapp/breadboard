@@ -89,11 +89,21 @@ import java.util.Date
 import java.util.Locale
 
 
+const val LARGE_CORNER_DP = 20
+const val SMALL_CORNER_DP = 4
 const val NAV_BAR_HEIGHT = 80
 const val CHIP_SPACING = 12
 private const val VERTICAL_DIVIDER_SPACING = 32
 private val CHIP_TOTAL_VERTICAL_PADDING = 16.dp
 private val CHIP_TOTAL_HEIGHT = FilterChipDefaults.Height + 16.dp
+
+
+enum class ListItemPosition(val topSize: Dp, val bottomSize: Dp) {
+    TOP(LARGE_CORNER_DP.dp, SMALL_CORNER_DP.dp),
+    MIDDLE(SMALL_CORNER_DP.dp, SMALL_CORNER_DP.dp),
+    BOTTOM(SMALL_CORNER_DP.dp, LARGE_CORNER_DP.dp),
+    SINGLE_ELEMENT(LARGE_CORNER_DP.dp, LARGE_CORNER_DP.dp)
+}
 
 
 @Composable
@@ -303,14 +313,14 @@ fun HorizontallyScrollingChipsWithLabels(
 
     Surface(
         modifier = modifier,
-        shape = MaterialTheme.shapes.large,
+        shape = largerShape,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         tonalElevation = 2.dp
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .padding(start = 16.dp, top = 8.dp, bottom = 8.dp)
+                .padding(start = 20.dp, top = 8.dp, bottom = 8.dp)
                 .height(CHIP_TOTAL_HEIGHT * labels.size)
         ) {
             Column(
@@ -578,3 +588,7 @@ fun HorizontalFloatingToolbar(
 val bottomAppBarAndNavBarHeight: Dp
     @Composable
     get() = NAV_BAR_HEIGHT.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
+
+val largerShapeCornerSize = 20.dp
+val largerShape = RoundedCornerShape(largerShapeCornerSize)

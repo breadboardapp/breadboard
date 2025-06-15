@@ -41,16 +41,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.ui.theme.prefTitle
 import moe.apex.rule34.util.Heading
+import moe.apex.rule34.util.ListItemPosition
 import moe.apex.rule34.util.VerticalSpacer
-
-
-private const val LARGE_CORNER_DP = 20
-private const val SMALL_CORNER_DP = 4
 
 
 private enum class ImportExport {
@@ -59,17 +55,9 @@ private enum class ImportExport {
 }
 
 
-private enum class PrefPosition(val topSize: Dp, val bottomSize: Dp) {
-    TOP(LARGE_CORNER_DP.dp, SMALL_CORNER_DP.dp),
-    MIDDLE(SMALL_CORNER_DP.dp, SMALL_CORNER_DP.dp),
-    BOTTOM(SMALL_CORNER_DP.dp, LARGE_CORNER_DP.dp),
-    SINGLE_ELEMENT(LARGE_CORNER_DP.dp, LARGE_CORNER_DP.dp)
-}
-
-
 @Composable
 private fun ExpressivePreferenceContainer(
-    position: PrefPosition,
+    position: ListItemPosition,
     content: @Composable () -> Unit
 ) {
     Surface(
@@ -117,10 +105,10 @@ fun PreferencesGroup(
         scope.items.forEachIndexed { index, itemContent ->
             ExpressivePreferenceContainer(
                 position = when {
-                    scope.items.size == 1 -> PrefPosition.SINGLE_ELEMENT
-                    index == 0 -> PrefPosition.TOP
-                    index == scope.items.lastIndex -> PrefPosition.BOTTOM
-                    else -> PrefPosition.MIDDLE
+                    scope.items.size == 1 -> ListItemPosition.SINGLE_ELEMENT
+                    index == 0 -> ListItemPosition.TOP
+                    index == scope.items.lastIndex -> ListItemPosition.BOTTOM
+                    else -> ListItemPosition.MIDDLE
                 }
             ) {
                 itemContent()

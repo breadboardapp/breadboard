@@ -6,9 +6,11 @@ import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -29,12 +31,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.sharp.Search
@@ -46,11 +48,9 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -80,6 +80,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -100,6 +101,7 @@ import moe.apex.rule34.tag.TagSuggestion
 import moe.apex.rule34.ui.theme.searchField
 import moe.apex.rule34.util.CHIP_SPACING
 import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
+import moe.apex.rule34.util.ListItemPosition
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.NAV_BAR_HEIGHT
 import moe.apex.rule34.util.NavBarHeightVerticalSpacer
@@ -109,6 +111,7 @@ import moe.apex.rule34.util.VerticalSpacer
 import moe.apex.rule34.util.availableRatingsForCurrentSource
 import moe.apex.rule34.util.availableRatingsForSource
 import moe.apex.rule34.util.copyText
+import moe.apex.rule34.util.largerShape
 import moe.apex.rule34.util.pluralise
 import moe.apex.rule34.util.showToast
 import moe.apex.rule34.viewmodel.BreadboardViewModel
@@ -196,12 +199,18 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
 
 
     @Composable
-    fun TagListEntry(tag: TagSuggestion) {
+    fun TagListEntry(
+        modifier: Modifier = Modifier,
+        tag: TagSuggestion,
+        position: ListItemPosition
+    ) {
         Column(
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier
-                .heightIn(min = 72.dp)
+            modifier = modifier
+                .heightIn(min = 64.dp)
                 .fillMaxWidth()
+                .clip(RoundedCornerShape(position.topSize, position.topSize, position.bottomSize, position.bottomSize))
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                 .clickable {
                     searchString = ""
                     cleanedSearchString = ""
@@ -235,32 +244,50 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                 .consumeWindowInsets(PaddingValues(0.dp, 0.dp, 0.dp, (NAV_BAR_HEIGHT + 16).dp))
                 .imePadding()
         ) {
-            Surface(
+            Box(
                 modifier = Modifier
                     .padding(
                         start = 16.dp,
                         end = 16.dp,
                         bottom = 16.dp
-                    ),
-                shape = MaterialTheme.shapes.large,
-                color = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                    .clip(largerShape)
             ) {
-                Column(
-                    Modifier
-                        .verticalScroll(rememberScrollState())
-                        .fillMaxWidth()
-                        .animateContentSize()
+                val resultsState = rememberLazyListState()
+                LaunchedEffect(mostRecentSuggestions.toList()) {
+                    scope.launch {
+                        resultsState.animateScrollToItem(0)
+                    }
+                }
+                LazyColumn(
+                    state = resultsState,
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     if (mostRecentSuggestions.isEmpty()) {
-                        Text(
-                            modifier = Modifier.padding(16.dp),
-                            fontSize = 16.sp,
-                            text = "No results :("
-                        )
+                        item {
+                            Text(
+                                fontSize = 16.sp,
+                                text = "No results :(",
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .fillMaxWidth(),
+                            )
+                        }
                     } else {
-                        for (t in mostRecentSuggestions) {
-                            TagListEntry(t)
-                            if (t != mostRecentSuggestions.last()) HorizontalDivider()
+                        mostRecentSuggestions.forEachIndexed { index, t ->
+                            item(key = t.label) {
+                                TagListEntry(
+                                    tag = t,
+                                    modifier = Modifier.animateItem(),
+                                    position = when (index) {
+                                        0 -> if (mostRecentSuggestions.size == 1) ListItemPosition.SINGLE_ELEMENT else ListItemPosition.TOP
+                                        mostRecentSuggestions.lastIndex -> ListItemPosition.BOTTOM
+                                        else -> ListItemPosition.MIDDLE
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -389,9 +416,10 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                     colors = TextFieldDefaults.colors().copy(
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest
                     ),
+                    prefix = { Spacer(Modifier.width(4.dp)) },
                     trailingIcon = {
                         Row(Modifier.padding(end = 4.dp)) {
                             IconButton(
