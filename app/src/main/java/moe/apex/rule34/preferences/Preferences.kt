@@ -170,7 +170,7 @@ fun PreferencesScreen(viewModel: BreadboardViewModel) {
                             )
                         }
                         viewModel.tagSuggestions.removeIf { tag ->
-                            tag.value == currentSettings.imageSource.site.aiTagName && tag.isExcluded
+                            tag.value == currentSettings.imageSource.imageBoard.aiTagName && tag.isExcluded
                         }
                     }
                 }

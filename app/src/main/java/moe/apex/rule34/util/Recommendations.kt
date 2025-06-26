@@ -51,7 +51,7 @@ class RecommendationsProvider(
 
     val recommendedImages = mutableStateListOf<Image>()
     private val recommendedTags = mutableListOf<String>()
-    private var pageNumber by mutableIntStateOf(imageSource.site.firstPageIndex)
+    private var pageNumber by mutableIntStateOf(imageSource.imageBoard.firstPageIndex)
 
     private var isLoading by mutableStateOf(false)
     private var shouldKeepSearching by mutableStateOf(true)
@@ -60,7 +60,7 @@ class RecommendationsProvider(
     fun prepareRecommendedTags() {
         recommendedTags.clear()
         shouldKeepSearching = true
-        pageNumber = imageSource.site.firstPageIndex
+        pageNumber = imageSource.imageBoard.firstPageIndex
 
         val tagsFromFavourites = seedImages
             .filter { it.imageSource == imageSource && it.metadata != null && it.metadata.rating == ImageRating.SAFE }
@@ -104,16 +104,16 @@ class RecommendationsProvider(
                         "Recommendations",
                         "Filtering recommendations locally because either the local filter is enabled, or the image source does not support server-side filtering."
                     )
-                    "${imageSource.site.formatTagNameString(recommendedTags)}+${
+                    "${imageSource.imageBoard.formatTagNameString(recommendedTags)}+${
                         ImageRating.buildSearchStringFor(ImageRating.SAFE)
                     }"
                 } else {
-                    imageSource.site.formatTagNameString(recommendedTags)
+                    imageSource.imageBoard.formatTagNameString(recommendedTags)
                 }
 
                 isLoading = true
                 // if recommendedTags is empty, it should just return the most recent uploaded posts
-                val results = imageSource.site.loadPage(
+                val results = imageSource.imageBoard.loadPage(
                     tags = searchQuery,
                     page = pageNumber
                 )
@@ -121,7 +121,7 @@ class RecommendationsProvider(
                     it !in recommendedImages &&
                     if (filterLocally) it.metadata!!.rating == ImageRating.SAFE else true
                 }
-                if (pageNumber == imageSource.site.firstPageIndex) {
+                if (pageNumber == imageSource.imageBoard.firstPageIndex) {
                     recommendedImages.clear()
                 }
                 if (results.isEmpty() || wantedResults.isEmpty()) {

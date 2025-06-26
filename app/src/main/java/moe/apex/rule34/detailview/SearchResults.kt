@@ -51,7 +51,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tags: Strin
 
     val prefs = LocalPreferences.current
     val preferencesRepository = LocalContext.current.prefs
-    val imageSource = source.site
+    val imageSource = source.imageBoard
     val filterLocally = prefs.filterRatingsLocally
     var pageNumber by remember { mutableIntStateOf(imageSource.firstPageIndex) }
 

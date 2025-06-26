@@ -475,7 +475,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
 
 // I don't know why Proguard is removing this.
 @Keep
-enum class ImageSource(override val label: String, val site: ImageBoard) : PrefEnum<ImageSource> {
+enum class ImageSource(override val label: String, val imageBoard: ImageBoard) : PrefEnum<ImageSource> {
     SAFEBOORU("Safebooru", Safebooru),
     DANBOORU("Danbooru", Danbooru),
     GELBOORU("Gelbooru", Gelbooru),

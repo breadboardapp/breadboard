@@ -186,7 +186,7 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                 ) {
                     composable<ImageView> {
                         val args = it.toRoute<ImageView>()
-                        LazyLargeImageView(navController) { args.source.site.loadImage(args.id) }
+                        LazyLargeImageView(navController) { args.source.imageBoard.loadImage(args.id) }
                     }
                     composable<Home> { HomeScreen(navController, viewModel, bottomBarVisibleState) }
                     composable<Search> { SearchScreen(navController, focusRequester, viewModel) }

@@ -177,7 +177,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
             if (cleanedSearchString.isNotEmpty()) delay(if (bypassDelay) 0 else 200)
             if (cleanedSearchString !in listOf("", "-")) {
                 try {
-                    val suggestions = source.site.loadAutoComplete(cleanedSearchString)
+                    val suggestions = source.imageBoard.loadAutoComplete(cleanedSearchString)
                     /* This check shouldn't be needed but avoids a race condition whereby clearing
                        the query in the time between getting suggestions and displaying them will cause
                        the old suggestions to be displayed. */
@@ -333,7 +333,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
             }
         }
 
-        val searchTags = currentSource.site.formatTagString(tagChipList)
+        val searchTags = currentSource.imageBoard.formatTagString(tagChipList)
         val ratingsFilter = if (prefs.filterRatingsLocally) ""
                             else ImageRating.buildSearchStringFor(prefs.ratingsFilter)
 
@@ -342,8 +342,8 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
     }
 
     fun addAiExcludedTag(source: ImageSource) {
-        if (excludeAi && !forciblyAllowedAi && tagChipList.getIndexByName(currentSource.site.aiTagName) == null) {
-            val tag = TagSuggestion("", source.site.aiTagName, "", true)
+        if (excludeAi && !forciblyAllowedAi && tagChipList.getIndexByName(currentSource.imageBoard.aiTagName) == null) {
+            val tag = TagSuggestion("", source.imageBoard.aiTagName, "", true)
             tagChipList.add(0, tag)
         }
     }
@@ -583,7 +583,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                                 label = { Text(t.value) },
                                 selected = !t.isExcluded,
                                 onClick = {
-                                    if (t.value == prefs.imageSource.site.aiTagName) {
+                                    if (t.value == prefs.imageSource.imageBoard.aiTagName) {
                                         if (t.isExcluded) forciblyAllowedAi = true
                                         else addAiExcludedTag(prefs.imageSource)
                                     }
