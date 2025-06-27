@@ -29,7 +29,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.core.text.isDigitsOnly
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -221,11 +220,11 @@ fun PreferencesScreen(viewModel: BreadboardViewModel) {
                 AuthDialog(
                     default = currentSettings.authFor(currentSettings.imageSource),
                     onDismissRequest = { showAuthDialog = false }
-                ) { userId, apiKey ->
+                ) { username, apiKey ->
                     scope.launch {
                         preferencesRepository.setAuth(
                             currentSettings.imageSource,
-                            userId.takeUnless { it.isBlank() }?.toInt(),
+                            username.takeUnless { it.isBlank() },
                             apiKey.takeUnless { it.isBlank() }
                         )
                     }
@@ -406,7 +405,7 @@ private fun AuthDialog(
     onDismissRequest: () -> Unit,
     onSave: (String, String) -> Unit
 ) {
-    var userId by remember { mutableStateOf(default?.userId?.toString() ?: "") }
+    var userId by remember { mutableStateOf(default?.user ?: "") }
     var apiKey by remember { mutableStateOf(default?.apiKey ?: "") }
 
     AlertDialog(
@@ -416,13 +415,11 @@ private fun AuthDialog(
             Column {
                 PreferenceTextBox(
                     value = userId,
-                    label = "User ID",
-                    keyboardType = KeyboardType.NumberPassword,
+                    label = "User ID/name",
+                    keyboardType = KeyboardType.Password,
                     obscured = false
                 ) {
-                    if (it.isEmpty() || it.isDigitsOnly()) {
-                        userId = it
-                    }
+                    userId = it.trim()
                 }
                 SmallVerticalSpacer()
                 PreferenceTextBox(

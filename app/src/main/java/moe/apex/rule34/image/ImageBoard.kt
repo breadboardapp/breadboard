@@ -13,7 +13,7 @@ import org.json.JSONObject
 
 @Serializable
 data class ImageBoardAuth(
-    val userId: Int,
+    val user: String,
     val apiKey: String,
 )
 
@@ -31,7 +31,7 @@ interface ImageBoard {
     val autoCompleteCategoryMapping: Map<String, String>
     val imageSearchUrl: String
     val authenticatedImageSearchUrl: String
-        get() = "$imageSearchUrl&api_key=%s&user_id=%d"
+        get() = "$imageSearchUrl&api_key=%s&user_id=%s"
     val aiTagName: String
     val firstPageIndex: Int
         get() = 0
@@ -88,7 +88,7 @@ interface ImageBoard {
 
     fun buildImageSearchUrl(tags: String, page: Int, auth: ImageBoardAuth?): String {
         return if (auth != null) {
-            authenticatedImageSearchUrl.format(tags, page, auth.apiKey, auth.userId)
+            authenticatedImageSearchUrl.format(tags, page, auth.apiKey, auth.user)
         } else {
             imageSearchUrl.format(tags, page)
         }
@@ -252,6 +252,7 @@ object Danbooru : ImageBoard {
     override val imageSearchUrl = "${baseUrl}posts.json?tags=%s&page=%d&limit=100"
     override val aiTagName = "ai-generated"
     override val firstPageIndex = 1
+    override val authenticatedImageSearchUrl = "$imageSearchUrl&api_key=%s&login=%s"
     override val canLoadUnauthenticated = false // Technically it can, it's just very limited
     override val localFilterType = ImageBoardLocalFilterType.RECOMMENDED
 
