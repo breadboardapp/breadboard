@@ -39,6 +39,7 @@ import moe.apex.rule34.util.extractPixivId
 import java.io.IOException
 import kotlin.collections.toSet
 import androidx.core.net.toUri
+import moe.apex.rule34.image.ImageBoardAuth
 
 
 val LocalPreferences = compositionLocalOf {
@@ -66,6 +67,7 @@ data object PrefNames {
     const val SAVE_SEARCH_HISTORY = "save_search_history"
     const val SEARCH_HISTORY = "search_history"
     const val USE_FIXED_LINKS = "use_fixed_links"
+    const val IMAGE_BOARD_AUTHS = "image_board_auths"
 }
 
 
@@ -84,6 +86,7 @@ object PreferenceKeys {
     val SAVE_SEARCH_HISTORY = booleanPreferencesKey(PrefNames.SAVE_SEARCH_HISTORY)
     val SEARCH_HISTORY = byteArrayPreferencesKey(PrefNames.SEARCH_HISTORY)
     val USE_FIXED_LINKS = booleanPreferencesKey(PrefNames.USE_FIXED_LINKS)
+    val IMAGE_BOARD_AUTHS = byteArrayPreferencesKey(PrefNames.IMAGE_BOARD_AUTHS)
 }
 
 
@@ -120,6 +123,7 @@ data class Prefs(
     val saveSearchHistory: Boolean,
     val searchHistory: List<SearchHistoryEntry>,
     val useFixedLinks: Boolean,
+    val imageBoardAuths: Map<ImageSource, ImageBoardAuth>
 ) {
     companion object {
         val DEFAULT = Prefs(
@@ -137,7 +141,13 @@ data class Prefs(
             saveSearchHistory = true,
             searchHistory = emptyList(),
             useFixedLinks = false,
+            imageBoardAuths = emptyMap()
         )
+    }
+
+
+    fun authFor(source: ImageSource): ImageBoardAuth? {
+        return imageBoardAuths[source]
     }
 }
 
@@ -160,6 +170,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             PreferenceKeys.SAVE_SEARCH_HISTORY to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.SEARCH_HISTORY to PrefMeta(PrefCategory.SEARCH_HISTORY),
             PreferenceKeys.USE_FIXED_LINKS to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.IMAGE_BOARD_AUTHS to PrefMeta(PrefCategory.SETTING, exportable = false)
         )
     }
 
@@ -404,6 +415,18 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
     }
 
 
+    @OptIn(ExperimentalSerializationApi::class)
+    suspend fun setAuth(source: ImageSource, userId: Int?, apiKey: String?) {
+        val auths = getPreferences.first().imageBoardAuths.toMutableMap()
+        if (userId == null && apiKey == null) {
+            auths.remove(source)
+        } else {
+            auths[source] = ImageBoardAuth(userId!!, apiKey!!)
+        }
+        updateByteArray(PreferenceKeys.IMAGE_BOARD_AUTHS, auths)
+    }
+
+
     suspend fun removeSearchHistoryEntry(entry: SearchHistoryEntry) {
         val history = getPreferences.first().searchHistory.toMutableList().apply {
             removeIf { it == entry }
@@ -451,6 +474,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val useFixedLinks = (
             preferences[PreferenceKeys.USE_FIXED_LINKS] ?: false
         )
+        val imageBoardAuthsRaw = preferences[PreferenceKeys.IMAGE_BOARD_AUTHS]
+        val imageBoardAuths: Map<ImageSource, ImageBoardAuth> = imageBoardAuthsRaw?.let { Cbor.decodeFromByteArray(it) } ?: emptyMap()
 
         return Prefs(
             dataSaver,
@@ -467,9 +492,9 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             saveSearchHistory,
             searchHistory,
             useFixedLinks,
+            imageBoardAuths
         )
     }
-
 }
 
 

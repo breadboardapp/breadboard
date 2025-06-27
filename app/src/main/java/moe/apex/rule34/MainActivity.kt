@@ -78,8 +78,12 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity() {
             val viewModel = viewModel(BreadboardViewModel::class.java)
             val startDestination = Home
 
-            LaunchedEffect(prefs.imageSource) {
-                if (viewModel.recommendationsProvider?.imageSource != prefs.imageSource) {
+            LaunchedEffect(prefs.imageSource, prefs.imageBoardAuths, prefs.filterRatingsLocally) {
+                if (
+                    viewModel.recommendationsProvider?.imageSource != prefs.imageSource ||
+                    viewModel.recommendationsProvider?.auth != prefs.authFor(prefs.imageSource) ||
+                    viewModel.recommendationsProvider?.filterRatingsLocally != prefs.filterRatingsLocally
+                ) {
                     viewModel.recommendationsProvider = null
                 }
             }

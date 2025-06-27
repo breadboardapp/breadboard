@@ -9,6 +9,7 @@ import androidx.compose.runtime.setValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import moe.apex.rule34.image.Image
+import moe.apex.rule34.image.ImageBoardAuth
 import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.preferences.ImageSource
 
@@ -16,7 +17,8 @@ import moe.apex.rule34.preferences.ImageSource
 class RecommendationsProvider(
     private val seedImages: List<Image>,
     val imageSource: ImageSource,
-    private val filterRatingsLocally: Boolean,
+    val auth: ImageBoardAuth?,
+    val filterRatingsLocally: Boolean,
     //private val excludeAi: Boolean TODO: Won't actually be used. Migrate to incoming blocked tags feature.
 ) {
     companion object {
@@ -115,7 +117,8 @@ class RecommendationsProvider(
                 // if recommendedTags is empty, it should just return the most recent uploaded posts
                 val results = imageSource.imageBoard.loadPage(
                     tags = searchQuery,
-                    page = pageNumber
+                    page = pageNumber,
+                    auth = auth,
                 )
                 val wantedResults = results.filter {
                     it !in recommendedImages &&

@@ -43,6 +43,7 @@ import moe.apex.rule34.detailview.SearchResults
 import moe.apex.rule34.favourites.FavouritesPage
 import moe.apex.rule34.home.HomeScreen
 import moe.apex.rule34.largeimageview.LazyLargeImageView
+import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.PreferencesScreen
 import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.util.withoutVertical
@@ -52,6 +53,7 @@ import moe.apex.rule34.viewmodel.BreadboardViewModel
 @Composable
 fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel, startDestination: Any = Search) {
     val density = LocalDensity.current
+    val prefs = LocalPreferences.current
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
     val bottomBarVisibleState = remember { mutableStateOf(true) }
@@ -186,7 +188,7 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                 ) {
                     composable<ImageView> {
                         val args = it.toRoute<ImageView>()
-                        LazyLargeImageView(navController) { args.source.imageBoard.loadImage(args.id) }
+                        LazyLargeImageView(navController) { args.source.imageBoard.loadImage(args.id, prefs.authFor(args.source)) }
                     }
                     composable<Home> { HomeScreen(navController, viewModel, bottomBarVisibleState) }
                     composable<Search> { SearchScreen(navController, focusRequester, viewModel) }

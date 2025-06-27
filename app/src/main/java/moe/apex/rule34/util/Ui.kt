@@ -271,6 +271,12 @@ fun Heading(
 }
 
 
+@Composable
+fun SmallVerticalSpacer() {
+    Spacer(Modifier.height(8.dp))
+}
+
+
 /** A vertical spacer with 12dp height. */
 @Composable
 fun VerticalSpacer() {

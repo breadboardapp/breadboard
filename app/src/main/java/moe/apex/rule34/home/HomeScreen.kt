@@ -68,7 +68,12 @@ fun HomeScreen(
     val uniformFirstItem by remember { derivedStateOf { uniformGridState.firstVisibleItemIndex } }
 
     if (viewModel.recommendationsProvider == null) {
-        viewModel.recommendationsProvider = RecommendationsProvider(prefs.favouriteImages, prefs.imageSource, prefs.filterRatingsLocally)
+        viewModel.recommendationsProvider = RecommendationsProvider(
+            seedImages = prefs.favouriteImages,
+            imageSource = prefs.imageSource,
+            auth = prefs.authFor(prefs.imageSource),
+            filterRatingsLocally = prefs.filterRatingsLocally
+        )
         viewModel.recommendationsProvider!!.prepareRecommendedTags()
     }
     val recommendationsProvider = viewModel.recommendationsProvider!!

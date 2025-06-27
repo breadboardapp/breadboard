@@ -8,8 +8,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
@@ -23,10 +27,14 @@ import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.core.text.isDigitsOnly
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import moe.apex.rule34.image.ImageBoardAuth
+import moe.apex.rule34.image.ImageBoardLocalFilterType
 import moe.apex.rule34.prefs
 import moe.apex.rule34.util.ExportDirectoryHandler
 import moe.apex.rule34.util.VerticalSpacer
@@ -37,6 +45,7 @@ import moe.apex.rule34.util.StorageLocationSelection
 import moe.apex.rule34.util.ImportException
 import moe.apex.rule34.util.ImportHandler
 import moe.apex.rule34.util.PromptType
+import moe.apex.rule34.util.SmallVerticalSpacer
 import moe.apex.rule34.util.exportData
 import moe.apex.rule34.util.importData
 import moe.apex.rule34.util.preImportChecks
@@ -61,6 +70,7 @@ fun PreferencesScreen(viewModel: BreadboardViewModel) {
     var exportedData: JSONObject? by remember { mutableStateOf(null) }
     var importedData: JSONObject? by remember { mutableStateOf(null) }
     var importingStarted by rememberSaveable { mutableStateOf(false) }
+    var showAuthDialog by remember { mutableStateOf(false) }
 
     val preferencesRepository = LocalContext.current.prefs
     val currentSettings = LocalPreferences.current
@@ -140,6 +150,22 @@ fun PreferencesScreen(viewModel: BreadboardViewModel) {
                     )
                 }
                 item {
+                    val noAuthNeeded = currentSettings.imageSource.imageBoard.canLoadUnauthenticated
+                    TitleSummary(
+                        modifier = Modifier.fillMaxWidth(),
+                        title = "Set API key",
+                        summary = if (!noAuthNeeded) {
+                            "${currentSettings.imageSource.label} requires an API key to work properly. " +
+                            "Tap to set."
+                        } else {
+                            "${currentSettings.imageSource.label} does not require an API key."
+                        },
+                        enabled = !noAuthNeeded
+                    ) {
+                        showAuthDialog = true
+                    }
+                }
+                item {
                     SwitchPref(
                         checked = currentSettings.saveSearchHistory,
                         title = "Save search history",
@@ -188,6 +214,22 @@ fun PreferencesScreen(viewModel: BreadboardViewModel) {
                             )
                         }
                     }
+                }
+            }
+
+            if (showAuthDialog) {
+                AuthDialog(
+                    default = currentSettings.authFor(currentSettings.imageSource),
+                    onDismissRequest = { showAuthDialog = false }
+                ) { userId, apiKey ->
+                    scope.launch {
+                        preferencesRepository.setAuth(
+                            currentSettings.imageSource,
+                            userId.takeUnless { it.isBlank() }?.toInt(),
+                            apiKey.takeUnless { it.isBlank() }
+                        )
+                    }
+                    showAuthDialog = false
                 }
             }
 
@@ -330,23 +372,23 @@ fun PreferencesScreen(viewModel: BreadboardViewModel) {
 
             InfoSection(text = "When data saver is enabled, images will load in a lower resolution " +
                                "by default. Downloads will always be in the maximum resolution.")
-            AnimatedVisibility(currentSettings.imageSource == ImageSource.DANBOORU) {
+            AnimatedVisibility(currentSettings.imageSource.imageBoard.localFilterType != ImageBoardLocalFilterType.NOT_NEEDED) {
                 Column {
                     LargeVerticalSpacer()
                     InfoSection(
-                        text = "Danbooru limits searches to 2 tags (which includes ratings), " +
-                                "so filtering by rating is difficult. If you are using " +
-                                "Danbooru, you should enable 'Filter ratings locally' if " +
-                                "you wish to filter by rating."
+                        text = "Danbooru limits searches to 2 tags (which includes ratings) " +
+                                "without an API key. If you are using Danbooru without an API key, " +
+                                "you should enable 'Filter ratings locally' to filter by rating. " +
+                                "Yande.re always requires this option."
                     )
                 }
             }
             LargeVerticalSpacer()
             InfoSection(text = "Filtering ratings locally has the benefit of being able to " +
-                               "adjust the filter after searching and allows filtering on " +
-                               "otherwise unsupported sites like Danbooru, but may cause " +
-                               "less results to be shown at once and result in higher data "+
-                               "usage for the same number of visible images.")
+                               "adjust the filter after searching and allows filtering without " +
+                               "an API key on Danbooru, but may cause less results to be shown at" +
+                               "once and result in higher data usage for the same number of " +
+                               "visible images.")
             LargeVerticalSpacer()
             InfoSection(text = "When fixed links are enabled, sharing an image may use an " +
                                "alternative link depending on the source. Bluesky links are " +
@@ -355,6 +397,57 @@ fun PreferencesScreen(viewModel: BreadboardViewModel) {
             NavBarHeightVerticalSpacer()
         }
     }
+}
+
+
+@Composable
+private fun AuthDialog(
+    default: ImageBoardAuth?,
+    onDismissRequest: () -> Unit,
+    onSave: (String, String) -> Unit
+) {
+    var userId by remember { mutableStateOf(default?.userId?.toString() ?: "") }
+    var apiKey by remember { mutableStateOf(default?.apiKey ?: "") }
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text("Set API key") },
+        text = {
+            Column {
+                PreferenceTextBox(
+                    value = userId,
+                    label = "User ID",
+                    keyboardType = KeyboardType.NumberPassword,
+                    obscured = false
+                ) {
+                    if (it.isEmpty() || it.isDigitsOnly()) {
+                        userId = it
+                    }
+                }
+                SmallVerticalSpacer()
+                PreferenceTextBox(
+                    value = apiKey,
+                    label = "API key",
+                    keyboardType = KeyboardType.Password,
+                    obscured = true
+                ) {
+                    apiKey = it.trim()
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                enabled = (userId.isNotBlank() && apiKey.isNotBlank()) || (userId.isBlank() && apiKey.isBlank()),
+                onClick = { onSave(userId, apiKey) }) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 

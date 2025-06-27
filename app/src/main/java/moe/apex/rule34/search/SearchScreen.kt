@@ -91,6 +91,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import moe.apex.rule34.R
 import moe.apex.rule34.history.SearchHistoryEntry
+import moe.apex.rule34.image.ImageBoardLocalFilterType
 import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.navigation.Results
 import moe.apex.rule34.preferences.ImageSource
@@ -163,8 +164,12 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
 
 
     fun danbooruLimitCheck(): Boolean {
-        if (tagChipList.size > 2 && prefs.imageSource == ImageSource.DANBOORU) {
-            showToast(context, "Danbooru supports up to 2 tags")
+        if (
+            tagChipList.size > 2 &&
+            prefs.imageSource == ImageSource.DANBOORU &&
+            prefs.authFor(ImageSource.DANBOORU) == null
+        ) {
+            showToast(context, "Danbooru only supports up to 2 tags without an API key")
             return false
         }
         return true
@@ -305,15 +310,20 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
         )
             return showToast(context, "Please select some ratings")
 
-        if (
-            !prefs.filterRatingsLocally &&
-            !prefs.ratingsFilter.containsAll(availableRatingsForSource(prefs.imageSource)) &&
-            prefs.imageSource in listOf(ImageSource.YANDERE, ImageSource.DANBOORU)
-        )
-            return showToast(
-                context,
-                "To filter ratings on this source, enable the 'Filter ratings locally' option"
-            )
+        if (!prefs.ratingsFilter.containsAll(availableRatingsForSource(prefs.imageSource))) {
+            if (
+                prefs.imageSource.imageBoard.localFilterType == ImageBoardLocalFilterType.REQUIRED &&
+                !prefs.filterRatingsLocally
+            ) {
+                return showToast(context, "Enable the 'Filter ratings locally' option to filter ratings on this source.")
+            } else if (
+                prefs.imageSource.imageBoard.localFilterType == ImageBoardLocalFilterType.RECOMMENDED &&
+                !prefs.filterRatingsLocally &&
+                prefs.authFor(prefs.imageSource) == null
+            ) {
+                return showToast(context, "Set an API key or enable the 'Filter ratings locally' option to filter ratings on this source.")
+            }
+        }
 
         // Danbooru has the 2-tag limit and filtering by multiple negated tags simply does not work on Yande.re
         if (!danbooruLimitCheck())

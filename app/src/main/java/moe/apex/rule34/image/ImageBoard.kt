@@ -1,5 +1,6 @@
 package moe.apex.rule34.image
 
+import kotlinx.serialization.Serializable
 import moe.apex.rule34.RequestUtil
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.tag.TagCategory
@@ -10,14 +11,34 @@ import org.json.JSONException
 import org.json.JSONObject
 
 
+@Serializable
+data class ImageBoardAuth(
+    val userId: Int,
+    val apiKey: String,
+)
+
+
+enum class ImageBoardLocalFilterType {
+    NOT_NEEDED,
+    RECOMMENDED,
+    REQUIRED
+}
+
+
 interface ImageBoard {
     val baseUrl: String
     val autoCompleteSearchUrl: String
     val autoCompleteCategoryMapping: Map<String, String>
     val imageSearchUrl: String
+    val authenticatedImageSearchUrl: String
+        get() = "$imageSearchUrl&api_key=%s&user_id=%d"
     val aiTagName: String
     val firstPageIndex: Int
         get() = 0
+    val canLoadUnauthenticated: Boolean
+        get() = true
+    val localFilterType: ImageBoardLocalFilterType
+        get() = ImageBoardLocalFilterType.NOT_NEEDED
 
     fun loadAutoComplete(searchString: String): List<TagSuggestion> {
         val suggestions = mutableListOf<TagSuggestion>()
@@ -51,9 +72,9 @@ interface ImageBoard {
 
     fun parseImage(e: JSONObject): Image?
 
-    fun loadImage(id: String): Image?
+    fun loadImage(id: String, auth: ImageBoardAuth? = null): Image?
 
-    fun loadPage(tags: String, page: Int): List<Image>
+    fun loadPage(tags: String, page: Int, auth: ImageBoardAuth? = null): List<Image>
 
     fun formatTagString(tags: List<TagSuggestion>): String {
         return tags.joinToString("+") { it.formattedLabel }
@@ -64,6 +85,14 @@ interface ImageBoard {
     }
 
     fun getRatingFromString(rating: String): ImageRating
+
+    fun buildImageSearchUrl(tags: String, page: Int, auth: ImageBoardAuth?): String {
+        return if (auth != null) {
+            authenticatedImageSearchUrl.format(tags, page, auth.apiKey, auth.userId)
+        } else {
+            imageSearchUrl.format(tags, page)
+        }
+    }
 }
 
 
@@ -100,13 +129,14 @@ interface GelbooruBasedImageBoard : ImageBoard {
         return Image(id, fileName, fileFormat, previewUrl, fileUrl, sampleUrl, imageSource, aspectRatio, metadata)
     }
 
-    fun loadImage(id: String, postListKey: String?, imageSource: ImageSource): Image? {
+    fun loadImage(id: String, postListKey: String?, imageSource: ImageSource, auth: ImageBoardAuth? = null): Image? {
         val parsedId = id.toIntOrNull() ?: return null
-        return loadPage("id:$parsedId", 0, postListKey, imageSource).getOrNull(0)
+        return loadPage("id:$parsedId", 0, postListKey, imageSource, auth).getOrNull(0)
     }
 
-    fun loadPage(tags: String, page: Int, postListKey: String?, imageSource: ImageSource): List<Image> {
-        val body = RequestUtil.get(imageSearchUrl.format(tags, page)).get()
+    fun loadPage(tags: String, page: Int, postListKey: String?, imageSource: ImageSource, auth: ImageBoardAuth? = null): List<Image> {
+        val url = buildImageSearchUrl(tags, page, auth)
+        val body = RequestUtil.get(url).get()
         if (body.isEmpty()) return emptyList()
 
         val posts: JSONArray
@@ -156,12 +186,12 @@ object Rule34 : GelbooruBasedImageBoard {
         return parseImage(e, ImageSource.R34)
     }
 
-    override fun loadImage(id: String): Image? {
-        return loadImage(id, null, ImageSource.R34)
+    override fun loadImage(id: String, auth: ImageBoardAuth?): Image? {
+        return loadImage(id, null, ImageSource.R34, auth)
     }
 
-    override fun loadPage(tags: String, page: Int): List<Image> {
-        return loadPage(tags, page, null, ImageSource.R34)
+    override fun loadPage(tags: String, page: Int, auth: ImageBoardAuth?): List<Image> {
+        return loadPage(tags, page, null, ImageSource.R34, auth)
     }
 }
 
@@ -177,12 +207,12 @@ object Safebooru : GelbooruBasedImageBoard {
         return parseImage(e, ImageSource.SAFEBOORU)
     }
 
-    override fun loadImage(id: String): Image? {
-        return loadImage(id, null, ImageSource.SAFEBOORU)
+    override fun loadImage(id: String, auth: ImageBoardAuth?): Image? {
+        return loadImage(id, null, ImageSource.SAFEBOORU, auth)
     }
 
-    override fun loadPage(tags: String, page: Int): List<Image> {
-        return loadPage(tags, page, null, ImageSource.SAFEBOORU)
+    override fun loadPage(tags: String, page: Int, auth: ImageBoardAuth?): List<Image> {
+        return loadPage(tags, page, null, ImageSource.SAFEBOORU, auth)
     }
 }
 
@@ -193,17 +223,18 @@ object Gelbooru : GelbooruBasedImageBoard {
     override val autoCompleteCategoryMapping = mapOf("tag" to "general")
     override val imageSearchUrl = "${baseUrl}index.php?page=dapi&json=1&s=post&q=index&limit=100&tags=%s&pid=%d"
     override val aiTagName = "ai-generated"
+    override val canLoadUnauthenticated = false
 
     override fun parseImage(e: JSONObject): Image? {
         return parseImage(e, ImageSource.GELBOORU)
     }
 
-    override fun loadImage(id: String): Image? {
-        return loadImage(id, "post", ImageSource.GELBOORU)
+    override fun loadImage(id: String, auth: ImageBoardAuth?): Image? {
+        return loadImage(id, "post", ImageSource.GELBOORU, auth)
     }
 
-    override fun loadPage(tags: String, page: Int): List<Image> {
-        return loadPage(tags, page, "post", ImageSource.GELBOORU)
+    override fun loadPage(tags: String, page: Int, auth: ImageBoardAuth?): List<Image> {
+        return loadPage(tags, page, "post", ImageSource.GELBOORU, auth)
     }
 }
 
@@ -221,6 +252,8 @@ object Danbooru : ImageBoard {
     override val imageSearchUrl = "${baseUrl}posts.json?tags=%s&page=%d&limit=100"
     override val aiTagName = "ai-generated"
     override val firstPageIndex = 1
+    override val canLoadUnauthenticated = false // Technically it can, it's just very limited
+    override val localFilterType = ImageBoardLocalFilterType.RECOMMENDED
 
     override fun parseImage(e: JSONObject): Image? {
         if (e.isNull("md5")) return null
@@ -270,13 +303,14 @@ object Danbooru : ImageBoard {
         return Image(id, fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.DANBOORU, aspectRatio, metadata)
     }
 
-    override fun loadImage(id: String): Image? {
+    override fun loadImage(id: String, auth: ImageBoardAuth?): Image? {
         val parsedId = id.toIntOrNull() ?: return null
-        return loadPage("id:$parsedId", 0).getOrNull(0)
+        return loadPage("id:$parsedId", 0, auth).getOrNull(0)
     }
 
-    override fun loadPage(tags: String, page: Int): List<Image> {
-        val body = RequestUtil.get(imageSearchUrl.format(tags, page)).get()
+    override fun loadPage(tags: String, page: Int, auth: ImageBoardAuth?): List<Image> {
+        val url = buildImageSearchUrl(tags, page, auth)
+        val body = RequestUtil.get(url).get()
         if (body.isEmpty()) return emptyList()
 
         val json = JSONArray(body)
@@ -316,6 +350,7 @@ object Yandere : ImageBoard {
     override val imageSearchUrl = "${baseUrl}post.json?tags=%s&page=%d&limit=100"
     override val aiTagName = "ai-generated" // Yande.re does not allow AI-generated images but this tag appears in search
     override val firstPageIndex = 1
+    override val localFilterType = ImageBoardLocalFilterType.REQUIRED
 
     override fun parseImage(e: JSONObject): Image? {
         if (e.isNull("md5")) return null
@@ -353,13 +388,14 @@ object Yandere : ImageBoard {
         return Image(id, fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.YANDERE, aspectRatio, metadata)
     }
 
-    override fun loadImage(id: String): Image? {
+    override fun loadImage(id: String, auth: ImageBoardAuth?): Image? {
         val parsedId = id.toIntOrNull() ?: return null
         return loadPage("id:$parsedId", 0).getOrNull(0)
     }
 
-    override fun loadPage(tags: String, page: Int): List<Image> {
-        val body = RequestUtil.get(imageSearchUrl.format(tags, page)).get()
+    override fun loadPage(tags: String, page: Int, auth: ImageBoardAuth?): List<Image> {
+        val url = buildImageSearchUrl(tags, page, auth)
+        val body = RequestUtil.get(url).get()
         if (body.isEmpty()) return emptyList()
 
         val json = JSONArray(body)

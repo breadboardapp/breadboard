@@ -106,7 +106,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tags: Strin
             initialLoad = {
                 withContext(Dispatchers.IO) {
                     try {
-                        val newImages = imageSource.loadPage(tags, pageNumber)
+                        val newImages = imageSource.loadPage(tags, pageNumber, prefs.authFor(source))
                         if (!allImages.addAll(newImages)) shouldKeepSearching = false
                         pageNumber++
                     } catch (e: Exception) {
@@ -119,7 +119,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tags: Strin
             if (shouldKeepSearching) {
                 scope.launch(Dispatchers.IO) {
                     try {
-                        val newImages = imageSource.loadPage(tags, pageNumber)
+                        val newImages = imageSource.loadPage(tags, pageNumber, prefs.authFor(source))
                         if (newImages.isNotEmpty()) {
                             pageNumber++
                             allImages.addAll(newImages.filter { it !in allImages })
