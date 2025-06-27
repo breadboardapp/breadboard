@@ -132,7 +132,7 @@ data class Prefs(
             favouriteImages = emptyList(),
             excludeAi = false,
             imageSource = ImageSource.SAFEBOORU,
-            favouritesFilter = ImageSource.entries.toList(),
+            favouritesFilter = ImageSource.entries,
             lastUsedVersionCode = 0, // We'll update this later
             ratingsFilter = listOf(ImageRating.SAFE),
             favouritesRatingsFilter = listOf(ImageRating.SAFE),
@@ -416,12 +416,12 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
 
 
     @OptIn(ExperimentalSerializationApi::class)
-    suspend fun setAuth(source: ImageSource, userId: Int?, apiKey: String?) {
+    suspend fun setAuth(source: ImageSource, username: String?, apiKey: String?) {
         val auths = getPreferences.first().imageBoardAuths.toMutableMap()
-        if (userId == null && apiKey == null) {
+        if (username == null && apiKey == null) {
             auths.remove(source)
         } else {
-            auths[source] = ImageBoardAuth(userId!!, apiKey!!)
+            auths[source] = ImageBoardAuth(username!!, apiKey!!)
         }
         updateByteArray(PreferenceKeys.IMAGE_BOARD_AUTHS, auths)
     }
@@ -442,40 +442,29 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
 
     @OptIn(ExperimentalSerializationApi::class)
     private fun mapUserPreferences(preferences: Preferences): Prefs {
-        val dataSaver = DataSaver.valueOf(
-            preferences[PreferenceKeys.DATA_SAVER] ?: DataSaver.AUTO.name
-        )
-        val storageLocation = (preferences[PreferenceKeys.STORAGE_LOCATION] ?: "").toUri()
+        val dataSaver = preferences[PreferenceKeys.DATA_SAVER]?.let { DataSaver.valueOf(it) } ?: Prefs.DEFAULT.dataSaver
+        val storageLocation = preferences[PreferenceKeys.STORAGE_LOCATION]?.toUri() ?: Prefs.DEFAULT.storageLocation
+
         val favouriteImagesRaw = preferences[PreferenceKeys.FAVOURITE_IMAGES]
-        val favouriteImages: List<Image> = favouriteImagesRaw?.let { Cbor.decodeFromByteArray(it) } ?: emptyList()
-        val excludeAi = preferences[PreferenceKeys.EXCLUDE_AI] ?: false
-        val imageSource = ImageSource.valueOf(preferences[PreferenceKeys.IMAGE_SOURCE] ?: ImageSource.SAFEBOORU.name)
-        val favouritesFilter = (
-            preferences[PreferenceKeys.FAVOURITES_FILTER]?.map { ImageSource.valueOf(it) } ?: ImageSource.entries
-        )
-        val lastUsedVersionCode = preferences[PreferenceKeys.LAST_USED_VERSION_CODE] ?: 0
-        val ratingsFilter = (
-            preferences[PreferenceKeys.RATINGS_FILTER]?.map { ImageRating.valueOf(it) } ?: listOf(ImageRating.SAFE)
-        )
-        val favouritesRatingFilter = (
-            preferences[PreferenceKeys.FAVOURITES_RATING_FILTER]?.map { ImageRating.valueOf(it) } ?: listOf(ImageRating.SAFE)
-        )
-        val filterRatingsLocally = (
-            preferences[PreferenceKeys.FILTER_RATINGS_LOCALLY] ?: true
-        )
-        val useStaggeredGrid = (
-            preferences[PreferenceKeys.USE_STAGGERED_GRID] ?: false
-        )
-        val saveSearchHistory = (
-            preferences[PreferenceKeys.SAVE_SEARCH_HISTORY] ?: true
-        )
+        val favouriteImages: List<Image> = favouriteImagesRaw?.let { Cbor.decodeFromByteArray(it) } ?: Prefs.DEFAULT.favouriteImages
+
+        val excludeAi = preferences[PreferenceKeys.EXCLUDE_AI] ?: Prefs.DEFAULT.excludeAi
+        val imageSource = preferences[PreferenceKeys.IMAGE_SOURCE]?.let { ImageSource.valueOf(it) } ?: Prefs.DEFAULT.imageSource
+        val favouritesFilter = (preferences[PreferenceKeys.FAVOURITES_FILTER]?.map { ImageSource.valueOf(it) } ?: Prefs.DEFAULT.favouritesFilter)
+        val lastUsedVersionCode = preferences[PreferenceKeys.LAST_USED_VERSION_CODE] ?: Prefs.DEFAULT.lastUsedVersionCode
+        val ratingsFilter = (preferences[PreferenceKeys.RATINGS_FILTER]?.map { ImageRating.valueOf(it) } ?: Prefs.DEFAULT.ratingsFilter)
+        val favouritesRatingFilter = (preferences[PreferenceKeys.FAVOURITES_RATING_FILTER]?.map { ImageRating.valueOf(it) } ?: Prefs.DEFAULT.favouritesRatingsFilter)
+        val filterRatingsLocally = (preferences[PreferenceKeys.FILTER_RATINGS_LOCALLY] ?: Prefs.DEFAULT.filterRatingsLocally)
+        val useStaggeredGrid = (preferences[PreferenceKeys.USE_STAGGERED_GRID] ?: Prefs.DEFAULT.useStaggeredGrid)
+        val saveSearchHistory = (preferences[PreferenceKeys.SAVE_SEARCH_HISTORY] ?: Prefs.DEFAULT.saveSearchHistory)
+
         val searchHistoryRaw = preferences[PreferenceKeys.SEARCH_HISTORY]
-        val searchHistory: List<SearchHistoryEntry> = searchHistoryRaw?.let { Cbor.decodeFromByteArray(it) } ?: emptyList()
-        val useFixedLinks = (
-            preferences[PreferenceKeys.USE_FIXED_LINKS] ?: false
-        )
+        val searchHistory: List<SearchHistoryEntry> = searchHistoryRaw?.let { Cbor.decodeFromByteArray(it) } ?: Prefs.DEFAULT.searchHistory
+
+        val useFixedLinks = (preferences[PreferenceKeys.USE_FIXED_LINKS] ?: Prefs.DEFAULT.useFixedLinks)
+
         val imageBoardAuthsRaw = preferences[PreferenceKeys.IMAGE_BOARD_AUTHS]
-        val imageBoardAuths: Map<ImageSource, ImageBoardAuth> = imageBoardAuthsRaw?.let { Cbor.decodeFromByteArray(it) } ?: emptyMap()
+        val imageBoardAuths: Map<ImageSource, ImageBoardAuth> = imageBoardAuthsRaw?.let { Cbor.decodeFromByteArray(it) } ?: Prefs.DEFAULT.imageBoardAuths
 
         return Prefs(
             dataSaver,
