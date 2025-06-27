@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.image.ImageBoardAuth
+import moe.apex.rule34.image.ImageBoardLocalFilterType
 import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.preferences.ImageSource
 
@@ -79,7 +80,7 @@ class RecommendationsProvider(
             .take(POOL_SIZE)
             .map { it.key }
 
-        val selectionSize = if (imageSource == ImageSource.DANBOORU) SELECTION_SIZE_DANBOORU else SELECTION_SIZE
+        val selectionSize = if (imageSource == ImageSource.DANBOORU && auth == null) SELECTION_SIZE_DANBOORU else SELECTION_SIZE
         val selected = if (topTags.size <= selectionSize) {
             topTags
         } else {
@@ -99,18 +100,20 @@ class RecommendationsProvider(
             "Fetching recommended posts for tags: ${recommendedTags.joinToString(", ")} - page $pageNumber"
         )
         withContext(Dispatchers.IO) {
-            val filterLocally = filterRatingsLocally || imageSource == ImageSource.DANBOORU || imageSource == ImageSource.YANDERE
+            val filterLocally = filterRatingsLocally ||
+                    imageSource.imageBoard.localFilterType == ImageBoardLocalFilterType.REQUIRED ||
+                    (imageSource == ImageSource.DANBOORU && auth == null)
             try {
                 val searchQuery = if (filterLocally) {
                     Log.i(
                         "Recommendations",
                         "Filtering recommendations locally because either the local filter is enabled, or the image source does not support server-side filtering."
                     )
+                    imageSource.imageBoard.formatTagNameString(recommendedTags)
+                } else {
                     "${imageSource.imageBoard.formatTagNameString(recommendedTags)}+${
                         ImageRating.buildSearchStringFor(ImageRating.SAFE)
                     }"
-                } else {
-                    imageSource.imageBoard.formatTagNameString(recommendedTags)
                 }
 
                 isLoading = true
