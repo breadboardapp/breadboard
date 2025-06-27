@@ -263,11 +263,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
            to img4. */
         if (lastUsedVersionCode < 270) {
             val data = dataStore.data.first()
-            val useStaggeredGrid = data[PreferenceKeys.USE_STAGGERED_GRID]
-            if (useStaggeredGrid == null)
-                updatePref(PreferenceKeys.USE_STAGGERED_GRID, false)
-
             val brokenFavouritesByteArray = data[PreferenceKeys.FAVOURITE_IMAGES]
+
             if (brokenFavouritesByteArray != null) {
                 val brokenFavourites: List<Image> = Cbor.decodeFromByteArray(brokenFavouritesByteArray)
                 val tempFavourites = brokenFavourites.toMutableList()
@@ -283,6 +280,18 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
                 }
                 updateFavouriteImages(tempFavourites)
             }
+        }
+
+        // v3 migrations start here
+
+        /* Versions 270 and 271 had a bug where staggered might still be disabled by default for new
+           installs. We'll keep it disabled for people affected by this but it will be enabled by
+           default for new installations of v3. */
+        if (lastUsedVersionCode < 300) {
+            val data = dataStore.data.first()
+            val useStaggeredGrid = data[PreferenceKeys.USE_STAGGERED_GRID]
+            if (useStaggeredGrid == null)
+                updatePref(PreferenceKeys.USE_STAGGERED_GRID, false)
         }
 
         // Place any future migrations above this line by checking the last used version code.
