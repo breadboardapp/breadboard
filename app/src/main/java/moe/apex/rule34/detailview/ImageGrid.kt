@@ -54,10 +54,11 @@ import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.util.FullscreenLoadingSpinner
 import moe.apex.rule34.util.NavBarHeightVerticalSpacer
+import moe.apex.rule34.util.largerShape
 
 
-private const val MIN_IMAGE_HEIGHT = 96
-private const val MAX_IMAGE_HEIGHT = 320
+private const val MIN_IMAGE_HEIGHT = 108
+private const val MAX_IMAGE_HEIGHT = 280
 private const val MIN_CELL_WIDTH   = 120
 private const val MAX_CELL_WIDTH   = 144
 
@@ -247,7 +248,7 @@ private fun ImagePreviewContainer(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .clip(RoundedCornerShape(12.dp))
+                .clip(largerShape)
         ) {
             ImagePreview(
                 modifier = Modifier.fillMaxSize(),
@@ -293,7 +294,7 @@ private fun StaggeredImagePreviewContainer(
         modifier = Modifier
             .widthIn(min = MIN_CELL_WIDTH.dp, max = MAX_CELL_WIDTH.dp)
             .heightIn(min = MIN_IMAGE_HEIGHT.dp, max = MAX_IMAGE_HEIGHT.dp)
-            .clip(RoundedCornerShape(12.dp)),
+            .clip(largerShape),
         contentAlignment = Alignment.TopEnd,
         propagateMinConstraints = true
     ) {

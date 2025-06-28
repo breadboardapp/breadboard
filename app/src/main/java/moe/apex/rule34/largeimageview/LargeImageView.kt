@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.Info
@@ -139,7 +138,7 @@ fun LargeImageView(
     var storageLocationPromptLaunched by remember { mutableStateOf(false) }
     var isDownloading by remember { mutableStateOf(false) }
 
-    val isZoomedOut by remember { derivedStateOf { (zoomState.zoomFraction ?: 0f) < 0.15f } }
+    val isZoomedOut by remember { derivedStateOf { zoomState.zoomFraction == 0f } }
 
     if (allImages.isEmpty()) {
         visible?.value = false
@@ -203,13 +202,13 @@ fun LargeImageView(
                         model = previewImageUrl,
                         contentDescription = "Image",
                         contentScale = ContentScale.Fit,
-                        modifier = modifier.clip(RoundedCornerShape(24.dp))
+                        modifier = modifier.clip(MaterialTheme.shapes.extraLarge)
                     )
                 }
             },
             modifier = modifier
                 .scale(0.95f)
-                .clip(RoundedCornerShape(24.dp))
+                .clip(MaterialTheme.shapes.extraLarge)
         )
     }
 
@@ -254,7 +253,8 @@ fun LargeImageView(
                             }
                             Log.i("toolbar", toolbarState.toString())
                         }
-                    )) {
+                    )
+                ) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
