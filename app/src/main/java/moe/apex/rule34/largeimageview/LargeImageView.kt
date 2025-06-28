@@ -152,15 +152,15 @@ fun LargeImageView(
     }
 
     val currentImage = allImages[pagerState.currentPage]
-    val popupVisibilityState = rememberSaveable { mutableStateOf(false) }
+    var showInfoSheet by rememberSaveable { mutableStateOf(false) }
 
     val prefs = LocalPreferences.current
     val dataSaver = prefs.dataSaver
     val storageLocation = prefs.storageLocation
     val favouriteImages = prefs.favouriteImages
 
-    if (popupVisibilityState.value) {
-        InfoSheet(navController, currentImage, popupVisibilityState)
+    if (showInfoSheet) {
+        InfoSheet(navController, currentImage, { showInfoSheet = false })
     }
 
     LaunchedEffect(visible?.value) {
@@ -354,7 +354,7 @@ fun LargeImageView(
                             }
                             if (currentImage.metadata != null) {
                                 IconButton(
-                                    onClick = { popupVisibilityState.value = true }
+                                    onClick = { showInfoSheet = true }
                                 ) {
                                     Icon(
                                         imageVector = Icons.Outlined.Info,

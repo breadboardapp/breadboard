@@ -63,7 +63,7 @@ import moe.apex.rule34.util.pluralise
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun InfoSheet(navController: NavController, image: Image, visibilityState: MutableState<Boolean>) {
+fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -> Unit) {
     if (image.metadata == null) return
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -75,7 +75,7 @@ fun InfoSheet(navController: NavController, image: Image, visibilityState: Mutab
         scope.launch {
             state?.hide()
         }.invokeOnCompletion {
-            visibilityState.value = false
+            onDismissRequest()
             block()
         }
     }
@@ -120,7 +120,7 @@ fun InfoSheet(navController: NavController, image: Image, visibilityState: Mutab
     /* The padding and window insets allow the content to draw behind the nav bar while ensuring
        the sheet doesn't expand to behind the status bar. */
     TitledModalBottomSheet(
-        onDismissRequest = { visibilityState.value = false },
+        onDismissRequest = onDismissRequest,
         sheetState = state,
         title = "About this image"
     ) {
