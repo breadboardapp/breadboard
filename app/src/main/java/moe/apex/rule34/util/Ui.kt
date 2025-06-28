@@ -98,6 +98,7 @@ const val LARGE_CORNER_DP = 20
 const val SMALL_CORNER_DP = 4
 const val BOTTOM_APP_BAR_HEIGHT = 80
 const val CHIP_SPACING = 12
+const val DISABLED_OPACITY = 0.38f
 private const val VERTICAL_DIVIDER_SPACING = 32
 private val CHIP_TOTAL_VERTICAL_PADDING = 16.dp
 private val CHIP_TOTAL_HEIGHT = FilterChipDefaults.Height + 16.dp

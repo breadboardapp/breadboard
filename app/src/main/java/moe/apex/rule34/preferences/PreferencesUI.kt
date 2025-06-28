@@ -54,12 +54,12 @@ import androidx.compose.ui.unit.sp
 import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.ui.theme.prefTitle
 import moe.apex.rule34.ui.theme.searchField
+import moe.apex.rule34.util.DISABLED_OPACITY
 import moe.apex.rule34.util.ExpressiveGroupHeading
 import moe.apex.rule34.util.ListItemPosition
 import moe.apex.rule34.util.VerticalSpacer
 
 
-private const val DISABLED_OPACITY = 0.38f
 private enum class ImportExport {
     IMPORT,
     EXPORT

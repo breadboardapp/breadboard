@@ -42,6 +42,7 @@ import androidx.navigation.NavHostController
 import kotlinx.coroutines.launch
 import moe.apex.rule34.prefs
 import moe.apex.rule34.util.BaseHeading
+import moe.apex.rule34.util.DISABLED_OPACITY
 import moe.apex.rule34.util.ExpressiveTagEntryContainer
 import moe.apex.rule34.util.LargeTitleBar
 import moe.apex.rule34.util.LargeVerticalSpacer
@@ -135,7 +136,7 @@ fun BlockedTagsScreen(navController: NavHostController) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .alpha(0.3f),
+                                .alpha(DISABLED_OPACITY),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {

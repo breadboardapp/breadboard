@@ -101,6 +101,7 @@ import moe.apex.rule34.util.ListItemPosition
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.BOTTOM_APP_BAR_HEIGHT
 import moe.apex.rule34.util.BaseHeading
+import moe.apex.rule34.util.DISABLED_OPACITY
 import moe.apex.rule34.util.SearchHistoryListItem
 import moe.apex.rule34.util.ExpressiveTagEntryContainer
 import moe.apex.rule34.util.TitledModalBottomSheet
@@ -659,7 +660,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                             textAlign = TextAlign.Center,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .alpha(0.38f)
+                                .alpha(DISABLED_OPACITY)
                         )
                     }
                 } else {
