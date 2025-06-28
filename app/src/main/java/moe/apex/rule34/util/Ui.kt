@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
@@ -254,6 +255,7 @@ fun PaddingValues.withoutVertical(top: Boolean = true, bottom: Boolean = true) :
 }
 
 
+/** A higher level MainScreenScaffold that provides two preset types of top bars. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreenScaffold(
@@ -261,11 +263,12 @@ fun MainScreenScaffold(
     scrollBehavior: TopAppBarScrollBehavior? = null,
     largeTopBar: Boolean = true,
     addBottomPadding: Boolean = true,
+    floatingActionButton: (@Composable () -> Unit)? = null,
     additionalActions: @Composable RowScope.() -> Unit = { },
     content: @Composable (PaddingValues) -> Unit
 ) {
-    Scaffold(
-        topBar = {
+    MainScreenScaffold(
+        topAppBar = {
             if (largeTopBar) {
                 LargeTitleBar(title, scrollBehavior, additionalActions = additionalActions)
             } else {
@@ -275,7 +278,31 @@ fun MainScreenScaffold(
                     additionalActions = additionalActions
                 )
             }
-        }
+        },
+        addBottomPadding = addBottomPadding,
+        floatingActionButton = floatingActionButton,
+        content = content
+    )
+}
+
+
+/** A lower level MainScreenScaffold that allows passing in a custom top bar for more
+    fine grained control over its behaviour and appearance. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MainScreenScaffold(
+    topAppBar: @Composable () -> Unit,
+    addBottomPadding: Boolean = true,
+    floatingActionButton: (@Composable () -> Unit)? = null,
+    content: @Composable (PaddingValues) -> Unit
+) {
+    Scaffold(
+        topBar = topAppBar,
+        floatingActionButton = { floatingActionButton?.let {
+            Box(Modifier.offset(y = if (addBottomPadding) -BOTTOM_APP_BAR_HEIGHT.dp else 0.dp)) {
+                it()
+            }
+        } }
     ) {
         val lld = LocalLayoutDirection.current
         val newPadding = PaddingValues(

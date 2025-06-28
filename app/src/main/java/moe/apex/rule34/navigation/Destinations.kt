@@ -63,6 +63,14 @@ object Favourites
 @Serializable
 object Settings
 
+@Serializable
+object BlockedTagsSettings
+
+
+fun NavDestination?.routeIs(routes: Collection<KClass<*>>): Boolean {
+    return routeIs(*routes.toTypedArray())
+}
+
 
 fun NavDestination?.routeIs(vararg routes: KClass<*>): Boolean {
     for (route in routes) {

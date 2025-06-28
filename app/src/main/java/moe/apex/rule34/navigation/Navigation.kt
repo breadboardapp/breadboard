@@ -43,6 +43,7 @@ import moe.apex.rule34.detailview.SearchResults
 import moe.apex.rule34.favourites.FavouritesPage
 import moe.apex.rule34.home.HomeScreen
 import moe.apex.rule34.largeimageview.LazyLargeImageView
+import moe.apex.rule34.preferences.BlockedTagsScreen
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.PreferencesScreen
 import moe.apex.rule34.ui.theme.BreadboardTheme
@@ -73,12 +74,16 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
     val popExitTransition = slideOutHorizontally(tween(easing = easing),  { slideDistance }) + fadeOut( tween(easing = easing))
     val popEnterTransition = slideInHorizontally(tween(easing = easing), { -slideDistance }) + fadeIn(tween(easing = easing))
 
+    val topLevelScreens = listOf(Home::class, Search::class, Favourites::class, Settings::class, BlockedTagsSettings::class)
+    val searchScreens = listOf(Search::class, Results::class)
+    val settingsScreens = listOf(Settings::class, BlockedTagsSettings::class)
+
     BreadboardTheme {
         Surface {
             Scaffold(
                 bottomBar = {
                     AnimatedVisibility(
-                        visible = currentRoute.routeIs(Home::class, Search::class, Settings::class, Favourites::class)
+                        visible = currentRoute.routeIs(topLevelScreens)
                                 && bottomBarVisibleState.value,
                         enter = slideInVertically { it /3} + fadeIn(),
                         exit = slideOutVertically { it/3 } + fadeOut()
@@ -103,7 +108,7 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                             )
                             NavigationBarItem(
                                 label = { Text("Search") },
-                                selected = currentRoute.routeIs(Search::class, Results::class),
+                                selected = currentRoute.routeIs(searchScreens),
                                 icon = {
                                     Icon(
                                         imageVector = Icons.Rounded.Search,
@@ -142,15 +147,17 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                             )
                             NavigationBarItem(
                                 label = { Text("Settings") },
-                                selected = currentRoute.routeIs(Settings::class),
+                                selected = currentRoute.routeIs(settingsScreens),
                                 icon = {
                                     Icon(
-                                        painter = if (currentRoute.routeIs(Settings::class)) rememberVectorPainter(Icons.Filled.Settings) else painterResource(R.drawable.ic_settings_hollow),
+                                        painter = if (currentRoute.routeIs(settingsScreens)) rememberVectorPainter(Icons.Filled.Settings) else painterResource(R.drawable.ic_settings_hollow),
                                         contentDescription = "Settings"
                                     )
                                 },
                                 onClick = {
-                                    if (!currentRoute.routeIs(Settings::class)) {
+                                    if (currentRoute.routeIs(settingsScreens.filter { it != Settings::class })) {
+                                        navController.popBackStack()
+                                    } else if (!currentRoute.routeIs(Settings::class)) {
                                         navController.navigate(Settings) {
                                             popUpTo(Settings) { inclusive = true }
                                         }
@@ -166,22 +173,22 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                     navController = navController,
                     startDestination = startDestination,
                     enterTransition = {
-                        if (targetState.destination.routeIs(Results::class, ImageView::class))
+                        if (targetState.destination.routeIs(Results::class, ImageView::class, BlockedTagsSettings::class))
                             enterTransition
                         else fadeIn()
                     },
                     exitTransition = {
-                        if (targetState.destination.routeIs(Results::class, ImageView::class))
+                        if (targetState.destination.routeIs(Results::class, ImageView::class, BlockedTagsSettings::class))
                             exitTransition
                         else fadeOut()
                     },
                     popEnterTransition = {
-                        if (initialState.destination.routeIs(Results::class, ImageView::class))
+                        if (initialState.destination.routeIs(Results::class, ImageView::class, BlockedTagsSettings::class))
                             popEnterTransition
                         else fadeIn()
                     },
                     popExitTransition = {
-                        if (initialState.destination.routeIs(Results::class, ImageView::class))
+                        if (initialState.destination.routeIs(Results::class, ImageView::class, BlockedTagsSettings::class))
                             popExitTransition
                         else fadeOut()
                     }
@@ -197,7 +204,8 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                         SearchResults(navController, args.source, args.tags)
                     }
                     composable<Favourites> { FavouritesPage(navController, bottomBarVisibleState) }
-                    composable<Settings> { PreferencesScreen(viewModel) }
+                    composable<Settings> { PreferencesScreen(navController, viewModel) }
+                    composable<BlockedTagsSettings> { BlockedTagsScreen(navController) }
                 }
             }
         }
