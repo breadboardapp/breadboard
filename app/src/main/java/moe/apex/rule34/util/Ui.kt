@@ -2,7 +2,6 @@ package moe.apex.rule34.util
 
 import android.app.Activity
 import android.content.Context
-import android.text.format.DateFormat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.slideInVertically
@@ -93,9 +92,6 @@ import moe.apex.rule34.history.SearchHistoryEntry
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.largeimageview.LargeImageView
 import moe.apex.rule34.prefs
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 
 const val LARGE_CORNER_DP = 20
@@ -513,31 +509,31 @@ fun SearchHistoryListItem(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    val is24h = DateFormat.is24HourFormat(context)
-    val timeFormat = if (is24h) "HH:mm" else "h:mm a"
-    val date = Date(item.timestamp)
-    val formatter = SimpleDateFormat("dd MMM $timeFormat", Locale.getDefault())
-    val formattedDate = formatter.format(date)
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min),
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+        horizontalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         Surface(
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             modifier = Modifier
                 .weight(1f, true)
                 .fillMaxHeight()
-                .clip(RoundedCornerShape(16.dp, 4.dp, 4.dp, 16.dp))
+                .clip(RoundedCornerShape(
+                    topStart = largerShapeCornerSize,
+                    bottomStart = largerShapeCornerSize,
+                    topEnd = 4.dp,
+                    bottomEnd = 4.dp
+                ))
                 .clickable(
                     interactionSource = interactionSource,
                     indication = LocalIndication.current
-                ) { onContainerClick() }
+                ) {
+                    onContainerClick()
+                }
         ) {
-            Column(Modifier.padding(top = 16.dp, bottom = 8.dp)) {
-                ExpressiveGroupHeading(text = "$formattedDate  \u2022  ${item.source.label}")
+            Column(Modifier.padding(vertical = 8.dp)) {
                 /* We're preventing the chips from consuming touch actions by placing the chips
                    column inside a Box, and then placing an invisible composable of the same
                    size in the same box. This invisible composable sits on top of the column
@@ -585,7 +581,12 @@ fun SearchHistoryListItem(
         Surface(
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             modifier = Modifier
-                .clip(RoundedCornerShape(4.dp, 16.dp, 16.dp, 4.dp))
+                .clip(RoundedCornerShape(
+                    topStart = 4.dp,
+                    topEnd = largerShapeCornerSize,
+                    bottomEnd = largerShapeCornerSize,
+                    bottomStart = 4.dp
+                ))
                 .clickable { onContainerClick() }
         ) {
             Box(

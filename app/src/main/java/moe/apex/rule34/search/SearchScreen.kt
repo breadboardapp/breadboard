@@ -1,6 +1,7 @@
 package moe.apex.rule34.search
 
 import android.annotation.SuppressLint
+import android.text.format.DateFormat
 import android.util.Log
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -13,11 +14,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -96,7 +100,7 @@ import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.rule34.util.ListItemPosition
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.BOTTOM_APP_BAR_HEIGHT
-import moe.apex.rule34.util.NavBarHeightVerticalSpacer
+import moe.apex.rule34.util.BaseHeading
 import moe.apex.rule34.util.SearchHistoryListItem
 import moe.apex.rule34.util.ExpressiveTagEntryContainer
 import moe.apex.rule34.util.TitledModalBottomSheet
@@ -109,7 +113,9 @@ import moe.apex.rule34.util.pluralise
 import moe.apex.rule34.util.showToast
 import moe.apex.rule34.viewmodel.BreadboardViewModel
 import moe.apex.rule34.viewmodel.getIndexByName
+import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -124,17 +130,20 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
     var cleanedSearchString by remember { mutableStateOf("") }
     val mostRecentSuggestions = remember { mutableStateListOf<TagSuggestion>() }
 
-    var showSearchHistoryPopup by rememberSaveable { mutableStateOf(false) }
     var showSourceChangeDialog by remember { mutableStateOf(false) }
     var sourceChangeDialogData by remember { mutableStateOf<SourceDialogData?>(null) }
     var showSourceRatingBox by remember { mutableStateOf(false) }
     val chevronRotation by animateFloatAsState(if (showSourceRatingBox) 180f else 0f)
 
-    val historySheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
     val prefs = LocalPreferences.current
     val currentSource = prefs.imageSource
+
+    var showSearchHistoryPopup by rememberSaveable { mutableStateOf(false) }
+    val historySheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val is24h = DateFormat.is24HourFormat(context)
+    val timeFormat = if (is24h) "HH:mm" else "h:mm a"
 
     var searchJob: Job? = null
     val scope = rememberCoroutineScope()
@@ -634,37 +643,57 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
             sheetState = historySheetState,
             title = "Search history"
         ) {
+            val reversedSearchHistory = prefs.searchHistory.reversed()
             LazyColumn(
                 modifier = Modifier
                     .animateContentSize()
-                    .padding(horizontal = 16.dp)
-                    .clip(RoundedCornerShape(16.dp, 16.dp)),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(horizontal = 12.dp)
+                    .clip(largerShape),
+                verticalArrangement = Arrangement.spacedBy(24.dp),
+                contentPadding = PaddingValues(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() * 2)
             ) {
                 if (prefs.searchHistory.isEmpty()) {
                     item {
                         Text(
                             text = "Nothing to see here.",
-                            modifier = Modifier.padding(horizontal = 16.dp)
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .alpha(0.38f)
                         )
                     }
                 } else {
-                    items(prefs.searchHistory.reversed(), key = { it.timestamp }) {
-                        SearchHistoryListItem(item = it) {
-                            tagChipList.clear()
-                            tagChipList.addAll(it.tags)
-                            searchString = ""
-                            shouldShowSuggestions = false
-                            scope.launch {
-                                context.prefs.updatePref(PreferenceKeys.IMAGE_SOURCE, it.source)
-                                context.prefs.replaceImageRatings(it.ratings)
-                                historySheetState.hide()
-                                showSearchHistoryPopup = false
+                    items(reversedSearchHistory, key = { it.timestamp } ) { entry ->
+                        val date = Date(entry.timestamp)
+                        val formatter = SimpleDateFormat("dd MMM $timeFormat", Locale.getDefault())
+                        val formattedDate = formatter.format(date)
+
+                        Column(
+                            modifier = Modifier.animateItem(),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            BaseHeading(
+                                modifier = Modifier.padding(start = 8.dp),
+                                text = "$formattedDate  \u2022  ${entry.source.label}"
+                            )
+                            SearchHistoryListItem(entry) {
+                                tagChipList.clear()
+                                tagChipList.addAll(entry.tags)
+                                searchString = ""
+                                shouldShowSuggestions = false
+                                scope.launch {
+                                    context.prefs.updatePref(
+                                        PreferenceKeys.IMAGE_SOURCE,
+                                        entry.source
+                                    )
+                                    context.prefs.replaceImageRatings(entry.ratings)
+                                    historySheetState.hide()
+                                    showSearchHistoryPopup = false
+                                }
                             }
                         }
                     }
                 }
-                item { NavBarHeightVerticalSpacer() }
             }
         }
     }
