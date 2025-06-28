@@ -138,7 +138,11 @@ fun LargeImageView(
     var storageLocationPromptLaunched by remember { mutableStateOf(false) }
     var isDownloading by remember { mutableStateOf(false) }
 
-    val isZoomedOut by remember { derivedStateOf { zoomState.zoomFraction == 0f } }
+    val isFullyZoomedOut by remember { derivedStateOf { zoomState.zoomFraction == 0f } }
+    val isMostlyZoomedOut by remember { derivedStateOf { zoomState.zoomFraction.let {
+        if (it == null) false
+        else it < 0.10
+    } } }
 
     if (allImages.isEmpty()) {
         visible?.value = false
@@ -243,15 +247,11 @@ fun LargeImageView(
                     Modifier.zoomable(
                         zoomState,
                         onClick = {
-                            Log.i("toolbar", toolbarState.toString())
-                            Log.i("is zoomed out", isZoomedOut.toString())
-                            Log.i("zoom fraction", zoomState.zoomFraction.toString())
                             toolbarState = when (toolbarState) {
-                                ToolbarState.DEFAULT -> if (isZoomedOut) ToolbarState.FORCE_HIDE else ToolbarState.FORCE_SHOW
+                                ToolbarState.DEFAULT -> if (isMostlyZoomedOut) ToolbarState.FORCE_HIDE else ToolbarState.FORCE_SHOW
                                 ToolbarState.FORCE_SHOW -> ToolbarState.FORCE_HIDE
-                                ToolbarState.FORCE_HIDE -> if (isZoomedOut) ToolbarState.DEFAULT else ToolbarState.FORCE_SHOW
+                                ToolbarState.FORCE_HIDE -> if (isMostlyZoomedOut) ToolbarState.DEFAULT else ToolbarState.FORCE_SHOW
                             }
-                            Log.i("toolbar", toolbarState.toString())
                         }
                     )
                 ) {
@@ -272,14 +272,14 @@ fun LargeImageView(
             }
 
             // Disable page changing while zoomed in and reset bottom bar state
-            LaunchedEffect(isZoomedOut, pagerState.currentPage) {
-                canChangePage = isZoomedOut
+            LaunchedEffect(isFullyZoomedOut, pagerState.currentPage) {
+                canChangePage = isFullyZoomedOut
                 toolbarState = ToolbarState.DEFAULT
             }
 
             Box(Modifier.align(Alignment.BottomCenter)) {
                 AnimatedVisibility(
-                    visible = toolbarState == ToolbarState.FORCE_SHOW || (isZoomedOut && toolbarState != ToolbarState.FORCE_HIDE),
+                    visible = toolbarState == ToolbarState.FORCE_SHOW || (isMostlyZoomedOut && toolbarState != ToolbarState.FORCE_HIDE),
                     enter = slideInVertically(initialOffsetY = { it }),
                     exit = slideOutVertically(targetOffsetY = { it })
                 ) {
