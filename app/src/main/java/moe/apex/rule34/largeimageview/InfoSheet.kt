@@ -10,19 +10,14 @@ import androidx.compose.foundation.layout.ContextualFlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetState
@@ -93,7 +88,7 @@ fun InfoSheet(navController: NavController, image: Image, visibilityState: Mutab
                 val intent = createSearchIntent(context, image.imageSource, tag)
                 context.startActivity(intent)
             } else {
-                navController.navigate(Results(image.imageSource, tag))
+                navController.navigate(Results(image.imageSource, listOf(tag)))
             }
         }
     }
@@ -125,10 +120,8 @@ fun InfoSheet(navController: NavController, image: Image, visibilityState: Mutab
     /* The padding and window insets allow the content to draw behind the nav bar while ensuring
        the sheet doesn't expand to behind the status bar. */
     TitledModalBottomSheet(
-        modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars),
         onDismissRequest = { visibilityState.value = false },
         sheetState = state,
-        contentWindowInsets = { BottomSheetDefaults.windowInsets.only(WindowInsetsSides.Horizontal) },
         title = "About this image"
     ) {
         Column(
@@ -158,7 +151,7 @@ fun InfoSheet(navController: NavController, image: Image, visibilityState: Mutab
                                     val intent = createSearchIntent(context, image.imageSource, "parent:$it")
                                     context.startActivity(intent)
                                 } else {
-                                    navController.navigate(Results(image.imageSource, "parent:$it"))
+                                    navController.navigate(Results(image.imageSource, listOf("parent:$it")))
                                 }
                             }
                         }
@@ -246,10 +239,15 @@ private fun PaddedUrlText(text: String) {
 
 
 private fun createSearchIntent(context: Context, imageSource: ImageSource, query: String): Intent {
+    return createSearchIntent(context, imageSource, listOf(query))
+}
+
+
+private fun createSearchIntent(context: Context, imageSource: ImageSource, queries: List<String>): Intent {
     val intent = Intent(Intent.ACTION_VIEW)
     intent.putExtra("source", imageSource.name)
     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-    intent.putExtra("query", query)
+    intent.putExtra("query", queries.toTypedArray())
     intent.setComponent(
         ComponentName(
             context,

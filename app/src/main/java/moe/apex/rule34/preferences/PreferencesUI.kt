@@ -54,7 +54,7 @@ import androidx.compose.ui.unit.sp
 import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.ui.theme.prefTitle
 import moe.apex.rule34.ui.theme.searchField
-import moe.apex.rule34.util.Heading
+import moe.apex.rule34.util.ExpressiveGroupHeading
 import moe.apex.rule34.util.ListItemPosition
 import moe.apex.rule34.util.VerticalSpacer
 
@@ -108,8 +108,8 @@ fun PreferencesGroup(
     val scope = PreferencesGroupScopeImpl()
     scope.content()
 
-    Heading(
-        modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
+    ExpressiveGroupHeading(
+        modifier = Modifier.padding(bottom = 8.dp),
         text = title
     )
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -130,7 +130,7 @@ fun PreferencesGroup(
 
 
 @Composable
-private fun Summary(
+fun Summary(
     modifier: Modifier = Modifier,
     text: String
 ) {

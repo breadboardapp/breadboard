@@ -57,8 +57,8 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity() {
 
     private fun maybePrepareResultsDestination(intent: Intent): Results? {
         val searchSource = ImageSource.valueOf(intent.getStringExtra("source") ?: return null)
-        val searchQuery = intent.getStringExtra("query") ?: return null
-        return Results(searchSource, searchQuery)
+        val searchQuery = intent.getStringArrayExtra("query") ?: return null
+        return Results(searchSource, searchQuery.toList())
     }
 
 
@@ -78,11 +78,12 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity() {
             val viewModel = viewModel(BreadboardViewModel::class.java)
             val startDestination = Home
 
-            LaunchedEffect(prefs.imageSource, prefs.imageBoardAuths, prefs.filterRatingsLocally) {
+            LaunchedEffect(prefs.imageSource, prefs.imageBoardAuths, prefs.filterRatingsLocally, prefs.blockedTags) {
                 if (
                     viewModel.recommendationsProvider?.imageSource != prefs.imageSource ||
                     viewModel.recommendationsProvider?.auth != prefs.authFor(prefs.imageSource) ||
-                    viewModel.recommendationsProvider?.filterRatingsLocally != prefs.filterRatingsLocally
+                    viewModel.recommendationsProvider?.filterRatingsLocally != prefs.filterRatingsLocally ||
+                    viewModel.recommendationsProvider?.blockedTags != prefs.blockedTags
                 ) {
                     viewModel.recommendationsProvider = null
                 }

@@ -4,11 +4,13 @@ import android.app.Activity
 import android.content.Context
 import android.text.format.DateFormat
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
@@ -23,6 +25,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
@@ -30,9 +33,13 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -63,6 +70,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -91,7 +99,7 @@ import java.util.Locale
 
 const val LARGE_CORNER_DP = 20
 const val SMALL_CORNER_DP = 4
-const val NAV_BAR_HEIGHT = 80
+const val BOTTOM_APP_BAR_HEIGHT = 80
 const val CHIP_SPACING = 12
 private const val VERTICAL_DIVIDER_SPACING = 32
 private val CHIP_TOTAL_VERTICAL_PADDING = 16.dp
@@ -103,6 +111,30 @@ enum class ListItemPosition(val topSize: Dp, val bottomSize: Dp) {
     MIDDLE(SMALL_CORNER_DP.dp, SMALL_CORNER_DP.dp),
     BOTTOM(SMALL_CORNER_DP.dp, LARGE_CORNER_DP.dp),
     SINGLE_ELEMENT(LARGE_CORNER_DP.dp, LARGE_CORNER_DP.dp)
+}
+
+
+@Composable
+fun topCornerSizeForPosition(position: ListItemPosition): Dp {
+    val cornerSize by animateDpAsState(when (position) {
+        ListItemPosition.TOP -> LARGE_CORNER_DP.dp
+        ListItemPosition.MIDDLE -> SMALL_CORNER_DP.dp
+        ListItemPosition.BOTTOM -> SMALL_CORNER_DP.dp
+        ListItemPosition.SINGLE_ELEMENT -> LARGE_CORNER_DP.dp
+    } )
+    return cornerSize
+}
+
+
+@Composable
+fun bottomCornerSizeForPosition(position: ListItemPosition): Dp {
+    val cornerSize by animateDpAsState(when (position) {
+        ListItemPosition.TOP -> SMALL_CORNER_DP.dp
+        ListItemPosition.MIDDLE -> SMALL_CORNER_DP.dp
+        ListItemPosition.BOTTOM -> LARGE_CORNER_DP.dp
+        ListItemPosition.SINGLE_ELEMENT -> LARGE_CORNER_DP.dp
+    } )
+    return cornerSize
 }
 
 
@@ -250,24 +282,39 @@ fun MainScreenScaffold(
             start = it.calculateStartPadding(lld),
             end = it.calculateEndPadding(lld),
             top = it.calculateTopPadding(),
-            bottom = if (addBottomPadding) it.calculateBottomPadding() + NAV_BAR_HEIGHT.dp else 0.dp
+            bottom = if (addBottomPadding) it.calculateBottomPadding() + BOTTOM_APP_BAR_HEIGHT.dp else 0.dp
         )
         content(newPadding)
     }
 }
 
 
+/** A heading with no horizontal padding */
 @Composable
-fun Heading(
-    modifier: Modifier = Modifier,
+fun BaseHeading(
+    modifier: Modifier,
     text: String
 ) {
     Text(
-        modifier = modifier.padding(horizontal = 16.dp),
+        modifier = modifier,
         text = text,
         color = MaterialTheme.colorScheme.primary,
         style = MaterialTheme.typography.titleMedium
     )
+}
+
+
+/** A heading with 16dp horizontal padding */
+@Composable
+fun Heading(modifier: Modifier = Modifier, text: String) {
+    BaseHeading(modifier.padding(horizontal = 16.dp), text)
+}
+
+
+/** A heading with 20dp horizontal padding */
+@Composable
+fun ExpressiveGroupHeading(modifier: Modifier = Modifier, text: String) {
+    BaseHeading(modifier.padding(horizontal = 20.dp), text)
 }
 
 
@@ -281,6 +328,13 @@ fun SmallVerticalSpacer() {
 @Composable
 fun VerticalSpacer() {
     Spacer(Modifier.height(12.dp))
+}
+
+
+/** A vertical spacer with 20dp height. */
+@Composable
+fun MediumLargeVerticalSpacer() {
+    Spacer(Modifier.height(20.dp))
 }
 
 
@@ -456,10 +510,7 @@ fun SearchHistoryListItem(
                 ) { onContainerClick() }
         ) {
             Column(Modifier.padding(top = 16.dp, bottom = 8.dp)) {
-                Heading(
-                    modifier = Modifier.padding(start = 4.dp),
-                    text = "$formattedDate  \u2022  ${item.source.label}"
-                )
+                ExpressiveGroupHeading(text = "$formattedDate  \u2022  ${item.source.label}")
                 /* We're preventing the chips from consuming touch actions by placing the chips
                    column inside a Box, and then placing an invisible composable of the same
                    size in the same box. This invisible composable sits on top of the column
@@ -534,15 +585,15 @@ fun TitledModalBottomSheet(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
     sheetState: SheetState = rememberModalBottomSheetState(),
-    contentWindowInsets: @Composable () -> WindowInsets = { BottomSheetDefaults.windowInsets },
+    contentWindowInsets: @Composable () -> WindowInsets = { BottomSheetDefaults.windowInsets.only(WindowInsetsSides.Horizontal) },
     title: String,
     content: @Composable ColumnScope.() -> Unit
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
-        modifier = modifier,
+        modifier = modifier.windowInsetsPadding(WindowInsets.statusBars),
         sheetState = sheetState,
-        contentWindowInsets = contentWindowInsets,
+        contentWindowInsets = contentWindowInsets
     ) {
         Text(
             text = title,
@@ -591,10 +642,69 @@ fun HorizontalFloatingToolbar(
 }
 
 
+@Composable
+fun ExpressiveTagEntryContainer(
+    modifier: Modifier = Modifier,
+    label: String,
+    supportingLabel: String? = null,
+    trailingContent: (@Composable RowScope.() -> Unit)? = null,
+    position: ListItemPosition,
+    onClick: (() -> Unit)? = null
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 64.dp)
+            .clip(
+                RoundedCornerShape(
+                    topCornerSizeForPosition(position),
+                    topCornerSizeForPosition(position),
+                    bottomCornerSizeForPosition(position),
+                    bottomCornerSizeForPosition(position)
+                )
+            )
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .clickable(onClick != null) { onClick!!() },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier
+                .padding(horizontal = 16.dp)
+                .weight(1f, true)
+        ) {
+            Text(
+                text = label,
+                fontSize = 16.sp,
+                lineHeight = 17.sp,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            supportingLabel?.let {
+                Text(
+                    text = it,
+                    fontSize = 12.sp,
+                    lineHeight = 13.sp,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+        trailingContent?.let {
+            Row(Modifier.padding(end = 8.dp)) {
+                it()
+            }
+        }
+    }
+}
+
+
 val bottomAppBarAndNavBarHeight: Dp
     @Composable
-    get() = NAV_BAR_HEIGHT.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    get() = BOTTOM_APP_BAR_HEIGHT.dp + navBarHeight
 
+val navBarHeight: Dp
+    @Composable
+    get() = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
 val largerShapeCornerSize = 20.dp
 val largerShape = RoundedCornerShape(largerShapeCornerSize)

@@ -2,19 +2,33 @@ package moe.apex.rule34.preferences
 
 import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -24,7 +38,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
@@ -35,6 +51,7 @@ import kotlinx.coroutines.withContext
 import moe.apex.rule34.image.ImageBoardAuth
 import moe.apex.rule34.image.ImageBoardLocalFilterType
 import moe.apex.rule34.prefs
+import moe.apex.rule34.util.BaseHeading
 import moe.apex.rule34.util.ExportDirectoryHandler
 import moe.apex.rule34.util.VerticalSpacer
 import moe.apex.rule34.util.LargeVerticalSpacer
@@ -43,10 +60,16 @@ import moe.apex.rule34.util.NavBarHeightVerticalSpacer
 import moe.apex.rule34.util.StorageLocationSelection
 import moe.apex.rule34.util.ImportException
 import moe.apex.rule34.util.ImportHandler
+import moe.apex.rule34.util.ListItemPosition
+import moe.apex.rule34.util.MediumLargeVerticalSpacer
 import moe.apex.rule34.util.PromptType
 import moe.apex.rule34.util.SmallVerticalSpacer
+import moe.apex.rule34.util.ExpressiveTagEntryContainer
+import moe.apex.rule34.util.TitledModalBottomSheet
 import moe.apex.rule34.util.exportData
 import moe.apex.rule34.util.importData
+import moe.apex.rule34.util.largerShapeCornerSize
+import moe.apex.rule34.util.navBarHeight
 import moe.apex.rule34.util.preImportChecks
 import moe.apex.rule34.util.saveUriToPref
 import moe.apex.rule34.util.showToast
@@ -70,6 +93,7 @@ fun PreferencesScreen(viewModel: BreadboardViewModel) {
     var importedData: JSONObject? by remember { mutableStateOf(null) }
     var importingStarted by rememberSaveable { mutableStateOf(false) }
     var showAuthDialog by remember { mutableStateOf(false) }
+    var showBlockedTagsSheet by rememberSaveable { mutableStateOf(false) }
 
     val preferencesRepository = LocalContext.current.prefs
     val currentSettings = LocalPreferences.current
@@ -185,8 +209,8 @@ fun PreferencesScreen(viewModel: BreadboardViewModel) {
                     SwitchPref(
                         checked = currentSettings.excludeAi,
                         title = "Hide AI-generated images",
-                        summary = "Attempt to remove AI-generated images by excluding the " +
-                                "'ai_generated' tag in search queries by default."
+                        summary = "Attempt to hide AI-generated images by automatically adding " +
+                                  "AI-related tags to your block list."
                     ) {
                         scope.launch {
                             preferencesRepository.updatePref(
@@ -197,6 +221,15 @@ fun PreferencesScreen(viewModel: BreadboardViewModel) {
                         viewModel.tagSuggestions.removeIf { tag ->
                             tag.value == currentSettings.imageSource.imageBoard.aiTagName && tag.isExcluded
                         }
+                    }
+                }
+                item {
+                    TitleSummary(
+                        modifier = Modifier.fillMaxWidth(),
+                        title = "Manage blocked tags",
+                        summary = "Add or remove tags to block from search results."
+                    ) {
+                        showBlockedTagsSheet = true
                     }
                 }
                 item {
@@ -230,6 +263,10 @@ fun PreferencesScreen(viewModel: BreadboardViewModel) {
                     }
                     showAuthDialog = false
                 }
+            }
+
+            if (showBlockedTagsSheet) {
+                BlockedTagsBottomSheet(onDismissRequest = { showBlockedTagsSheet = false })
             }
 
             LargeVerticalSpacer()
@@ -445,6 +482,149 @@ private fun AuthDialog(
             }
         }
     )
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BlockedTagsBottomSheet(
+    onDismissRequest: () -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    val userPreferencesRepository = LocalContext.current.prefs
+    val prefs = LocalPreferences.current
+    val blockedTags = prefs.manuallyBlockedTags.reversed()
+    var showAddDialog by rememberSaveable { mutableStateOf(false) }
+
+    if (showAddDialog) {
+        var content by remember { mutableStateOf("") }
+        AlertDialog(
+            title = { Text("Add blocked tag") },
+            text = {
+                PreferenceTextBox(
+                    value = content,
+                    label = "Tags",
+                ) {
+                    content = it
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val newBlocks = content.trim().split(" ")
+                        scope.launch {
+                            for (tag in newBlocks) {
+                                userPreferencesRepository.addToSet(
+                                    PreferenceKeys.MANUALLY_BLOCKED_TAGS,
+                                    tag
+                                )
+                            }
+                        }
+                        showAddDialog = false
+                    }
+                ) {
+                    Text("Add")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddDialog = false }) {
+                    Text("Cancel")
+                }
+            },
+            onDismissRequest = { showAddDialog = false },
+        )
+    }
+
+    TitledModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        title = "Blocked tags"
+    ) {
+        Box(
+            modifier = Modifier
+                .padding(horizontal = 12.dp)
+                .clip(RoundedCornerShape(largerShapeCornerSize, largerShapeCornerSize, 0.dp, 0.dp))
+        ) {
+            LazyColumn(
+                modifier = Modifier.animateContentSize(),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+                contentPadding = PaddingValues(bottom = navBarHeight + 88.dp), // FAB height + 16dp vertical padding
+            ) {
+                item {
+                    Summary(
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                        text = "Images with any of these tags will not appear in search results or recommendations. However, they will still show in your Favourites.",
+                    )
+                    LargeVerticalSpacer()
+                }
+                if (prefs.excludeAi) {
+                    val aiTags = ImageSource.entries.mapTo(mutableSetOf()) { it.imageBoard.aiTagName }
+                    item {
+                        BaseHeading(
+                            modifier = Modifier.padding(start = 8.dp, bottom = 6.dp),
+                            text = "Automatically blocked"
+                        )
+                    }
+                    items(aiTags.size) { index ->
+                        ExpressiveTagEntryContainer(
+                            modifier = Modifier.animateItem(),
+                            label = aiTags.elementAt(index),
+                            position = when (index) {
+                                0 -> ListItemPosition.TOP
+                                aiTags.size - 1 -> ListItemPosition.BOTTOM
+                                else -> ListItemPosition.MIDDLE // Not used at the time of writing but if more AI tags appear in the future when it would be useful
+                            }
+                        )
+                    }
+                    if (prefs.manuallyBlockedTags.isNotEmpty()) {
+                        item { MediumLargeVerticalSpacer() }
+                        item {
+                            BaseHeading(
+                                modifier = Modifier
+                                    .padding(start = 8.dp, bottom = 6.dp)
+                                    .animateItem(),
+                                text = "Blocked by you"
+                            )
+                        }
+                    }
+                }
+                items(blockedTags.size, key = { index -> blockedTags[index] }) { index ->
+                    val tag = blockedTags[index]
+                    ExpressiveTagEntryContainer(
+                        modifier = Modifier.animateItem(),
+                        label = tag,
+                        position = when {
+                            prefs.manuallyBlockedTags.size == 1 -> ListItemPosition.SINGLE_ELEMENT
+                            index == 0 -> ListItemPosition.TOP
+                            index == prefs.manuallyBlockedTags.size - 1 -> ListItemPosition.BOTTOM
+                            else -> ListItemPosition.MIDDLE
+                        },
+                        trailingContent = {
+                            IconButton(
+                                onClick = { scope.launch {
+                                    userPreferencesRepository.removeFromSet(PreferenceKeys.MANUALLY_BLOCKED_TAGS, tag)
+                                } }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Delete,
+                                    contentDescription = "Unblock tag",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    )
+                }
+            }
+            FloatingActionButton(
+                onClick = { showAddDialog = true },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = navBarHeight + 16.dp, end = 4.dp)
+            ) {
+                Icon(Icons.Rounded.Add, "Add blocked tag")
+            }
+        }
+    }
 }
 
 

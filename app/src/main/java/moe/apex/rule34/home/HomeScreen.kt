@@ -72,7 +72,8 @@ fun HomeScreen(
             seedImages = prefs.favouriteImages,
             imageSource = prefs.imageSource,
             auth = prefs.authFor(prefs.imageSource),
-            filterRatingsLocally = prefs.filterRatingsLocally
+            filterRatingsLocally = prefs.filterRatingsLocally,
+            blockedTags = prefs.blockedTags
         )
         viewModel.recommendationsProvider!!.prepareRecommendedTags()
     }

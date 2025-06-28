@@ -68,6 +68,7 @@ data object PrefNames {
     const val SEARCH_HISTORY = "search_history"
     const val USE_FIXED_LINKS = "use_fixed_links"
     const val IMAGE_BOARD_AUTHS = "image_board_auths"
+    const val MANUALLY_BLOCKED_TAGS = "manually_blocked_tags"
 }
 
 
@@ -87,6 +88,7 @@ object PreferenceKeys {
     val SEARCH_HISTORY = byteArrayPreferencesKey(PrefNames.SEARCH_HISTORY)
     val USE_FIXED_LINKS = booleanPreferencesKey(PrefNames.USE_FIXED_LINKS)
     val IMAGE_BOARD_AUTHS = byteArrayPreferencesKey(PrefNames.IMAGE_BOARD_AUTHS)
+    val MANUALLY_BLOCKED_TAGS = stringSetPreferencesKey(PrefNames.MANUALLY_BLOCKED_TAGS)
 }
 
 
@@ -123,7 +125,8 @@ data class Prefs(
     val saveSearchHistory: Boolean,
     val searchHistory: List<SearchHistoryEntry>,
     val useFixedLinks: Boolean,
-    val imageBoardAuths: Map<ImageSource, ImageBoardAuth>
+    val imageBoardAuths: Map<ImageSource, ImageBoardAuth>,
+    val manuallyBlockedTags: Set<String>
 ) {
     companion object {
         val DEFAULT = Prefs(
@@ -141,7 +144,8 @@ data class Prefs(
             saveSearchHistory = true,
             searchHistory = emptyList(),
             useFixedLinks = false,
-            imageBoardAuths = emptyMap()
+            imageBoardAuths = emptyMap(),
+            manuallyBlockedTags = emptySet()
         )
     }
 
@@ -149,6 +153,13 @@ data class Prefs(
     fun authFor(source: ImageSource): ImageBoardAuth? {
         return imageBoardAuths[source]
     }
+
+
+    /** The users manually blocked tags, plus the AI tags if `excludeAi` is enabled. */
+    val blockedTags: Set<String>
+        get() = manuallyBlockedTags.toMutableSet().apply {
+            if (excludeAi) addAll(ImageSource.entries.map { it.imageBoard.aiTagName })
+        }
 }
 
 
@@ -170,7 +181,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             PreferenceKeys.SAVE_SEARCH_HISTORY to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.SEARCH_HISTORY to PrefMeta(PrefCategory.SEARCH_HISTORY),
             PreferenceKeys.USE_FIXED_LINKS to PrefMeta(PrefCategory.SETTING),
-            PreferenceKeys.IMAGE_BOARD_AUTHS to PrefMeta(PrefCategory.SETTING, exportable = false)
+            PreferenceKeys.IMAGE_BOARD_AUTHS to PrefMeta(PrefCategory.SETTING, exportable = false),
+            PreferenceKeys.MANUALLY_BLOCKED_TAGS to PrefMeta(PrefCategory.SETTING),
         )
     }
 
@@ -340,17 +352,27 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
     }
 
 
-    suspend fun addToSet(key: Preferences.Key<Set<String>>, item: PrefEnum<*>) {
+    suspend fun addToSet(key: Preferences.Key<Set<String>>, item: String) {
         val set = dataStore.data.first()[key]?.toMutableSet() ?: mutableSetOf()
-        set.add((item as Enum<*>).name)
+        set.add(item)
         updateSet(key, set)
     }
 
 
-    suspend fun removeFromSet(key: Preferences.Key<Set<String>>, item: PrefEnum<*>) {
+    suspend fun removeFromSet(key: Preferences.Key<Set<String>>, item: String) {
         val set = dataStore.data.first()[key]?.toMutableSet() ?: mutableSetOf()
-        set.remove((item as Enum<*>).name)
+        set.remove(item)
         updateSet(key, set)
+    }
+
+
+    suspend fun addToSet(key: Preferences.Key<Set<String>>, item: PrefEnum<*>) {
+        addToSet(key, (item as Enum<*>).name)
+    }
+
+
+    suspend fun removeFromSet(key: Preferences.Key<Set<String>>, item: PrefEnum<*>) {
+        removeFromSet(key, (item as Enum<*>).name)
     }
 
 
@@ -475,6 +497,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val imageBoardAuthsRaw = preferences[PreferenceKeys.IMAGE_BOARD_AUTHS]
         val imageBoardAuths: Map<ImageSource, ImageBoardAuth> = imageBoardAuthsRaw?.let { Cbor.decodeFromByteArray(it) } ?: Prefs.DEFAULT.imageBoardAuths
 
+        val manuallyBlockedTags= preferences[PreferenceKeys.MANUALLY_BLOCKED_TAGS] ?: Prefs.DEFAULT.manuallyBlockedTags
+
         return Prefs(
             dataSaver,
             storageLocation,
@@ -490,7 +514,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             saveSearchHistory,
             searchHistory,
             useFixedLinks,
-            imageBoardAuths
+            imageBoardAuths,
+            manuallyBlockedTags,
         )
     }
 }

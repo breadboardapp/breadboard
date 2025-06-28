@@ -54,7 +54,7 @@ object Search
 @Serializable
 data class Results(
     val source: ImageSource,
-    val tags: String
+    val tags: List<String>
 )
 
 @Serializable

@@ -6,8 +6,6 @@ import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,20 +13,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -42,7 +34,6 @@ import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.sharp.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -104,9 +95,10 @@ import moe.apex.rule34.util.CHIP_SPACING
 import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.rule34.util.ListItemPosition
 import moe.apex.rule34.util.MainScreenScaffold
-import moe.apex.rule34.util.NAV_BAR_HEIGHT
+import moe.apex.rule34.util.BOTTOM_APP_BAR_HEIGHT
 import moe.apex.rule34.util.NavBarHeightVerticalSpacer
 import moe.apex.rule34.util.SearchHistoryListItem
+import moe.apex.rule34.util.ExpressiveTagEntryContainer
 import moe.apex.rule34.util.TitledModalBottomSheet
 import moe.apex.rule34.util.VerticalSpacer
 import moe.apex.rule34.util.availableRatingsForCurrentSource
@@ -131,7 +123,6 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
     var searchString by remember { mutableStateOf("") }
     var cleanedSearchString by remember { mutableStateOf("") }
     val mostRecentSuggestions = remember { mutableStateListOf<TagSuggestion>() }
-    var forciblyAllowedAi by remember { mutableStateOf(false) }
 
     var showSearchHistoryPopup by rememberSaveable { mutableStateOf(false) }
     var showSourceChangeDialog by remember { mutableStateOf(false) }
@@ -143,7 +134,6 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
     val prefs = LocalPreferences.current
-    val excludeAi = prefs.excludeAi
     val currentSource = prefs.imageSource
 
     var searchJob: Job? = null
@@ -209,35 +199,16 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
         tag: TagSuggestion,
         position: ListItemPosition
     ) {
-        Column(
-            verticalArrangement = Arrangement.Center,
-            modifier = modifier
-                .heightIn(min = 64.dp)
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(position.topSize, position.topSize, position.bottomSize, position.bottomSize))
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                .clickable {
-                    searchString = ""
-                    cleanedSearchString = ""
-                    shouldShowSuggestions = false
-                    addToFilter(tag)
-                }
+        ExpressiveTagEntryContainer(
+            modifier = modifier,
+            label = tag.label,
+            supportingLabel = tag.category,
+            position = position
         ) {
-            Text(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                text = tag.label,
-                fontSize = 16.sp,
-                lineHeight = 17.sp
-            )
-
-            tag.category?.let {
-                Text(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    text = it,
-                    fontSize = 12.sp,
-                    lineHeight = 13.sp
-                )
-            }
+            searchString = ""
+            cleanedSearchString = ""
+            shouldShowSuggestions = false
+            addToFilter(tag)
         }
     }
 
@@ -246,7 +217,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
     fun AutoCompleteTagResults() {
         Column(
             modifier = Modifier
-                .consumeWindowInsets(PaddingValues(0.dp, 0.dp, 0.dp, (NAV_BAR_HEIGHT + 16).dp))
+                .consumeWindowInsets(PaddingValues(0.dp, 0.dp, 0.dp, (BOTTOM_APP_BAR_HEIGHT + 16).dp))
                 .imePadding()
         ) {
             Box(
@@ -343,23 +314,16 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
             }
         }
 
-        val searchTags = currentSource.imageBoard.formatTagString(tagChipList)
-        val ratingsFilter = if (prefs.filterRatingsLocally) ""
-                            else ImageRating.buildSearchStringFor(prefs.ratingsFilter)
+        val ratingsFilter = if (prefs.filterRatingsLocally) emptyList()
+                            else ImageRating.buildQueryListFor(*prefs.ratingsFilter.toTypedArray())
 
-        val tags = searchTags + if (ratingsFilter.isNotEmpty()) "+$ratingsFilter" else ""
-        navController.navigate(Results(prefs.imageSource, tags))
-    }
-
-    fun addAiExcludedTag(source: ImageSource) {
-        if (excludeAi && !forciblyAllowedAi && tagChipList.getIndexByName(currentSource.imageBoard.aiTagName) == null) {
-            val tag = TagSuggestion("", source.imageBoard.aiTagName, "", true)
-            tagChipList.add(0, tag)
+        val tags = tagChipList.map { it.formattedLabel }.toMutableList().apply {
+            for (rating in ratingsFilter) {
+                addAll(rating)
+            }
         }
-    }
 
-    LaunchedEffect(Unit) {
-        addAiExcludedTag(source = prefs.imageSource)
+        navController.navigate(Results(prefs.imageSource, tags))
     }
 
     fun beginSearch() {
@@ -526,7 +490,6 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                                         context.prefs.updatePref(PreferenceKeys.IMAGE_SOURCE, it)
                                     }
                                     tagChipList.clear()
-                                    addAiExcludedTag(source = it)
                                     if (shouldShowSuggestions) getSuggestions(
                                         bypassDelay = true,
                                         source = it
@@ -593,10 +556,6 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                                 label = { Text(t.value) },
                                 selected = !t.isExcluded,
                                 onClick = {
-                                    if (t.value == prefs.imageSource.imageBoard.aiTagName) {
-                                        if (t.isExcluded) forciblyAllowedAi = true
-                                        else addAiExcludedTag(prefs.imageSource)
-                                    }
                                     tagChipList.remove(t)
                                 }
                             )
@@ -671,10 +630,8 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
 
     if (showSearchHistoryPopup) {
         TitledModalBottomSheet(
-            modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars),
             onDismissRequest = { showSearchHistoryPopup = false },
             sheetState = historySheetState,
-            contentWindowInsets = { BottomSheetDefaults.windowInsets.only(WindowInsetsSides.Horizontal) },
             title = "Search history"
         ) {
             LazyColumn(

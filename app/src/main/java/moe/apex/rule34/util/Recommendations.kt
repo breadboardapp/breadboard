@@ -20,7 +20,7 @@ class RecommendationsProvider(
     val imageSource: ImageSource,
     val auth: ImageBoardAuth?,
     val filterRatingsLocally: Boolean,
-    //private val excludeAi: Boolean TODO: Won't actually be used. Migrate to incoming blocked tags feature.
+    val blockedTags: Set<String>
 ) {
     companion object {
         private const val POOL_SIZE = 5
@@ -69,6 +69,7 @@ class RecommendationsProvider(
             .filter { it.imageSource == imageSource && it.metadata != null && it.metadata.rating == ImageRating.SAFE }
             .flatMap { it.metadata!!.allTags }
             .filterNot { tag -> ignoredTags.contains(tag.lowercase()) }
+            .filterNot { tag -> blockedTags.contains(tag.lowercase())}
 
         if (tagsFromFavourites.isEmpty()) {
             return
@@ -100,11 +101,11 @@ class RecommendationsProvider(
             "Fetching recommended posts for tags: ${recommendedTags.joinToString(", ")} - page $pageNumber"
         )
         withContext(Dispatchers.IO) {
-            val filterLocally = filterRatingsLocally ||
+            val filterRatingsLocally = this@RecommendationsProvider.filterRatingsLocally ||
                     imageSource.imageBoard.localFilterType == ImageBoardLocalFilterType.REQUIRED ||
                     (imageSource == ImageSource.DANBOORU && auth == null)
             try {
-                val searchQuery = if (filterLocally) {
+                val searchQuery = if (filterRatingsLocally) {
                     Log.i(
                         "Recommendations",
                         "Filtering recommendations locally because either the local filter is enabled, or the image source does not support server-side filtering."
@@ -123,14 +124,17 @@ class RecommendationsProvider(
                     page = pageNumber,
                     auth = auth,
                 )
-                val wantedResults = results.filter {
+                val safeResults = results.filter {
                     it !in recommendedImages &&
-                    if (filterLocally) it.metadata!!.rating == ImageRating.SAFE else true
+                    if (filterRatingsLocally) it.metadata!!.rating == ImageRating.SAFE else true
+                }
+                val wantedResults = safeResults.filter {
+                    it.metadata!!.allTags.none { tag -> blockedTags.contains(tag.lowercase()) }
                 }
                 if (pageNumber == imageSource.imageBoard.firstPageIndex) {
                     recommendedImages.clear()
                 }
-                if (results.isEmpty() || wantedResults.isEmpty()) {
+                if (results.isEmpty() || safeResults.isEmpty()) {
                     shouldKeepSearching = false
                 } else {
                     recommendedImages.addAll(wantedResults)

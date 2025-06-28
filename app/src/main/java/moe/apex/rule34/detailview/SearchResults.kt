@@ -40,7 +40,7 @@ import moe.apex.rule34.util.withoutVertical
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchResults(navController: NavController, source: ImageSource, tags: String) {
+fun SearchResults(navController: NavController, source: ImageSource, tagList: List<String>) {
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
     val shouldShowLargeImage = remember { mutableStateOf(false) }
@@ -54,6 +54,8 @@ fun SearchResults(navController: NavController, source: ImageSource, tags: Strin
     val imageSource = source.imageBoard
     val filterLocally = prefs.filterRatingsLocally
     var pageNumber by remember { mutableIntStateOf(imageSource.firstPageIndex) }
+
+    val tags = imageSource.formatTagNameString(tagList)
 
     val ratingRows: List<@Composable () -> Unit> = availableRatingsForCurrentSource.map { {
         FilterChip(
@@ -71,9 +73,11 @@ fun SearchResults(navController: NavController, source: ImageSource, tags: Strin
         )
     } }
 
+    // In case they explicitly search for a blocked tag
+    val actuallyBlockedTags = prefs.blockedTags.filter { it !in tagList }
     val imagesToDisplay = allImages.filter {
-        if (prefs.filterRatingsLocally) it.metadata!!.rating in prefs.ratingsFilter
-        else true
+        it.metadata!!.allTags.none { tag -> actuallyBlockedTags.contains(tag.lowercase()) } &&
+        if (prefs.filterRatingsLocally) it.metadata.rating in prefs.ratingsFilter else true
     }
 
     Scaffold(
