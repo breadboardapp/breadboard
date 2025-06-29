@@ -40,6 +40,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -399,7 +400,7 @@ fun HorizontallyScrollingChipsWithLabels(
         modifier = modifier,
         shape = largerShape,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-        tonalElevation = 2.dp
+        color = MaterialTheme.colorScheme.surfaceContainerHigh
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -427,14 +428,16 @@ fun HorizontallyScrollingChipsWithLabels(
                     .padding(start = VERTICAL_DIVIDER_SPACING.dp)
             )
 
-            Column(Modifier.horizontalScroll(rememberScrollState())) {
+            LazyColumn(
+                userScrollEnabled = false,
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                contentPadding = PaddingValues(start = VERTICAL_DIVIDER_SPACING.dp, end = 16.dp)
+            ) {
                 for (item in rows) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp)) {
-                        Spacer(Modifier.width((VERTICAL_DIVIDER_SPACING - CHIP_SPACING).dp))
-                        for (chip in item.second) {
-                            chip()
+                    item {
+                        Row(horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp)) {
+                            item.second.forEach { it() }
                         }
-                        Spacer(Modifier.width((16 - CHIP_SPACING).dp))
                     }
                 }
             }

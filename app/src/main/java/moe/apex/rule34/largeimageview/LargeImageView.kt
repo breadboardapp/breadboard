@@ -31,6 +31,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
@@ -310,7 +313,7 @@ fun LargeImageView(
                                     }
                                 }) {
                                     Icon(
-                                        painter = painterResource(R.drawable.ic_heart_filled),
+                                        imageVector = Icons.Rounded.Favorite,
                                         contentDescription = "Remove from favourites"
                                     )
                                 }
@@ -322,7 +325,7 @@ fun LargeImageView(
                                     }
                                 }) {
                                     Icon(
-                                        painter = painterResource(R.drawable.ic_heart_hollow),
+                                        imageVector = Icons.Rounded.FavoriteBorder,
                                         contentDescription = "Add to favourites"
                                     )
                                 }
@@ -402,7 +405,7 @@ fun LargeImageView(
                                     CircularProgressIndicator(Modifier.scale(0.5F))
                                 } else {
                                     Icon(
-                                        painter = painterResource(R.drawable.ic_download),
+                                        imageVector = Icons.Rounded.Download,
                                         contentDescription = "Save"
                                     )
                                 }

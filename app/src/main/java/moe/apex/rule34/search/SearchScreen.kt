@@ -7,7 +7,6 @@ import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,7 +15,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,24 +24,27 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.KeyboardArrowDown
-import androidx.compose.material.icons.sharp.Search
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.ContentPaste
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -103,8 +104,8 @@ import moe.apex.rule34.util.BaseHeading
 import moe.apex.rule34.util.DISABLED_OPACITY
 import moe.apex.rule34.util.SearchHistoryListItem
 import moe.apex.rule34.util.ExpressiveTagEntryContainer
+import moe.apex.rule34.util.SmallVerticalSpacer
 import moe.apex.rule34.util.TitledModalBottomSheet
-import moe.apex.rule34.util.VerticalSpacer
 import moe.apex.rule34.util.availableRatingsForCurrentSource
 import moe.apex.rule34.util.availableRatingsForSource
 import moe.apex.rule34.util.copyText
@@ -436,7 +437,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                                 }
                             ) {
                                 Icon(
-                                    painter = painterResource(id = R.drawable.ic_paste),
+                                    imageVector = Icons.Rounded.ContentPaste,
                                     contentDescription = "Paste"
                                 )
                             }
@@ -445,7 +446,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                                 onClick = { showSourceRatingBox = !showSourceRatingBox }
                             ) {
                                 Icon(
-                                    imageVector = Icons.Outlined.KeyboardArrowDown,
+                                    imageVector = Icons.Rounded.KeyboardArrowDown,
                                     contentDescription = "Filter"
                                 )
                             }
@@ -460,13 +461,13 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                     elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
                 ) {
                     Icon(
-                        imageVector = Icons.Sharp.Search,
+                        imageVector = Icons.Rounded.Search,
                         contentDescription = "Search"
                     )
                 }
             }
 
-            VerticalSpacer()
+            SmallVerticalSpacer()
 
             AnimatedVisibility(showSourceRatingBox) {
                 var opacity by remember { mutableFloatStateOf(1f) }
@@ -539,6 +540,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                             )
                         }
                     }
+
                 Column(Modifier.padding(horizontal = 16.dp)) {
                     HorizontallyScrollingChipsWithLabels(
                         modifier = Modifier
@@ -547,58 +549,57 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                         labels = listOf("Source", "Ratings"),
                         content = listOf(sourceRows, ratingRows)
                     )
-                    VerticalSpacer()
+                    SmallVerticalSpacer()
                 }
             }
 
             AnimatedVisibility(tagChipList.isNotEmpty()) {
                 Column {
-                    Row(
-                        modifier = Modifier
-                            .height(FilterChipDefaults.Height)
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp)
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        contentPadding = PaddingValues(horizontal = 16.dp)
                     ) {
-                        Spacer(Modifier.width((16 - CHIP_SPACING).dp))
-                        for (t in tagChipList) {
+                        items(tagChipList, key = { it.value }) { tag ->
                             FilterChip(
-                                label = { Text(t.value) },
-                                selected = !t.isExcluded,
+                                modifier = Modifier.animateItem(),
+                                label = { Text(tag.value) },
+                                selected = !tag.isExcluded,
                                 onClick = {
-                                    tagChipList.remove(t)
+                                    tagChipList.remove(tag)
                                 }
                             )
                         }
                         if (tagChipList.isNotEmpty()) {
-                            AssistChip(
-                                modifier = Modifier.aspectRatio(1f),
-                                onClick = {
-                                    val tags = tagChipList.joinToString(" ") { it.formattedLabel }
-                                    copyText(
-                                        context = context,
-                                        clipboardManager = clipboard,
-                                        text = tags,
-                                        message = "Copied ${tagChipList.size} ${
-                                            "tag".pluralise(
-                                                tagChipList.size,
-                                                "tags"
-                                            )
-                                        }"
-                                    )
-                                },
-                                label = { },
-                                leadingIcon = {
+                            item(key = "") {
+                                FilledIconButton (
+                                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
+                                    modifier = Modifier
+                                        .height(FilterChipDefaults.Height)
+                                        .width(56.dp) // Match the search FAB
+                                        .animateItem(),
+                                    onClick = {
+                                        val tags = tagChipList.joinToString(" ") { it.formattedLabel }
+                                        copyText(
+                                            context = context,
+                                            clipboardManager = clipboard,
+                                            text = tags,
+                                            message = "Copied ${tagChipList.size} ${"tag".pluralise(tagChipList.size, "tags")}"
+                                        )
+                                    }
+                                ) {
                                     Icon(
-                                        painter = painterResource(id = R.drawable.ic_copy),
-                                        contentDescription = "Copy all"
+                                        imageVector = Icons.Rounded.ContentCopy,
+                                        contentDescription = "Copy all",
+                                        modifier = Modifier.size(FilterChipDefaults.IconSize)
+
                                     )
                                 }
-                            )
+                            }
                         }
-
-                        Spacer(modifier = Modifier.width((16 - CHIP_SPACING).dp))
                     }
-                    VerticalSpacer()
+                    SmallVerticalSpacer()
                 }
             }
             AnimatedVisibility(shouldShowSuggestions) {

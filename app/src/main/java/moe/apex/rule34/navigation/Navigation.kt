@@ -11,8 +11,10 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -133,7 +135,7 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                                 selected = currentRoute.routeIs(Favourites::class),
                                 icon = {
                                     Icon(
-                                        painter = painterResource(if (currentRoute.routeIs(Favourites::class)) R.drawable.ic_heart_filled else R.drawable.ic_heart_hollow),
+                                        imageVector = if (currentRoute.routeIs(Favourites::class)) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                                         contentDescription = "Favourite images"
                                     )
                                 },
@@ -150,7 +152,7 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                                 selected = currentRoute.routeIs(settingsScreens),
                                 icon = {
                                     Icon(
-                                        painter = if (currentRoute.routeIs(settingsScreens)) rememberVectorPainter(Icons.Filled.Settings) else painterResource(R.drawable.ic_settings_hollow),
+                                        painter = if (currentRoute.routeIs(settingsScreens)) rememberVectorPainter(Icons.Rounded.Settings) else painterResource(R.drawable.ic_settings_hollow),
                                         contentDescription = "Settings"
                                     )
                                 },
