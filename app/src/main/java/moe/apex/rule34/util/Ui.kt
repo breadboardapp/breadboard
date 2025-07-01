@@ -659,7 +659,9 @@ fun HorizontalFloatingToolbar(
             shadowElevation = 3.dp
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 8.dp),
+                modifier = Modifier
+                    .padding(horizontal = 8.dp)
+                    .height(48.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -668,7 +670,7 @@ fun HorizontalFloatingToolbar(
         }
         floatingActionButton?.let {
             Spacer(Modifier.width(8.dp))
-            floatingActionButton()
+            it()
         }
     }
 }
@@ -726,6 +728,32 @@ fun ExpressiveTagEntryContainer(
                 it()
             }
         }
+    }
+}
+
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun CombinedClickableAction(
+    enabled: Boolean = true,
+    interactionSource: MutableInteractionSource,
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
+    content: @Composable () -> Unit
+) {
+    Box(contentAlignment = Alignment.Center) {
+        content()
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .combinedClickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    enabled = enabled,
+                    onClick = onClick,
+                    onLongClick = onLongClick
+                ),
+        )
     }
 }
 

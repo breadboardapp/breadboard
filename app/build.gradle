@@ -72,6 +72,7 @@ dependencies {
     implementation 'me.saket.telephoto:zoomable:0.15.1'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-core:1.8.1'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-cbor:1.8.1'
+    implementation 'sh.calvin.reorderable:reorderable:2.5.1'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'

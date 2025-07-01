@@ -260,6 +260,21 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                         }
                     }
                 }
+                item {
+                    ReorderablePref(
+                        title = "Image viewer action order",
+                        summary = "Reorder the actions in the image viewer. The top action will " +
+                                  "be displayed separately in its own dedicated button.",
+                        items = currentSettings.imageViewerActions
+                    ) {
+                        scope.launch {
+                            preferencesRepository.updateEnumList(
+                                PreferenceKeys.IMAGE_VIEWER_ACTION_ORDER,
+                                it
+                            )
+                        }
+                    }
+                }
             }
 
             LargeVerticalSpacer()

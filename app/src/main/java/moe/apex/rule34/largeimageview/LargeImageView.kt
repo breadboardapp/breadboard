@@ -11,9 +11,6 @@ import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
@@ -29,27 +26,17 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.rounded.Download
-import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonColors
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.minimumInteractiveComponentSize
-import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
@@ -63,10 +50,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
@@ -85,8 +73,10 @@ import moe.apex.rule34.R
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.DataSaver
 import moe.apex.rule34.preferences.LocalPreferences
+import moe.apex.rule34.preferences.ToolbarAction
 import moe.apex.rule34.prefs
 import moe.apex.rule34.ui.theme.Typography
+import moe.apex.rule34.util.CombinedClickableAction
 import moe.apex.rule34.util.showToast
 import moe.apex.rule34.util.FullscreenLoadingSpinner
 import moe.apex.rule34.util.HorizontalFloatingToolbar
@@ -139,7 +129,6 @@ fun LargeImageView(
     val scope = rememberCoroutineScope()
     val isUsingWifi = isUsingWiFi(context)
     var storageLocationPromptLaunched by remember { mutableStateOf(false) }
-    var isDownloading by remember { mutableStateOf(false) }
 
     val isFullyZoomedOut by remember { derivedStateOf { zoomState.zoomFraction == 0f } }
     val isMostlyZoomedOut by remember { derivedStateOf { zoomState.zoomFraction.let {
@@ -164,6 +153,137 @@ fun LargeImageView(
     val dataSaver = prefs.dataSaver
     val storageLocation = prefs.storageLocation
     val favouriteImages = prefs.favouriteImages
+    val actions = prefs.imageViewerActions.drop(1)
+    val primaryAction = prefs.imageViewerActions.first()
+
+    val actionMapping = mapOf<ToolbarAction, @Composable () -> ImageAction?>(
+        ToolbarAction.TOGGLE_HD to {
+            ImageAction(
+                onClick = { currentImage.toggleHd() }
+            ) {
+                val vectorIcon = if (currentImage.preferHd) {
+                    ToolbarAction.TOGGLE_HD.enabledIcon
+                } else {
+                    ImageVector.vectorResource(R.drawable.ic_hd_disabled)
+                }
+                Icon(
+                    imageVector = vectorIcon,
+                    contentDescription = "Toggle HD",
+                    modifier = Modifier.scale(1.2F)
+                )
+            }
+        },
+        ToolbarAction.FAVOURITE to {
+            val isFavourited = favouriteImages.any { it.fileName == currentImage.fileName && it.imageSource == currentImage.imageSource }
+            ImageAction(
+                onClick = {
+                    scope.launch {
+                        if (isFavourited) {
+                            context.prefs.removeFavouriteImage(currentImage)
+                            showToast(context, "Removed from your favourites")
+                        } else {
+                            context.prefs.addFavouriteImage(currentImage)
+                            showToast(context, "Added to your favourites")
+                        }
+                    }
+                }
+            ) {
+                Icon(
+                    imageVector = if (isFavourited) ToolbarAction.FAVOURITE.enabledIcon else Icons.Rounded.FavoriteBorder,
+                    contentDescription = "${if (isFavourited) "Remove from" else "Add to"} favourites"
+                )
+            }
+        },
+        ToolbarAction.SHARE to {
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+            }
+            ImageAction(
+                onClick = {
+                    var shareLink = currentImage.metadata?.pixivUrl
+                        ?: currentImage.metadata?.source.let { if (it?.isWebLink() == true) it else null }
+                        ?: currentImage.highestQualityFormatUrl
+                    if (prefs.useFixedLinks) shareLink = fixLink(shareLink)
+                    shareIntent.putExtra(Intent.EXTRA_TEXT, shareLink)
+                    context.startActivity(Intent.createChooser(shareIntent, null))
+                },
+                onLongClick = {
+                    shareIntent.putExtra(
+                        Intent.EXTRA_TEXT,
+                        currentImage.highestQualityFormatUrl
+                    )
+                    context.startActivity(Intent.createChooser(shareIntent, null))
+                }
+            ) {
+                Icon(
+                    imageVector = ToolbarAction.SHARE.enabledIcon,
+                    contentDescription = "Share"
+                )
+            }
+        },
+        ToolbarAction.INFO to {
+            if (currentImage.metadata != null) {
+                ImageAction(
+                    onClick = { showInfoSheet = true }
+                ) {
+                    Icon(
+                        imageVector = ToolbarAction.INFO.enabledIcon,
+                        contentDescription = "Info"
+                    )
+                }
+            } else {
+                null
+            }
+        },
+        ToolbarAction.DOWNLOAD to {
+            ImageAction(
+                enabled = currentImage !in viewModel.downloadingImages,
+                onClick = {
+                    if (currentImage !in viewModel.downloadingImages) {
+                        viewModel.viewModelScope.launch {
+                            viewModel.downloadingImages.add(currentImage)
+                            val result: Result<Boolean> = downloadImage(
+                                context,
+                                currentImage,
+                                storageLocation
+                            )
+
+                            if (result.isSuccess) {
+                                showToast(context, "Image saved.")
+                            } else {
+                                val exc = result.exceptionOrNull()!!
+                                exc.printStackTrace()
+
+                                if (exc is MustSetLocation) {
+                                    storageLocationPromptLaunched = true
+                                }
+                                showToast(context, exc.message ?: "Unknown error")
+                                Log.e(
+                                    "Downloader",
+                                    exc.message ?: "Error downloading image",
+                                    exc
+                                )
+                            }
+                            viewModel.downloadingImages.remove(currentImage)
+                        }
+                    }
+                }
+            ) {
+                if (currentImage in viewModel.downloadingImages) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.scale(0.5F),
+                        color = LocalContentColor.current
+                    )
+                } else {
+                    Icon(
+                        imageVector = ToolbarAction.DOWNLOAD.enabledIcon,
+                        contentDescription = "Save",
+                        modifier = Modifier.scale(1.1f)
+                    )
+                }
+            }
+        }
+    )
 
     if (showInfoSheet) {
         InfoSheet(navController, currentImage, { showInfoSheet = false })
@@ -291,126 +411,44 @@ fun LargeImageView(
                             .navigationBarsPadding()
                             .padding(bottom = 16.dp),
                         actions = {
-                            IconButton(
-                                onClick = { currentImage.toggleHd() }
-                            ) {
-                                val vectorIcon = if (currentImage.preferHd) {
-                                    R.drawable.ic_hd_enabled
-                                } else {
-                                    R.drawable.ic_hd_disabled
-                                }
-                                Icon(
-                                    painter = painterResource(vectorIcon),
-                                    contentDescription = "Toggle HD",
-                                    modifier = Modifier.scale(1.2F)
-                                )
-                            }
-                            if (favouriteImages.any { it.fileName == currentImage.fileName && it.imageSource == currentImage.imageSource }) {
-                                IconButton(onClick = {
-                                    scope.launch {
-                                        context.prefs.removeFavouriteImage(currentImage)
-                                        showToast(context, "Removed from your favourites")
-                                    }
-                                }) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Favorite,
-                                        contentDescription = "Remove from favourites"
-                                    )
-                                }
-                            } else {
-                                IconButton(onClick = {
-                                    scope.launch {
-                                        context.prefs.addFavouriteImage(currentImage)
-                                        showToast(context, "Added to your favourites")
-                                    }
-                                }) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.FavoriteBorder,
-                                        contentDescription = "Add to favourites"
-                                    )
-                                }
-                            }
-                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                            }
-                            CombinedClickableIconButton(
-                                onClick = {
-                                    var shareLink = currentImage.metadata?.pixivUrl
-                                        ?: currentImage.metadata?.source.let { if (it?.isWebLink() == true) it else null }
-                                        ?: currentImage.highestQualityFormatUrl
-                                    if (prefs.useFixedLinks) shareLink = fixLink(shareLink)
-                                    shareIntent.putExtra(Intent.EXTRA_TEXT, shareLink)
-                                    context.startActivity(Intent.createChooser(shareIntent, null))
-                                },
-                                onLongClick = {
-                                    shareIntent.putExtra(
-                                        Intent.EXTRA_TEXT,
-                                        currentImage.highestQualityFormatUrl
-                                    )
-                                    context.startActivity(Intent.createChooser(shareIntent, null))
-                                }
-                            ) {
-                                Icon(
-                                    Icons.Filled.Share,
-                                    "Share"
-                                )
-                            }
-                            if (currentImage.metadata != null) {
-                                IconButton(
-                                    onClick = { showInfoSheet = true }
+                            for (action in actions) {
+                                val item = actionMapping[action]!!()
+                                if (item == null) continue
+                                val interactionSource = remember { MutableInteractionSource() }
+                                CombinedClickableAction(
+                                    enabled = item.enabled,
+                                    interactionSource = interactionSource,
+                                    onClick = item.onClick,
+                                    onLongClick = item.onLongClick
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Info,
-                                        contentDescription = "Info"
-                                    )
+                                    IconButton(
+                                        modifier = item.modifier,
+                                        enabled = item.enabled,
+                                        onClick = { },
+                                        interactionSource = interactionSource
+                                    ) {
+                                        item.composableContent()
+                                    }
                                 }
                             }
                         },
-                        floatingActionButton = {
-                            FloatingActionButton(
-                                modifier = Modifier.size(56.dp),
-                                onClick = {
-                                    if (!isDownloading) {
-                                        viewModel.viewModelScope.launch {
-                                            isDownloading = true
-                                            val result: Result<Boolean> = downloadImage(
-                                                context,
-                                                currentImage,
-                                                storageLocation
-                                            )
-
-                                            if (result.isSuccess) {
-                                                showToast(context, "Image saved.")
-                                            } else {
-                                                val exc = result.exceptionOrNull()!!
-                                                exc.printStackTrace()
-
-                                                if (exc is MustSetLocation) {
-                                                    storageLocationPromptLaunched = true
-                                                }
-                                                showToast(context, exc.message ?: "Unknown error")
-                                                Log.e(
-                                                    "Downloader",
-                                                    exc.message ?: "Error downloading image",
-                                                    exc
-                                                )
-                                            }
-                                            isDownloading = false
-                                        }
-                                    }
-                                },
-                                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 3.dp)
+                        floatingActionButton = actionMapping[primaryAction]!!()?.let { {
+                            val interactionSource = remember { MutableInteractionSource() }
+                            CombinedClickableAction(
+                                enabled = it.enabled,
+                                interactionSource = interactionSource,
+                                onClick = it.onClick,
+                                onLongClick = it.onLongClick
                             ) {
-                                if (isDownloading) {
-                                    CircularProgressIndicator(Modifier.scale(0.5F))
-                                } else {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Download,
-                                        contentDescription = "Save"
-                                    )
+                                FloatingActionButton(
+                                    modifier = it.modifier,
+                                    onClick = { },
+                                    interactionSource = interactionSource
+                                ) {
+                                    it.composableContent()
                                 }
                             }
-                        }
+                        } }
                     )
                 }
             }
@@ -485,29 +523,11 @@ private fun LoadingContentPlaceholder(
 }
 
 
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun CombinedClickableIconButton(
-    modifier: Modifier = Modifier,
-    colors: IconButtonColors = IconButtonDefaults.iconButtonColors(),
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
-    content: @Composable () -> Unit
-) {
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = modifier
-            .minimumInteractiveComponentSize()
-            .size(40.dp)
-            .clip(CircleShape)
-            .background(colors.containerColor)
-            .combinedClickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = ripple(false, 20.dp),
-                onClick = onClick,
-                onLongClick = onLongClick
-            ),
-    ) {
-        CompositionLocalProvider(LocalContentColor provides colors.contentColor, content = content)
-    }
-}
+private data class ImageAction(
+    val modifier: Modifier = Modifier,
+    var enabled: Boolean = true,
+    val onClick: () -> Unit,
+    val onLongClick: (() -> Unit)? = null,
+    val composableContent: @Composable () -> Unit
+)
+

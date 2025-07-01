@@ -1,5 +1,6 @@
 package moe.apex.rule34.preferences
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,6 +12,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -18,9 +22,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -41,6 +47,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -58,6 +66,9 @@ import moe.apex.rule34.util.DISABLED_OPACITY
 import moe.apex.rule34.util.ExpressiveGroupHeading
 import moe.apex.rule34.util.ListItemPosition
 import moe.apex.rule34.util.VerticalSpacer
+import moe.apex.rule34.util.largerShape
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 
 private enum class ImportExport {
@@ -423,6 +434,105 @@ fun PreferenceTextBox(
         } else VisualTransformation.None,
         textStyle = MaterialTheme.typography.searchField
     )
+}
+
+
+@Composable
+fun ReorderablePref(
+    title: String,
+    summary: String?,
+    items: List<PrefEnum<*>>,
+    onReorder: (List<PrefEnum<*>>) -> Unit
+) {
+    var showDialog by remember { mutableStateOf(false) }
+
+    val hapticFeedback = LocalHapticFeedback.current
+    val list = items.toMutableStateList()
+    val listState = rememberLazyListState()
+    val reorderableLazyListState = rememberReorderableLazyListState(listState) { from, to ->
+        list.add(to.index, list.removeAt(from.index))
+        hapticFeedback.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
+        onReorder(list)
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            title = { Text(title) },
+            confirmButton = { },
+            onDismissRequest = { showDialog = false },
+            text = {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.clip(largerShape)
+                ) {
+                    items(list, { it.label}) {
+                        ReorderableItem(reorderableLazyListState, key = it.label) { isDragging ->
+                            val color by animateColorAsState(
+                                targetValue = if (list.indexOf(it) == 0) {
+                                    MaterialTheme.colorScheme.secondaryContainer
+                                } else if (isDragging) {
+                                    MaterialTheme.colorScheme.surfaceContainerHighest
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceContainerHigh
+                                }
+                            )
+                            Surface(
+                                color = color,
+                                modifier = Modifier.clip(largerShape)
+                            ) {
+                                Row(
+                                    modifier = Modifier.height(64.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    it.enabledIcon?.let {
+                                        Icon(
+                                            imageVector = it,
+                                            contentDescription = null,
+                                            modifier = Modifier.padding(horizontal = 16.dp)
+                                        )
+                                    }
+                                    Text(
+                                        text = it.label,
+                                        modifier = Modifier.weight(1f, true)
+                                    )
+                                    IconButton(
+                                        modifier = Modifier
+                                            .padding(horizontal = 8.dp)
+                                            .draggableHandle(
+                                                onDragStarted = {
+                                                    hapticFeedback.performHapticFeedback(
+                                                        HapticFeedbackType.GestureThresholdActivate
+                                                    )
+                                                },
+                                                onDragStopped = {
+                                                    hapticFeedback.performHapticFeedback(
+                                                        HapticFeedbackType.GestureEnd
+                                                    )
+                                                },
+                                        ),
+                                        onClick = { },
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.DragHandle,
+                                            contentDescription = "Reorder"
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        )
+    }
+
+    TitleSummary(
+        modifier = Modifier.fillMaxWidth(),
+        title = title,
+        summary = summary
+    ) {
+        showDialog = true
+    }
 }
 
 

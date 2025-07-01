@@ -6,7 +6,14 @@ import android.net.Uri
 import android.os.Build
 import android.util.Log
 import androidx.annotation.Keep
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.Hd
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -49,6 +56,8 @@ val LocalPreferences = compositionLocalOf {
 
 interface PrefEnum<T : Enum<T>> {
     val label: String
+    val enabledIcon: ImageVector?
+        get() = null
 }
 
 
@@ -69,6 +78,7 @@ data object PrefNames {
     const val USE_FIXED_LINKS = "use_fixed_links"
     const val IMAGE_BOARD_AUTHS = "image_board_auths"
     const val MANUALLY_BLOCKED_TAGS = "manually_blocked_tags"
+    const val IMAGE_VIEWER_ACTION_ORDER = "image_viewer_action_order"
 }
 
 
@@ -89,6 +99,7 @@ object PreferenceKeys {
     val USE_FIXED_LINKS = booleanPreferencesKey(PrefNames.USE_FIXED_LINKS)
     val IMAGE_BOARD_AUTHS = byteArrayPreferencesKey(PrefNames.IMAGE_BOARD_AUTHS)
     val MANUALLY_BLOCKED_TAGS = stringSetPreferencesKey(PrefNames.MANUALLY_BLOCKED_TAGS)
+    val IMAGE_VIEWER_ACTION_ORDER = stringPreferencesKey(PrefNames.IMAGE_VIEWER_ACTION_ORDER)
 }
 
 
@@ -110,6 +121,15 @@ enum class DataSaver(override val label: String) : PrefEnum<DataSaver> {
 }
 
 
+enum class ToolbarAction(override val label: String, override val enabledIcon: ImageVector) : PrefEnum<ToolbarAction> {
+    DOWNLOAD("Download", Icons.Rounded.Download),
+    TOGGLE_HD("Toggle HD", Icons.Rounded.Hd),
+    FAVOURITE("Favourite", Icons.Rounded.Favorite),
+    SHARE("Share", Icons.Rounded.Share),
+    INFO("About", Icons.Rounded.Info)
+}
+
+
 data class Prefs(
     val dataSaver: DataSaver,
     val storageLocation: Uri,
@@ -126,7 +146,8 @@ data class Prefs(
     val searchHistory: List<SearchHistoryEntry>,
     val useFixedLinks: Boolean,
     val imageBoardAuths: Map<ImageSource, ImageBoardAuth>,
-    val manuallyBlockedTags: Set<String>
+    val manuallyBlockedTags: Set<String>,
+    val imageViewerActions: List<ToolbarAction>,
 ) {
     companion object {
         val DEFAULT = Prefs(
@@ -145,7 +166,8 @@ data class Prefs(
             searchHistory = emptyList(),
             useFixedLinks = false,
             imageBoardAuths = emptyMap(),
-            manuallyBlockedTags = emptySet()
+            manuallyBlockedTags = emptySet(),
+            imageViewerActions = ToolbarAction.entries.toList()
         )
     }
 
@@ -183,6 +205,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             PreferenceKeys.USE_FIXED_LINKS to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.IMAGE_BOARD_AUTHS to PrefMeta(PrefCategory.SETTING, exportable = false),
             PreferenceKeys.MANUALLY_BLOCKED_TAGS to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.IMAGE_VIEWER_ACTION_ORDER to PrefMeta(PrefCategory.SETTING),
         )
     }
 
@@ -347,6 +370,11 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
     }
 
 
+    suspend fun updateEnumList(key: Preferences.Key<String>, to: List<PrefEnum<*>>) {
+        updatePref(key, to.joinToString(",") { (it as Enum<*>).name })
+    }
+
+
     private suspend fun updateSet(key: Preferences.Key<Set<String>>, to: Collection<String>) {
         updatePrefMain(key, to.toSet())
     }
@@ -471,6 +499,17 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
     }
 
 
+    inline fun <reified T : Enum<T>> parseSerializedEnumList(serializedString: String): List<T> {
+        if (serializedString.isEmpty()) {
+            return emptyList()
+        }
+
+        return serializedString
+            .split(",")
+            .map { enumValues<T>().first { item -> item.name == it} }
+    }
+
+
     @OptIn(ExperimentalSerializationApi::class)
     private fun mapUserPreferences(preferences: Preferences): Prefs {
         val dataSaver = preferences[PreferenceKeys.DATA_SAVER]?.let { DataSaver.valueOf(it) } ?: Prefs.DEFAULT.dataSaver
@@ -497,7 +536,23 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val imageBoardAuthsRaw = preferences[PreferenceKeys.IMAGE_BOARD_AUTHS]
         val imageBoardAuths: Map<ImageSource, ImageBoardAuth> = imageBoardAuthsRaw?.let { Cbor.decodeFromByteArray(it) } ?: Prefs.DEFAULT.imageBoardAuths
 
-        val manuallyBlockedTags= preferences[PreferenceKeys.MANUALLY_BLOCKED_TAGS] ?: Prefs.DEFAULT.manuallyBlockedTags
+        val manuallyBlockedTags = preferences[PreferenceKeys.MANUALLY_BLOCKED_TAGS] ?: Prefs.DEFAULT.manuallyBlockedTags
+
+        /* If an update adds a new ToolbarAction, add it to the users prefs.
+           This seemed better than making a new migration every time there's a new action. */
+
+        val imageViewerActions = preferences[PreferenceKeys.IMAGE_VIEWER_ACTION_ORDER]
+            ?.let { parseSerializedEnumList<ToolbarAction>(it) }
+            ?.let {
+                it.toMutableList().apply {
+                    for (action in ToolbarAction.entries) {
+                        if (action !in this) {
+                            add(action)
+                        }
+                    }
+                }
+            }
+            ?: Prefs.DEFAULT.imageViewerActions
 
         return Prefs(
             dataSaver,
@@ -516,6 +571,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             useFixedLinks,
             imageBoardAuths,
             manuallyBlockedTags,
+            imageViewerActions,
         )
     }
 }
