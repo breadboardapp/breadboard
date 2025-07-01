@@ -440,6 +440,7 @@ fun PreferenceTextBox(
 @Composable
 fun ReorderablePref(
     title: String,
+    dialogTitle: String? = null,
     summary: String?,
     items: List<PrefEnum<*>>,
     onReorder: (List<PrefEnum<*>>) -> Unit
@@ -457,7 +458,7 @@ fun ReorderablePref(
 
     if (showDialog) {
         AlertDialog(
-            title = { Text(title) },
+            title = { Text(dialogTitle ?: title) },
             confirmButton = { },
             onDismissRequest = { showDialog = false },
             text = {

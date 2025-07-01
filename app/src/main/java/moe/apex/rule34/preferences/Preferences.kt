@@ -2,6 +2,7 @@ package moe.apex.rule34.preferences
 
 import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -86,53 +87,7 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
         ) {
             VerticalSpacer()
 
-            PreferencesGroup("Data saver") {
-                item {
-                    EnumPref(
-                        title = "Data saver",
-                        summary = currentSettings.dataSaver.label,
-                        enumItems = DataSaver.entries.toTypedArray(),
-                        selectedItem = currentSettings.dataSaver,
-                        onSelection = {
-                            scope.launch {
-                                preferencesRepository.updatePref(
-                                    PreferenceKeys.DATA_SAVER,
-                                    it
-                                )
-                            }
-                        }
-                    )
-                }
-            }
-
-            LargeVerticalSpacer()
-
-            PreferencesGroup("Downloads") {
-                item {
-                    TitleSummary(
-                        modifier = Modifier.fillMaxWidth(),
-                        title = "Save downloads to",
-                        summary = if (currentSettings.storageLocation == Uri.EMPTY) "Tap to set"
-                        else currentSettings.storageLocation.toString()
-                    ) {
-                        storageLocationPromptLaunched = true
-                    }
-                }
-            }
-
-            if (storageLocationPromptLaunched) {
-                StorageLocationSelection(
-                    promptType = PromptType.DIRECTORY_PERMISSION,
-                    onFailure = { storageLocationPromptLaunched = false }
-                ) { uri ->
-                    saveUriToPref(context, scope, uri)
-                    storageLocationPromptLaunched = false
-                }
-            }
-
-            LargeVerticalSpacer()
-
-            PreferencesGroup(title = "Searching") {
+            PreferencesGroup("General") {
                 item {
                     EnumPref(
                         title = "Image source",
@@ -153,11 +108,13 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                 item {
                     val noAuthNeeded = currentSettings.imageSource.imageBoard.canLoadUnauthenticated
                     TitleSummary(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .animateContentSize(),
                         title = "Set API key",
                         summary = if (!noAuthNeeded) {
                             "${currentSettings.imageSource.label} requires an API key for the best experience. " +
-                            "Tap to set."
+                                    "Tap to set."
                         } else {
                             "${currentSettings.imageSource.label} does not require an API key."
                         },
@@ -185,41 +142,13 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                 }
                 item {
                     SwitchPref(
-                        checked = currentSettings.excludeAi,
-                        title = "Hide AI-generated images",
-                        summary = "Attempt to hide AI-generated images by automatically adding " +
-                                  "AI-related tags to your block list."
+                        checked = currentSettings.useFixedLinks,
+                        title = "Share fixed links",
+                        summary = "When sharing an image, use a 'fixed' link where possible."
                     ) {
                         scope.launch {
                             preferencesRepository.updatePref(
-                                PreferenceKeys.EXCLUDE_AI,
-                                it
-                            )
-                        }
-                        viewModel.tagSuggestions.removeIf { tag ->
-                            tag.value == currentSettings.imageSource.imageBoard.aiTagName && tag.isExcluded
-                        }
-                    }
-                }
-                item {
-                    TitleSummary(
-                        modifier = Modifier.fillMaxWidth(),
-                        title = "Manage blocked tags",
-                        summary = "Add or remove tags to block from search results."
-                    ) {
-                        navController.navigate(BlockedTagsSettings)
-                    }
-                }
-                item {
-                    SwitchPref(
-                        checked = currentSettings.filterRatingsLocally,
-                        title = "Filter ratings locally",
-                        summary = "Rather than appending the selected ratings to the search query, " +
-                                "filter the results by rating after searching."
-                    ) {
-                        scope.launch {
-                            preferencesRepository.updatePref(
-                                PreferenceKeys.FILTER_RATINGS_LOCALLY,
+                                PreferenceKeys.USE_FIXED_LINKS,
                                 it
                             )
                         }
@@ -245,6 +174,50 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
 
             LargeVerticalSpacer()
 
+            PreferencesGroup(title = "Content filtering") {
+                item {
+                    TitleSummary(
+                        modifier = Modifier.fillMaxWidth(),
+                        title = "Manage blocked tags",
+                        summary = "Add or remove tags to block from search results and recommendations."
+                    ) {
+                        navController.navigate(BlockedTagsSettings)
+                    }
+                }
+                item {
+                    SwitchPref(
+                        checked = currentSettings.excludeAi,
+                        title = "Hide AI-generated images",
+                        summary = "Attempt to hide AI-generated images by automatically adding " +
+                                  "AI-related tags to your block list."
+                    ) {
+                        scope.launch {
+                            preferencesRepository.updatePref(
+                                PreferenceKeys.EXCLUDE_AI,
+                                it
+                            )
+                        }
+                    }
+                }
+                item {
+                    SwitchPref(
+                        checked = currentSettings.filterRatingsLocally,
+                        title = "Filter ratings locally",
+                        summary = "Rather than appending the selected ratings to the search query, " +
+                                "filter the results by rating after searching."
+                    ) {
+                        scope.launch {
+                            preferencesRepository.updatePref(
+                                PreferenceKeys.FILTER_RATINGS_LOCALLY,
+                                it
+                            )
+                        }
+                    }
+                }
+            }
+
+            LargeVerticalSpacer()
+
             PreferencesGroup(title = "Layout") {
                 item {
                     SwitchPref(
@@ -262,9 +235,10 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                 }
                 item {
                     ReorderablePref(
-                        title = "Image viewer action order",
-                        summary = "Reorder the actions in the image viewer. The top action will " +
-                                  "be displayed separately in its own dedicated button.",
+                        title = "Reorder image actions",
+                        dialogTitle = "Actions",
+                        summary = "Customise the order of actions in the image viewer. The top " +
+                                  "action will be displayed separately in its own dedicated button.",
                         items = currentSettings.imageViewerActions
                     ) {
                         scope.launch {
@@ -279,20 +253,42 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
 
             LargeVerticalSpacer()
 
-            PreferencesGroup(title = "Sharing") {
+            PreferencesGroup("Data and storage") {
                 item {
-                    SwitchPref(
-                        checked = currentSettings.useFixedLinks,
-                        title = "Share fixed links",
-                        summary = "When sharing an image, use a 'fixed' link where possible."
-                    ) {
-                        scope.launch {
-                            preferencesRepository.updatePref(
-                                PreferenceKeys.USE_FIXED_LINKS,
-                                it
-                            )
+                    EnumPref(
+                        title = "Data saver",
+                        summary = currentSettings.dataSaver.label,
+                        enumItems = DataSaver.entries.toTypedArray(),
+                        selectedItem = currentSettings.dataSaver,
+                        onSelection = {
+                            scope.launch {
+                                preferencesRepository.updatePref(
+                                    PreferenceKeys.DATA_SAVER,
+                                    it
+                                )
+                            }
                         }
+                    )
+                }
+                item {
+                    TitleSummary(
+                        modifier = Modifier.fillMaxWidth(),
+                        title = "Save downloads to",
+                        summary = if (currentSettings.storageLocation == Uri.EMPTY) "Tap to set"
+                        else currentSettings.storageLocation.toString()
+                    ) {
+                        storageLocationPromptLaunched = true
                     }
+                }
+            }
+
+            if (storageLocationPromptLaunched) {
+                StorageLocationSelection(
+                    promptType = PromptType.DIRECTORY_PERMISSION,
+                    onFailure = { storageLocationPromptLaunched = false }
+                ) { uri ->
+                    saveUriToPref(context, scope, uri)
+                    storageLocationPromptLaunched = false
                 }
             }
 
@@ -411,7 +407,7 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
             LargeVerticalSpacer()
             InfoSection(text = "Filtering ratings locally has the benefit of being able to " +
                                "adjust the filter after searching and allows filtering without " +
-                               "an API key on Danbooru, but may cause less results to be shown at" +
+                               "an API key on Danbooru, but may cause less results to be shown at " +
                                "once and result in higher data usage for the same number of " +
                                "visible images.")
             LargeVerticalSpacer()
