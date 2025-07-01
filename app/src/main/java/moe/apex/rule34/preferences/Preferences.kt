@@ -156,7 +156,7 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                         modifier = Modifier.fillMaxWidth(),
                         title = "Set API key",
                         summary = if (!noAuthNeeded) {
-                            "${currentSettings.imageSource.label} requires an API key to work properly. " +
+                            "${currentSettings.imageSource.label} requires an API key for the best experience. " +
                             "Tap to set."
                         } else {
                             "${currentSettings.imageSource.label} does not require an API key."
