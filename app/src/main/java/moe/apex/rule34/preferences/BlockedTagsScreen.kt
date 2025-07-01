@@ -49,6 +49,7 @@ import moe.apex.rule34.util.LargeVerticalSpacer
 import moe.apex.rule34.util.ListItemPosition
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.MediumLargeVerticalSpacer
+import moe.apex.rule34.util.SmallVerticalSpacer
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -79,13 +80,20 @@ fun BlockedTagsScreen(navController: NavHostController) {
         if (showAddDialog) {
             var content by remember { mutableStateOf("") }
             AlertDialog(
-                title = { Text("Add blocked tag") },
+                title = { Text("Add blocked tags") },
                 text = {
-                    PreferenceTextBox(
-                        value = content,
-                        label = "Tags",
-                    ) {
-                        content = it
+                    Column {
+                        PreferenceTextBox(
+                            value = content,
+                            label = "Tags",
+                        ) {
+                            content = it
+                        }
+                        SmallVerticalSpacer()
+                        Summary(
+                            modifier = Modifier.padding(start = 4.dp),
+                            text = "Separate multiple tags with a space."
+                        )
                     }
                 },
                 confirmButton = {
