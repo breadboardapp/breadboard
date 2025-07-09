@@ -92,7 +92,7 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                     EnumPref(
                         title = "Image source",
                         summary = currentSettings.imageSource.label,
-                        enumItems = ImageSource.entries.toTypedArray(),
+                        enumItems = ImageSource.entries,
                         selectedItem = currentSettings.imageSource,
                         onSelection = {
                             scope.launch {
@@ -218,7 +218,22 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
 
             LargeVerticalSpacer()
 
-            PreferencesGroup(title = "Layout") {
+            PreferencesGroup(title = "Interaction and layout") {
+                item {
+                    EnumPref(
+                        title = "Start page",
+                        summary = currentSettings.defaultStartDestination.label,
+                        enumItems = StartDestination.entries,
+                        selectedItem = currentSettings.defaultStartDestination,
+                    ) {
+                        scope.launch {
+                            preferencesRepository.updatePref(
+                                PreferenceKeys.DEFAULT_START_DESTINATION,
+                                it
+                            )
+                        }
+                    }
+                }
                 item {
                     SwitchPref(
                         checked = currentSettings.useStaggeredGrid,
@@ -258,7 +273,7 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                     EnumPref(
                         title = "Data saver",
                         summary = currentSettings.dataSaver.label,
-                        enumItems = DataSaver.entries.toTypedArray(),
+                        enumItems = DataSaver.entries,
                         selectedItem = currentSettings.dataSaver,
                         onSelection = {
                             scope.launch {

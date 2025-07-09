@@ -79,6 +79,7 @@ data object PrefNames {
     const val IMAGE_BOARD_AUTHS = "image_board_auths"
     const val MANUALLY_BLOCKED_TAGS = "manually_blocked_tags"
     const val IMAGE_VIEWER_ACTION_ORDER = "image_viewer_action_order"
+    const val DEFAULT_START_DESTINATION = "default_start_destination"
 }
 
 
@@ -100,6 +101,7 @@ object PreferenceKeys {
     val IMAGE_BOARD_AUTHS = byteArrayPreferencesKey(PrefNames.IMAGE_BOARD_AUTHS)
     val MANUALLY_BLOCKED_TAGS = stringSetPreferencesKey(PrefNames.MANUALLY_BLOCKED_TAGS)
     val IMAGE_VIEWER_ACTION_ORDER = stringPreferencesKey(PrefNames.IMAGE_VIEWER_ACTION_ORDER)
+    val DEFAULT_START_DESTINATION = stringPreferencesKey(PrefNames.DEFAULT_START_DESTINATION)
 }
 
 
@@ -130,6 +132,13 @@ enum class ToolbarAction(override val label: String, override val enabledIcon: I
 }
 
 
+enum class StartDestination(override val label: String) : PrefEnum<StartDestination> {
+    HOME("Browse"),
+    SEARCH("Search"),
+    FAVOURITES("Favourites")
+}
+
+
 data class Prefs(
     val dataSaver: DataSaver,
     val storageLocation: Uri,
@@ -148,6 +157,7 @@ data class Prefs(
     val imageBoardAuths: Map<ImageSource, ImageBoardAuth>,
     val manuallyBlockedTags: Set<String>,
     val imageViewerActions: List<ToolbarAction>,
+    val defaultStartDestination: StartDestination,
 ) {
     companion object {
         val DEFAULT = Prefs(
@@ -167,7 +177,8 @@ data class Prefs(
             useFixedLinks = false,
             imageBoardAuths = emptyMap(),
             manuallyBlockedTags = emptySet(),
-            imageViewerActions = ToolbarAction.entries.toList()
+            imageViewerActions = ToolbarAction.entries.toList(),
+            defaultStartDestination = StartDestination.HOME,
         )
     }
 
@@ -206,6 +217,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             PreferenceKeys.IMAGE_BOARD_AUTHS to PrefMeta(PrefCategory.SETTING, exportable = false),
             PreferenceKeys.MANUALLY_BLOCKED_TAGS to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.IMAGE_VIEWER_ACTION_ORDER to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.DEFAULT_START_DESTINATION to PrefMeta(PrefCategory.SETTING),
         )
     }
 
@@ -554,6 +566,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             }
             ?: Prefs.DEFAULT.imageViewerActions
 
+        val defaultStartDestination = preferences[PreferenceKeys.DEFAULT_START_DESTINATION]?.let { StartDestination.valueOf(it) } ?: Prefs.DEFAULT.defaultStartDestination
+
         return Prefs(
             dataSaver,
             storageLocation,
@@ -572,6 +586,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             imageBoardAuths,
             manuallyBlockedTags,
             imageViewerActions,
+            defaultStartDestination,
         )
     }
 }

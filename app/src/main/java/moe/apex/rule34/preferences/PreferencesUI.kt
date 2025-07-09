@@ -234,7 +234,7 @@ fun SwitchPref(
 fun EnumPref(
     title: String,
     summary: String?,
-    enumItems: Array<PrefEnum<*>>,
+    enumItems: Collection<PrefEnum<*>>,
     selectedItem: PrefEnum<*>,
     onSelection: (PrefEnum<*>) -> Unit
 ) {

@@ -27,11 +27,14 @@ import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import moe.apex.rule34.navigation.Favourites
 import moe.apex.rule34.navigation.Home
 import moe.apex.rule34.navigation.Navigation
 import moe.apex.rule34.navigation.Results
+import moe.apex.rule34.navigation.Search
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
+import moe.apex.rule34.preferences.StartDestination
 import moe.apex.rule34.preferences.UserPreferencesRepository
 import moe.apex.rule34.viewmodel.BreadboardViewModel
 
@@ -72,11 +75,16 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity() {
 
         Log.i("intent", intent.extras?.keySet()?.toSet().toString())
 
+        val startDestination = when (initialPrefs.defaultStartDestination) {
+            StartDestination.HOME -> Home
+            StartDestination.SEARCH -> Search
+            StartDestination.FAVOURITES -> Favourites
+        }
+
         setContent {
             val navController = rememberNavController()
             val prefs = prefs.getPreferences.collectAsState(initialPrefs).value
             val viewModel = viewModel(BreadboardViewModel::class.java)
-            val startDestination = Home
 
             LaunchedEffect(prefs.imageSource, prefs.imageBoardAuths, prefs.filterRatingsLocally, prefs.blockedTags) {
                 if (
