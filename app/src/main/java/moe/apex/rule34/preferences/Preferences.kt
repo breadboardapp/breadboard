@@ -201,6 +201,21 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                 }
                 item {
                     SwitchPref(
+                        checked = currentSettings.recommendAllRatings,
+                        title = "Recommend all ratings",
+                        summary = "On the browse page, show images with all ratings. If disabled, " +
+                                  "only show images rated Safe."
+                    ) {
+                        scope.launch {
+                            preferencesRepository.updatePref(
+                                PreferenceKeys.RECOMMEND_ALL_RATINGS,
+                                it
+                            )
+                        }
+                    }
+                }
+                item {
+                    SwitchPref(
                         checked = currentSettings.filterRatingsLocally,
                         title = "Filter ratings locally",
                         summary = "Rather than appending the selected ratings to the search query, " +

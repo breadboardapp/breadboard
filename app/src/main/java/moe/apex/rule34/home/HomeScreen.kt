@@ -72,6 +72,7 @@ fun HomeScreen(
             seedImages = prefs.favouriteImages,
             imageSource = prefs.imageSource,
             auth = prefs.authFor(prefs.imageSource),
+            showAllRatings = prefs.recommendAllRatings,
             filterRatingsLocally = prefs.filterRatingsLocally,
             blockedTags = prefs.blockedTags
         )

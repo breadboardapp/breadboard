@@ -19,6 +19,7 @@ class RecommendationsProvider(
     private val seedImages: List<Image>,
     val imageSource: ImageSource,
     val auth: ImageBoardAuth?,
+    val showAllRatings: Boolean,
     val filterRatingsLocally: Boolean,
     val blockedTags: Set<String>
 ) {
@@ -66,7 +67,8 @@ class RecommendationsProvider(
         pageNumber = imageSource.imageBoard.firstPageIndex
 
         val tagsFromFavourites = seedImages
-            .filter { it.imageSource == imageSource && it.metadata != null && it.metadata.rating == ImageRating.SAFE }
+            .filter { it.imageSource == imageSource && it.metadata != null }
+            .filter { showAllRatings || it.metadata!!.rating == ImageRating.SAFE }
             .flatMap { it.metadata!!.allTags }
             .filterNot { tag -> ignoredTags.contains(tag.lowercase()) }
             .filterNot { tag -> blockedTags.contains(tag.lowercase())}
@@ -101,7 +103,7 @@ class RecommendationsProvider(
             "Fetching recommended posts for tags: ${recommendedTags.joinToString(", ")} - page $pageNumber"
         )
         withContext(Dispatchers.IO) {
-            val filterRatingsLocally = this@RecommendationsProvider.filterRatingsLocally ||
+            val filterRatingsLocally = filterRatingsLocally ||
                     imageSource.imageBoard.localFilterType == ImageBoardLocalFilterType.REQUIRED ||
                     (imageSource == ImageSource.DANBOORU && auth == null)
             try {
@@ -113,7 +115,13 @@ class RecommendationsProvider(
                     imageSource.imageBoard.formatTagNameString(recommendedTags)
                 } else {
                     "${imageSource.imageBoard.formatTagNameString(recommendedTags)}+${
-                        ImageRating.buildSearchStringFor(ImageRating.SAFE)
+                        ImageRating.buildSearchStringFor(
+                            if (showAllRatings) {
+                                ImageRating.entries.filter { it != ImageRating.UNKNOWN }
+                            } else {
+                                listOf(ImageRating.SAFE)
+                            }
+                        )
                     }"
                 }
 
@@ -126,7 +134,9 @@ class RecommendationsProvider(
                 )
                 val safeResults = results.filter {
                     it !in recommendedImages &&
-                    if (filterRatingsLocally) it.metadata!!.rating == ImageRating.SAFE else true
+                    if (filterRatingsLocally) {
+                        showAllRatings || it.metadata!!.rating == ImageRating.SAFE
+                    } else true
                 }
                 val wantedResults = safeResults.filter {
                     it.metadata!!.allTags.none { tag -> blockedTags.contains(tag.lowercase()) }

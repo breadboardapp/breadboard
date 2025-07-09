@@ -80,6 +80,7 @@ data object PrefNames {
     const val MANUALLY_BLOCKED_TAGS = "manually_blocked_tags"
     const val IMAGE_VIEWER_ACTION_ORDER = "image_viewer_action_order"
     const val DEFAULT_START_DESTINATION = "default_start_destination"
+    const val RECOMMEND_ALL_RATINGS = "recommend_all_ratings"
 }
 
 
@@ -102,6 +103,7 @@ object PreferenceKeys {
     val MANUALLY_BLOCKED_TAGS = stringSetPreferencesKey(PrefNames.MANUALLY_BLOCKED_TAGS)
     val IMAGE_VIEWER_ACTION_ORDER = stringPreferencesKey(PrefNames.IMAGE_VIEWER_ACTION_ORDER)
     val DEFAULT_START_DESTINATION = stringPreferencesKey(PrefNames.DEFAULT_START_DESTINATION)
+    val RECOMMEND_ALL_RATINGS = booleanPreferencesKey(PrefNames.RECOMMEND_ALL_RATINGS)
 }
 
 
@@ -158,6 +160,7 @@ data class Prefs(
     val manuallyBlockedTags: Set<String>,
     val imageViewerActions: List<ToolbarAction>,
     val defaultStartDestination: StartDestination,
+    val recommendAllRatings: Boolean,
 ) {
     companion object {
         val DEFAULT = Prefs(
@@ -179,6 +182,7 @@ data class Prefs(
             manuallyBlockedTags = emptySet(),
             imageViewerActions = ToolbarAction.entries.toList(),
             defaultStartDestination = StartDestination.HOME,
+            recommendAllRatings = false,
         )
     }
 
@@ -218,6 +222,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             PreferenceKeys.MANUALLY_BLOCKED_TAGS to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.IMAGE_VIEWER_ACTION_ORDER to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.DEFAULT_START_DESTINATION to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.RECOMMEND_ALL_RATINGS to PrefMeta(PrefCategory.SETTING),
         )
     }
 
@@ -567,6 +572,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             ?: Prefs.DEFAULT.imageViewerActions
 
         val defaultStartDestination = preferences[PreferenceKeys.DEFAULT_START_DESTINATION]?.let { StartDestination.valueOf(it) } ?: Prefs.DEFAULT.defaultStartDestination
+        val recommendAllRatings = preferences[PreferenceKeys.RECOMMEND_ALL_RATINGS] ?: Prefs.DEFAULT.recommendAllRatings
 
         return Prefs(
             dataSaver,
@@ -587,6 +593,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             manuallyBlockedTags,
             imageViewerActions,
             defaultStartDestination,
+            recommendAllRatings,
         )
     }
 }
