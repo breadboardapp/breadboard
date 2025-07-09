@@ -459,7 +459,11 @@ fun ReorderablePref(
     if (showDialog) {
         AlertDialog(
             title = { Text(dialogTitle ?: title) },
-            confirmButton = { },
+            confirmButton = {
+                TextButton({ showDialog = false }) {
+                    Text("Close")
+                }
+            },
             onDismissRequest = { showDialog = false },
             text = {
                 LazyColumn(

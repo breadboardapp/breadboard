@@ -251,7 +251,7 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                 item {
                     ReorderablePref(
                         title = "Reorder image actions",
-                        dialogTitle = "Actions",
+                        dialogTitle = "Image actions",
                         summary = "Customise the order of actions in the image viewer. The top " +
                                   "action will be displayed separately in its own dedicated button.",
                         items = currentSettings.imageViewerActions
