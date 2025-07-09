@@ -176,8 +176,8 @@ interface GelbooruBasedImageBoard : ImageBoard {
 
 
 object Rule34 : GelbooruBasedImageBoard {
-    override val baseUrl = "https://rule34.xxx/"
-    override val autoCompleteSearchUrl = "${baseUrl}public/autocomplete.php?q=%s"
+    override val baseUrl = "https://api.rule34.xxx/"
+    override val autoCompleteSearchUrl = "${baseUrl}/autocomplete.php?q=%s"
     override val autoCompleteCategoryMapping = emptyMap<String, String>()
     override val imageSearchUrl = "${baseUrl}index.php?page=dapi&json=1&s=post&q=index&limit=100&tags=%s&pid=%d"
     override val aiTagName = "ai_generated"
