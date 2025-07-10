@@ -6,7 +6,13 @@ import android.util.Log
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.EaseOutBack
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -118,6 +124,10 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+
+const val ANIMATION_DURATION_MS = 300
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
@@ -149,6 +159,33 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
     var searchJob: Job? = null
     val scope = rememberCoroutineScope()
 
+    // I'm sorry future me
+    var useExpansionAnimation by remember { mutableStateOf(shouldShowSuggestions) }
+    val enterTransitionNoSuggestions = fadeIn(animationSpec = tween(durationMillis = ANIMATION_DURATION_MS))
+    val exitTransitionNoSuggestions = fadeOut(animationSpec = tween(durationMillis = ANIMATION_DURATION_MS))
+
+    val enterTransitionWithSuggestions = expandVertically(
+        animationSpec = tween(durationMillis = ANIMATION_DURATION_MS, easing = EaseOutBack)
+    ) + fadeIn(animationSpec = tween(
+            durationMillis = ANIMATION_DURATION_MS,
+            delayMillis = if (shouldShowSuggestions) ANIMATION_DURATION_MS else 0
+    ))
+    val exitTransitionWithSuggestions = fadeOut(
+        animationSpec = tween(durationMillis = ANIMATION_DURATION_MS)
+    ) + shrinkVertically(animationSpec = tween(
+            durationMillis = ANIMATION_DURATION_MS,
+            delayMillis = if (shouldShowSuggestions) ANIMATION_DURATION_MS else 0
+    ))
+
+    LaunchedEffect(shouldShowSuggestions) {
+        if (shouldShowSuggestions) {
+            useExpansionAnimation = true
+        } else {
+            // Wait for the suggestion box to animate out before changing chip animation to the no-suggestion version
+            delay(ANIMATION_DURATION_MS.toLong())
+            useExpansionAnimation = false
+        }
+    }
 
     fun addToFilter(tag: TagSuggestion) {
         val index = tagChipList.getIndexByName(tag.value)
@@ -553,7 +590,11 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                 }
             }
 
-            AnimatedVisibility(tagChipList.isNotEmpty()) {
+            AnimatedVisibility(
+                visible = tagChipList.isNotEmpty(),
+                enter = if (useExpansionAnimation) enterTransitionWithSuggestions else enterTransitionNoSuggestions,
+                exit = if (useExpansionAnimation) exitTransitionWithSuggestions else exitTransitionNoSuggestions
+            ) {
                 Column {
                     LazyRow(
                         modifier = Modifier.fillMaxWidth(),
@@ -593,7 +634,6 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                                         imageVector = Icons.Rounded.ContentCopy,
                                         contentDescription = "Copy all",
                                         modifier = Modifier.size(FilterChipDefaults.IconSize)
-
                                     )
                                 }
                             }
@@ -602,7 +642,11 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                     SmallVerticalSpacer()
                 }
             }
-            AnimatedVisibility(shouldShowSuggestions) {
+            AnimatedVisibility(
+                visible = shouldShowSuggestions,
+                enter = fadeIn(tween(durationMillis = 300)),
+                exit = fadeOut(tween(durationMillis = 300))
+            ) {
                 AutoCompleteTagResults()
             }
         }
