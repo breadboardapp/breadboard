@@ -78,12 +78,13 @@ private enum class ImportExport {
 
 
 @Composable
-private fun ExpressivePreferenceContainer(
+fun ExpressivePreferenceContainer(
+    modifier: Modifier = Modifier,
     position: ListItemPosition,
     content: @Composable () -> Unit
 ) {
     Surface(
-        modifier = Modifier.padding(horizontal = 12.dp),
+        modifier = modifier.padding(horizontal = 12.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = RoundedCornerShape(
             topStart = position.topSize,

@@ -66,6 +66,9 @@ object Settings
 @Serializable
 object BlockedTagsSettings
 
+@Serializable
+object LibrariesSettings
+
 
 fun NavDestination?.routeIs(routes: Collection<KClass<*>>): Boolean {
     return routeIs(*routes.toTypedArray())

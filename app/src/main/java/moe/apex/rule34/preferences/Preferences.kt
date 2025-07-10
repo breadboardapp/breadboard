@@ -3,16 +3,23 @@ package moe.apex.rule34.preferences
 import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -37,6 +44,7 @@ import kotlinx.coroutines.withContext
 import moe.apex.rule34.image.ImageBoardAuth
 import moe.apex.rule34.image.ImageBoardLocalFilterType
 import moe.apex.rule34.navigation.BlockedTagsSettings
+import moe.apex.rule34.navigation.LibrariesSettings
 import moe.apex.rule34.prefs
 import moe.apex.rule34.util.ExportDirectoryHandler
 import moe.apex.rule34.util.VerticalSpacer
@@ -77,7 +85,33 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
     val preferencesRepository = LocalContext.current.prefs
     val currentSettings = LocalPreferences.current
 
-    MainScreenScaffold("Settings", scrollBehavior) {
+    MainScreenScaffold(
+        title = "Settings",
+        scrollBehavior = scrollBehavior,
+        additionalActions = {
+            var isDropdownVisible by remember { mutableStateOf(false) }
+            Box {
+                IconButton(onClick = { isDropdownVisible = true }) {
+                    Icon(
+                        imageVector = Icons.Rounded.MoreVert,
+                        contentDescription = "More"
+                    )
+                }
+                DropdownMenu(
+                    expanded = isDropdownVisible,
+                    onDismissRequest = { isDropdownVisible = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Third-party notices") },
+                        onClick = {
+                            isDropdownVisible = false
+                            navController.navigate(LibrariesSettings)
+                        }
+                    )
+                }
+            }
+        }
+    ) {
         Column(
             Modifier
                 .fillMaxSize()
