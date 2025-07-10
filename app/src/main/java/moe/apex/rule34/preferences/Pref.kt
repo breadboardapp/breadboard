@@ -1,9 +1,7 @@
 package moe.apex.rule34.preferences
 
 import android.content.Context
-import android.content.pm.PackageInfo
 import android.net.Uri
-import android.os.Build
 import android.util.Log
 import androidx.annotation.Keep
 import androidx.compose.material.icons.Icons
@@ -46,6 +44,7 @@ import moe.apex.rule34.util.extractPixivId
 import java.io.IOException
 import kotlin.collections.toSet
 import androidx.core.net.toUri
+import moe.apex.rule34.BuildConfig
 import moe.apex.rule34.image.ImageBoardAuth
 
 
@@ -253,7 +252,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
            In such a case, we can't reliably determine what their previous version was. Just load
            the default settings. */
         if (isOnFirstInstallVersion || lastUsedVersionCode == 0)
-            return updateLastUsedVersionCode(packageInfo)
+            return updateLastUsedVersionCode()
 
         /* As of version code 270, the migration to keep users on the R34 source if they updated
            from older than 230 was removed. Users updating from below 230 straight to 270+ will have
@@ -347,8 +346,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         }
 
         // Place any future migrations above this line by checking the last used version code.
-        if (getCurrentRunningVersionCode(packageInfo) >= lastUsedVersionCode)
-            updateLastUsedVersionCode(packageInfo)
+        if (BuildConfig.VERSION_CODE >= lastUsedVersionCode)
+            updateLastUsedVersionCode()
     }
 
 
@@ -359,16 +358,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
     }
 
 
-    @Suppress("Deprecation")
-    private fun getCurrentRunningVersionCode(packageInfo: PackageInfo): Int {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) packageInfo.longVersionCode.toInt()
-        else packageInfo.versionCode
-    }
-
-
-    private suspend fun updateLastUsedVersionCode(packageInfo: PackageInfo) {
-        val versionCode = getCurrentRunningVersionCode(packageInfo)
-        updatePrefMain(PreferenceKeys.LAST_USED_VERSION_CODE, versionCode)
+    private suspend fun updateLastUsedVersionCode() {
+        updatePrefMain(PreferenceKeys.LAST_USED_VERSION_CODE, BuildConfig.VERSION_CODE)
     }
 
 
