@@ -1,23 +1,37 @@
 package moe.apex.rule34.preferences
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -33,12 +47,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import moe.apex.rule34.ui.theme.BreadboardTheme
+import moe.apex.rule34.ui.theme.prefTitle
+import moe.apex.rule34.ui.theme.searchField
+import moe.apex.rule34.util.DISABLED_OPACITY
+import moe.apex.rule34.util.ExpressiveGroupHeading
+import moe.apex.rule34.util.ListItemPosition
 import moe.apex.rule34.util.VerticalSpacer
+import moe.apex.rule34.util.largerShape
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 
 private enum class ImportExport {
@@ -48,7 +78,71 @@ private enum class ImportExport {
 
 
 @Composable
-private fun Summary(
+fun ExpressivePreferenceContainer(
+    modifier: Modifier = Modifier,
+    position: ListItemPosition,
+    content: @Composable () -> Unit
+) {
+    Surface(
+        modifier = modifier.padding(horizontal = 12.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = RoundedCornerShape(
+            topStart = position.topSize,
+            topEnd = position.topSize,
+            bottomStart = position.bottomSize,
+            bottomEnd = position.bottomSize
+        )
+    ) {
+        content()
+    }
+}
+
+
+interface PreferencesGroupScope {
+    fun item(content: @Composable () -> Unit)
+}
+
+
+private class PreferencesGroupScopeImpl : PreferencesGroupScope {
+    val items = mutableListOf<@Composable () -> Unit>()
+
+    override fun item(content: @Composable () -> Unit) {
+        items.add(content)
+    }
+}
+
+
+@Composable
+fun PreferencesGroup(
+    title: String,
+    content: @Composable PreferencesGroupScope.() -> Unit
+) {
+    val scope = PreferencesGroupScopeImpl()
+    scope.content()
+
+    ExpressiveGroupHeading(
+        modifier = Modifier.padding(bottom = 8.dp),
+        text = title
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        scope.items.forEachIndexed { index, itemContent ->
+            ExpressivePreferenceContainer(
+                position = when {
+                    scope.items.size == 1 -> ListItemPosition.SINGLE_ELEMENT
+                    index == 0 -> ListItemPosition.TOP
+                    index == scope.items.lastIndex -> ListItemPosition.BOTTOM
+                    else -> ListItemPosition.MIDDLE
+                }
+            ) {
+                itemContent()
+            }
+        }
+    }
+}
+
+
+@Composable
+fun Summary(
     modifier: Modifier = Modifier,
     text: String
 ) {
@@ -66,10 +160,11 @@ fun TitleSummary(
     modifier: Modifier = Modifier,
     title: String,
     summary: String? = null,
+    enabled: Boolean = true,
     onClick: (() -> Unit)? = null
 ) {
-    val baseModifier = modifier.heightIn(min = 72.dp)
-    val finalModifier = onClick?.let { baseModifier.clickable { it() } } ?: baseModifier
+    val baseModifier = modifier.heightIn(min = 76.dp)
+    val finalModifier = onClick?.let { baseModifier.clickable(enabled) { it() } } ?: baseModifier
 
     Column(
         modifier = finalModifier,
@@ -77,21 +172,23 @@ fun TitleSummary(
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.prefTitle,
             modifier = Modifier
                 .padding(
                     start = 16.dp,
                     end = 16.dp,
-                    top = 14.dp,
-                    bottom = (if (summary == null) 14.dp else 2.dp)
+                    top = 16.dp,
+                    bottom = (if (summary == null) 16.dp else 2.dp)
                 )
+                .alpha(if (enabled) 1f else DISABLED_OPACITY),
         )
 
         if (summary != null) {
             Summary(
                 text = summary,
-                modifier = Modifier.padding(bottom = 14.dp, start = 16.dp, end = 16.dp)
-
+                modifier = Modifier
+                    .padding(bottom = 16.dp, start = 16.dp, end = 16.dp)
+                    .alpha(if (enabled) 1f else DISABLED_OPACITY)
             )
         }
     }
@@ -113,6 +210,7 @@ fun SwitchPref(
         verticalAlignment = Alignment.CenterVertically
     ) {
         TitleSummary(Modifier.weight(1f), title, summary)
+        Spacer(Modifier.width(16.dp))
         Switch(
             checked = checked,
             onCheckedChange = onToggle,
@@ -120,7 +218,14 @@ fun SwitchPref(
             colors = SwitchDefaults.colors().copy(
                 uncheckedThumbColor = BreadboardTheme.colors.outlineStrong,
                 uncheckedBorderColor = BreadboardTheme.colors.outlineStrong
-            )
+            ),
+            thumbContent = {
+                Icon(
+                    imageVector = if (checked) Icons.Default.Check else Icons.Default.Clear,
+                    contentDescription = if (checked) "Enabled" else "Disabled",
+                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                )
+            }
         )
     }
 }
@@ -130,7 +235,7 @@ fun SwitchPref(
 fun EnumPref(
     title: String,
     summary: String?,
-    enumItems: Array<PrefEnum<*>>,
+    enumItems: Collection<PrefEnum<*>>,
     selectedItem: PrefEnum<*>,
     onSelection: (PrefEnum<*>) -> Unit
 ) {
@@ -302,6 +407,137 @@ private fun CheckboxSelectable(toggleablePrefCategory: ToggleablePrefCategory) {
         Text(
             text = toggleablePrefCategory.category.label
         )
+    }
+}
+
+
+@Composable
+fun PreferenceTextBox(
+    value: String,
+    label: String,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    obscured: Boolean = false,
+    onValueChange: (String) -> Unit,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label, style = LocalTextStyle.current.copy(fontSize = (LocalTextStyle.current.fontSize.value - 3).sp)) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        visualTransformation = if (obscured) {
+            VisualTransformation { input ->
+                TransformedText(
+                    text = AnnotatedString("•".repeat(input.length)),
+                    offsetMapping = OffsetMapping.Identity
+                )
+            }
+        } else VisualTransformation.None,
+        textStyle = MaterialTheme.typography.searchField
+    )
+}
+
+
+@Composable
+fun ReorderablePref(
+    title: String,
+    dialogTitle: String? = null,
+    summary: String?,
+    items: List<PrefEnum<*>>,
+    onReorder: (List<PrefEnum<*>>) -> Unit
+) {
+    var showDialog by remember { mutableStateOf(false) }
+
+    val hapticFeedback = LocalHapticFeedback.current
+    val list = items.toMutableStateList()
+    val listState = rememberLazyListState()
+    val reorderableLazyListState = rememberReorderableLazyListState(listState) { from, to ->
+        list.add(to.index, list.removeAt(from.index))
+        hapticFeedback.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
+        onReorder(list)
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            title = { Text(dialogTitle ?: title) },
+            confirmButton = {
+                TextButton({ showDialog = false }) {
+                    Text("Close")
+                }
+            },
+            onDismissRequest = { showDialog = false },
+            text = {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.clip(largerShape)
+                ) {
+                    items(list, { it.label}) {
+                        ReorderableItem(reorderableLazyListState, key = it.label) { isDragging ->
+                            val color by animateColorAsState(
+                                targetValue = if (list.indexOf(it) == 0) {
+                                    MaterialTheme.colorScheme.secondaryContainer
+                                } else if (isDragging) {
+                                    MaterialTheme.colorScheme.surfaceContainerHighest
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceContainerHigh
+                                }
+                            )
+                            Surface(
+                                color = color,
+                                modifier = Modifier.clip(largerShape)
+                            ) {
+                                Row(
+                                    modifier = Modifier.height(64.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    it.enabledIcon?.let {
+                                        Icon(
+                                            imageVector = it,
+                                            contentDescription = null,
+                                            modifier = Modifier.padding(horizontal = 16.dp)
+                                        )
+                                    }
+                                    Text(
+                                        text = it.label,
+                                        modifier = Modifier.weight(1f, true)
+                                    )
+                                    IconButton(
+                                        modifier = Modifier
+                                            .padding(horizontal = 8.dp)
+                                            .draggableHandle(
+                                                onDragStarted = {
+                                                    hapticFeedback.performHapticFeedback(
+                                                        HapticFeedbackType.GestureThresholdActivate
+                                                    )
+                                                },
+                                                onDragStopped = {
+                                                    hapticFeedback.performHapticFeedback(
+                                                        HapticFeedbackType.GestureEnd
+                                                    )
+                                                },
+                                        ),
+                                        onClick = { },
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.DragHandle,
+                                            contentDescription = "Reorder"
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        )
+    }
+
+    TitleSummary(
+        modifier = Modifier.fillMaxWidth(),
+        title = title,
+        summary = summary
+    ) {
+        showDialog = true
     }
 }
 

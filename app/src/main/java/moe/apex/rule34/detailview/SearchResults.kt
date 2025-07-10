@@ -33,14 +33,14 @@ import moe.apex.rule34.preferences.PreferenceKeys
 import moe.apex.rule34.prefs
 import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
 import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
-import moe.apex.rule34.util.TitleBar
+import moe.apex.rule34.util.LargeTitleBar
 import moe.apex.rule34.util.availableRatingsForCurrentSource
 import moe.apex.rule34.util.withoutVertical
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchResults(navController: NavController, source: ImageSource, tags: String) {
+fun SearchResults(navController: NavController, source: ImageSource, tagList: List<String>) {
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
     val shouldShowLargeImage = remember { mutableStateOf(false) }
@@ -51,9 +51,11 @@ fun SearchResults(navController: NavController, source: ImageSource, tags: Strin
 
     val prefs = LocalPreferences.current
     val preferencesRepository = LocalContext.current.prefs
-    val imageSource = source.site
+    val imageSource = source.imageBoard
     val filterLocally = prefs.filterRatingsLocally
     var pageNumber by remember { mutableIntStateOf(imageSource.firstPageIndex) }
+
+    val tags = imageSource.formatTagNameString(tagList)
 
     val ratingRows: List<@Composable () -> Unit> = availableRatingsForCurrentSource.map { {
         FilterChip(
@@ -71,15 +73,17 @@ fun SearchResults(navController: NavController, source: ImageSource, tags: Strin
         )
     } }
 
+    // In case they explicitly search for a blocked tag
+    val actuallyBlockedTags = prefs.blockedTags.filter { it !in tagList }
     val imagesToDisplay = allImages.filter {
-        if (prefs.filterRatingsLocally) it.metadata!!.rating in prefs.ratingsFilter
-        else true
+        it.metadata!!.allTags.none { tag -> actuallyBlockedTags.contains(tag.lowercase()) } &&
+        if (prefs.filterRatingsLocally) it.metadata.rating in prefs.ratingsFilter else true
     }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TitleBar(
+            LargeTitleBar(
                 title = "Search results",
                 scrollBehavior = scrollBehavior,
                 navController = navController
@@ -106,7 +110,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tags: Strin
             initialLoad = {
                 withContext(Dispatchers.IO) {
                     try {
-                        val newImages = imageSource.loadPage(tags, pageNumber)
+                        val newImages = imageSource.loadPage(tags, pageNumber, prefs.authFor(source))
                         if (!allImages.addAll(newImages)) shouldKeepSearching = false
                         pageNumber++
                     } catch (e: Exception) {
@@ -119,7 +123,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tags: Strin
             if (shouldKeepSearching) {
                 scope.launch(Dispatchers.IO) {
                     try {
-                        val newImages = imageSource.loadPage(tags, pageNumber)
+                        val newImages = imageSource.loadPage(tags, pageNumber, prefs.authFor(source))
                         if (newImages.isNotEmpty()) {
                             pageNumber++
                             allImages.addAll(newImages.filter { it !in allImages })

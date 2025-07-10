@@ -2,13 +2,14 @@ package moe.apex.rule34.util
 
 import android.app.Activity
 import android.content.Context
-import android.text.format.DateFormat
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
@@ -30,21 +32,29 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -53,12 +63,15 @@ import androidx.compose.material3.SheetState
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -71,56 +84,117 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import moe.apex.rule34.history.SearchHistoryEntry
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.largeimageview.LargeImageView
 import moe.apex.rule34.prefs
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 
-const val NAV_BAR_HEIGHT = 80
+const val LARGE_CORNER_DP = 20
+const val SMALL_CORNER_DP = 4
+const val BOTTOM_APP_BAR_HEIGHT = 80
 const val CHIP_SPACING = 12
+const val DISABLED_OPACITY = 0.38f
 private const val VERTICAL_DIVIDER_SPACING = 32
 private val CHIP_TOTAL_VERTICAL_PADDING = 16.dp
 private val CHIP_TOTAL_HEIGHT = FilterChipDefaults.Height + 16.dp
 
 
+enum class ListItemPosition(val topSize: Dp, val bottomSize: Dp) {
+    TOP(LARGE_CORNER_DP.dp, SMALL_CORNER_DP.dp),
+    MIDDLE(SMALL_CORNER_DP.dp, SMALL_CORNER_DP.dp),
+    BOTTOM(SMALL_CORNER_DP.dp, LARGE_CORNER_DP.dp),
+    SINGLE_ELEMENT(LARGE_CORNER_DP.dp, LARGE_CORNER_DP.dp)
+}
+
+
+@Composable
+fun topCornerSizeForPosition(position: ListItemPosition): Dp {
+    val cornerSize by animateDpAsState(when (position) {
+        ListItemPosition.TOP -> LARGE_CORNER_DP.dp
+        ListItemPosition.MIDDLE -> SMALL_CORNER_DP.dp
+        ListItemPosition.BOTTOM -> SMALL_CORNER_DP.dp
+        ListItemPosition.SINGLE_ELEMENT -> LARGE_CORNER_DP.dp
+    } )
+    return cornerSize
+}
+
+
+@Composable
+fun bottomCornerSizeForPosition(position: ListItemPosition): Dp {
+    val cornerSize by animateDpAsState(when (position) {
+        ListItemPosition.TOP -> SMALL_CORNER_DP.dp
+        ListItemPosition.MIDDLE -> SMALL_CORNER_DP.dp
+        ListItemPosition.BOTTOM -> LARGE_CORNER_DP.dp
+        ListItemPosition.SINGLE_ELEMENT -> LARGE_CORNER_DP.dp
+    } )
+    return cornerSize
+}
+
+
+@Composable
+private fun NavigationIcon(navController: NavController? = null) {
+    val context = LocalContext.current
+    if (navController != null) {
+        FilledIconButton(
+            modifier = Modifier.padding(horizontal = 8.dp),
+            colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+            onClick = {
+                if (navController.previousBackStackEntry != null) {
+                    navController.navigateUp()
+                } else {
+                    (context as Activity).finish()
+                }
+            }
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                contentDescription = "Discover"
+            )
+        }
+    }
+}
+
+
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-fun TitleBar(
+fun LargeTitleBar(
     title: String,
     scrollBehavior: TopAppBarScrollBehavior?,
     navController: NavController? = null,
     additionalActions: @Composable RowScope.() -> Unit = { }
 ) {
-    val context = LocalContext.current
     LargeTopAppBar(
         title = { Text(title, overflow = TextOverflow.Ellipsis) },
         scrollBehavior = scrollBehavior,
         actions = additionalActions,
-        navigationIcon = {
-            if (navController != null) {
-                IconButton(
-                    onClick = {
-                        if (navController.previousBackStackEntry != null) {
-                            navController.navigateUp()
-                        } else {
-                            (context as Activity).finish()
-                        }
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Home"
-                    )
-                }
-            }
-        }
+        navigationIcon = { NavigationIcon(navController) },
+        colors = TopAppBarDefaults.largeTopAppBarColors().copy(
+            scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        )
+    )
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SmallTitleBar(
+    title: String,
+    scrollBehavior: TopAppBarScrollBehavior? = null,
+    navController: NavController? = null,
+    additionalActions: @Composable RowScope.() -> Unit = { }
+) {
+    TopAppBar(
+        title = { Text(title) },
+        scrollBehavior = scrollBehavior,
+        actions = additionalActions,
+        navigationIcon = { NavigationIcon(navController) },
+        colors = TopAppBarDefaults.topAppBarColors().copy(containerColor = TopAppBarDefaults.topAppBarColors().scrolledContainerColor)
     )
 }
 
@@ -179,38 +253,75 @@ fun PaddingValues.withoutVertical(top: Boolean = true, bottom: Boolean = true) :
 }
 
 
+/** A higher level MainScreenScaffold that provides two preset types of top bars. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreenScaffold(
     title: String,
     scrollBehavior: TopAppBarScrollBehavior? = null,
+    largeTopBar: Boolean = true,
+    addBottomPadding: Boolean = true,
+    floatingActionButton: (@Composable () -> Unit)? = null,
     additionalActions: @Composable RowScope.() -> Unit = { },
     content: @Composable (PaddingValues) -> Unit
 ) {
+    MainScreenScaffold(
+        topAppBar = {
+            if (largeTopBar) {
+                LargeTitleBar(title, scrollBehavior, additionalActions = additionalActions)
+            } else {
+                SmallTitleBar(
+                    title,
+                    scrollBehavior = scrollBehavior,
+                    additionalActions = additionalActions
+                )
+            }
+        },
+        addBottomPadding = addBottomPadding,
+        floatingActionButton = floatingActionButton,
+        content = content
+    )
+}
+
+
+/** A lower level MainScreenScaffold that allows passing in a custom top bar for more
+    fine grained control over its behaviour and appearance. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MainScreenScaffold(
+    topAppBar: @Composable () -> Unit,
+    addBottomPadding: Boolean = true,
+    floatingActionButton: (@Composable () -> Unit)? = null,
+    content: @Composable (PaddingValues) -> Unit
+) {
     Scaffold(
-        topBar = {
-            TitleBar(title, scrollBehavior, additionalActions = additionalActions)
-        }
+        topBar = topAppBar,
+        floatingActionButton = { floatingActionButton?.let {
+            Box(Modifier.offset(y = if (addBottomPadding) -BOTTOM_APP_BAR_HEIGHT.dp else 0.dp)) {
+                it()
+            }
+        } }
     ) {
         val lld = LocalLayoutDirection.current
         val newPadding = PaddingValues(
             start = it.calculateStartPadding(lld),
             end = it.calculateEndPadding(lld),
             top = it.calculateTopPadding(),
-            bottom = it.calculateBottomPadding() + NAV_BAR_HEIGHT.dp
+            bottom = if (addBottomPadding) it.calculateBottomPadding() + BOTTOM_APP_BAR_HEIGHT.dp else 0.dp
         )
         content(newPadding)
     }
 }
 
 
+/** A heading with no horizontal padding */
 @Composable
-fun Heading(
-    modifier: Modifier = Modifier,
+fun BaseHeading(
+    modifier: Modifier,
     text: String
 ) {
     Text(
-        modifier = modifier.padding(horizontal = 16.dp),
+        modifier = modifier,
         text = text,
         color = MaterialTheme.colorScheme.primary,
         style = MaterialTheme.typography.titleMedium
@@ -218,10 +329,37 @@ fun Heading(
 }
 
 
+/** A heading with 16dp horizontal padding */
+@Composable
+fun Heading(modifier: Modifier = Modifier, text: String) {
+    BaseHeading(modifier.padding(horizontal = 16.dp), text)
+}
+
+
+/** A heading with 20dp horizontal padding */
+@Composable
+fun ExpressiveGroupHeading(modifier: Modifier = Modifier, text: String) {
+    BaseHeading(modifier.padding(horizontal = 20.dp), text)
+}
+
+
+@Composable
+fun SmallVerticalSpacer() {
+    Spacer(Modifier.height(8.dp))
+}
+
+
 /** A vertical spacer with 12dp height. */
 @Composable
 fun VerticalSpacer() {
     Spacer(Modifier.height(12.dp))
+}
+
+
+/** A vertical spacer with 20dp height. */
+@Composable
+fun MediumLargeVerticalSpacer() {
+    Spacer(Modifier.height(20.dp))
 }
 
 
@@ -260,14 +398,14 @@ fun HorizontallyScrollingChipsWithLabels(
 
     Surface(
         modifier = modifier,
-        shape = MaterialTheme.shapes.large,
+        shape = largerShape,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-        tonalElevation = 2.dp
+        color = MaterialTheme.colorScheme.surfaceContainerHigh
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .padding(start = 16.dp, top = 8.dp, bottom = 8.dp)
+                .padding(start = 20.dp, top = 8.dp, bottom = 8.dp)
                 .height(CHIP_TOTAL_HEIGHT * labels.size)
         ) {
             Column(
@@ -279,7 +417,7 @@ fun HorizontallyScrollingChipsWithLabels(
                         text = item.first,
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
-                        lineHeight = MaterialTheme.typography.titleMedium.fontSize
+                        fontSize = 14.sp
                     )
                 }
             }
@@ -290,14 +428,16 @@ fun HorizontallyScrollingChipsWithLabels(
                     .padding(start = VERTICAL_DIVIDER_SPACING.dp)
             )
 
-            Column(Modifier.horizontalScroll(rememberScrollState())) {
+            LazyColumn(
+                userScrollEnabled = false,
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                contentPadding = PaddingValues(start = VERTICAL_DIVIDER_SPACING.dp, end = 16.dp)
+            ) {
                 for (item in rows) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp)) {
-                        Spacer(Modifier.width((VERTICAL_DIVIDER_SPACING - CHIP_SPACING).dp))
-                        for (chip in item.second) {
-                            chip()
+                    item {
+                        Row(horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp)) {
+                            item.second.forEach { it() }
                         }
-                        Spacer(Modifier.width((16 - CHIP_SPACING).dp))
                     }
                 }
             }
@@ -373,34 +513,31 @@ fun SearchHistoryListItem(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    val is24h = DateFormat.is24HourFormat(context)
-    val timeFormat = if (is24h) "HH:mm" else "h:mm a"
-    val date = Date(item.timestamp)
-    val formatter = SimpleDateFormat("dd MMM $timeFormat", Locale.getDefault())
-    val formattedDate = formatter.format(date)
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min),
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+        horizontalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         Surface(
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             modifier = Modifier
                 .weight(1f, true)
                 .fillMaxHeight()
-                .clip(RoundedCornerShape(16.dp, 4.dp, 4.dp, 16.dp))
+                .clip(RoundedCornerShape(
+                    topStart = largerShapeCornerSize,
+                    bottomStart = largerShapeCornerSize,
+                    topEnd = 4.dp,
+                    bottomEnd = 4.dp
+                ))
                 .clickable(
                     interactionSource = interactionSource,
                     indication = LocalIndication.current
-                ) { onContainerClick() }
+                ) {
+                    onContainerClick()
+                }
         ) {
-            Column(Modifier.padding(top = 16.dp, bottom = 8.dp)) {
-                Heading(
-                    modifier = Modifier.padding(start = 4.dp),
-                    text = "$formattedDate  \u2022  ${item.source.label}"
-                )
+            Column(Modifier.padding(vertical = 8.dp)) {
                 /* We're preventing the chips from consuming touch actions by placing the chips
                    column inside a Box, and then placing an invisible composable of the same
                    size in the same box. This invisible composable sits on top of the column
@@ -448,7 +585,12 @@ fun SearchHistoryListItem(
         Surface(
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             modifier = Modifier
-                .clip(RoundedCornerShape(4.dp, 16.dp, 16.dp, 4.dp))
+                .clip(RoundedCornerShape(
+                    topStart = 4.dp,
+                    topEnd = largerShapeCornerSize,
+                    bottomEnd = largerShapeCornerSize,
+                    bottomStart = 4.dp
+                ))
                 .clickable { onContainerClick() }
         ) {
             Box(
@@ -459,7 +601,7 @@ fun SearchHistoryListItem(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.Delete,
+                    imageVector = Icons.Rounded.Delete,
                     contentDescription = "Delete",
                     tint = MaterialTheme.colorScheme.primary
                 )
@@ -475,15 +617,15 @@ fun TitledModalBottomSheet(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
     sheetState: SheetState = rememberModalBottomSheetState(),
-    contentWindowInsets: @Composable () -> WindowInsets = { BottomSheetDefaults.windowInsets },
+    contentWindowInsets: @Composable () -> WindowInsets = { BottomSheetDefaults.windowInsets.only(WindowInsetsSides.Horizontal) },
     title: String,
     content: @Composable ColumnScope.() -> Unit
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
-        modifier = modifier,
+        modifier = modifier.windowInsetsPadding(WindowInsets.statusBars),
         sheetState = sheetState,
-        contentWindowInsets = contentWindowInsets,
+        contentWindowInsets = contentWindowInsets
     ) {
         Text(
             text = title,
@@ -497,3 +639,132 @@ fun TitledModalBottomSheet(
         content()
     }
 }
+
+
+@Composable
+fun HorizontalFloatingToolbar(
+    modifier: Modifier = Modifier,
+    floatingActionButton: (@Composable () -> Unit)? = null,
+    actions: @Composable RowScope.() -> Unit
+) {
+    // TODO: When Material3 1.4 drops, switch to the native implementation
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            shape = CircleShape,
+            modifier = Modifier.height(64.dp),
+            shadowElevation = 3.dp
+        ) {
+            Row(
+                modifier = Modifier
+                    .padding(horizontal = 8.dp)
+                    .height(48.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                actions()
+            }
+        }
+        floatingActionButton?.let {
+            Spacer(Modifier.width(8.dp))
+            it()
+        }
+    }
+}
+
+
+@Composable
+fun ExpressiveTagEntryContainer(
+    modifier: Modifier = Modifier,
+    label: String,
+    supportingLabel: String? = null,
+    trailingContent: (@Composable RowScope.() -> Unit)? = null,
+    position: ListItemPosition,
+    onClick: (() -> Unit)? = null
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 64.dp)
+            .clip(
+                RoundedCornerShape(
+                    topCornerSizeForPosition(position),
+                    topCornerSizeForPosition(position),
+                    bottomCornerSizeForPosition(position),
+                    bottomCornerSizeForPosition(position)
+                )
+            )
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .clickable(onClick != null) { onClick!!() },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier
+                .padding(horizontal = 16.dp)
+                .weight(1f, true)
+        ) {
+            Text(
+                text = label,
+                fontSize = 16.sp,
+                lineHeight = 17.sp,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            supportingLabel?.let {
+                Text(
+                    text = it,
+                    fontSize = 12.sp,
+                    lineHeight = 13.sp,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+        trailingContent?.let {
+            Row(Modifier.padding(end = 8.dp)) {
+                it()
+            }
+        }
+    }
+}
+
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun CombinedClickableAction(
+    enabled: Boolean = true,
+    interactionSource: MutableInteractionSource,
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
+    content: @Composable () -> Unit
+) {
+    Box(contentAlignment = Alignment.Center) {
+        content()
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .combinedClickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    enabled = enabled,
+                    onClick = onClick,
+                    onLongClick = onLongClick
+                ),
+        )
+    }
+}
+
+
+val bottomAppBarAndNavBarHeight: Dp
+    @Composable
+    get() = BOTTOM_APP_BAR_HEIGHT.dp + navBarHeight
+
+val navBarHeight: Dp
+    @Composable
+    get() = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
+val largerShapeCornerSize = 20.dp
+val largerShape = RoundedCornerShape(largerShapeCornerSize)

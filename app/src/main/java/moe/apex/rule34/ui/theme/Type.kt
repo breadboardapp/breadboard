@@ -19,6 +19,7 @@ val Typography = Typography(
         bodySmall = Typography().bodySmall.copy(
                 fontSize = 14.sp,
                 lineHeight = 16.sp,
+                letterSpacing = 0.2.sp
         ),
         labelSmall = Typography().labelSmall.copy(
                 fontFamily = FontFamily(Font(R.font.kumbh)),
@@ -34,7 +35,7 @@ val Typography = Typography(
         titleMedium = Typography().titleMedium.copy(
                 fontFamily = FontFamily(Font(R.font.kumbh)),
                 fontWeight = FontWeight.Bold,
-                fontSize = 14.sp,
+                fontSize = 15.sp,
         ),
         headlineMedium = Typography().headlineMedium.copy(
                 fontFamily = FontFamily(Font(R.font.kumbh)),
@@ -53,3 +54,12 @@ val Typography = Typography(
 
 val Typography.searchField: TextStyle
         get() = Typography.bodyLarge.copy(fontSize = 16.sp)
+
+val Typography.prefTitle: TextStyle
+        get() = Typography().bodyLarge.copy(
+                        fontSize = 17.sp,
+                        lineHeight = 17.sp,
+                        letterSpacing = 0.sp,
+                        fontFamily = FontFamily(Font(R.font.kumbh)),
+                        fontWeight = FontWeight.Bold
+        )

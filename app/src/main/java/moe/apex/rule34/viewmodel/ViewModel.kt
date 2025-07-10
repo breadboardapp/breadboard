@@ -1,13 +1,18 @@
 package moe.apex.rule34.viewmodel
 
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.ViewModel
+import moe.apex.rule34.image.Image
 import moe.apex.rule34.tag.TagSuggestion
+import moe.apex.rule34.util.RecommendationsProvider
 
 
 class BreadboardViewModel : ViewModel() {
     val tagSuggestions = mutableStateListOf<TagSuggestion>()
+    var recommendationsProvider: RecommendationsProvider? = null
+    val downloadingImages = mutableStateSetOf<Image>()
 }
 
 

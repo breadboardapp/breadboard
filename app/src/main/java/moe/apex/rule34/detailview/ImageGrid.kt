@@ -6,32 +6,36 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeightIn
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,104 +54,175 @@ import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.util.FullscreenLoadingSpinner
 import moe.apex.rule34.util.NavBarHeightVerticalSpacer
+import moe.apex.rule34.util.largerShape
 
 
-private const val MIN_IMAGE_HEIGHT = 96
-private const val MAX_IMAGE_HEIGHT = 320
+private const val MIN_IMAGE_HEIGHT = 108
+private const val MAX_IMAGE_HEIGHT = 280
 private const val MIN_CELL_WIDTH   = 120
 private const val MAX_CELL_WIDTH   = 144
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ImageGrid(
     modifier: Modifier = Modifier,
+    staggeredGridState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
+    uniformGridState: LazyGridState = rememberLazyGridState(),
     images: List<Image>,
     onImageClick: (Int, Image) -> Unit,
+    noImagesContent: @Composable () -> Unit = { NoImages() },
     contentPadding: PaddingValues = PaddingValues(0.dp),
     filterComposable: (@Composable () -> Unit)? = null,
+    onPullToRefresh: ((MutableState<Boolean>) -> Unit)? = null,
     initialLoad: (suspend () -> Unit)? = null,
     onEndReached: suspend () -> Unit = { }
 ) {
     val prefs = LocalPreferences.current
-    var doneInitialLoad by remember { mutableStateOf(initialLoad == null) }
+    var doneInitialLoad by remember { mutableStateOf(initialLoad == null || images.isNotEmpty()) }
 
     if (!doneInitialLoad) {
         LaunchedEffect(Unit) {
-            initialLoad!!.invoke()
+            initialLoad!!()
             doneInitialLoad = true
         }
         LinearProgressIndicator(
             modifier = modifier
                 .fillMaxWidth()
-                .padding(top = 8.dp)
                 .padding(contentPadding)
         )
         return
     }
 
-    if (prefs.useStaggeredGrid) {
-        LazyVerticalStaggeredGrid(
-            columns = StaggeredGridCells.Adaptive(MIN_CELL_WIDTH.dp),
-            state = rememberLazyStaggeredGridState(),
-            modifier = modifier,
-            contentPadding = contentPadding,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalItemSpacing = 8.dp
-        ) {
-            item(span = StaggeredGridItemSpan.FullLine ) {
-                if (filterComposable != null) filterComposable()
-                else Spacer(modifier = Modifier.height(8.dp))
-            }
+    @Composable
+    fun Container(content: @Composable () -> Unit) {
+        if (onPullToRefresh != null) {
+            val ptrState = rememberPullToRefreshState()
+            val isRefreshing = remember { mutableStateOf(false) }
 
-            itemsIndexed(images, key = { _, image -> image.previewUrl }) { index, image ->
-                StaggeredImagePreviewContainer(image, index, onImageClick)
-            }
-
-            item { LaunchedEffect(Unit) { onEndReached() } }
-
-            if (images.isEmpty()) {
-                item(span = StaggeredGridItemSpan.FullLine) {
-                    NoImages()
-                }
-            }
-
-            item(span = StaggeredGridItemSpan.FullLine) {
-                NavBarHeightVerticalSpacer()
-            }
+            PullToRefreshBox(
+                modifier = modifier,
+                isRefreshing = isRefreshing.value,
+                state = ptrState,
+                onRefresh = { onPullToRefresh(isRefreshing) },
+                content = { content() }
+            )
+        } else {
+            content()
         }
-    } else {
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(MIN_CELL_WIDTH.dp),
-            state = rememberLazyGridState(),
-            modifier = modifier,
-            contentPadding = contentPadding,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                if (filterComposable != null) filterComposable()
-                else Spacer(modifier = Modifier.height(8.dp))
-            }
+    }
 
-            itemsIndexed(images, key = { _, image -> image.previewUrl }) { index, image ->
-                ImagePreviewContainer(image, index, onImageClick)
-            }
-
-            item { LaunchedEffect(Unit) { onEndReached() } }
-
-            if (images.isEmpty()) {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    NoImages()
-                }
-            }
-
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                NavBarHeightVerticalSpacer()
-            }
+    Container {
+        if (prefs.useStaggeredGrid) {
+            StaggeredImageGrid(
+                modifier = if (onPullToRefresh == null) modifier else Modifier,
+                gridState = staggeredGridState,
+                contentPadding = contentPadding,
+                filterComposable = filterComposable,
+                images = images,
+                noImagesContent = noImagesContent,
+                onImageClick = onImageClick,
+                onEndReached = onEndReached
+            )
+        } else {
+            UniformImageGrid(
+                modifier = if (onPullToRefresh == null) modifier else Modifier,
+                gridState = uniformGridState,
+                contentPadding = contentPadding,
+                filterComposable = filterComposable,
+                images = images,
+                noImagesContent = noImagesContent,
+                onImageClick = onImageClick,
+                onEndReached = onEndReached
+            )
         }
     }
 }
 
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun StaggeredImageGrid(
+    modifier: Modifier = Modifier,
+    gridState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
+    contentPadding: PaddingValues,
+    filterComposable: (@Composable () -> Unit)? = null,
+    images: List<Image>,
+    noImagesContent: @Composable () -> Unit,
+    onImageClick: (Int, Image) -> Unit,
+    onEndReached: suspend () -> Unit = { }
+) {
+    LazyVerticalStaggeredGrid(
+        columns = StaggeredGridCells.Adaptive(MIN_CELL_WIDTH.dp),
+        state = gridState,
+        modifier = modifier,
+        contentPadding = contentPadding,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalItemSpacing = 8.dp
+    ) {
+        filterComposable?.let {
+            item(span = StaggeredGridItemSpan.FullLine ) { it() }
+        }
+
+        itemsIndexed(images, key = { _, image -> image.previewUrl }) { index, image ->
+            StaggeredImagePreviewContainer(image, index, onImageClick)
+        }
+
+        item { LaunchedEffect(Unit) { onEndReached() } }
+
+        if (images.isEmpty()) {
+            item(span = StaggeredGridItemSpan.FullLine) {
+                noImagesContent()
+            }
+        }
+
+        item(span = StaggeredGridItemSpan.FullLine) {
+            NavBarHeightVerticalSpacer()
+        }
+    }
+}
+
+
+@Composable
+private fun UniformImageGrid(
+    modifier: Modifier = Modifier,
+    gridState: LazyGridState = rememberLazyGridState(),
+    contentPadding: PaddingValues,
+    filterComposable: (@Composable () -> Unit)? = null,
+    images: List<Image>,
+    noImagesContent: @Composable () -> Unit,
+    onImageClick: (Int, Image) -> Unit,
+    onEndReached: suspend () -> Unit = { }
+) {
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(MIN_CELL_WIDTH.dp),
+        state = gridState,
+        modifier = modifier,
+        contentPadding = contentPadding,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        filterComposable?.let {
+            item(span = { GridItemSpan(maxLineSpan) }) { it() }
+        }
+
+        itemsIndexed(images, key = { _, image -> image.previewUrl }) { index, image ->
+            ImagePreviewContainer(image, index, onImageClick)
+        }
+
+        item { LaunchedEffect(Unit) { onEndReached() } }
+
+        if (images.isEmpty()) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                noImagesContent()
+            }
+        }
+
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            NavBarHeightVerticalSpacer()
+        }
+    }
+}
 
 @Composable
 private fun NoImages() {
@@ -173,7 +248,7 @@ private fun ImagePreviewContainer(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .clip(RoundedCornerShape(12.dp))
+                .clip(largerShape)
         ) {
             ImagePreview(
                 modifier = Modifier.fillMaxSize(),
@@ -219,7 +294,7 @@ private fun StaggeredImagePreviewContainer(
         modifier = Modifier
             .widthIn(min = MIN_CELL_WIDTH.dp, max = MAX_CELL_WIDTH.dp)
             .heightIn(min = MIN_IMAGE_HEIGHT.dp, max = MAX_IMAGE_HEIGHT.dp)
-            .clip(RoundedCornerShape(12.dp)),
+            .clip(largerShape),
         contentAlignment = Alignment.TopEnd,
         propagateMinConstraints = true
     ) {
