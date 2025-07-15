@@ -95,12 +95,12 @@ import moe.apex.rule34.largeimageview.LargeImageView
 import moe.apex.rule34.prefs
 
 
-const val LARGE_CORNER_DP = 20
-const val SMALL_CORNER_DP = 4
+private const val LARGE_CORNER_DP = 20
+private const val SMALL_CORNER_DP = 4
+private const val VERTICAL_DIVIDER_SPACING = 32
 const val BOTTOM_APP_BAR_HEIGHT = 80
 const val CHIP_SPACING = 12
 const val DISABLED_OPACITY = 0.38f
-private const val VERTICAL_DIVIDER_SPACING = 32
 private val CHIP_TOTAL_VERTICAL_PADDING = 16.dp
 private val CHIP_TOTAL_HEIGHT = FilterChipDefaults.Height + 16.dp
 
@@ -114,25 +114,15 @@ enum class ListItemPosition(val topSize: Dp, val bottomSize: Dp) {
 
 
 @Composable
-fun topCornerSizeForPosition(position: ListItemPosition): Dp {
-    val cornerSize by animateDpAsState(when (position) {
-        ListItemPosition.TOP -> LARGE_CORNER_DP.dp
-        ListItemPosition.MIDDLE -> SMALL_CORNER_DP.dp
-        ListItemPosition.BOTTOM -> SMALL_CORNER_DP.dp
-        ListItemPosition.SINGLE_ELEMENT -> LARGE_CORNER_DP.dp
-    } )
+fun animateTopCornerSizeForPosition(position: ListItemPosition): Dp {
+    val cornerSize by animateDpAsState(position.topSize)
     return cornerSize
 }
 
 
 @Composable
-fun bottomCornerSizeForPosition(position: ListItemPosition): Dp {
-    val cornerSize by animateDpAsState(when (position) {
-        ListItemPosition.TOP -> SMALL_CORNER_DP.dp
-        ListItemPosition.MIDDLE -> SMALL_CORNER_DP.dp
-        ListItemPosition.BOTTOM -> LARGE_CORNER_DP.dp
-        ListItemPosition.SINGLE_ELEMENT -> LARGE_CORNER_DP.dp
-    } )
+fun animateBottomCornerSizeForPosition(position: ListItemPosition): Dp {
+    val cornerSize by animateDpAsState(position.bottomSize)
     return cornerSize
 }
 
@@ -691,10 +681,10 @@ fun ExpressiveTagEntryContainer(
             .heightIn(min = 64.dp)
             .clip(
                 RoundedCornerShape(
-                    topCornerSizeForPosition(position),
-                    topCornerSizeForPosition(position),
-                    bottomCornerSizeForPosition(position),
-                    bottomCornerSizeForPosition(position)
+                    animateTopCornerSizeForPosition(position),
+                    animateTopCornerSizeForPosition(position),
+                    animateBottomCornerSizeForPosition(position),
+                    animateBottomCornerSizeForPosition(position)
                 )
             )
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
@@ -766,5 +756,5 @@ val navBarHeight: Dp
     @Composable
     get() = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
-val largerShapeCornerSize = 20.dp
+val largerShapeCornerSize = LARGE_CORNER_DP.dp
 val largerShape = RoundedCornerShape(largerShapeCornerSize)
