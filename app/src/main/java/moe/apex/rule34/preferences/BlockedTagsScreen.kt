@@ -87,7 +87,7 @@ fun BlockedTagsScreen(navController: NavHostController) {
                             value = content,
                             label = "Tags",
                         ) {
-                            content = it
+                            content = it.lowercase()
                         }
                         SmallVerticalSpacer()
                         Summary(
