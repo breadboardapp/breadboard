@@ -3,6 +3,7 @@ package moe.apex.rule34.preferences
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -161,35 +162,44 @@ fun TitleSummary(
     title: String,
     summary: String? = null,
     enabled: Boolean = true,
+    icon: @Composable (() -> Unit)? = null,
     onClick: (() -> Unit)? = null
 ) {
     val baseModifier = modifier.heightIn(min = 76.dp)
     val finalModifier = onClick?.let { baseModifier.clickable(enabled) { it() } } ?: baseModifier
 
-    Column(
+    Row(
         modifier = finalModifier,
-        verticalArrangement = Arrangement.Center
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.prefTitle,
-            modifier = Modifier
-                .padding(
-                    start = 16.dp,
-                    end = 16.dp,
-                    top = 16.dp,
-                    bottom = (if (summary == null) 16.dp else 2.dp)
-                )
-                .alpha(if (enabled) 1f else DISABLED_OPACITY),
-        )
-
-        if (summary != null) {
-            Summary(
-                text = summary,
+        icon?.let {
+            Spacer(Modifier.width(16.dp))
+            Box(Modifier.size(48.dp)) {
+                it()
+            }
+        }
+        Column {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.prefTitle,
                 modifier = Modifier
-                    .padding(bottom = 16.dp, start = 16.dp, end = 16.dp)
-                    .alpha(if (enabled) 1f else DISABLED_OPACITY)
+                    .padding(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = 16.dp,
+                        bottom = (if (summary == null) 16.dp else 2.dp)
+                    )
+                    .alpha(if (enabled) 1f else DISABLED_OPACITY),
             )
+
+            if (summary != null) {
+                Summary(
+                    text = summary,
+                    modifier = Modifier
+                        .padding(bottom = 16.dp, start = 16.dp, end = 16.dp)
+                        .alpha(if (enabled) 1f else DISABLED_OPACITY)
+                )
+            }
         }
     }
 }

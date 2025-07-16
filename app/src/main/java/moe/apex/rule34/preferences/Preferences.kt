@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -20,6 +21,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -43,8 +45,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import moe.apex.rule34.image.ImageBoardAuth
 import moe.apex.rule34.image.ImageBoardLocalFilterType
+import moe.apex.rule34.navigation.AboutSettings
 import moe.apex.rule34.navigation.BlockedTagsSettings
-import moe.apex.rule34.navigation.LibrariesSettings
 import moe.apex.rule34.prefs
 import moe.apex.rule34.util.ExportDirectoryHandler
 import moe.apex.rule34.util.VerticalSpacer
@@ -99,13 +101,21 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                 }
                 DropdownMenu(
                     expanded = isDropdownVisible,
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    shape = MaterialTheme.shapes.small,
                     onDismissRequest = { isDropdownVisible = false }
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Third-party notices") },
+                        text = { Text("About") },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Rounded.Info,
+                                contentDescription = "About"
+                            )
+                        },
                         onClick = {
                             isDropdownVisible = false
-                            navController.navigate(LibrariesSettings)
+                            navController.navigate(AboutSettings)
                         }
                     )
                 }

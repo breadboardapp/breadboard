@@ -45,6 +45,7 @@ import moe.apex.rule34.detailview.SearchResults
 import moe.apex.rule34.favourites.FavouritesPage
 import moe.apex.rule34.home.HomeScreen
 import moe.apex.rule34.largeimageview.LazyLargeImageView
+import moe.apex.rule34.preferences.AboutScreen
 import moe.apex.rule34.preferences.BlockedTagsScreen
 import moe.apex.rule34.preferences.LibrariesScreen
 import moe.apex.rule34.preferences.LocalPreferences
@@ -77,9 +78,10 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
     val popExitTransition = slideOutHorizontally(tween(easing = easing),  { slideDistance }) + fadeOut( tween(easing = easing))
     val popEnterTransition = slideInHorizontally(tween(easing = easing), { -slideDistance }) + fadeIn(tween(easing = easing))
 
-    val topLevelScreens = listOf(Home::class, Search::class, Favourites::class, Settings::class, BlockedTagsSettings::class, LibrariesSettings::class)
     val searchScreens = listOf(Search::class, Results::class)
-    val settingsScreens = listOf(Settings::class, BlockedTagsSettings::class, LibrariesSettings::class)
+    val settingsScreens = listOf(Settings::class, BlockedTagsSettings::class, AboutSettings::class, LibrariesSettings::class)
+    val topLevelScreens = listOf(Home::class, Search::class, Favourites::class) + settingsScreens
+    val slideTransitionScreens = listOf(Results::class, ImageView::class, *settingsScreens.filter { it != Settings::class }.toTypedArray())
 
     BreadboardTheme {
         Surface {
@@ -176,22 +178,22 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                     navController = navController,
                     startDestination = startDestination,
                     enterTransition = {
-                        if (targetState.destination.routeIs(Results::class, ImageView::class, BlockedTagsSettings::class, LibrariesSettings::class))
+                        if (targetState.destination.routeIs(slideTransitionScreens))
                             enterTransition
                         else fadeIn()
                     },
                     exitTransition = {
-                        if (targetState.destination.routeIs(Results::class, ImageView::class, BlockedTagsSettings::class, LibrariesSettings::class))
+                        if (targetState.destination.routeIs(slideTransitionScreens))
                             exitTransition
                         else fadeOut()
                     },
                     popEnterTransition = {
-                        if (initialState.destination.routeIs(Results::class, ImageView::class, BlockedTagsSettings::class, LibrariesSettings::class))
+                        if (initialState.destination.routeIs(slideTransitionScreens))
                             popEnterTransition
                         else fadeIn()
                     },
                     popExitTransition = {
-                        if (initialState.destination.routeIs(Results::class, ImageView::class, BlockedTagsSettings::class, LibrariesSettings::class))
+                        if (initialState.destination.routeIs(slideTransitionScreens))
                             popExitTransition
                         else fadeOut()
                     }
@@ -210,6 +212,7 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                     composable<Settings> { PreferencesScreen(navController, viewModel) }
                     composable<BlockedTagsSettings> { BlockedTagsScreen(navController) }
                     composable<LibrariesSettings> { LibrariesScreen(navController) }
+                    composable<AboutSettings> { AboutScreen(navController) }
                 }
             }
         }
