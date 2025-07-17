@@ -61,9 +61,11 @@ import kotlinx.coroutines.delay
 import moe.apex.rule34.BuildConfig
 import moe.apex.rule34.R
 import moe.apex.rule34.navigation.LibrariesSettings
+import moe.apex.rule34.util.LARGE_SPACER
 import moe.apex.rule34.util.LargeTitleBar
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.SmallVerticalSpacer
+import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.showToast
 import kotlin.math.max
 
@@ -122,8 +124,8 @@ fun AboutScreen(navController: NavHostController) {
                 .fillMaxSize()
                 .padding(it)
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
-            contentPadding = PaddingValues(vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            contentPadding = PaddingValues(vertical = MEDIUM_SPACER.dp),
+            verticalArrangement = Arrangement.spacedBy(LARGE_SPACER.dp)
         ) {
             item {
                 var isMonochrome by remember { mutableStateOf(false) }

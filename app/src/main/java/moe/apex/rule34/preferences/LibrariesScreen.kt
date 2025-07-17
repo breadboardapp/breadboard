@@ -33,6 +33,7 @@ import moe.apex.rule34.R
 import moe.apex.rule34.util.LargeTitleBar
 import moe.apex.rule34.util.ListItemPosition
 import moe.apex.rule34.util.MainScreenScaffold
+import moe.apex.rule34.util.MEDIUM_SPACER
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,7 +68,7 @@ fun LibrariesScreen(navController: NavHostController) {
                 text = {
                     Column {
                         HorizontalDivider()
-                        LazyColumn(contentPadding = PaddingValues(vertical = 12.dp)) {
+                        LazyColumn(contentPadding = PaddingValues(vertical = MEDIUM_SPACER.dp)) {
                             item {
                                 Text(selectedLibrary!!.strippedLicenseContent.takeIf { it.isNotEmpty() }
                                     ?: "No license text.")
@@ -85,7 +86,7 @@ fun LibrariesScreen(navController: NavHostController) {
                 .fillMaxSize()
                 .padding(it)
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
-            contentPadding = PaddingValues(vertical = 12.dp),
+            contentPadding = PaddingValues(vertical = MEDIUM_SPACER.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             items(actualLibraries.size, key = { it }) { index ->

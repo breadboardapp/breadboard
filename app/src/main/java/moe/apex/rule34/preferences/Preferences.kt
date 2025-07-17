@@ -53,8 +53,10 @@ import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.StorageLocationSelection
 import moe.apex.rule34.util.ImportException
 import moe.apex.rule34.util.ImportHandler
+import moe.apex.rule34.util.LARGE_SPACER
 import moe.apex.rule34.util.PromptType
 import moe.apex.rule34.util.SmallVerticalSpacer
+import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.exportData
 import moe.apex.rule34.util.importData
 import moe.apex.rule34.util.preImportChecks
@@ -223,8 +225,8 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                 .fillMaxSize()
                 .padding(it)
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
-            contentPadding = PaddingValues(vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            contentPadding = PaddingValues(vertical = MEDIUM_SPACER.dp),
+            verticalArrangement = Arrangement.spacedBy(LARGE_SPACER.dp)
         ) {
             item {
                 PreferencesGroup("General") {
@@ -463,7 +465,7 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
             }
 
             item {
-                HorizontalDivider(Modifier.padding(vertical = 24.dp))
+                HorizontalDivider(Modifier.padding(vertical = LARGE_SPACER.dp))
             }
 
             item {

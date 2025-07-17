@@ -43,6 +43,7 @@ import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.RecommendationsProvider
+import moe.apex.rule34.util.SMALL_SPACER
 import moe.apex.rule34.util.bottomAppBarAndNavBarHeight
 import moe.apex.rule34.util.onScroll
 import moe.apex.rule34.viewmodel.BreadboardViewModel
@@ -154,7 +155,7 @@ fun HomeScreen(
                         } else {
                             Icon(Icons.Default.Refresh, contentDescription = null)
                         }
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(SMALL_SPACER.dp))
                         Text("Refresh")
                     }
                 }

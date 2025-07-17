@@ -97,6 +97,14 @@ import moe.apex.rule34.prefs
 
 private const val LARGE_CORNER_DP = 20
 private const val SMALL_CORNER_DP = 4
+/** 24dp spacing */
+const val LARGE_SPACER = 24
+/** 20dp spacing */
+const val MEDIUM_LARGE_SPACER = 20
+/** 12dp spacing */
+const val MEDIUM_SPACER = 12
+/** 8dp spacing */
+const val SMALL_SPACER = 8
 private const val VERTICAL_DIVIDER_SPACING = 32
 const val BOTTOM_APP_BAR_HEIGHT = 80
 const val CHIP_SPACING = 12
@@ -132,7 +140,7 @@ private fun NavigationIcon(navController: NavController? = null) {
     val context = LocalContext.current
     if (navController != null) {
         FilledIconButton(
-            modifier = Modifier.padding(horizontal = 8.dp),
+            modifier = Modifier.padding(horizontal = SMALL_SPACER.dp),
             colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
             onClick = {
                 if (navController.previousBackStackEntry != null) {
@@ -329,34 +337,34 @@ fun Heading(modifier: Modifier = Modifier, text: String) {
 /** A heading with 20dp horizontal padding */
 @Composable
 fun ExpressiveGroupHeading(modifier: Modifier = Modifier, text: String) {
-    BaseHeading(modifier.padding(horizontal = 20.dp), text)
+    BaseHeading(modifier.padding(horizontal = MEDIUM_LARGE_SPACER.dp), text)
 }
 
 
 @Composable
 fun SmallVerticalSpacer() {
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(SMALL_SPACER.dp))
 }
 
 
 /** A vertical spacer with 12dp height. */
 @Composable
 fun VerticalSpacer() {
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(MEDIUM_SPACER.dp))
 }
 
 
 /** A vertical spacer with 20dp height. */
 @Composable
 fun MediumLargeVerticalSpacer() {
-    Spacer(Modifier.height(20.dp))
+    Spacer(Modifier.height(MEDIUM_LARGE_SPACER.dp))
 }
 
 
 /** A vertical spacer with 24dp height. */
 @Composable
 fun LargeVerticalSpacer() {
-    Spacer(Modifier.height(24.dp))
+    Spacer(Modifier.height(LARGE_SPACER.dp))
 }
 
 
@@ -395,7 +403,7 @@ fun HorizontallyScrollingChipsWithLabels(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .padding(start = 20.dp, top = 8.dp, bottom = 8.dp)
+                .padding(start = MEDIUM_LARGE_SPACER.dp, top = SMALL_SPACER.dp, bottom = SMALL_SPACER.dp)
                 .height(CHIP_TOTAL_HEIGHT * labels.size)
         ) {
             Column(
@@ -527,7 +535,7 @@ fun SearchHistoryListItem(
                     onContainerClick()
                 }
         ) {
-            Column(Modifier.padding(vertical = 8.dp)) {
+            Column(Modifier.padding(vertical = SMALL_SPACER.dp)) {
                 /* We're preventing the chips from consuming touch actions by placing the chips
                    column inside a Box, and then placing an invisible composable of the same
                    size in the same box. This invisible composable sits on top of the column
@@ -650,7 +658,7 @@ fun HorizontalFloatingToolbar(
         ) {
             Row(
                 modifier = Modifier
-                    .padding(horizontal = 8.dp)
+                    .padding(horizontal = SMALL_SPACER.dp)
                     .height(48.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -659,7 +667,7 @@ fun HorizontalFloatingToolbar(
             }
         }
         floatingActionButton?.let {
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(SMALL_SPACER.dp))
             it()
         }
     }
@@ -714,7 +722,7 @@ fun ExpressiveTagEntryContainer(
             }
         }
         trailingContent?.let {
-            Row(Modifier.padding(end = 8.dp)) {
+            Row(Modifier.padding(end = SMALL_SPACER.dp)) {
                 it()
             }
         }

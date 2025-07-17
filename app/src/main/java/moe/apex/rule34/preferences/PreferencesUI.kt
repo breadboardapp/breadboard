@@ -66,6 +66,8 @@ import moe.apex.rule34.ui.theme.searchField
 import moe.apex.rule34.util.DISABLED_OPACITY
 import moe.apex.rule34.util.ExpressiveGroupHeading
 import moe.apex.rule34.util.ListItemPosition
+import moe.apex.rule34.util.SMALL_SPACER
+import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.VerticalSpacer
 import moe.apex.rule34.util.largerShape
 import sh.calvin.reorderable.ReorderableItem
@@ -85,7 +87,7 @@ fun ExpressivePreferenceContainer(
     content: @Composable () -> Unit
 ) {
     Surface(
-        modifier = modifier.padding(horizontal = 12.dp),
+        modifier = modifier.padding(horizontal = MEDIUM_SPACER.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = RoundedCornerShape(
             topStart = position.topSize,
@@ -122,7 +124,7 @@ fun PreferencesGroup(
     scope.content()
 
     ExpressiveGroupHeading(
-        modifier = Modifier.padding(bottom = 8.dp),
+        modifier = Modifier.padding(bottom = SMALL_SPACER.dp),
         text = title
     )
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -513,7 +515,7 @@ fun ReorderablePref(
                                     )
                                     IconButton(
                                         modifier = Modifier
-                                            .padding(horizontal = 8.dp)
+                                            .padding(horizontal = SMALL_SPACER.dp)
                                             .draggableHandle(
                                                 onDragStarted = {
                                                     hapticFeedback.performHapticFeedback(

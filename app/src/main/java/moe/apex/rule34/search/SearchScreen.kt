@@ -110,8 +110,11 @@ import moe.apex.rule34.util.BaseHeading
 import moe.apex.rule34.util.DISABLED_OPACITY
 import moe.apex.rule34.util.SearchHistoryListItem
 import moe.apex.rule34.util.ExpressiveTagEntryContainer
+import moe.apex.rule34.util.LARGE_SPACER
+import moe.apex.rule34.util.SMALL_SPACER
 import moe.apex.rule34.util.SmallVerticalSpacer
 import moe.apex.rule34.util.TitledModalBottomSheet
+import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.availableRatingsForCurrentSource
 import moe.apex.rule34.util.availableRatingsForSource
 import moe.apex.rule34.util.copyText
@@ -491,7 +494,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                     }
                 )
 
-                Spacer(modifier = Modifier.size(8.dp))
+                Spacer(modifier = Modifier.width(SMALL_SPACER.dp))
 
                 FloatingActionButton(
                     onClick = { performSearch() },
@@ -692,9 +695,9 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
             LazyColumn(
                 modifier = Modifier
                     .animateContentSize()
-                    .padding(horizontal = 12.dp)
+                    .padding(horizontal = MEDIUM_SPACER.dp)
                     .clip(largerShape),
-                verticalArrangement = Arrangement.spacedBy(24.dp),
+                verticalArrangement = Arrangement.spacedBy(LARGE_SPACER.dp),
                 contentPadding = PaddingValues(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() * 2)
             ) {
                 if (prefs.searchHistory.isEmpty()) {
@@ -718,7 +721,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             BaseHeading(
-                                modifier = Modifier.padding(start = 8.dp),
+                                modifier = Modifier.padding(start = SMALL_SPACER.dp),
                                 text = "$formattedDate  \u2022  ${entry.source.label}"
                             )
                             SearchHistoryListItem(entry) {

@@ -54,6 +54,7 @@ import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.util.FullscreenLoadingSpinner
 import moe.apex.rule34.util.NavBarHeightVerticalSpacer
+import moe.apex.rule34.util.SMALL_SPACER
 import moe.apex.rule34.util.largerShape
 
 
@@ -157,8 +158,8 @@ private fun StaggeredImageGrid(
         state = gridState,
         modifier = modifier,
         contentPadding = contentPadding,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalItemSpacing = 8.dp
+        horizontalArrangement = Arrangement.spacedBy(SMALL_SPACER.dp),
+        verticalItemSpacing = SMALL_SPACER.dp
     ) {
         filterComposable?.let {
             item(span = StaggeredGridItemSpan.FullLine ) { it() }
@@ -199,8 +200,8 @@ private fun UniformImageGrid(
         state = gridState,
         modifier = modifier,
         contentPadding = contentPadding,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(SMALL_SPACER.dp),
+        verticalArrangement = Arrangement.spacedBy(SMALL_SPACER.dp)
     ) {
         filterComposable?.let {
             item(span = { GridItemSpan(maxLineSpan) }) { it() }
@@ -323,7 +324,7 @@ private fun GifBadge() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
+            .padding(SMALL_SPACER.dp),
         horizontalArrangement = Arrangement.End
     ) {
         Text(

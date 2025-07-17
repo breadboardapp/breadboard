@@ -48,7 +48,9 @@ import moe.apex.rule34.util.LargeVerticalSpacer
 import moe.apex.rule34.util.ListItemPosition
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.MediumLargeVerticalSpacer
+import moe.apex.rule34.util.SMALL_SPACER
 import moe.apex.rule34.util.SmallVerticalSpacer
+import moe.apex.rule34.util.MEDIUM_SPACER
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -128,7 +130,7 @@ fun BlockedTagsScreen(navController: NavHostController) {
                 .fillMaxSize()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
             verticalArrangement = Arrangement.spacedBy(2.dp),
-            contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 16.dp, bottom = 88.dp), // FAB height + 16dp vertical padding
+            contentPadding = PaddingValues(start = MEDIUM_SPACER.dp, end = MEDIUM_SPACER.dp, top = 16.dp, bottom = 88.dp), // FAB height + 16dp vertical padding
         ) {
             item {
                 Summary(
@@ -164,7 +166,7 @@ fun BlockedTagsScreen(navController: NavHostController) {
                 val aiTags = ImageSource.entries.mapTo(mutableSetOf()) { it.imageBoard.aiTagName }
                 item {
                     BaseHeading(
-                        modifier = Modifier.padding(start = 8.dp, bottom = 6.dp),
+                        modifier = Modifier.padding(start = SMALL_SPACER.dp, bottom = 6.dp),
                         text = "Automatically blocked"
                     )
                 }
@@ -184,7 +186,7 @@ fun BlockedTagsScreen(navController: NavHostController) {
                     item {
                         BaseHeading(
                             modifier = Modifier
-                                .padding(start = 8.dp, bottom = 6.dp)
+                                .padding(start = SMALL_SPACER.dp, bottom = 6.dp)
                                 .animateItem(),
                             text = "Blocked by you"
                         )
