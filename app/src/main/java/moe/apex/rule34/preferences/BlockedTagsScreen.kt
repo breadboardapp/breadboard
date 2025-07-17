@@ -1,7 +1,6 @@
 package moe.apex.rule34.preferences
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -63,6 +62,52 @@ fun BlockedTagsScreen(navController: NavHostController) {
     val blockedTags = prefs.manuallyBlockedTags.reversed()
     var showAddDialog by rememberSaveable { mutableStateOf(false) }
 
+    if (showAddDialog) {
+        var content by remember { mutableStateOf("") }
+        AlertDialog(
+            title = { Text("Add blocked tags") },
+            text = {
+                Column {
+                    PreferenceTextBox(
+                        value = content,
+                        label = "Tags",
+                    ) {
+                        content = it.lowercase()
+                    }
+                    SmallVerticalSpacer()
+                    Summary(
+                        modifier = Modifier.padding(start = 4.dp),
+                        text = "Separate multiple tags with a space."
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val newBlocks = content.trim().split(" ")
+                        scope.launch {
+                            for (tag in newBlocks) {
+                                userPreferencesRepository.addToSet(
+                                    PreferenceKeys.MANUALLY_BLOCKED_TAGS,
+                                    tag
+                                )
+                            }
+                        }
+                        showAddDialog = false
+                    }
+                ) {
+                    Text("Add")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddDialog = false }) {
+                    Text("Cancel")
+                }
+            },
+            onDismissRequest = { showAddDialog = false },
+        )
+    }
+
     MainScreenScaffold(
         topAppBar = {
             LargeTitleBar(
@@ -76,154 +121,106 @@ fun BlockedTagsScreen(navController: NavHostController) {
                 Icon(Icons.Rounded.Add, "Add blocked tag")
             }
         }
-    ) { paddingValues ->
-        if (showAddDialog) {
-            var content by remember { mutableStateOf("") }
-            AlertDialog(
-                title = { Text("Add blocked tags") },
-                text = {
-                    Column {
-                        PreferenceTextBox(
-                            value = content,
-                            label = "Tags",
-                        ) {
-                            content = it.lowercase()
-                        }
-                        SmallVerticalSpacer()
-                        Summary(
-                            modifier = Modifier.padding(start = 4.dp),
-                            text = "Separate multiple tags with a space."
+    ) {
+        LazyColumn(
+            modifier = Modifier
+                .padding(it)
+                .fillMaxSize()
+                .nestedScroll(scrollBehavior.nestedScrollConnection),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+            contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 16.dp, bottom = 88.dp), // FAB height + 16dp vertical padding
+        ) {
+            item {
+                Summary(
+                    modifier = Modifier.padding(horizontal = 4.dp),
+                    text = "Images with any of these tags will not appear in search results or recommendations. However, they will still show in your Favourites.",
+                )
+                LargeVerticalSpacer()
+            }
+            if (!prefs.excludeAi && blockedTags.isEmpty()) {
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .alpha(DISABLED_OPACITY),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Block,
+                            contentDescription = null,
+                            modifier = Modifier.size(120.dp)
+                        )
+                        Text(
+                            text = "No tags blocked. Search with caution.",
+                            style = MaterialTheme.typography.titleLarge,
+                            textAlign = TextAlign.Center
                         )
                     }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            val newBlocks = content.trim().split(" ")
-                            scope.launch {
-                                for (tag in newBlocks) {
-                                    userPreferencesRepository.addToSet(
+                }
+                return@LazyColumn
+            }
+            if (prefs.excludeAi) {
+                val aiTags = ImageSource.entries.mapTo(mutableSetOf()) { it.imageBoard.aiTagName }
+                item {
+                    BaseHeading(
+                        modifier = Modifier.padding(start = 8.dp, bottom = 6.dp),
+                        text = "Automatically blocked"
+                    )
+                }
+                items(aiTags.size) { index ->
+                    ExpressiveTagEntryContainer(
+                        modifier = Modifier.animateItem(),
+                        label = aiTags.elementAt(index),
+                        position = when (index) {
+                            0 -> ListItemPosition.TOP
+                            aiTags.size - 1 -> ListItemPosition.BOTTOM
+                            else -> ListItemPosition.MIDDLE // Not used at the time of writing but if more AI tags appear in the future when it would be useful
+                        }
+                    )
+                }
+                if (prefs.manuallyBlockedTags.isNotEmpty()) {
+                    item { MediumLargeVerticalSpacer() }
+                    item {
+                        BaseHeading(
+                            modifier = Modifier
+                                .padding(start = 8.dp, bottom = 6.dp)
+                                .animateItem(),
+                            text = "Blocked by you"
+                        )
+                    }
+                }
+            }
+            items(blockedTags.size, key = { index -> blockedTags[index] }) { index ->
+                val tag = blockedTags[index]
+                ExpressiveTagEntryContainer(
+                    modifier = Modifier.animateItem(),
+                    label = tag,
+                    position = when {
+                        prefs.manuallyBlockedTags.size == 1 -> ListItemPosition.SINGLE_ELEMENT
+                        index == 0 -> ListItemPosition.TOP
+                        index == prefs.manuallyBlockedTags.size - 1 -> ListItemPosition.BOTTOM
+                        else -> ListItemPosition.MIDDLE
+                    },
+                    trailingContent = {
+                        IconButton(
+                            onClick = {
+                                scope.launch {
+                                    userPreferencesRepository.removeFromSet(
                                         PreferenceKeys.MANUALLY_BLOCKED_TAGS,
                                         tag
                                     )
                                 }
                             }
-                            showAddDialog = false
-                        }
-                    ) {
-                        Text("Add")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showAddDialog = false }) {
-                        Text("Cancel")
-                    }
-                },
-                onDismissRequest = { showAddDialog = false },
-            )
-        }
-        Box(
-            modifier = Modifier
-                .padding(paddingValues)
-                .padding(horizontal = 12.dp)
-        ) {
-            LazyColumn(
-                modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection).fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-                contentPadding = PaddingValues(top = 16.dp, bottom = 88.dp), // FAB height + 16dp vertical padding
-            ) {
-                item {
-                    Summary(
-                        modifier = Modifier.padding(horizontal = 4.dp),
-                        text = "Images with any of these tags will not appear in search results or recommendations. However, they will still show in your Favourites.",
-                    )
-                    LargeVerticalSpacer()
-                }
-                if (!prefs.excludeAi && blockedTags.isEmpty()) {
-                    item {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .alpha(DISABLED_OPACITY),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Rounded.Block,
-                                contentDescription = null,
-                                modifier = Modifier.size(120.dp)
-                            )
-                            Text(
-                                text = "No tags blocked. Search with caution.",
-                                style = MaterialTheme.typography.titleLarge,
-                                textAlign = TextAlign.Center
+                                imageVector = Icons.Rounded.Delete,
+                                contentDescription = "Unblock tag",
+                                tint = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
-                    return@LazyColumn
-                }
-                if (prefs.excludeAi) {
-                    val aiTags = ImageSource.entries.mapTo(mutableSetOf()) { it.imageBoard.aiTagName }
-                    item {
-                        BaseHeading(
-                            modifier = Modifier.padding(start = 8.dp, bottom = 6.dp),
-                            text = "Automatically blocked"
-                        )
-                    }
-                    items(aiTags.size) { index ->
-                        ExpressiveTagEntryContainer(
-                            modifier = Modifier.animateItem(),
-                            label = aiTags.elementAt(index),
-                            position = when (index) {
-                                0 -> ListItemPosition.TOP
-                                aiTags.size - 1 -> ListItemPosition.BOTTOM
-                                else -> ListItemPosition.MIDDLE // Not used at the time of writing but if more AI tags appear in the future when it would be useful
-                            }
-                        )
-                    }
-                    if (prefs.manuallyBlockedTags.isNotEmpty()) {
-                        item { MediumLargeVerticalSpacer() }
-                        item {
-                            BaseHeading(
-                                modifier = Modifier
-                                    .padding(start = 8.dp, bottom = 6.dp)
-                                    .animateItem(),
-                                text = "Blocked by you"
-                            )
-                        }
-                    }
-                }
-                items(blockedTags.size, key = { index -> blockedTags[index] }) { index ->
-                    val tag = blockedTags[index]
-                    ExpressiveTagEntryContainer(
-                        modifier = Modifier.animateItem(),
-                        label = tag,
-                        position = when {
-                            prefs.manuallyBlockedTags.size == 1 -> ListItemPosition.SINGLE_ELEMENT
-                            index == 0 -> ListItemPosition.TOP
-                            index == prefs.manuallyBlockedTags.size - 1 -> ListItemPosition.BOTTOM
-                            else -> ListItemPosition.MIDDLE
-                        },
-                        trailingContent = {
-                            IconButton(
-                                onClick = {
-                                    scope.launch {
-                                        userPreferencesRepository.removeFromSet(
-                                            PreferenceKeys.MANUALLY_BLOCKED_TAGS,
-                                            tag
-                                        )
-                                    }
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Delete,
-                                    contentDescription = "Unblock tag",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-                    )
-                }
+                )
             }
         }
     }
