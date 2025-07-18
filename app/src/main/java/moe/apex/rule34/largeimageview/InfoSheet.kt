@@ -26,7 +26,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,7 +33,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
@@ -68,7 +67,7 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var state: SheetState? = null
-    val clip = LocalClipboardManager.current
+    val clip = LocalClipboard.current
     var previousSheetValue by remember { mutableStateOf(SheetValue.Hidden) }
 
     fun hideAndThen(block: () -> Unit = { }) {
@@ -94,7 +93,9 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
     }
 
     fun chipLongClick(tag: String) {
-        copyText(context, clip, tag)
+        scope.launch {
+            copyText(context, clip, tag)
+        }
     }
 
     // We want to bypass the partially expanded state when closing but not when opening.

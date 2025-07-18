@@ -1,6 +1,7 @@
 package moe.apex.rule34.util
 
 import android.app.Activity
+import android.content.ClipData
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
@@ -78,17 +79,19 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.ClipboardManager
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import moe.apex.rule34.history.SearchHistoryEntry
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.largeimageview.LargeImageView
@@ -449,16 +452,17 @@ fun String.pluralise(count: Int, pluralised: String) : String {
 }
 
 
-fun copyText(
+suspend fun copyText(
     context: Context,
-    clipboardManager: ClipboardManager,
+    clipboard: Clipboard,
     text: String,
     message: String = "Copied to clipboard"
 ) {
-    clipboardManager.setText(AnnotatedString(text))
-    // if (SDK_INT < VERSION_CODES.TIRAMISU) { // Android 13 has its own text copied popup
-    showToast(context, message)
-    // }
+    clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(null, text)))
+    // Android 13 has its own text copied popup but we'll ignore that for now
+    withContext(Dispatchers.Main) {
+        showToast(context, message)
+    }
 }
 
 

@@ -76,7 +76,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
@@ -150,7 +150,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
     val chevronRotation by animateFloatAsState(if (showSourceRatingBox) 180f else 0f)
 
     val context = LocalContext.current
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
     val prefs = LocalPreferences.current
     val currentSource = prefs.imageSource
 
@@ -448,9 +448,9 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                         Row(Modifier.padding(end = 4.dp)) {
                             IconButton(
                                 onClick = {
-                                    val tags = clipboard.getClip()
-                                        .takeIf { it?.clipData?.description?.getMimeType(0) == "text/plain" }
-                                        ?.clipData?.getItemAt(0)
+                                    val tags = clipboard.nativeClipboard.primaryClip
+                                        .takeIf { it?.description?.getMimeType(0) == "text/plain" }
+                                        ?.getItemAt(0)
                                         ?.let {
                                             it.text.split(" ")
                                                 .filter { tag -> tag.trim().isNotEmpty() }
@@ -625,12 +625,19 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                                         .animateItem(),
                                     onClick = {
                                         val tags = tagChipList.joinToString(" ") { it.formattedLabel }
-                                        copyText(
-                                            context = context,
-                                            clipboardManager = clipboard,
-                                            text = tags,
-                                            message = "Copied ${tagChipList.size} ${"tag".pluralise(tagChipList.size, "tags")}"
-                                        )
+                                        scope.launch {
+                                            copyText(
+                                                context = context,
+                                                clipboard = clipboard,
+                                                text = tags,
+                                                message = "Copied ${tagChipList.size} ${
+                                                    "tag".pluralise(
+                                                        tagChipList.size,
+                                                        "tags"
+                                                    )
+                                                }"
+                                            )
+                                        }
                                     }
                                 ) {
                                     Icon(
