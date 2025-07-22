@@ -18,8 +18,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.SheetValue
@@ -54,7 +54,6 @@ import moe.apex.rule34.util.LARGE_SPACER
 import moe.apex.rule34.util.ListItemPosition
 import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
-import moe.apex.rule34.util.SMALL_SPACER
 import moe.apex.rule34.util.TitleSummary
 import moe.apex.rule34.util.TitledModalBottomSheet
 import moe.apex.rule34.util.copyText
@@ -168,12 +167,13 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                                     summary = "Artist",
                                     onClick = { chipClick(it) },
                                     trailingIcon = {
-                                        FilledTonalIconButton(
-                                            onClick = { chipLongClick(it) }
+                                        IconButton(
+                                            onClick = { chipLongClick(it) },
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Rounded.ContentCopy,
-                                                contentDescription = "Copy artist name"
+                                                contentDescription = "Copy artist name",
+                                                tint = MaterialTheme.colorScheme.primary
                                             )
                                         }
                                     }
@@ -237,14 +237,15 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                                 } else null,
                                 trailingIcon = if (it.isWebLink()) {
                                     {
-                                        FilledTonalIconButton(
+                                        IconButton(
                                             onClick = {
                                                 scope.launch { copyText(context, clip, it) }
                                             }
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Rounded.ContentCopy,
-                                                contentDescription = "Copy source"
+                                                contentDescription = "Copy source",
+                                                tint = MaterialTheme.colorScheme.primary
                                             )
                                         }
                                     }
@@ -264,14 +265,15 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                                 } else null,
                                 trailingIcon = if (it.isWebLink()) {
                                     {
-                                        FilledTonalIconButton(
+                                        IconButton(
                                             onClick = {
                                                 scope.launch { copyText(context, clip, it) }
                                             }
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Rounded.ContentCopy,
-                                                contentDescription = "Copy Pixiv URL"
+                                                contentDescription = "Copy Pixiv URL",
+                                                tint = MaterialTheme.colorScheme.primary
                                             )
                                         }
                                     }
@@ -286,14 +288,15 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                                 summary = it,
                                 onClick = { openUrl(context, it) },
                                 trailingIcon = {
-                                    FilledTonalIconButton(
+                                    IconButton(
                                         onClick = {
                                             scope.launch { copyText(context, clip, it) }
                                         }
                                     ) {
                                         Icon(
                                             imageVector = Icons.Rounded.ContentCopy,
-                                            contentDescription = "Copy image URL"
+                                            contentDescription = "Copy image URL",
+                                            tint = MaterialTheme.colorScheme.primary
                                         )
                                     }
                                 }
