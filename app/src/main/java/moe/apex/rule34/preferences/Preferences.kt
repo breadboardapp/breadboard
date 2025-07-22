@@ -1,6 +1,7 @@
 package moe.apex.rule34.preferences
 
 import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -134,7 +135,20 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
 
     if (importingStarted) {
         ImportHandler({ importingStarted = false }) { uri ->
-            if (!uri.toString().endsWith(".bread")) {
+            var displayName = uri.lastPathSegment.toString()
+            if (!displayName.endsWith(".bread")) {
+                /* Android's content provider also sometimes returns URIs that hide the real file
+                   path and name so we need to query the content resolver to get the correct one. */
+                context.contentResolver.query(uri, null, null, null).use { cursor ->
+                    if (cursor?.moveToFirst() == true) {
+                        val displayNameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                        if (displayNameIndex != -1) {
+                            displayName = cursor.getString(displayNameIndex)
+                        }
+                    }
+                }
+            }
+            if (!displayName.endsWith(".bread")) {
                 showToast(context, "Invalid file type.")
                 importingStarted = false
                 return@ImportHandler
