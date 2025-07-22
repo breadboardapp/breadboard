@@ -48,6 +48,7 @@ import moe.apex.rule34.image.ImageBoardLocalFilterType
 import moe.apex.rule34.navigation.AboutSettings
 import moe.apex.rule34.navigation.BlockedTagsSettings
 import moe.apex.rule34.prefs
+import moe.apex.rule34.util.ChevronRight
 import moe.apex.rule34.util.ExportDirectoryHandler
 import moe.apex.rule34.util.ExpressiveGroup
 import moe.apex.rule34.util.MainScreenScaffold
@@ -308,7 +309,8 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                         TitleSummary(
                             modifier = Modifier.fillMaxWidth(),
                             title = "Manage blocked tags",
-                            summary = "Add or remove tags to block from search results and recommendations."
+                            summary = "Add or remove tags to block from search results and recommendations.",
+                            trailingIcon = { ChevronRight() }
                         ) {
                             navController.navigate(BlockedTagsSettings)
                         }

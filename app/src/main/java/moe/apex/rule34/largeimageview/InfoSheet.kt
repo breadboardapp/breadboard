@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -50,6 +49,7 @@ import moe.apex.rule34.ui.theme.prefTitle
 import moe.apex.rule34.util.BasicExpressiveContainer
 import moe.apex.rule34.util.BasicExpressiveGroup
 import moe.apex.rule34.util.CHIP_SPACING
+import moe.apex.rule34.util.ChevronRight
 import moe.apex.rule34.util.CombinedClickableFilterChip
 import moe.apex.rule34.util.LARGE_SPACER
 import moe.apex.rule34.util.ListItemPosition
@@ -326,16 +326,6 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
             }
         }
     }
-}
-
-
-@Composable
-private fun ChevronRight() {
-    Icon(
-        imageVector = Icons.Rounded.ChevronRight,
-        contentDescription = null,
-        tint = MaterialTheme.colorScheme.primary
-    )
 }
 
 

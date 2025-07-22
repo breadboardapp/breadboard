@@ -57,6 +57,7 @@ import kotlinx.coroutines.delay
 import moe.apex.rule34.BuildConfig
 import moe.apex.rule34.R
 import moe.apex.rule34.navigation.LibrariesSettings
+import moe.apex.rule34.util.ChevronRight
 import moe.apex.rule34.util.ExpressiveGroup
 import moe.apex.rule34.util.LARGE_SPACER
 import moe.apex.rule34.util.LargeTitleBar
@@ -203,7 +204,8 @@ fun AboutScreen(navController: NavHostController) {
                         TitleSummary(
                             modifier = Modifier.fillMaxWidth(),
                             title = "Third-party notices",
-                            summary = "Libraries used in Breadboard"
+                            summary = "Libraries used in Breadboard",
+                            trailingIcon = { ChevronRight() }
                         ) { navController.navigate(LibrariesSettings) }
                     }
                 }
