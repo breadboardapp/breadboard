@@ -60,6 +60,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.ui.theme.searchField
+import moe.apex.rule34.util.MEDIUM_SPACER
+import moe.apex.rule34.util.SMALL_LARGE_SPACER
 import moe.apex.rule34.util.SMALL_SPACER
 import moe.apex.rule34.util.Summary
 import moe.apex.rule34.util.TitleSummary
@@ -90,11 +92,11 @@ fun SwitchPref(
         verticalAlignment = Alignment.CenterVertically
     ) {
         TitleSummary(Modifier.weight(1f), title, summary)
-        Spacer(Modifier.width(16.dp))
+        Spacer(Modifier.width(SMALL_LARGE_SPACER.dp))
         Switch(
             checked = checked,
             onCheckedChange = onToggle,
-            modifier = Modifier.padding(end = 16.dp),
+            modifier = Modifier.padding(end = SMALL_LARGE_SPACER.dp),
             colors = SwitchDefaults.colors().copy(
                 uncheckedThumbColor = BreadboardTheme.colors.outlineStrong,
                 uncheckedBorderColor = BreadboardTheme.colors.outlineStrong
@@ -144,7 +146,7 @@ fun EnumPref(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             RadioButton(
-                                modifier = Modifier.padding(start = 12.dp, end = 16.dp),
+                                modifier = Modifier.padding(start = MEDIUM_SPACER.dp, end = SMALL_LARGE_SPACER.dp),
                                 selected = selectedItem == setting,
                                 onClick = null
                             )
@@ -171,7 +173,7 @@ fun InfoSection(text: String) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = SMALL_LARGE_SPACER.dp),
     ) {
         Icon(
             modifier = Modifier.size(20.dp),
@@ -374,7 +376,7 @@ fun ReorderablePref(
                                         Icon(
                                             imageVector = it,
                                             contentDescription = null,
-                                            modifier = Modifier.padding(horizontal = 16.dp)
+                                            modifier = Modifier.padding(horizontal = SMALL_LARGE_SPACER.dp)
                                         )
                                     }
                                     Text(

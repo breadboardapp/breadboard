@@ -43,6 +43,7 @@ import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.RecommendationsProvider
+import moe.apex.rule34.util.SMALL_LARGE_SPACER
 import moe.apex.rule34.util.SMALL_SPACER
 import moe.apex.rule34.util.bottomAppBarAndNavBarHeight
 import moe.apex.rule34.util.onScroll
@@ -165,9 +166,9 @@ fun HomeScreen(
                 shouldShowLargeImage.value = true
             },
             contentPadding = PaddingValues(
-                start = 16.dp,
-                end = 16.dp,
-                top = 16.dp,
+                start = SMALL_LARGE_SPACER.dp,
+                end = SMALL_LARGE_SPACER.dp,
+                top = SMALL_LARGE_SPACER.dp,
                 bottom = bottomAppBarAndNavBarHeight
             ),
             initialLoad = { recommendationsProvider.recommendImages() },

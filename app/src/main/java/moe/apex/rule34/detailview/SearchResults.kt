@@ -34,6 +34,7 @@ import moe.apex.rule34.prefs
 import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
 import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.rule34.util.LargeTitleBar
+import moe.apex.rule34.util.SMALL_LARGE_SPACER
 import moe.apex.rule34.util.availableRatingsForCurrentSource
 import moe.apex.rule34.util.withoutVertical
 
@@ -99,7 +100,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
                 initialPage = index
                 shouldShowLargeImage.value = true
             },
-            contentPadding = PaddingValues(top = 16.dp, start = 16.dp, end = 16.dp),
+            contentPadding = PaddingValues(top = SMALL_LARGE_SPACER.dp, start = SMALL_LARGE_SPACER.dp, end = SMALL_LARGE_SPACER.dp),
             filterComposable = if (filterLocally) { {
                 HorizontallyScrollingChipsWithLabels(
                     modifier = Modifier.padding(bottom = 4.dp),

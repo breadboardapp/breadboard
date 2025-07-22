@@ -115,6 +115,7 @@ import moe.apex.rule34.util.SMALL_SPACER
 import moe.apex.rule34.util.SmallVerticalSpacer
 import moe.apex.rule34.util.TitledModalBottomSheet
 import moe.apex.rule34.util.MEDIUM_SPACER
+import moe.apex.rule34.util.SMALL_LARGE_SPACER
 import moe.apex.rule34.util.availableRatingsForCurrentSource
 import moe.apex.rule34.util.availableRatingsForSource
 import moe.apex.rule34.util.copyText
@@ -273,9 +274,9 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
             Box(
                 modifier = Modifier
                     .padding(
-                        start = 16.dp,
-                        end = 16.dp,
-                        bottom = 16.dp
+                        start = SMALL_LARGE_SPACER.dp,
+                        end = SMALL_LARGE_SPACER.dp,
+                        bottom = SMALL_LARGE_SPACER.dp
                     )
                     .clip(largerShape)
             ) {
@@ -297,7 +298,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                                 text = "No results :(",
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier
-                                    .padding(16.dp)
+                                    .padding(SMALL_LARGE_SPACER.dp)
                                     .fillMaxWidth(),
                             )
                         }
@@ -404,7 +405,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
+                    .padding(horizontal = SMALL_LARGE_SPACER.dp)
                     .align(Alignment.CenterHorizontally)
             ) {
                 TextField(
@@ -581,7 +582,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                         }
                     }
 
-                Column(Modifier.padding(horizontal = 16.dp)) {
+                Column(Modifier.padding(horizontal = SMALL_LARGE_SPACER.dp)) {
                     HorizontallyScrollingChipsWithLabels(
                         modifier = Modifier
                             .alpha(opacity)
@@ -603,7 +604,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        contentPadding = PaddingValues(horizontal = 16.dp)
+                        contentPadding = PaddingValues(horizontal = SMALL_LARGE_SPACER.dp)
                     ) {
                         items(tagChipList, key = { it.value }) { tag ->
                             FilterChip(

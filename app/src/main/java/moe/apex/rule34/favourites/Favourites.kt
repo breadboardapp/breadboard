@@ -32,6 +32,7 @@ import moe.apex.rule34.prefs
 import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
 import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.rule34.util.MainScreenScaffold
+import moe.apex.rule34.util.SMALL_LARGE_SPACER
 import moe.apex.rule34.util.bottomAppBarAndNavBarHeight
 import moe.apex.rule34.util.onScroll
 
@@ -103,7 +104,7 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
                 initialPage = index
                 shouldShowLargeImage.value = true
             },
-            contentPadding = PaddingValues(top = 16.dp, start = 16.dp, end = 16.dp, bottom = bottomAppBarAndNavBarHeight),
+            contentPadding = PaddingValues(top = SMALL_LARGE_SPACER.dp, start = SMALL_LARGE_SPACER.dp, end = SMALL_LARGE_SPACER.dp, bottom = bottomAppBarAndNavBarHeight),
             filterComposable = {
                 HorizontallyScrollingChipsWithLabels(
                     modifier = Modifier.padding(bottom = 4.dp),

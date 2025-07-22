@@ -107,6 +107,8 @@ private const val SMALL_CORNER_DP = 4
 const val LARGE_SPACER = 24
 /** 20dp spacing */
 const val MEDIUM_LARGE_SPACER = 20
+/** 16dp spacing */
+const val SMALL_LARGE_SPACER = 16
 /** 12dp spacing */
 const val MEDIUM_SPACER = 12
 /** 8dp spacing */
@@ -352,7 +354,7 @@ fun TitleSummary(
         verticalAlignment = Alignment.CenterVertically
     ) {
         leadingIcon?.let {
-            Spacer(Modifier.width(16.dp))
+            Spacer(Modifier.width(SMALL_LARGE_SPACER.dp))
             Box(Modifier.size(48.dp)) {
                 it()
             }
@@ -360,7 +362,7 @@ fun TitleSummary(
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = SMALL_LARGE_SPACER.dp)
                 .alpha(if (enabled) 1f else DISABLED_OPACITY)
         ) {
             Text(
@@ -368,15 +370,15 @@ fun TitleSummary(
                 style = MaterialTheme.typography.prefTitle,
                 modifier = Modifier
                     .padding(
-                        top = 16.dp,
-                        bottom = (if (summary == null) 16.dp else 2.dp)
+                        top = SMALL_LARGE_SPACER.dp,
+                        bottom = (if (summary == null) SMALL_LARGE_SPACER.dp else 2.dp)
                     )
             )
 
             if (summary != null) {
                 Summary(
                     text = summary,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    modifier = Modifier.padding(bottom = SMALL_LARGE_SPACER.dp)
                 )
             }
         }
@@ -411,7 +413,7 @@ fun BaseHeading(
 /** A heading with 16dp horizontal padding */
 @Composable
 fun Heading(modifier: Modifier = Modifier, text: String) {
-    BaseHeading(modifier.padding(horizontal = 16.dp), text)
+    BaseHeading(modifier.padding(horizontal = SMALL_LARGE_SPACER.dp), text)
 }
 
 
@@ -510,7 +512,7 @@ fun HorizontallyScrollingChipsWithLabels(
             LazyColumn(
                 userScrollEnabled = false,
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
-                contentPadding = PaddingValues(start = VERTICAL_DIVIDER_SPACING.dp, end = 16.dp)
+                contentPadding = PaddingValues(start = VERTICAL_DIVIDER_SPACING.dp, end = SMALL_LARGE_SPACER.dp)
             ) {
                 for (item in rows) {
                     item {
@@ -713,7 +715,7 @@ fun TitledModalBottomSheet(
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(SMALL_LARGE_SPACER.dp)
         )
         VerticalSpacer()
         content()
@@ -784,7 +786,7 @@ fun ExpressiveTagEntryContainer(
         Column(
             verticalArrangement = Arrangement.Center,
             modifier = Modifier
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = SMALL_LARGE_SPACER.dp)
                 .weight(1f, true)
         ) {
             Text(

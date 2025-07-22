@@ -51,6 +51,7 @@ import moe.apex.rule34.util.MediumLargeVerticalSpacer
 import moe.apex.rule34.util.SMALL_SPACER
 import moe.apex.rule34.util.SmallVerticalSpacer
 import moe.apex.rule34.util.MEDIUM_SPACER
+import moe.apex.rule34.util.SMALL_LARGE_SPACER
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -130,7 +131,7 @@ fun BlockedTagsScreen(navController: NavHostController) {
                 .fillMaxSize()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
             verticalArrangement = Arrangement.spacedBy(2.dp),
-            contentPadding = PaddingValues(start = MEDIUM_SPACER.dp, end = MEDIUM_SPACER.dp, top = 16.dp, bottom = 88.dp), // FAB height + 16dp vertical padding
+            contentPadding = PaddingValues(start = MEDIUM_SPACER.dp, end = MEDIUM_SPACER.dp, top = SMALL_LARGE_SPACER.dp, bottom = 88.dp), // FAB height + 16dp vertical padding
         ) {
             item {
                 Summary(

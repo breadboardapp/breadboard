@@ -53,6 +53,7 @@ import moe.apex.rule34.util.CombinedClickableFilterChip
 import moe.apex.rule34.util.LARGE_SPACER
 import moe.apex.rule34.util.ListItemPosition
 import moe.apex.rule34.util.MEDIUM_SPACER
+import moe.apex.rule34.util.SMALL_LARGE_SPACER
 import moe.apex.rule34.util.SMALL_SPACER
 import moe.apex.rule34.util.TitleSummary
 import moe.apex.rule34.util.TitledModalBottomSheet
@@ -308,10 +309,10 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                             Modifier
                                 .fillMaxWidth()
                                 .padding(
-                                    top = 16.dp,
-                                    bottom = SMALL_SPACER.dp, // Chips have 8dp vertical padding already
-                                    start = 16.dp,
-                                    end = 16.dp
+                                    top = SMALL_LARGE_SPACER.dp,
+                                    bottom = (SMALL_LARGE_SPACER - 8).dp, // Chips have 8dp vertical padding already
+                                    start = SMALL_LARGE_SPACER.dp,
+                                    end = SMALL_LARGE_SPACER.dp
                                 )
                         ) {
                             Text(

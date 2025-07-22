@@ -82,6 +82,7 @@ import moe.apex.rule34.util.FullscreenLoadingSpinner
 import moe.apex.rule34.util.HorizontalFloatingToolbar
 import moe.apex.rule34.util.PromptType
 import moe.apex.rule34.util.MustSetLocation
+import moe.apex.rule34.util.SMALL_LARGE_SPACER
 import moe.apex.rule34.util.StorageLocationSelection
 import moe.apex.rule34.util.downloadImage
 import moe.apex.rule34.util.fixLink
@@ -409,7 +410,7 @@ fun LargeImageView(
                     HorizontalFloatingToolbar(
                         modifier = Modifier
                             .navigationBarsPadding()
-                            .padding(bottom = 16.dp),
+                            .padding(bottom = SMALL_LARGE_SPACER.dp),
                         actions = {
                             for (action in actions) {
                                 val item = actionMapping[action]!!()
