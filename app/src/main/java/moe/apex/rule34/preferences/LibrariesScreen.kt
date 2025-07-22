@@ -30,6 +30,7 @@ import com.mikepenz.aboutlibraries.ui.compose.android.rememberLibraries
 import com.mikepenz.aboutlibraries.ui.compose.util.author
 import com.mikepenz.aboutlibraries.ui.compose.util.strippedLicenseContent
 import moe.apex.rule34.R
+import moe.apex.rule34.util.ExpressiveContainer
 import moe.apex.rule34.util.LargeTitleBar
 import moe.apex.rule34.util.ListItemPosition
 import moe.apex.rule34.util.MainScreenScaffold
@@ -91,7 +92,7 @@ fun LibrariesScreen(navController: NavHostController) {
         ) {
             items(actualLibraries.size, key = { it }) { index ->
                 val library = actualLibraries[index]
-                ExpressivePreferenceContainer(
+                ExpressiveContainer(
                     modifier = Modifier.animateItem(),
                     position = when (index) {
                         0 -> ListItemPosition.TOP

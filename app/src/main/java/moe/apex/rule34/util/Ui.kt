@@ -61,7 +61,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetState
-import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -468,7 +467,7 @@ suspend fun copyText(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun CombinedClickableSuggestionChip(
+fun CombinedClickableFilterChip(
     modifier: Modifier = Modifier,
     label: @Composable () -> Unit,
     onClick: () -> Unit,
@@ -476,17 +475,17 @@ fun CombinedClickableSuggestionChip(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
 
-    Box(modifier = modifier) {
-        SuggestionChip(onClick = { }, label = label, interactionSource = interactionSource)
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .combinedClickable(
-                    onClick = onClick,
-                    onLongClick = onLongClick,
-                    interactionSource = interactionSource,
-                    indication = null
-                )
+    CombinedClickableAction(
+        interactionSource = interactionSource,
+        onClick = onClick,
+        onLongClick = onLongClick
+    ) {
+        FilterChip(
+            onClick = onClick,
+            selected = true,
+            label = label,
+            modifier = modifier,
+            interactionSource = interactionSource
         )
     }
 }
@@ -730,6 +729,27 @@ fun ExpressiveTagEntryContainer(
                 it()
             }
         }
+    }
+}
+
+
+@Composable
+fun ExpressiveContainer(
+    modifier: Modifier = Modifier,
+    position: ListItemPosition,
+    content: @Composable () -> Unit
+) {
+    Surface(
+        modifier = modifier.padding(horizontal = MEDIUM_SPACER.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = RoundedCornerShape(
+            topStart = animateTopCornerSizeForPosition(position),
+            topEnd = animateTopCornerSizeForPosition(position),
+            bottomStart = animateBottomCornerSizeForPosition(position),
+            bottomEnd = animateBottomCornerSizeForPosition(position)
+        )
+    ) {
+        content()
     }
 }
 

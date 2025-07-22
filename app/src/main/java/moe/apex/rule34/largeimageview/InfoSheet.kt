@@ -51,7 +51,7 @@ import moe.apex.rule34.navigation.ImageView
 import moe.apex.rule34.navigation.Results
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.util.CHIP_SPACING
-import moe.apex.rule34.util.CombinedClickableSuggestionChip
+import moe.apex.rule34.util.CombinedClickableFilterChip
 import moe.apex.rule34.util.Heading
 import moe.apex.rule34.util.LargeVerticalSpacer
 import moe.apex.rule34.util.TitledModalBottomSheet
@@ -163,7 +163,7 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
             }
             image.metadata.artist?.let {
                 Heading(text = "Artist")
-                CombinedClickableSuggestionChip(
+                CombinedClickableFilterChip(
                     modifier = Modifier.padding(start = 16.dp),
                     label = { Text(it) },
                     onClick = { chipClick(it) },
@@ -192,7 +192,7 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                     horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp, Alignment.Start)
                 ) { index ->
                     val tag = it.tags[index]
-                    CombinedClickableSuggestionChip(
+                    CombinedClickableFilterChip(
                         label = { Text(tag) },
                         onClick = { chipClick(tag) },
                         onLongClick = { chipLongClick(tag) }

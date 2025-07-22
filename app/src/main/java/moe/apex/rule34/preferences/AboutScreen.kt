@@ -223,7 +223,7 @@ private fun GitHubUserContainer(user: GitHubUser) {
         modifier = Modifier.fillMaxWidth(),
         title = user.name,
         summary = user.url,
-        icon = {
+        leadingIcon = {
             AsyncImage(
                 model = user.avatarUrl,
                 contentDescription = "Avatar",

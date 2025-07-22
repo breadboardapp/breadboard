@@ -64,10 +64,10 @@ import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.ui.theme.prefTitle
 import moe.apex.rule34.ui.theme.searchField
 import moe.apex.rule34.util.DISABLED_OPACITY
+import moe.apex.rule34.util.ExpressiveContainer
 import moe.apex.rule34.util.ExpressiveGroupHeading
 import moe.apex.rule34.util.ListItemPosition
 import moe.apex.rule34.util.SMALL_SPACER
-import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.VerticalSpacer
 import moe.apex.rule34.util.largerShape
 import sh.calvin.reorderable.ReorderableItem
@@ -77,27 +77,6 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 private enum class ImportExport {
     IMPORT,
     EXPORT
-}
-
-
-@Composable
-fun ExpressivePreferenceContainer(
-    modifier: Modifier = Modifier,
-    position: ListItemPosition,
-    content: @Composable () -> Unit
-) {
-    Surface(
-        modifier = modifier.padding(horizontal = MEDIUM_SPACER.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = RoundedCornerShape(
-            topStart = position.topSize,
-            topEnd = position.topSize,
-            bottomStart = position.bottomSize,
-            bottomEnd = position.bottomSize
-        )
-    ) {
-        content()
-    }
 }
 
 
@@ -129,7 +108,7 @@ fun PreferencesGroup(
     )
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         scope.items.forEachIndexed { index, itemContent ->
-            ExpressivePreferenceContainer(
+            ExpressiveContainer(
                 position = when {
                     scope.items.size == 1 -> ListItemPosition.SINGLE_ELEMENT
                     index == 0 -> ListItemPosition.TOP
@@ -164,7 +143,8 @@ fun TitleSummary(
     title: String,
     summary: String? = null,
     enabled: Boolean = true,
-    icon: @Composable (() -> Unit)? = null,
+    leadingIcon: @Composable (() -> Unit)? = null,
+    trailingIcon: @Composable (() -> Unit)? = null,
     onClick: (() -> Unit)? = null
 ) {
     val baseModifier = modifier.heightIn(min = 76.dp)
@@ -174,33 +154,42 @@ fun TitleSummary(
         modifier = finalModifier,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        icon?.let {
+        leadingIcon?.let {
             Spacer(Modifier.width(16.dp))
             Box(Modifier.size(48.dp)) {
                 it()
             }
         }
-        Column {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 16.dp)
+                .alpha(if (enabled) 1f else DISABLED_OPACITY)
+        ) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.prefTitle,
                 modifier = Modifier
                     .padding(
-                        start = 16.dp,
-                        end = 16.dp,
                         top = 16.dp,
                         bottom = (if (summary == null) 16.dp else 2.dp)
                     )
-                    .alpha(if (enabled) 1f else DISABLED_OPACITY),
             )
 
             if (summary != null) {
                 Summary(
                     text = summary,
-                    modifier = Modifier
-                        .padding(bottom = 16.dp, start = 16.dp, end = 16.dp)
-                        .alpha(if (enabled) 1f else DISABLED_OPACITY)
+                    modifier = Modifier.padding(bottom = 16.dp)
                 )
+            }
+        }
+        trailingIcon?.let {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .padding(16.dp)
+            ) {
+                it()
             }
         }
     }
