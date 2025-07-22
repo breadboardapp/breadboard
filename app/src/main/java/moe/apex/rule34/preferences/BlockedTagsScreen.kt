@@ -52,6 +52,7 @@ import moe.apex.rule34.util.SMALL_SPACER
 import moe.apex.rule34.util.SmallVerticalSpacer
 import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
+import moe.apex.rule34.util.Summary
 
 
 @OptIn(ExperimentalMaterial3Api::class)
