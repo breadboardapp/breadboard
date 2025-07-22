@@ -19,13 +19,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -120,6 +117,7 @@ import moe.apex.rule34.util.availableRatingsForCurrentSource
 import moe.apex.rule34.util.availableRatingsForSource
 import moe.apex.rule34.util.copyText
 import moe.apex.rule34.util.largerShape
+import moe.apex.rule34.util.navBarHeight
 import moe.apex.rule34.util.pluralise
 import moe.apex.rule34.util.showToast
 import moe.apex.rule34.viewmodel.BreadboardViewModel
@@ -706,7 +704,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                     .padding(horizontal = MEDIUM_SPACER.dp)
                     .clip(largerShape),
                 verticalArrangement = Arrangement.spacedBy(LARGE_SPACER.dp),
-                contentPadding = PaddingValues(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() * 2)
+                contentPadding = PaddingValues(bottom = navBarHeight * 2)
             ) {
                 if (prefs.searchHistory.isEmpty()) {
                     item {
