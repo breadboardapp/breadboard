@@ -9,6 +9,8 @@ import android.net.NetworkCapabilities
 import android.util.Log
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -404,7 +406,13 @@ fun LargeImageView(
             Box(Modifier.align(Alignment.BottomCenter)) {
                 AnimatedVisibility(
                     visible = toolbarState == ToolbarState.FORCE_SHOW || (isMostlyZoomedOut && toolbarState != ToolbarState.FORCE_HIDE),
-                    enter = slideInVertically(initialOffsetY = { it }),
+                    enter = slideInVertically(
+                        initialOffsetY = { it },
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioLowBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        )
+                    ),
                     exit = slideOutVertically(targetOffsetY = { it })
                 ) {
                     HorizontalFloatingToolbar(
