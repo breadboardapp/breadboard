@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -52,6 +53,7 @@ import moe.apex.rule34.util.CHIP_SPACING
 import moe.apex.rule34.util.CombinedClickableFilterChip
 import moe.apex.rule34.util.LARGE_SPACER
 import moe.apex.rule34.util.ListItemPosition
+import moe.apex.rule34.util.MEDIUM_LARGE_SPACER
 import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
 import moe.apex.rule34.util.TitleSummary
@@ -145,7 +147,7 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                             summary = "Rating"
                         )
                     }
-                    Spacer(Modifier.width(MEDIUM_SPACER.dp))
+                    Spacer(Modifier.width(MEDIUM_LARGE_SPACER.dp))
                     BasicExpressiveContainer(
                         modifier = Modifier.weight(1f),
                         position = ListItemPosition.SINGLE_ELEMENT
@@ -167,14 +169,8 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                                     summary = "Artist",
                                     onClick = { chipClick(it) },
                                     trailingIcon = {
-                                        IconButton(
-                                            onClick = { chipLongClick(it) },
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Rounded.ContentCopy,
-                                                contentDescription = "Copy artist name",
-                                                tint = MaterialTheme.colorScheme.primary
-                                            )
+                                        CopyIcon("artist name") {
+                                            scope.launch { copyText(context, clip, it) }
                                         }
                                     }
                                 )
@@ -188,6 +184,9 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                                         hideAndThen {
                                             navController.navigate(ImageView(image.imageSource, it))
                                         }
+                                    },
+                                    trailingIcon = {
+                                        ChevronRight()
                                     }
                                 )
                             }
@@ -215,6 +214,9 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                                                     )
                                                 }
                                             }
+                                        },
+                                        trailingIcon = {
+                                            ChevronRight()
                                         }
                                     )
                                 }
@@ -226,9 +228,10 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
             item {
                 BasicExpressiveGroup {
                     image.metadata.source?.let {
+                        val title = "Source"
                         item {
                             TitleSummary(
-                                title = "Source",
+                                title = title,
                                 summary = it,
                                 onClick = if (it.isWebLink()) {
                                     {
@@ -237,16 +240,8 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                                 } else null,
                                 trailingIcon = if (it.isWebLink()) {
                                     {
-                                        IconButton(
-                                            onClick = {
-                                                scope.launch { copyText(context, clip, it) }
-                                            }
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Rounded.ContentCopy,
-                                                contentDescription = "Copy source",
-                                                tint = MaterialTheme.colorScheme.primary
-                                            )
+                                        CopyIcon(title) {
+                                            scope.launch { copyText(context, clip, it) }
                                         }
                                     }
                                 } else null
@@ -254,9 +249,10 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                         }
                     }
                     image.metadata.pixivUrl?.let {
+                        val title = "Pixiv URL"
                         item {
                             TitleSummary(
-                                title = "Pixiv URL",
+                                title = title,
                                 summary = it,
                                 onClick = if (it.isWebLink()) {
                                     {
@@ -265,16 +261,8 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                                 } else null,
                                 trailingIcon = if (it.isWebLink()) {
                                     {
-                                        IconButton(
-                                            onClick = {
-                                                scope.launch { copyText(context, clip, it) }
-                                            }
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Rounded.ContentCopy,
-                                                contentDescription = "Copy Pixiv URL",
-                                                tint = MaterialTheme.colorScheme.primary
-                                            )
+                                        CopyIcon(title) {
+                                            scope.launch { copyText(context, clip, it) }
                                         }
                                     }
                                 } else null
@@ -282,22 +270,15 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                         }
                     }
                     image.highestQualityFormatUrl.let {
+                        val title = "File URL"
                         item {
                             TitleSummary(
-                                title = "File URL",
+                                title = title,
                                 summary = it,
                                 onClick = { openUrl(context, it) },
                                 trailingIcon = {
-                                    IconButton(
-                                        onClick = {
-                                            scope.launch { copyText(context, clip, it) }
-                                        }
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Rounded.ContentCopy,
-                                            contentDescription = "Copy image URL",
-                                            tint = MaterialTheme.colorScheme.primary
-                                        )
+                                    CopyIcon(title) {
+                                        scope.launch { copyText(context, clip, it) }
                                     }
                                 }
                             )
@@ -344,6 +325,28 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                 }
             }
         }
+    }
+}
+
+
+@Composable
+private fun ChevronRight() {
+    Icon(
+        imageVector = Icons.Rounded.ChevronRight,
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.primary
+    )
+}
+
+
+@Composable
+private fun CopyIcon(itemType: String, onClick: () -> Unit) {
+    IconButton(onClick = onClick) {
+        Icon(
+            imageVector = Icons.Rounded.ContentCopy,
+            contentDescription = "Copy $itemType",
+            tint = MaterialTheme.colorScheme.primary
+        )
     }
 }
 
