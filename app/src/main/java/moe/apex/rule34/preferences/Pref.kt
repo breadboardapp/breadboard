@@ -46,6 +46,7 @@ import kotlin.collections.toSet
 import androidx.core.net.toUri
 import moe.apex.rule34.BuildConfig
 import moe.apex.rule34.image.ImageBoardAuth
+import moe.apex.rule34.util.MigrationOnlyField
 
 
 val LocalPreferences = compositionLocalOf {
@@ -239,7 +240,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             mapUserPreferences(preferences)
         }
 
-    @OptIn(ExperimentalSerializationApi::class)
+    @OptIn(ExperimentalSerializationApi::class, MigrationOnlyField::class)
     @Suppress("DEPRECATION")
     suspend fun handleMigration(context: Context) {
         val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
@@ -285,8 +286,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
                 images.add(
                     image.copy(
                         metadata = image.metadata?.copy(
-                            tags = null,
-                            groupedTags = if (!image.metadata.tags.isNullOrEmpty()) listOf(TagCategory.GENERAL.group(image.metadata.tags))
+                            uncategorisedTags = null,
+                            groupedTags = if (!image.metadata.uncategorisedTags.isNullOrEmpty()) listOf(TagCategory.GENERAL.group(image.metadata.tags))
                                           else emptyList(),
                             pixivId = image.metadata.pixivId ?: extractPixivId(image.metadata.source)
                         )
@@ -333,17 +334,38 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             }
         }
 
-        // v3 migrations start here
+        // v3 (code 300) migrations start here
 
         /* Versions 270 and 271 had a bug where staggered might still be disabled by default for new
            installs. We'll keep it disabled for people affected by this but it will be enabled by
-           default for new installations of v3. */
+           default for new installations of v3.
+
+           v3 supports having multiple artists for an image. Migrate existing favourites by splitting
+           the artist string by a space. */
         if (lastUsedVersionCode < 300) {
             val data = dataStore.data.first()
             val useStaggeredGrid = data[PreferenceKeys.USE_STAGGERED_GRID]
             if (useStaggeredGrid == null)
                 updatePref(PreferenceKeys.USE_STAGGERED_GRID, false)
+
+            val favImagesByteArray = data[PreferenceKeys.FAVOURITE_IMAGES]
+            if (favImagesByteArray != null) {
+                val favImages: List<Image> = Cbor.decodeFromByteArray(favImagesByteArray)
+                val migrated = favImages.map { image ->
+                    val meta = image.metadata
+                    if (meta != null) {
+                        image.copy(
+                            metadata = meta.copy(
+                                artistsString = null,
+                                artists = meta.artistsString?.split(" ") ?: emptyList()
+                            )
+                        )
+                    } else image
+                }
+                updateFavouriteImages(migrated)
+            }
         }
+
 
         // Place any future migrations above this line by checking the last used version code.
         if (BuildConfig.VERSION_CODE >= lastUsedVersionCode)

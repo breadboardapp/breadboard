@@ -69,7 +69,7 @@ class RecommendationsProvider(
         val tagsFromFavourites = seedImages
             .filter { it.imageSource == imageSource && it.metadata != null }
             .filter { showAllRatings || it.metadata!!.rating == ImageRating.SAFE }
-            .flatMap { it.metadata!!.allTags }
+            .flatMap { it.metadata!!.tags }
             .filterNot { tag -> ignoredTags.contains(tag.lowercase()) }
             .filterNot { tag -> blockedTags.contains(tag.lowercase())}
 
@@ -139,7 +139,7 @@ class RecommendationsProvider(
                     } else true
                 }
                 val wantedResults = safeResults.filter {
-                    it.metadata!!.allTags.none { tag -> blockedTags.contains(tag.lowercase()) }
+                    it.metadata!!.tags.none { tag -> blockedTags.contains(tag.lowercase()) }
                 }
                 if (pageNumber == imageSource.imageBoard.firstPageIndex) {
                     recommendedImages.clear()

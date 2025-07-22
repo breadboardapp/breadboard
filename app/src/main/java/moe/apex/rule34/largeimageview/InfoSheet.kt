@@ -45,6 +45,7 @@ import moe.apex.rule34.image.Image
 import moe.apex.rule34.navigation.ImageView
 import moe.apex.rule34.navigation.Results
 import moe.apex.rule34.preferences.ImageSource
+import moe.apex.rule34.tag.TagCategory
 import moe.apex.rule34.ui.theme.prefTitle
 import moe.apex.rule34.util.BasicExpressiveContainer
 import moe.apex.rule34.util.BasicExpressiveGroup
@@ -159,72 +160,6 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                     }
                 }
             }
-            if (image.metadata.artist != null || image.metadata.parentId != null || image.metadata.hasChildren == true) {
-                item {
-                    BasicExpressiveGroup {
-                        image.metadata.artist?.let {
-                            item {
-                                TitleSummary(
-                                    title = it,
-                                    summary = "Artist",
-                                    onClick = { chipClick(it) },
-                                    trailingIcon = {
-                                        CopyIcon("artist name") {
-                                            scope.launch { copyText(context, clip, it) }
-                                        }
-                                    }
-                                )
-                            }
-                        }
-                        image.metadata.parentId?.let {
-                            item {
-                                TitleSummary(
-                                    title = "View parent image",
-                                    onClick = {
-                                        hideAndThen {
-                                            navController.navigate(ImageView(image.imageSource, it))
-                                        }
-                                    },
-                                    trailingIcon = {
-                                        ChevronRight()
-                                    }
-                                )
-                            }
-                        }
-                        if (image.metadata.hasChildren == true) {
-                            image.id?.let {
-                                item {
-                                    TitleSummary(
-                                        title = "View related images",
-                                        onClick = {
-                                            hideAndThen {
-                                                if (context is DeepLinkActivity) {
-                                                    val intent = createSearchIntent(
-                                                        context,
-                                                        image.imageSource,
-                                                        "parent:$it"
-                                                    )
-                                                    context.startActivity(intent)
-                                                } else {
-                                                    navController.navigate(
-                                                        Results(
-                                                            image.imageSource,
-                                                            listOf("parent:$it")
-                                                        )
-                                                    )
-                                                }
-                                            }
-                                        },
-                                        trailingIcon = {
-                                            ChevronRight()
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
             item {
                 BasicExpressiveGroup {
                     image.metadata.source?.let {
@@ -284,44 +219,74 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                             )
                         }
                     }
-                }
-            }
-            image.metadata.groupedTags.map {
-                item {
-                    BasicExpressiveContainer(position = ListItemPosition.SINGLE_ELEMENT) {
-                        Column(
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(
-                                    top = SMALL_LARGE_SPACER.dp,
-                                    bottom = (SMALL_LARGE_SPACER - 8).dp, // Chips have 8dp vertical padding already
-                                    start = SMALL_LARGE_SPACER.dp,
-                                    end = SMALL_LARGE_SPACER.dp
-                                )
-                        ) {
-                            Text(
-                                text = it.category.label.pluralise(
-                                    it.tags.size,
-                                    it.category.pluralisedLabel
-                                ),
-                                style = MaterialTheme.typography.prefTitle,
+                    image.metadata.parentId?.let {
+                        item {
+                            TitleSummary(
+                                title = "View parent image",
+                                onClick = {
+                                    hideAndThen {
+                                        navController.navigate(ImageView(image.imageSource, it))
+                                    }
+                                },
+                                trailingIcon = {
+                                    ChevronRight()
+                                }
                             )
-                            ContextualFlowRow(
-                                itemCount = it.tags.size,
-                                horizontalArrangement = Arrangement.spacedBy(
-                                    space = CHIP_SPACING.dp,
-                                    alignment = Alignment.Start
-                                )
-                            ) { index ->
-                                val tag = it.tags[index]
-                                CombinedClickableFilterChip(
-                                    label = { Text(tag) },
-                                    onClick = { chipClick(tag) },
-                                    onLongClick = { chipLongClick(tag) }
+                        }
+                    }
+                    if (image.metadata.hasChildren == true) {
+                        image.id?.let {
+                            item {
+                                TitleSummary(
+                                    title = "View related images",
+                                    onClick = {
+                                        hideAndThen {
+                                            if (context is DeepLinkActivity) {
+                                                val intent = createSearchIntent(
+                                                    context,
+                                                    image.imageSource,
+                                                    "parent:$it"
+                                                )
+                                                context.startActivity(intent)
+                                            } else {
+                                                navController.navigate(
+                                                    Results(
+                                                        image.imageSource,
+                                                        listOf("parent:$it")
+                                                    )
+                                                )
+                                            }
+                                        }
+                                    },
+                                    trailingIcon = {
+                                        ChevronRight()
+                                    }
                                 )
                             }
                         }
                     }
+                }
+            }
+            image.metadata.artists.takeIf { it.isNotEmpty() }?.let {
+                item {
+                    TagsContainer(
+                        category = TagCategory.ARTIST,
+                        tags = it,
+                        onChipClick = ::chipClick,
+                        onChipLongClick = ::chipLongClick
+                    )
+                }
+            }
+            /* Artists are stored in their own field rather than in groupedTags.
+               If the artist tags are somehow also in groupedTags, we don't want to show them again. */
+            image.metadata.groupedTags.filter { it.category != TagCategory.ARTIST }.map {
+                item {
+                    TagsContainer(
+                        category = it.category,
+                        tags = it.tags,
+                        onChipClick = ::chipClick,
+                        onChipLongClick = ::chipLongClick
+                    )
                 }
             }
         }
@@ -337,6 +302,52 @@ private fun CopyIcon(itemType: String, onClick: () -> Unit) {
             contentDescription = "Copy $itemType",
             tint = MaterialTheme.colorScheme.primary
         )
+    }
+}
+
+
+@OptIn(ExperimentalLayoutApi::class)
+@Suppress("DEPRECATION")
+@Composable
+private fun TagsContainer(
+    category: TagCategory,
+    tags: List<String>,
+    onChipClick: (String) -> Unit,
+    onChipLongClick: (String) -> Unit
+) {
+    BasicExpressiveContainer(position = ListItemPosition.SINGLE_ELEMENT) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(
+                    top = SMALL_LARGE_SPACER.dp,
+                    bottom = (SMALL_LARGE_SPACER - 8).dp, // Chips have 8dp vertical padding already
+                    start = SMALL_LARGE_SPACER.dp,
+                    end = SMALL_LARGE_SPACER.dp
+                )
+        ) {
+            Text(
+                text = category.label.pluralise(
+                    tags.size,
+                    category.pluralisedLabel
+                ),
+                style = MaterialTheme.typography.prefTitle,
+            )
+            ContextualFlowRow(
+                itemCount = tags.size,
+                horizontalArrangement = Arrangement.spacedBy(
+                    space = CHIP_SPACING.dp,
+                    alignment = Alignment.Start
+                )
+            ) { index ->
+                val tag = tags[index]
+                CombinedClickableFilterChip(
+                    label = { Text(tag) },
+                    onClick = { onChipClick(tag) },
+                    onLongClick = { onChipLongClick(tag) }
+                )
+            }
+        }
     }
 }
 

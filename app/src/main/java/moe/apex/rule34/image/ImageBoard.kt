@@ -281,7 +281,7 @@ object Danbooru : ImageBoard {
         val metaParentId = e.getString("parent_id").takeIf { it != "null" }
         val metaHasChildren = e.getBoolean("has_children")
         val metaSource = e.getString("source").takeIf { it.isNotEmpty() }
-        val metaArtist = tagStringArtist.takeIf { it.isNotEmpty() }
+        val metaArtists = tagStringArtist.takeIf { it.isNotBlank() }?.split(" ")?.filter { it.isNotBlank() } ?: emptyList()
         val metaGroupedTags = listOf(
             TagCategory.CHARACTER.group(tagCharacter),
             TagCategory.COPYRIGHT.group(tagCopyright),
@@ -294,7 +294,7 @@ object Danbooru : ImageBoard {
         val metadata = ImageMetadata(
             parentId = metaParentId,
             hasChildren = metaHasChildren,
-            artist = metaArtist,
+            artists = metaArtists,
             source = metaSource,
             groupedTags = metaGroupedTags,
             rating = metaRating,

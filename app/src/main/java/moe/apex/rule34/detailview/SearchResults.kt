@@ -77,7 +77,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
     // In case they explicitly search for a blocked tag
     val actuallyBlockedTags = prefs.blockedTags.filter { it !in tagList }
     val imagesToDisplay = allImages.filter {
-        it.metadata!!.allTags.none { tag -> actuallyBlockedTags.contains(tag.lowercase()) } &&
+        it.metadata!!.tags.none { tag -> actuallyBlockedTags.contains(tag.lowercase()) } &&
         if (prefs.filterRatingsLocally) it.metadata.rating in prefs.ratingsFilter else true
     }
 
