@@ -240,6 +240,18 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             mapUserPreferences(preferences)
         }
 
+
+    fun ensureNotMalformed(target: Preferences): Boolean {
+        try {
+            mapUserPreferences(target)
+            return true
+        } catch (e: Exception) {
+            Log.e("preferences", "Malformed preferences data.", e)
+            return false
+        }
+    }
+
+
     @OptIn(ExperimentalSerializationApi::class, MigrationOnlyField::class)
     @Suppress("DEPRECATION")
     suspend fun handleMigration(context: Context) {

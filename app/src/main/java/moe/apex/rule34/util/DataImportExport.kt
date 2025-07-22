@@ -4,12 +4,9 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -83,14 +80,14 @@ fun preImportChecks(currentPreferences: Prefs, json: JSONObject): Result<Boolean
 }
 
 
-private suspend fun importSettings(context: Context, data: JSONObject) {
+private fun importSettings(tempPrefs: MutablePreferences, data: JSONObject) {
     /* We can't check the inner type of each preference key because
        Preferences.Key<Int> == Preferences.Key<String> when the key names match.
        We also can't determine the type of each key so we can't directly assign prefValue to it, so
        we'll just create "new" ones with the same type and name as the originals instead.
      */
     val thisCategory = data.getJSONObject(PrefCategory.SETTING.name)
-    context.dataStore.edit {
+    tempPrefs.apply {
         for (key in UserPreferencesRepository.keyMetaMapping.keys) {
             if (UserPreferencesRepository.keyMetaMapping[key]!!.category != PrefCategory.SETTING) {
                 continue
@@ -99,26 +96,26 @@ private suspend fun importSettings(context: Context, data: JSONObject) {
             val prefValue = try {
                 thisCategory.get(key.name)
             } catch (_: JSONException) {
-                it.remove(key)
+                remove(key)
                 continue
             } // Pref has never been set in the backup, we should use the default.
 
             when (prefValue) {
                 is String -> {
                     if (!prefValue.startsWith("[")) {
-                        it[stringPreferencesKey(key.name)] = prefValue
+                        this[stringPreferencesKey(key.name)] = prefValue
                     } else {
                         val set = mutableSetOf<String>()
                         val ja = JSONArray(prefValue)
                         for (index in 0..<ja.length()) {
                             set.add(ja.getString(index))
                         }
-                        it[stringSetPreferencesKey(key.name)] = set
+                        this[stringSetPreferencesKey(key.name)] = set
                     } // Because the sets are actually serialised as strings
                 }
 
-                is Int -> it[intPreferencesKey(key.name)] = prefValue
-                is Boolean -> it[booleanPreferencesKey(key.name)] = prefValue
+                is Int -> this[intPreferencesKey(key.name)] = prefValue
+                is Boolean -> this[booleanPreferencesKey(key.name)] = prefValue
                 else -> throw NotImplementedError("Settings key with unhandled type: ${key.name}")
             }
         }
@@ -127,22 +124,22 @@ private suspend fun importSettings(context: Context, data: JSONObject) {
 
 
 @OptIn(ExperimentalSerializationApi::class)
-private suspend fun importFavouriteImages(context: Context, data: JSONObject) {
+private fun importFavouriteImages(editable: MutablePreferences, data: JSONObject) {
     val images = Cbor.decodeFromHexString(data.getString(PrefCategory.FAVOURITE_IMAGES.name)) as List<Image>
-    updateByteArrayPref(context, data, PreferenceKeys.FAVOURITE_IMAGES, PrefCategory.FAVOURITE_IMAGES.name, images)
+    updateByteArrayPref(editable, data, PreferenceKeys.FAVOURITE_IMAGES, PrefCategory.FAVOURITE_IMAGES.name, images)
 }
 
 
 @OptIn(ExperimentalSerializationApi::class)
-private suspend fun importSearchHistory(context: Context, data: JSONObject) {
+private fun importSearchHistory(editable: MutablePreferences, data: JSONObject) {
     val sh = Cbor.decodeFromHexString(data.getString(PrefCategory.SEARCH_HISTORY.name)) as List<SearchHistoryEntry>
-    updateByteArrayPref(context, data, PreferenceKeys.SEARCH_HISTORY, PrefCategory.SEARCH_HISTORY.name, sh)
+    updateByteArrayPref(editable, data, PreferenceKeys.SEARCH_HISTORY, PrefCategory.SEARCH_HISTORY.name, sh)
 }
 
 
 @OptIn(ExperimentalSerializationApi::class)
-private suspend inline fun <reified T> updateByteArrayPref(
-    context: Context,
+private inline fun <reified T> updateByteArrayPref(
+    editable: MutablePreferences,
     data: JSONObject,
     prefKey: Preferences.Key<ByteArray>,
     categoryName: String,
@@ -150,7 +147,7 @@ private suspend inline fun <reified T> updateByteArrayPref(
 ) {
     val hex = data.optString(categoryName)
     if (hex.isNotEmpty()) {
-        context.dataStore.edit { it[prefKey] = Cbor.encodeToByteArray(obj) }
+        editable[prefKey] = Cbor.encodeToByteArray(obj)
     }
 }
 
@@ -165,6 +162,7 @@ suspend fun importData(context: Context, data: JSONObject, categories: Collectio
     Log.i("Importing", data.toString())
     val current = context.dataStore.data.first()
     val currentCopy = current.toPreferences()
+    val editable = currentCopy.toMutablePreferences()
 
     try {
         context.dataStore.edit {
@@ -174,16 +172,19 @@ suspend fun importData(context: Context, data: JSONObject, categories: Collectio
         for (category in categories) {
             when (category) {
                 PrefCategory.BUILD -> {
-                    context.dataStore.edit {
-                        it[PreferenceKeys.LAST_USED_VERSION_CODE] = data.getInt(category.name)
-                    }
+                    editable[PreferenceKeys.LAST_USED_VERSION_CODE] = data.getInt(category.name)
                 }
-                PrefCategory.SETTING -> importSettings(context, data)
-                PrefCategory.FAVOURITE_IMAGES -> importFavouriteImages(context, data)
-                PrefCategory.SEARCH_HISTORY -> importSearchHistory(context, data)
+                PrefCategory.SETTING -> importSettings(editable, data)
+                PrefCategory.FAVOURITE_IMAGES -> importFavouriteImages(editable, data)
+                PrefCategory.SEARCH_HISTORY -> importSearchHistory(editable, data)
             }
         }
 
+        if (!context.prefs.ensureNotMalformed(editable)) {
+            throw ImportException("The data is malformed or incomplete. Aborting.")
+        }
+
+        context.dataStore.updateData { editable }
         context.prefs.handleMigration(context)
     } catch (e: Exception) {
         Log.e("Importing", null, e)
