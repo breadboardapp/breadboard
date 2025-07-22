@@ -1,8 +1,5 @@
 package moe.apex.rule34.preferences
 
-import android.content.ActivityNotFoundException
-import android.content.Context
-import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -47,7 +44,6 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.rotationMatrix
-import androidx.core.net.toUri
 import androidx.graphics.shapes.CornerRounding
 import androidx.graphics.shapes.RoundedPolygon
 import androidx.graphics.shapes.star
@@ -61,12 +57,14 @@ import kotlinx.coroutines.delay
 import moe.apex.rule34.BuildConfig
 import moe.apex.rule34.R
 import moe.apex.rule34.navigation.LibrariesSettings
+import moe.apex.rule34.util.ExpressiveGroup
 import moe.apex.rule34.util.LARGE_SPACER
 import moe.apex.rule34.util.LargeTitleBar
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.SmallVerticalSpacer
 import moe.apex.rule34.util.MEDIUM_SPACER
-import moe.apex.rule34.util.showToast
+import moe.apex.rule34.util.TitleSummary
+import moe.apex.rule34.util.openUrl
 import kotlin.math.max
 
 
@@ -179,21 +177,21 @@ fun AboutScreen(navController: NavHostController) {
                 }
             }
             item {
-                PreferencesGroup("Maintainer") {
+                ExpressiveGroup("Maintainer") {
                     item {
                         GitHubUserContainer(apex2504)
                     }
                 }
             }
             item {
-                PreferencesGroup("Original concept") {
+                ExpressiveGroup("Original concept") {
                     item {
                         GitHubUserContainer(devoxin)
                     }
                 }
             }
             item {
-                PreferencesGroup("Breadboard") {
+                ExpressiveGroup("Breadboard") {
                     item {
                         TitleSummary(
                             modifier = Modifier.fillMaxWidth(),
@@ -259,14 +257,3 @@ private class RoundedPolygonShape(private val polygon: RoundedPolygon) : Shape {
     }
 }
 
-
-private fun openUrl(context: Context, url: String) {
-    val intent = Intent(Intent.ACTION_VIEW)
-    intent.data = url.toUri()
-    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK + Intent.FLAG_ACTIVITY_CLEAR_TOP
-    try {
-        context.startActivity(intent)
-    } catch (_: ActivityNotFoundException) {
-        showToast(context, "Unable to open profile.")
-    }
-}

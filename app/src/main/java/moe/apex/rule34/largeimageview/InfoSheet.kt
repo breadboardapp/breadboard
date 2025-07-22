@@ -8,22 +8,22 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ContextualFlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,14 +33,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.LinkAnnotation
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLinkStyles
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
@@ -50,13 +45,22 @@ import moe.apex.rule34.image.Image
 import moe.apex.rule34.navigation.ImageView
 import moe.apex.rule34.navigation.Results
 import moe.apex.rule34.preferences.ImageSource
+import moe.apex.rule34.ui.theme.prefTitle
+import moe.apex.rule34.util.BasicExpressiveContainer
+import moe.apex.rule34.util.BasicExpressiveGroup
 import moe.apex.rule34.util.CHIP_SPACING
 import moe.apex.rule34.util.CombinedClickableFilterChip
-import moe.apex.rule34.util.Heading
-import moe.apex.rule34.util.LargeVerticalSpacer
+import moe.apex.rule34.util.LARGE_SPACER
+import moe.apex.rule34.util.ListItemPosition
+import moe.apex.rule34.util.MEDIUM_SPACER
+import moe.apex.rule34.util.SMALL_SPACER
+import moe.apex.rule34.util.TitleSummary
 import moe.apex.rule34.util.TitledModalBottomSheet
 import moe.apex.rule34.util.copyText
 import moe.apex.rule34.util.isWebLink
+import moe.apex.rule34.util.largerShape
+import moe.apex.rule34.util.navBarHeight
+import moe.apex.rule34.util.openUrl
 import moe.apex.rule34.util.pluralise
 
 
@@ -102,7 +106,7 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
     state = rememberModalBottomSheetState(
         skipPartiallyExpanded = false,
         confirmValueChange = { newValue ->
-            if (newValue == SheetValue.PartiallyExpanded ) {
+            if (newValue == SheetValue.PartiallyExpanded) {
                 if (previousSheetValue == SheetValue.Expanded) {
                     hideAndThen()
                     return@rememberModalBottomSheetState false
@@ -110,131 +114,232 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                     previousSheetValue = newValue
                     return@rememberModalBottomSheetState true
                 }
-            }
-            else {
+            } else {
                 previousSheetValue = newValue
                 return@rememberModalBottomSheetState true
             }
         }
     )
 
-    /* The padding and window insets allow the content to draw behind the nav bar while ensuring
-       the sheet doesn't expand to behind the status bar. */
     TitledModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = state,
         title = "About this image"
     ) {
-        Column(
+        LazyColumn(
             modifier = Modifier
-                .verticalScroll(rememberScrollState())
                 .fillMaxWidth()
+                .padding(horizontal = MEDIUM_SPACER.dp)
+                .clip(largerShape),
+            verticalArrangement = Arrangement.spacedBy(LARGE_SPACER.dp),
+            contentPadding = PaddingValues(bottom = navBarHeight * 2)
         ) {
-            image.metadata.parentId?.let {
-                TextButton(
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                    onClick = {
-                        hideAndThen {
-                            navController.navigate(ImageView(image.imageSource, it))
-                        }
+            item {
+                Row {
+                    BasicExpressiveContainer(
+                        modifier = Modifier.weight(1f),
+                        position = ListItemPosition.SINGLE_ELEMENT
+                    ) {
+                        TitleSummary(
+                            title = image.metadata.rating.label,
+                            summary = "Rating"
+                        )
                     }
-                ) {
-                    Text("View parent image")
+                    Spacer(Modifier.width(MEDIUM_SPACER.dp))
+                    BasicExpressiveContainer(
+                        modifier = Modifier.weight(1f),
+                        position = ListItemPosition.SINGLE_ELEMENT
+                    ) {
+                        TitleSummary(
+                            title = image.imageSource.label,
+                            summary = "Imageboard"
+                        )
+                    }
                 }
             }
-            if (image.metadata.hasChildren == true) {
-                image.id?.let {
-                    TextButton(
-                        modifier = Modifier.align(Alignment.CenterHorizontally),
-                        onClick = {
-                            hideAndThen {
-                                if (context is DeepLinkActivity) {
-                                    val intent = createSearchIntent(context, image.imageSource, "parent:$it")
-                                    context.startActivity(intent)
-                                } else {
-                                    navController.navigate(Results(image.imageSource, listOf("parent:$it")))
+            if (image.metadata.artist != null || image.metadata.parentId != null || image.metadata.hasChildren == true) {
+                item {
+                    BasicExpressiveGroup {
+                        image.metadata.artist?.let {
+                            item {
+                                TitleSummary(
+                                    title = it,
+                                    summary = "Artist",
+                                    onClick = { chipClick(it) },
+                                    trailingIcon = {
+                                        FilledTonalIconButton(
+                                            onClick = { chipLongClick(it) }
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.ContentCopy,
+                                                contentDescription = "Copy artist name"
+                                            )
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                        image.metadata.parentId?.let {
+                            item {
+                                TitleSummary(
+                                    title = "View parent image",
+                                    onClick = {
+                                        hideAndThen {
+                                            navController.navigate(ImageView(image.imageSource, it))
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                        if (image.metadata.hasChildren == true) {
+                            image.id?.let {
+                                item {
+                                    TitleSummary(
+                                        title = "View related images",
+                                        onClick = {
+                                            hideAndThen {
+                                                if (context is DeepLinkActivity) {
+                                                    val intent = createSearchIntent(
+                                                        context,
+                                                        image.imageSource,
+                                                        "parent:$it"
+                                                    )
+                                                    context.startActivity(intent)
+                                                } else {
+                                                    navController.navigate(
+                                                        Results(
+                                                            image.imageSource,
+                                                            listOf("parent:$it")
+                                                        )
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    )
                                 }
                             }
                         }
-                    ) {
-                        Text("View related images")
                     }
                 }
             }
-            image.metadata.artist?.let {
-                Heading(text = "Artist")
-                CombinedClickableFilterChip(
-                    modifier = Modifier.padding(start = 16.dp),
-                    label = { Text(it) },
-                    onClick = { chipClick(it) },
-                    onLongClick = { chipLongClick(it) }
-                )
-                LargeVerticalSpacer()
-            }
-            image.metadata.source?.let {
-                Heading(text = "Source")
-                if (it.isWebLink()) PaddedUrlText(it) else PaddedText(it)
-                LargeVerticalSpacer()
-            }
-            Heading(text = "Rating")
-            PaddedText(image.metadata.rating.label)
-            LargeVerticalSpacer()
-            image.metadata.pixivUrl?.let {
-                Heading(text = "Pixiv URL")
-                PaddedUrlText(it)
-                LargeVerticalSpacer()
+            item {
+                BasicExpressiveGroup {
+                    image.metadata.source?.let {
+                        item {
+                            TitleSummary(
+                                title = "Source",
+                                summary = it,
+                                onClick = if (it.isWebLink()) {
+                                    {
+                                        openUrl(context, it)
+                                    }
+                                } else null,
+                                trailingIcon = if (it.isWebLink()) {
+                                    {
+                                        FilledTonalIconButton(
+                                            onClick = {
+                                                scope.launch { copyText(context, clip, it) }
+                                            }
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.ContentCopy,
+                                                contentDescription = "Copy source"
+                                            )
+                                        }
+                                    }
+                                } else null
+                            )
+                        }
+                    }
+                    image.metadata.pixivUrl?.let {
+                        item {
+                            TitleSummary(
+                                title = "Pixiv URL",
+                                summary = it,
+                                onClick = if (it.isWebLink()) {
+                                    {
+                                        openUrl(context, it)
+                                    }
+                                } else null,
+                                trailingIcon = if (it.isWebLink()) {
+                                    {
+                                        FilledTonalIconButton(
+                                            onClick = {
+                                                scope.launch { copyText(context, clip, it) }
+                                            }
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.ContentCopy,
+                                                contentDescription = "Copy Pixiv URL"
+                                            )
+                                        }
+                                    }
+                                } else null
+                            )
+                        }
+                    }
+                    image.highestQualityFormatUrl.let {
+                        item {
+                            TitleSummary(
+                                title = "File URL",
+                                summary = it,
+                                onClick = { openUrl(context, it) },
+                                trailingIcon = {
+                                    FilledTonalIconButton(
+                                        onClick = {
+                                            scope.launch { copyText(context, clip, it) }
+                                        }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.ContentCopy,
+                                            contentDescription = "Copy image URL"
+                                        )
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
             }
             image.metadata.groupedTags.map {
-                Heading(text = it.category.label.pluralise(it.tags.size, it.category.pluralisedLabel))
-                ContextualFlowRow(
-                    itemCount = it.tags.size,
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp, Alignment.Start)
-                ) { index ->
-                    val tag = it.tags[index]
-                    CombinedClickableFilterChip(
-                        label = { Text(tag) },
-                        onClick = { chipClick(tag) },
-                        onLongClick = { chipLongClick(tag) }
-                    )
+                item {
+                    BasicExpressiveContainer(position = ListItemPosition.SINGLE_ELEMENT) {
+                        Column(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(
+                                    top = 16.dp,
+                                    bottom = SMALL_SPACER.dp, // Chips have 8dp vertical padding already
+                                    start = 16.dp,
+                                    end = 16.dp
+                                )
+                        ) {
+                            Text(
+                                text = it.category.label.pluralise(
+                                    it.tags.size,
+                                    it.category.pluralisedLabel
+                                ),
+                                style = MaterialTheme.typography.prefTitle,
+                            )
+                            ContextualFlowRow(
+                                itemCount = it.tags.size,
+                                horizontalArrangement = Arrangement.spacedBy(
+                                    space = CHIP_SPACING.dp,
+                                    alignment = Alignment.Start
+                                )
+                            ) { index ->
+                                val tag = it.tags[index]
+                                CombinedClickableFilterChip(
+                                    label = { Text(tag) },
+                                    onClick = { chipClick(tag) },
+                                    onLongClick = { chipLongClick(tag) }
+                                )
+                            }
+                        }
+                    }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
             }
-
-            Spacer(Modifier.height(WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() * 2))
         }
-    }
-}
-
-
-@Composable
-private fun PaddedText(text: String) {
-    Text(
-        modifier = Modifier.padding(horizontal = 16.dp),
-        text = text
-    )
-}
-
-
-@Composable
-private fun PaddedUrlText(text: String) {
-    val annotatedString = buildAnnotatedString {
-        withLink(LinkAnnotation.Url(
-            url = text,
-            styles = TextLinkStyles(SpanStyle(
-                color = MaterialTheme.colorScheme.secondary,
-                textDecoration = TextDecoration.Underline
-            ))
-        )) {
-            append(text)
-        }
-    }
-
-    SelectionContainer {
-        Text(
-            text = annotatedString,
-            modifier = Modifier.padding(horizontal = 16.dp)
-        )
     }
 }
 

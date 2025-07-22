@@ -49,6 +49,7 @@ import moe.apex.rule34.navigation.AboutSettings
 import moe.apex.rule34.navigation.BlockedTagsSettings
 import moe.apex.rule34.prefs
 import moe.apex.rule34.util.ExportDirectoryHandler
+import moe.apex.rule34.util.ExpressiveGroup
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.StorageLocationSelection
 import moe.apex.rule34.util.ImportException
@@ -57,6 +58,7 @@ import moe.apex.rule34.util.LARGE_SPACER
 import moe.apex.rule34.util.PromptType
 import moe.apex.rule34.util.SmallVerticalSpacer
 import moe.apex.rule34.util.MEDIUM_SPACER
+import moe.apex.rule34.util.TitleSummary
 import moe.apex.rule34.util.exportData
 import moe.apex.rule34.util.importData
 import moe.apex.rule34.util.preImportChecks
@@ -229,7 +231,7 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
             verticalArrangement = Arrangement.spacedBy(LARGE_SPACER.dp)
         ) {
             item {
-                PreferencesGroup("General") {
+                ExpressiveGroup("General") {
                     item {
                         EnumPref(
                             title = "Image source",
@@ -301,7 +303,7 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
             }
 
             item {
-                PreferencesGroup(title = "Content filtering") {
+                ExpressiveGroup(title = "Content filtering") {
                     item {
                         TitleSummary(
                             modifier = Modifier.fillMaxWidth(),
@@ -360,7 +362,7 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
             }
 
             item {
-                PreferencesGroup(title = "Interaction and layout") {
+                ExpressiveGroup(title = "Interaction and layout") {
                     item {
                         EnumPref(
                             title = "Start page",
@@ -410,7 +412,7 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
             }
 
             item {
-                PreferencesGroup("Data and storage") {
+                ExpressiveGroup("Data and storage") {
                     item {
                         EnumPref(
                             title = "Data saver",
@@ -441,7 +443,7 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
             }
 
             item {
-                PreferencesGroup(title = "Import/export") {
+                ExpressiveGroup(title = "Import/export") {
                     item {
                         TitleSummary(
                             modifier = Modifier.fillMaxWidth(),

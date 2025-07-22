@@ -35,6 +35,7 @@ import moe.apex.rule34.util.LargeTitleBar
 import moe.apex.rule34.util.ListItemPosition
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.MEDIUM_SPACER
+import moe.apex.rule34.util.TitleSummary
 
 
 @OptIn(ExperimentalMaterial3Api::class)

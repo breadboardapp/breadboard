@@ -3,13 +3,11 @@ package moe.apex.rule34.preferences
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -61,13 +59,10 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import moe.apex.rule34.ui.theme.BreadboardTheme
-import moe.apex.rule34.ui.theme.prefTitle
 import moe.apex.rule34.ui.theme.searchField
-import moe.apex.rule34.util.DISABLED_OPACITY
-import moe.apex.rule34.util.ExpressiveContainer
-import moe.apex.rule34.util.ExpressiveGroupHeading
-import moe.apex.rule34.util.ListItemPosition
 import moe.apex.rule34.util.SMALL_SPACER
+import moe.apex.rule34.util.Summary
+import moe.apex.rule34.util.TitleSummary
 import moe.apex.rule34.util.VerticalSpacer
 import moe.apex.rule34.util.largerShape
 import sh.calvin.reorderable.ReorderableItem
@@ -77,122 +72,6 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 private enum class ImportExport {
     IMPORT,
     EXPORT
-}
-
-
-interface PreferencesGroupScope {
-    fun item(content: @Composable () -> Unit)
-}
-
-
-private class PreferencesGroupScopeImpl : PreferencesGroupScope {
-    val items = mutableListOf<@Composable () -> Unit>()
-
-    override fun item(content: @Composable () -> Unit) {
-        items.add(content)
-    }
-}
-
-
-@Composable
-fun PreferencesGroup(
-    title: String,
-    content: @Composable PreferencesGroupScope.() -> Unit
-) {
-    val scope = PreferencesGroupScopeImpl()
-    scope.content()
-
-    ExpressiveGroupHeading(
-        modifier = Modifier.padding(bottom = SMALL_SPACER.dp),
-        text = title
-    )
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        scope.items.forEachIndexed { index, itemContent ->
-            ExpressiveContainer(
-                position = when {
-                    scope.items.size == 1 -> ListItemPosition.SINGLE_ELEMENT
-                    index == 0 -> ListItemPosition.TOP
-                    index == scope.items.lastIndex -> ListItemPosition.BOTTOM
-                    else -> ListItemPosition.MIDDLE
-                }
-            ) {
-                itemContent()
-            }
-        }
-    }
-}
-
-
-@Composable
-fun Summary(
-    modifier: Modifier = Modifier,
-    text: String
-) {
-    Text(
-        text = text,
-        color = Color.Gray,
-        style = MaterialTheme.typography.bodySmall,
-        modifier = modifier
-    )
-}
-
-
-@Composable
-fun TitleSummary(
-    modifier: Modifier = Modifier,
-    title: String,
-    summary: String? = null,
-    enabled: Boolean = true,
-    leadingIcon: @Composable (() -> Unit)? = null,
-    trailingIcon: @Composable (() -> Unit)? = null,
-    onClick: (() -> Unit)? = null
-) {
-    val baseModifier = modifier.heightIn(min = 76.dp)
-    val finalModifier = onClick?.let { baseModifier.clickable(enabled) { it() } } ?: baseModifier
-
-    Row(
-        modifier = finalModifier,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        leadingIcon?.let {
-            Spacer(Modifier.width(16.dp))
-            Box(Modifier.size(48.dp)) {
-                it()
-            }
-        }
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 16.dp)
-                .alpha(if (enabled) 1f else DISABLED_OPACITY)
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.prefTitle,
-                modifier = Modifier
-                    .padding(
-                        top = 16.dp,
-                        bottom = (if (summary == null) 16.dp else 2.dp)
-                    )
-            )
-
-            if (summary != null) {
-                Summary(
-                    text = summary,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-            }
-        }
-        trailingIcon?.let {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .padding(16.dp)
-            ) {
-                it()
-            }
-        }
-    }
 }
 
 

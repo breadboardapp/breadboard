@@ -38,6 +38,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -77,7 +78,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.LocalContext
@@ -95,6 +98,7 @@ import moe.apex.rule34.history.SearchHistoryEntry
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.largeimageview.LargeImageView
 import moe.apex.rule34.prefs
+import moe.apex.rule34.ui.theme.prefTitle
 
 
 private const val LARGE_CORNER_DP = 20
@@ -310,6 +314,81 @@ fun MainScreenScaffold(
             bottom = if (addBottomPadding) it.calculateBottomPadding() + BOTTOM_APP_BAR_HEIGHT.dp else 0.dp
         )
         content(newPadding)
+    }
+}
+
+
+
+
+@Composable
+fun Summary(
+    modifier: Modifier = Modifier,
+    text: String
+) {
+    Text(
+        text = text,
+        color = Color.Gray,
+        style = MaterialTheme.typography.bodySmall,
+        modifier = modifier
+    )
+}
+
+
+@Composable
+fun TitleSummary(
+    modifier: Modifier = Modifier,
+    title: String,
+    summary: String? = null,
+    enabled: Boolean = true,
+    leadingIcon: @Composable (() -> Unit)? = null,
+    trailingIcon: @Composable (() -> Unit)? = null,
+    onClick: (() -> Unit)? = null
+) {
+    val baseModifier = modifier.heightIn(min = 76.dp)
+    val finalModifier = onClick?.let { baseModifier.clickable(enabled) { it() } } ?: baseModifier
+
+    Row(
+        modifier = finalModifier,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        leadingIcon?.let {
+            Spacer(Modifier.width(16.dp))
+            Box(Modifier.size(48.dp)) {
+                it()
+            }
+        }
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 16.dp)
+                .alpha(if (enabled) 1f else DISABLED_OPACITY)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.prefTitle,
+                modifier = Modifier
+                    .padding(
+                        top = 16.dp,
+                        bottom = (if (summary == null) 16.dp else 2.dp)
+                    )
+            )
+
+            if (summary != null) {
+                Summary(
+                    text = summary,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+            }
+        }
+        trailingIcon?.let {
+            Box(
+                modifier = Modifier
+                    .padding(end = SMALL_SPACER.dp)
+                    .size(48.dp)
+            ) {
+                it()
+            }
+        }
     }
 }
 
@@ -733,14 +812,33 @@ fun ExpressiveTagEntryContainer(
 }
 
 
+/** A higher level expressive container.
+    This has medium width horizontal padding by default so acts as a drop-in container ideal for
+    placement in columns and pairs well with the [ExpressiveGroupHeading]. */
 @Composable
 fun ExpressiveContainer(
     modifier: Modifier = Modifier,
     position: ListItemPosition,
     content: @Composable () -> Unit
 ) {
-    Surface(
+    BasicExpressiveContainer(
         modifier = modifier.padding(horizontal = MEDIUM_SPACER.dp),
+        position = position,
+        content = content
+    )
+}
+
+
+/** A lower level expressive container.
+    This does not add padding by default so allows for more flexible placement. */
+@Composable
+fun BasicExpressiveContainer(
+    modifier: Modifier = Modifier,
+    position: ListItemPosition,
+    content: @Composable () -> Unit
+) {
+    Surface(
+        modifier = modifier,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = RoundedCornerShape(
             topStart = animateTopCornerSizeForPosition(position),
@@ -750,6 +848,86 @@ fun ExpressiveContainer(
         )
     ) {
         content()
+    }
+}
+
+
+interface ExpressiveGroupScope {
+    fun item(content: @Composable () -> Unit)
+}
+
+
+private class PreferencesGroupScopeImpl : ExpressiveGroupScope {
+    val items = mutableListOf<@Composable () -> Unit>()
+
+    override fun item(content: @Composable () -> Unit) {
+        items.add(content)
+    }
+}
+
+
+@Composable
+fun ExpressiveGroup(
+    title: String? = null,
+    content: @Composable ExpressiveGroupScope.() -> Unit
+) {
+    val scope = PreferencesGroupScopeImpl()
+    scope.content()
+
+    title?.let {
+        ExpressiveGroupHeading(
+            modifier = Modifier.padding(bottom = SMALL_SPACER.dp),
+            text = title
+        )
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        scope.items.forEachIndexed { index, itemContent ->
+            ExpressiveContainer(
+                position = when {
+                    scope.items.size == 1 -> ListItemPosition.SINGLE_ELEMENT
+                    index == 0 -> ListItemPosition.TOP
+                    index == scope.items.lastIndex -> ListItemPosition.BOTTOM
+                    else -> ListItemPosition.MIDDLE
+                }
+            ) {
+                itemContent()
+            }
+        }
+    }
+}
+
+
+@Composable
+fun BasicExpressiveGroup(
+    title: String? = null,
+    content: @Composable ExpressiveGroupScope.() -> Unit
+) {
+    val scope = PreferencesGroupScopeImpl()
+    scope.content()
+
+    title?.let {
+        BaseHeading(
+            modifier = Modifier.padding(
+                start = SMALL_SPACER.dp,
+                end = SMALL_SPACER.dp,
+                bottom = SMALL_SPACER.dp
+            ),
+            text = title
+        )
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        scope.items.forEachIndexed { index, itemContent ->
+            BasicExpressiveContainer(
+                position = when {
+                    scope.items.size == 1 -> ListItemPosition.SINGLE_ELEMENT
+                    index == 0 -> ListItemPosition.TOP
+                    index == scope.items.lastIndex -> ListItemPosition.BOTTOM
+                    else -> ListItemPosition.MIDDLE
+                }
+            ) {
+                itemContent()
+            }
+        }
     }
 }
 
