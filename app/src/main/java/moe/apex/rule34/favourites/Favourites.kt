@@ -96,7 +96,7 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
             ScrollToTopArrow(
                 staggeredGridState = viewModel.staggeredGridState,
                 uniformGridState = viewModel.uniformGridState,
-                animate = false
+                animate = prefs.alwaysAnimateScroll
             ) { bottomBarVisibleState.value = true }
         }
     ) { padding ->

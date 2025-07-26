@@ -22,6 +22,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,6 +48,7 @@ import moe.apex.rule34.home.HomeScreen
 import moe.apex.rule34.largeimageview.LazyLargeImageView
 import moe.apex.rule34.preferences.AboutScreen
 import moe.apex.rule34.preferences.BlockedTagsScreen
+import moe.apex.rule34.preferences.ExperimentalScreen
 import moe.apex.rule34.preferences.LibrariesScreen
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.PreferencesScreen
@@ -79,9 +81,17 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
     val popEnterTransition = slideInHorizontally(tween(easing = easing), { -slideDistance }) + fadeIn(tween(easing = easing))
 
     val searchScreens = listOf(Search::class, Results::class)
-    val settingsScreens = listOf(Settings::class, BlockedTagsSettings::class, AboutSettings::class, LibrariesSettings::class)
+    val settingsScreens = listOf(Settings::class, BlockedTagsSettings::class, AboutSettings::class, LibrariesSettings::class, ExperimentalSettings::class)
     val topLevelScreens = listOf(Home::class, Search::class, Favourites::class) + settingsScreens
     val slideTransitionScreens = listOf(Results::class, ImageView::class, *settingsScreens.filter { it != Settings::class }.toTypedArray())
+
+    /* Some screens have the ability to hide the bottom bar, so we need to ensure it appears again
+       when navigating to a different screen. */
+    LaunchedEffect(currentRoute) {
+        if (currentRoute.routeIs(topLevelScreens)) {
+            bottomBarVisibleState.value = true
+        }
+    }
 
     BreadboardTheme {
         Surface {
@@ -213,6 +223,7 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                     composable<BlockedTagsSettings> { BlockedTagsScreen(navController) }
                     composable<LibrariesSettings> { LibrariesScreen(navController) }
                     composable<AboutSettings> { AboutScreen(navController) }
+                    composable<ExperimentalSettings> { ExperimentalScreen(navController) }
                 }
             }
         }

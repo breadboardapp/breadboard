@@ -67,16 +67,18 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
         setUpViewModel()
     }
 
-    val pullToRefreshController = rememberPullToRefreshController(
-        initialValue = false,
-        modifier = if (prefs.filterRatingsLocally) {
-            Modifier.offset(y = 80.dp) // Height of the ratings box
-        } else Modifier
-    ) {
-        viewModel.reset()
-        setUpViewModel()
-        viewModel.loadMore()
-    }
+    val pullToRefreshController = if (prefs.searchPullToRefresh) {
+        rememberPullToRefreshController(
+            initialValue = false,
+            modifier = if (prefs.filterRatingsLocally) {
+                Modifier.offset(y = 80.dp) // Height of the ratings box
+            } else Modifier
+        ) {
+            viewModel.reset()
+            setUpViewModel()
+            viewModel.loadMore()
+        }
+    } else null
 
     val ratingRows: List<@Composable () -> Unit> = availableRatingsForCurrentSource.map { {
         FilterChip(
@@ -113,7 +115,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
                         ScrollToTopArrow(
                             staggeredGridState = viewModel.staggeredGridState,
                             uniformGridState = viewModel.uniformGridState,
-                            animate = !filterLocally
+                            animate = !filterLocally || prefs.alwaysAnimateScroll,
                         )
                     }
                 }

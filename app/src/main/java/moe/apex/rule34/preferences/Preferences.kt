@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -48,6 +49,7 @@ import moe.apex.rule34.image.ImageBoardAuth
 import moe.apex.rule34.image.ImageBoardLocalFilterType
 import moe.apex.rule34.navigation.AboutSettings
 import moe.apex.rule34.navigation.BlockedTagsSettings
+import moe.apex.rule34.navigation.ExperimentalSettings
 import moe.apex.rule34.prefs
 import moe.apex.rule34.util.ChevronRight
 import moe.apex.rule34.util.ExportDirectoryHandler
@@ -231,6 +233,19 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                         onClick = {
                             isDropdownVisible = false
                             navController.navigate(AboutSettings)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Experimental features") },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Rounded.Science,
+                                contentDescription = "Experimental features"
+                            )
+                        },
+                        onClick = {
+                            isDropdownVisible = false
+                            navController.navigate(ExperimentalSettings)
                         }
                     )
                 }

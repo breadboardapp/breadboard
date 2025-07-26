@@ -72,6 +72,8 @@ object LibrariesSettings
 @Serializable
 object AboutSettings
 
+@Serializable
+object ExperimentalSettings
 
 fun NavDestination?.routeIs(routes: Collection<KClass<*>>): Boolean {
     return routeIs(*routes.toTypedArray())

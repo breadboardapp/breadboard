@@ -81,6 +81,8 @@ data object PrefNames {
     const val IMAGE_VIEWER_ACTION_ORDER = "image_viewer_action_order"
     const val DEFAULT_START_DESTINATION = "default_start_destination"
     const val RECOMMEND_ALL_RATINGS = "recommend_all_ratings"
+    const val SEARCH_PULL_TO_REFRESH = "search_pull_to_refresh"
+    const val ALWAYS_ANIMATE_SCROLL = "always_animate_scroll"
 }
 
 
@@ -104,6 +106,8 @@ object PreferenceKeys {
     val IMAGE_VIEWER_ACTION_ORDER = stringPreferencesKey(PrefNames.IMAGE_VIEWER_ACTION_ORDER)
     val DEFAULT_START_DESTINATION = stringPreferencesKey(PrefNames.DEFAULT_START_DESTINATION)
     val RECOMMEND_ALL_RATINGS = booleanPreferencesKey(PrefNames.RECOMMEND_ALL_RATINGS)
+    val SEARCH_PULL_TO_REFRESH = booleanPreferencesKey(PrefNames.SEARCH_PULL_TO_REFRESH)
+    val ALWAYS_ANIMATE_SCROLL = booleanPreferencesKey(PrefNames.ALWAYS_ANIMATE_SCROLL)
 }
 
 
@@ -161,6 +165,8 @@ data class Prefs(
     val imageViewerActions: List<ToolbarAction>,
     val defaultStartDestination: StartDestination,
     val recommendAllRatings: Boolean,
+    val searchPullToRefresh: Boolean,
+    val alwaysAnimateScroll: Boolean,
 ) {
     companion object {
         val DEFAULT = Prefs(
@@ -183,6 +189,8 @@ data class Prefs(
             imageViewerActions = ToolbarAction.entries.toList(),
             defaultStartDestination = StartDestination.HOME,
             recommendAllRatings = false,
+            searchPullToRefresh = false,
+            alwaysAnimateScroll = false,
         )
     }
 
@@ -223,6 +231,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             PreferenceKeys.IMAGE_VIEWER_ACTION_ORDER to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.DEFAULT_START_DESTINATION to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.RECOMMEND_ALL_RATINGS to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.SEARCH_PULL_TO_REFRESH to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.ALWAYS_ANIMATE_SCROLL to PrefMeta(PrefCategory.SETTING),
         )
     }
 
@@ -598,6 +608,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
 
         val defaultStartDestination = preferences[PreferenceKeys.DEFAULT_START_DESTINATION]?.let { StartDestination.valueOf(it) } ?: Prefs.DEFAULT.defaultStartDestination
         val recommendAllRatings = preferences[PreferenceKeys.RECOMMEND_ALL_RATINGS] ?: Prefs.DEFAULT.recommendAllRatings
+        val searchPullToRefresh = preferences[PreferenceKeys.SEARCH_PULL_TO_REFRESH] ?: Prefs.DEFAULT.searchPullToRefresh
+        val alwaysAnimateScroll = preferences[PreferenceKeys.ALWAYS_ANIMATE_SCROLL] ?: Prefs.DEFAULT.alwaysAnimateScroll
 
         return Prefs(
             dataSaver,
@@ -619,6 +631,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             imageViewerActions,
             defaultStartDestination,
             recommendAllRatings,
+            searchPullToRefresh,
+            alwaysAnimateScroll,
         )
     }
 }
