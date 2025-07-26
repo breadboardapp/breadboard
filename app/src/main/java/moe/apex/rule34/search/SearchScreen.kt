@@ -139,8 +139,8 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
        while disappearing and that looks bad. */
     val tagChipList = viewModel.tagSuggestions
     var shouldShowSuggestions by remember { mutableStateOf(false) }
-    var searchString by remember { mutableStateOf("") }
-    var cleanedSearchString by remember { mutableStateOf("") }
+    var searchString by rememberSaveable { mutableStateOf("") }
+    var cleanedSearchString by rememberSaveable { mutableStateOf("") }
     val mostRecentSuggestions = remember { mutableStateListOf<TagSuggestion>() }
 
     var showSourceChangeDialog by remember { mutableStateOf(false) }
