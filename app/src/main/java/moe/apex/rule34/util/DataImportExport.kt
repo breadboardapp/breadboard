@@ -42,7 +42,11 @@ private fun exportSettingsToJson(prefs: Preferences): JSONObject {
     val json = JSONObject()
 
     for (item in prefs.asMap()) {
-        val meta = UserPreferencesRepository.keyMetaMapping[item.key] ?: throw NotImplementedError("Unknown key ${item.key}")
+        val meta = UserPreferencesRepository.keyMetaMapping[item.key]
+        if (meta == null) {
+            Log.w("Exporting", "Unknown preference key: ${item.key.name}, skipping.")
+            continue
+        }
         if (meta.category == PrefCategory.SETTING && meta.exportable) {
             val value = if (item.value is Set<*>) { (item.value as Set<*>).toList() } else item.value
             json.put(item.key.name, value)
