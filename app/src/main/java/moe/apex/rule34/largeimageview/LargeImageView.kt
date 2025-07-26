@@ -9,8 +9,6 @@ import android.net.NetworkCapabilities
 import android.util.Log
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -86,6 +84,7 @@ import moe.apex.rule34.util.PromptType
 import moe.apex.rule34.util.MustSetLocation
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
 import moe.apex.rule34.util.StorageLocationSelection
+import moe.apex.rule34.util.bouncyAnimationSpec
 import moe.apex.rule34.util.downloadImage
 import moe.apex.rule34.util.fixLink
 import moe.apex.rule34.util.isWebLink
@@ -408,10 +407,7 @@ fun LargeImageView(
                     visible = toolbarState == ToolbarState.FORCE_SHOW || (isMostlyZoomedOut && toolbarState != ToolbarState.FORCE_HIDE),
                     enter = slideInVertically(
                         initialOffsetY = { it },
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioLowBouncy,
-                            stiffness = Spring.StiffnessMediumLow
-                        )
+                        animationSpec = bouncyAnimationSpec()
                     ),
                     exit = slideOutVertically(targetOffsetY = { it })
                 ) {
