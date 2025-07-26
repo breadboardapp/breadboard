@@ -4,7 +4,10 @@ import android.app.Activity
 import android.content.ClipData
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -1125,6 +1128,12 @@ fun ScrollToTopArrow(
         }
     }
 }
+
+
+fun <T> bouncyAnimationSpec(): FiniteAnimationSpec<T> = spring(
+    dampingRatio = Spring.DampingRatioLowBouncy,
+    stiffness = Spring.StiffnessMediumLow,
+)
 
 
 val bottomAppBarAndNavBarHeight: Dp

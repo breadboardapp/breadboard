@@ -5,10 +5,13 @@ import android.text.format.DateFormat
 import android.util.Log
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.EaseOutBack
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -26,6 +29,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -39,6 +43,8 @@ import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilterChip
@@ -53,6 +59,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -113,8 +120,10 @@ import moe.apex.rule34.util.SmallVerticalSpacer
 import moe.apex.rule34.util.TitledModalBottomSheet
 import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
+import moe.apex.rule34.util.Summary
 import moe.apex.rule34.util.availableRatingsForCurrentSource
 import moe.apex.rule34.util.availableRatingsForSource
+import moe.apex.rule34.util.bouncyAnimationSpec
 import moe.apex.rule34.util.copyText
 import moe.apex.rule34.util.largerShape
 import moe.apex.rule34.util.navBarHeight
@@ -349,7 +358,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
         if (!danbooruLimitCheck())
             return
 
-        if (prefs.saveSearchHistory) {
+        if (prefs.saveSearchHistory && !viewModel.incognito) {
             scope.launch {
                 context.prefs.addSearchHistoryEntry(
                     SearchHistoryEntry(
@@ -388,6 +397,37 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
         title = "Search",
         additionalActions = {
             if (prefs.saveSearchHistory) {
+                val buttonColour by animateColorAsState(if (viewModel.incognito) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background)
+                val contentColor by animateColorAsState(if (viewModel.incognito) MaterialTheme.colorScheme.onSecondaryContainer else TopAppBarDefaults.topAppBarColors().actionIconContentColor)
+                val contentPadding by animateDpAsState(
+                    targetValue = if (!viewModel.incognito) SMALL_SPACER.dp else SMALL_LARGE_SPACER.dp,
+                    animationSpec = bouncyAnimationSpec()
+                )
+                Button(
+                    onClick = { viewModel.incognito = !viewModel.incognito },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = buttonColour,
+                        contentColor = contentColor
+                    ),
+                    contentPadding = PaddingValues(horizontal = contentPadding, vertical = SMALL_SPACER.dp),
+                    modifier = Modifier.widthIn(min = 40.dp) // Icon button surface size
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.incognito),
+                        contentDescription = "Incognito mode",
+                    )
+                    AnimatedVisibility(
+                        visible = viewModel.incognito,
+                        enter = fadeIn() + expandHorizontally(
+                            animationSpec = bouncyAnimationSpec()
+                        ),
+                    ) {
+                        Row {
+                            Spacer(Modifier.width(SMALL_SPACER.dp))
+                            Text("Incognito")
+                        }
+                    }
+                }
                 IconButton(
                     onClick = { showSearchHistoryPopup = true }
                 ) {
@@ -717,6 +757,16 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                         )
                     }
                 } else {
+                    if (viewModel.incognito) {
+                        item {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Summary(text = "Incognito mode is enabled. Search history will not be saved.")
+                            }
+                        }
+                    }
                     items(reversedSearchHistory, key = { it.timestamp } ) { entry ->
                         val date = Date(entry.timestamp)
                         val formatter = SimpleDateFormat("dd MMM $timeFormat", Locale.getDefault())
