@@ -548,7 +548,10 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
 
             SmallVerticalSpacer()
 
-            AnimatedVisibility(showSourceRatingBox) {
+            AnimatedVisibility(
+                visible = showSourceRatingBox,
+                enter = expandVertically(animationSpec = bouncyAnimationSpec()) + fadeIn(),
+            ) {
                 var opacity by remember { mutableFloatStateOf(1f) }
                 var scale by remember { mutableFloatStateOf(1f) }
                 LaunchedEffect(showSourceRatingBox) {
@@ -623,6 +626,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                 Column(Modifier.padding(horizontal = SMALL_LARGE_SPACER.dp)) {
                     HorizontallyScrollingChipsWithLabels(
                         modifier = Modifier
+                            .fillMaxWidth()
                             .alpha(opacity)
                             .scale(scale),
                         labels = listOf("Source", "Ratings"),
