@@ -5,6 +5,8 @@ import android.content.ClipData
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
@@ -43,11 +45,14 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.BottomSheetDefaults
@@ -57,6 +62,7 @@ import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
@@ -69,14 +75,20 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.VerticalDivider
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshState
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -92,6 +104,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -501,7 +514,11 @@ fun HorizontallyScrollingChipsWithLabels(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .padding(start = MEDIUM_LARGE_SPACER.dp, top = SMALL_SPACER.dp, bottom = SMALL_SPACER.dp)
+                .padding(
+                    start = MEDIUM_LARGE_SPACER.dp,
+                    top = SMALL_SPACER.dp,
+                    bottom = SMALL_SPACER.dp
+                )
                 .height(CHIP_TOTAL_HEIGHT * labels.size)
         ) {
             Column(
@@ -621,12 +638,14 @@ fun SearchHistoryListItem(
             modifier = Modifier
                 .weight(1f, true)
                 .fillMaxHeight()
-                .clip(RoundedCornerShape(
-                    topStart = largerShapeCornerSize,
-                    bottomStart = largerShapeCornerSize,
-                    topEnd = 4.dp,
-                    bottomEnd = 4.dp
-                ))
+                .clip(
+                    RoundedCornerShape(
+                        topStart = largerShapeCornerSize,
+                        bottomStart = largerShapeCornerSize,
+                        topEnd = 4.dp,
+                        bottomEnd = 4.dp
+                    )
+                )
                 .clickable(
                     interactionSource = interactionSource,
                     indication = LocalIndication.current
@@ -682,12 +701,14 @@ fun SearchHistoryListItem(
         Surface(
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             modifier = Modifier
-                .clip(RoundedCornerShape(
-                    topStart = 4.dp,
-                    topEnd = largerShapeCornerSize,
-                    bottomEnd = largerShapeCornerSize,
-                    bottomStart = 4.dp
-                ))
+                .clip(
+                    RoundedCornerShape(
+                        topStart = 4.dp,
+                        topEnd = largerShapeCornerSize,
+                        bottomEnd = largerShapeCornerSize,
+                        bottomStart = 4.dp
+                    )
+                )
                 .clickable { onContainerClick() }
         ) {
             Box(
@@ -971,6 +992,138 @@ fun CombinedClickableAction(
                     onLongClick = onLongClick
                 ),
         )
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+data class PullToRefreshController(
+    val state: PullToRefreshState,
+    private val initialValue: Boolean = false,
+    private val modifier: Modifier = Modifier,
+    private val scope: CoroutineScope,
+    private val refreshCallback: suspend () -> Unit
+) {
+    var isRefreshing by mutableStateOf(initialValue)
+
+    private fun startRefreshing(animate: Boolean) {
+        if (isRefreshing) return
+        if (animate) {
+            scope.launch { state.animateToThreshold() }
+        }
+        isRefreshing = true
+    }
+
+    private fun stopRefreshing(animate: Boolean) {
+        if (!isRefreshing) return
+        if (animate) {
+            scope.launch { state.animateToHidden() }
+        }
+        isRefreshing = false
+    }
+
+    fun refresh(animate: Boolean = false) {
+        startRefreshing(animate)
+        scope.launch {
+            refreshCallback()
+        }.invokeOnCompletion {
+            stopRefreshing(animate)
+        }
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun Indicator(modifier: Modifier = Modifier) {
+        PullToRefreshControllerDefaults.Indicator(
+            controller = this@PullToRefreshController,
+            modifier = this.modifier.then(modifier)
+        )
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun rememberPullToRefreshController(
+    initialValue: Boolean,
+    state: PullToRefreshState = rememberPullToRefreshState(),
+    modifier: Modifier = Modifier,
+    onRefresh: suspend () -> Unit = { }
+): PullToRefreshController {
+    val scope = rememberCoroutineScope { Dispatchers.IO }
+    return remember {
+        PullToRefreshController(
+            state = state,
+            initialValue = initialValue,
+            modifier = modifier,
+            scope = scope,
+            refreshCallback = onRefresh
+        )
+    }
+}
+
+
+object PullToRefreshControllerDefaults {
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun Indicator(
+        controller: PullToRefreshController,
+        modifier: Modifier
+    ) {
+        PullToRefreshDefaults.Indicator(
+            state = controller.state,
+            isRefreshing = controller.isRefreshing,
+            modifier = modifier,
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            color = MaterialTheme.colorScheme.onTertiaryContainer
+        )
+    }
+}
+
+
+/** A button that scrolls image grids back to the top.
+
+    Set [animate] to false to scroll immediately without animation. This option is mostly intended
+    to work around what I can only assume is a Compose bug whereby the scrolling animation is jumpy
+    when there is a full width item in the grid (like the filter). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ScrollToTopArrow(
+    staggeredGridState: LazyStaggeredGridState,
+    uniformGridState: LazyGridState,
+    animate: Boolean = true,
+    alsoOnClick: (() -> Unit)? = null
+) {
+    val scope = rememberCoroutineScope()
+    val staggeredFirstItem by remember { derivedStateOf { staggeredGridState.firstVisibleItemIndex } }
+    val uniformFirstItem by remember { derivedStateOf { uniformGridState.firstVisibleItemIndex } }
+
+    AnimatedVisibility(
+        enter = fadeIn(),
+        exit = fadeOut(),
+        visible = staggeredFirstItem != 0 || uniformFirstItem != 0
+    ) {
+        IconButton(
+            onClick = {
+                scope.launch {
+                    if (animate) {
+                        staggeredGridState.animateScrollToItem(0)
+                    } else {
+                        staggeredGridState.scrollToItem(0)
+                    }
+                }
+                scope.launch {
+                    if (animate) {
+                        uniformGridState.animateScrollToItem(0)
+                    } else {
+                        uniformGridState.scrollToItem(0)
+                    }
+                }
+                alsoOnClick?.invoke()
+            }
+        ) {
+            Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "Scroll to top")
+        }
     }
 }
 

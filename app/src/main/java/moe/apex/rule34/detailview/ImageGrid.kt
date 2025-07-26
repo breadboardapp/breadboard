@@ -1,5 +1,8 @@
 package moe.apex.rule34.detailview
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,10 +18,12 @@ import androidx.compose.foundation.layout.requiredHeightIn
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridItemScope
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridItemScope
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
@@ -29,17 +34,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,6 +52,7 @@ import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.util.FullscreenLoadingSpinner
 import moe.apex.rule34.util.NavBarHeightVerticalSpacer
+import moe.apex.rule34.util.PullToRefreshController
 import moe.apex.rule34.util.SMALL_SPACER
 import moe.apex.rule34.util.largerShape
 
@@ -75,37 +74,23 @@ fun ImageGrid(
     noImagesContent: @Composable () -> Unit = { NoImages() },
     contentPadding: PaddingValues = PaddingValues(0.dp),
     filterComposable: (@Composable () -> Unit)? = null,
-    onPullToRefresh: ((MutableState<Boolean>) -> Unit)? = null,
-    initialLoad: (suspend () -> Unit)? = null,
+    pullToRefreshController: PullToRefreshController? = null,
+    doneInitialLoad: Boolean = true,
     onEndReached: suspend () -> Unit = { }
 ) {
     val prefs = LocalPreferences.current
-    var doneInitialLoad by remember { mutableStateOf(initialLoad == null || images.isNotEmpty()) }
-
-    if (!doneInitialLoad) {
-        LaunchedEffect(Unit) {
-            initialLoad!!()
-            doneInitialLoad = true
-        }
-        LinearProgressIndicator(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(contentPadding)
-        )
-        return
-    }
 
     @Composable
     fun Container(content: @Composable () -> Unit) {
-        if (onPullToRefresh != null) {
-            val ptrState = rememberPullToRefreshState()
-            val isRefreshing = remember { mutableStateOf(false) }
-
+        if (pullToRefreshController != null) {
             PullToRefreshBox(
                 modifier = modifier,
-                isRefreshing = isRefreshing.value,
-                state = ptrState,
-                onRefresh = { onPullToRefresh(isRefreshing) },
+                isRefreshing = pullToRefreshController.isRefreshing,
+                state = pullToRefreshController.state,
+                onRefresh = pullToRefreshController::refresh,
+                indicator = {
+                    pullToRefreshController.Indicator(Modifier.align(Alignment.TopCenter))
+                },
                 content = { content() }
             )
         } else {
@@ -116,7 +101,7 @@ fun ImageGrid(
     Container {
         if (prefs.useStaggeredGrid) {
             StaggeredImageGrid(
-                modifier = if (onPullToRefresh == null) modifier else Modifier,
+                modifier = if (pullToRefreshController == null) modifier else Modifier,
                 gridState = staggeredGridState,
                 contentPadding = contentPadding,
                 filterComposable = filterComposable,
@@ -127,7 +112,7 @@ fun ImageGrid(
             )
         } else {
             UniformImageGrid(
-                modifier = if (onPullToRefresh == null) modifier else Modifier,
+                modifier = if (pullToRefreshController == null) modifier else Modifier,
                 gridState = uniformGridState,
                 contentPadding = contentPadding,
                 filterComposable = filterComposable,
@@ -135,6 +120,24 @@ fun ImageGrid(
                 noImagesContent = noImagesContent,
                 onImageClick = onImageClick,
                 onEndReached = onEndReached
+            )
+        }
+    }
+
+    AnimatedVisibility (
+        visible = !doneInitialLoad,
+        enter = EnterTransition.None,
+        exit = fadeOut(),
+    ) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(contentPadding)
+                .background(MaterialTheme.colorScheme.background)
+        ) {
+            LinearProgressIndicator(
+                modifier = modifier
+                    .fillMaxWidth()
             )
         }
     }
@@ -162,7 +165,7 @@ private fun StaggeredImageGrid(
         verticalItemSpacing = SMALL_SPACER.dp
     ) {
         filterComposable?.let {
-            item(span = StaggeredGridItemSpan.FullLine ) { it() }
+            item(key = "ratings-filter", span = StaggeredGridItemSpan.FullLine ) { it() }
         }
 
         itemsIndexed(images, key = { _, image -> image.previewUrl }) { index, image ->
@@ -225,8 +228,9 @@ private fun UniformImageGrid(
     }
 }
 
+
 @Composable
-private fun NoImages() {
+fun NoImages() {
     Text(
         text = "No images :(",
         textAlign = TextAlign.Center,
@@ -236,30 +240,30 @@ private fun NoImages() {
 
 
 @Composable
-private fun ImagePreviewContainer(
+private fun LazyGridItemScope.ImagePreviewContainer(
     image: Image,
     index: Int,
     onImageClick: (Int, Image) -> Unit
 ) {
-    Surface(
+    Box(
         modifier = Modifier
-            .widthIn(max = MAX_CELL_WIDTH.dp)
-            .aspectRatio(1f)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .clip(largerShape)
-        ) {
-            ImagePreview(
-                modifier = Modifier.fillMaxSize(),
-                image = image,
-                index = index,
-                onImageClick = onImageClick
+            .animateItem(
+                fadeOutSpec = null,
+                placementSpec = null
             )
-            if (image.fileFormat == "gif") {
-                GifBadge()
-            }
+            .fillMaxWidth()
+            .widthIn(MAX_CELL_WIDTH.dp)
+            .aspectRatio(1f)
+            .clip(largerShape)
+    ) {
+        ImagePreview(
+            modifier = Modifier.fillMaxSize(),
+            image = image,
+            index = index,
+            onImageClick = onImageClick
+        )
+        if (image.fileFormat == "gif") {
+            GifBadge()
         }
     }
 }
@@ -286,13 +290,17 @@ private fun ImagePreview(
 
 
 @Composable
-private fun StaggeredImagePreviewContainer(
+private fun LazyStaggeredGridItemScope.StaggeredImagePreviewContainer(
     image: Image,
     index: Int,
     onImageClick: (Int, Image) -> Unit
 ) {
     Box(
         modifier = Modifier
+            .animateItem(
+                fadeOutSpec = null,
+                placementSpec = null
+            )
             .widthIn(min = MIN_CELL_WIDTH.dp, max = MAX_CELL_WIDTH.dp)
             .heightIn(min = MIN_IMAGE_HEIGHT.dp, max = MAX_IMAGE_HEIGHT.dp)
             .clip(largerShape),

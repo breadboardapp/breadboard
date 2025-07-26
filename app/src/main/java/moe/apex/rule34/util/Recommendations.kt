@@ -1,11 +1,15 @@
 package moe.apex.rule34.util
 
+import android.annotation.SuppressLint
 import android.util.Log
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.toMutableStateList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import moe.apex.rule34.image.Image
@@ -15,6 +19,7 @@ import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.preferences.ImageSource
 
 
+@SuppressLint("MutableCollectionMutableState")
 class RecommendationsProvider(
     private val seedImages: List<Image>,
     val imageSource: ImageSource,
@@ -53,7 +58,11 @@ class RecommendationsProvider(
         )
     }
 
-    val recommendedImages = mutableStateListOf<Image>()
+    // Not great but it avoids the momentary period where the list is empty when doing a new search.
+    var recommendedImages by mutableStateOf(mutableStateListOf<Image>())
+    val staggeredGridState = LazyStaggeredGridState()
+    val uniformGridState = LazyGridState()
+    var doneInitialLoad by mutableStateOf(false)
     private val recommendedTags = mutableListOf<String>()
     private var pageNumber by mutableIntStateOf(imageSource.imageBoard.firstPageIndex)
 
@@ -102,29 +111,30 @@ class RecommendationsProvider(
             "Recommendations",
             "Fetching recommended posts for tags: ${recommendedTags.joinToString(", ")} - page $pageNumber"
         )
-        withContext(Dispatchers.IO) {
-            val filterRatingsLocally = filterRatingsLocally ||
-                    imageSource.imageBoard.localFilterType == ImageBoardLocalFilterType.REQUIRED ||
-                    (imageSource == ImageSource.DANBOORU && auth == null)
-            try {
-                val searchQuery = if (filterRatingsLocally) {
-                    Log.i(
-                        "Recommendations",
-                        "Filtering recommendations locally because either the local filter is enabled, or the image source does not support server-side filtering."
-                    )
-                    imageSource.imageBoard.formatTagNameString(recommendedTags)
-                } else {
-                    "${imageSource.imageBoard.formatTagNameString(recommendedTags)}+${
-                        ImageRating.buildSearchStringFor(
-                            if (showAllRatings) {
-                                ImageRating.entries.filter { it != ImageRating.UNKNOWN }
-                            } else {
-                                listOf(ImageRating.SAFE)
-                            }
-                        )
-                    }"
-                }
+        val filterRatingsLocally = filterRatingsLocally ||
+                imageSource.imageBoard.localFilterType == ImageBoardLocalFilterType.REQUIRED ||
+                (imageSource == ImageSource.DANBOORU && auth == null)
 
+        val searchQuery = if (filterRatingsLocally) {
+            Log.i(
+                "Recommendations",
+                "Filtering recommendations locally because either the local filter is enabled, or the image source does not support server-side filtering."
+            )
+            imageSource.imageBoard.formatTagNameString(recommendedTags)
+        } else {
+            "${imageSource.imageBoard.formatTagNameString(recommendedTags)}+${
+                ImageRating.buildSearchStringFor(
+                    if (showAllRatings) {
+                        ImageRating.entries.filter { it != ImageRating.UNKNOWN }
+                    } else {
+                        listOf(ImageRating.SAFE)
+                    }
+                )
+            }"
+        }
+
+        withContext(Dispatchers.IO) {
+            try {
                 isLoading = true
                 // if recommendedTags is empty, it should just return the most recent uploaded posts
                 val results = imageSource.imageBoard.loadPage(
@@ -133,7 +143,6 @@ class RecommendationsProvider(
                     auth = auth,
                 )
                 val safeResults = results.filter {
-                    it !in recommendedImages &&
                     if (filterRatingsLocally) {
                         showAllRatings || it.metadata!!.rating == ImageRating.SAFE
                     } else true
@@ -141,13 +150,17 @@ class RecommendationsProvider(
                 val wantedResults = safeResults.filter {
                     it.metadata!!.tags.none { tag -> blockedTags.contains(tag.lowercase()) }
                 }
-                if (pageNumber == imageSource.imageBoard.firstPageIndex) {
-                    recommendedImages.clear()
-                }
+                Log.i("Recommendations", "Found ${results.size} new images for tags: ${recommendedTags.joinToString(", ")}")
+                Log.i("Recommendations", "Found ${safeResults.size} safe images for tags: ${recommendedTags.joinToString(", ")}")
+                Log.i("Recommendations", "Found ${wantedResults.size} wanted images for tags: ${recommendedTags.joinToString(", ")}")
                 if (results.isEmpty() || safeResults.isEmpty()) {
                     shouldKeepSearching = false
                 } else {
-                    recommendedImages.addAll(wantedResults)
+                    if (pageNumber == imageSource.imageBoard.firstPageIndex) {
+                        recommendedImages = wantedResults.toMutableStateList()
+                    } else if (wantedResults.isNotEmpty()) {
+                        recommendedImages += wantedResults.filter { it !in recommendedImages }
+                    }
                 }
                 pageNumber++
             } catch (e: Exception) {
@@ -158,6 +171,9 @@ class RecommendationsProvider(
                 shouldKeepSearching = false
             }
             isLoading = false
+            if (!doneInitialLoad) {
+                doneInitialLoad = true
+            }
         }
     }
 }

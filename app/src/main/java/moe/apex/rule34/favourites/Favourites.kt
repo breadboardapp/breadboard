@@ -2,8 +2,6 @@ package moe.apex.rule34.favourites
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Text
@@ -21,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import moe.apex.rule34.detailview.ImageGrid
@@ -33,13 +32,15 @@ import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
 import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
+import moe.apex.rule34.util.ScrollToTopArrow
 import moe.apex.rule34.util.bottomAppBarAndNavBarHeight
 import moe.apex.rule34.util.onScroll
+import moe.apex.rule34.viewmodel.FavouritesViewModel
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableState<Boolean>) {
+fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableState<Boolean>, viewModel: FavouritesViewModel = viewModel()) {
     val prefs = LocalPreferences.current
     val preferencesRepository = LocalContext.current.prefs
     val topAppBarState = rememberTopAppBarState()
@@ -47,9 +48,6 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
     val shouldShowLargeImage = remember { mutableStateOf(false) }
     var initialPage by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
-
-    val staggeredGridState = rememberLazyStaggeredGridState()
-    val uniformGridState = rememberLazyGridState()
 
     val images = prefs.favouriteImages.reversed().filter {
         it.imageSource in prefs.favouritesFilter
@@ -90,15 +88,26 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
         )
     } })
 
-    MainScreenScaffold("Favourite images", scrollBehavior, addBottomPadding = false) { padding ->
+    MainScreenScaffold(
+        title = "Favourite images",
+        scrollBehavior = scrollBehavior,
+        addBottomPadding = false,
+        additionalActions = {
+            ScrollToTopArrow(
+                staggeredGridState = viewModel.staggeredGridState,
+                uniformGridState = viewModel.uniformGridState,
+                animate = false
+            ) { bottomBarVisibleState.value = true }
+        }
+    ) { padding ->
         ImageGrid(
             modifier = Modifier
                 .padding(padding)
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
-                .onScroll(staggeredGridState) { bottomBarVisibleState.value = !it.lastScrolledForward }
-                .onScroll(uniformGridState) { bottomBarVisibleState.value = !it.lastScrolledForward },
-            staggeredGridState = staggeredGridState,
-            uniformGridState = uniformGridState,
+                .onScroll(viewModel.staggeredGridState) { bottomBarVisibleState.value = !it.lastScrolledForward }
+                .onScroll(viewModel.uniformGridState) { bottomBarVisibleState.value = !it.lastScrolledForward },
+            staggeredGridState = viewModel.staggeredGridState,
+            uniformGridState = viewModel.uniformGridState,
             images = images,
             onImageClick = { index, _ ->
                 initialPage = index
