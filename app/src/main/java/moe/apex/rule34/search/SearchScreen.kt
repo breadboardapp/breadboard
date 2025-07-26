@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -120,7 +121,6 @@ import moe.apex.rule34.util.SmallVerticalSpacer
 import moe.apex.rule34.util.TitledModalBottomSheet
 import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
-import moe.apex.rule34.util.Summary
 import moe.apex.rule34.util.availableRatingsForCurrentSource
 import moe.apex.rule34.util.availableRatingsForSource
 import moe.apex.rule34.util.bouncyAnimationSpec
@@ -747,25 +747,10 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                 contentPadding = PaddingValues(bottom = navBarHeight * 2)
             ) {
                 if (prefs.searchHistory.isEmpty()) {
-                    item {
-                        Text(
-                            text = "Nothing to see here.",
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .alpha(DISABLED_OPACITY)
-                        )
-                    }
+                    SearchHistoryStandaloneTextItem("No search history yet. Start searching!")
                 } else {
                     if (viewModel.incognito) {
-                        item {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                Summary(text = "Incognito mode is enabled. Search history will not be saved.")
-                            }
-                        }
+                        SearchHistoryStandaloneTextItem("Incognito mode is enabled. Search history will not be saved.")
                     }
                     items(reversedSearchHistory, key = { it.timestamp } ) { entry ->
                         val date = Date(entry.timestamp)
@@ -800,6 +785,22 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                 }
             }
         }
+    }
+}
+
+
+@Suppress("FunctionName")
+private fun LazyListScope.SearchHistoryStandaloneTextItem(text: String) {
+    item {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(SMALL_LARGE_SPACER.dp)
+                .alpha(DISABLED_OPACITY)
+        )
     }
 }
 
