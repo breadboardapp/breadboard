@@ -15,7 +15,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -69,11 +68,6 @@ fun HomeScreen(
     val pullToRefreshController = rememberPullToRefreshController(false) {
         recommendationsProvider.prepareRecommendedTags()
         recommendationsProvider.recommendImages()
-    }
-
-    LaunchedEffect(recommendationsProvider.recommendedImages.toList()) {
-        recommendationsProvider.staggeredGridState.scrollToItem(0)
-        recommendationsProvider.uniformGridState.scrollToItem(0)
     }
 
     MainScreenScaffold(
