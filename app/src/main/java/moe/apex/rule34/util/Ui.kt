@@ -213,8 +213,7 @@ fun SmallTitleBar(
         title = { Text(title) },
         scrollBehavior = scrollBehavior,
         actions = additionalActions,
-        navigationIcon = { NavigationIcon(navController) },
-        colors = TopAppBarDefaults.topAppBarColors().copy(containerColor = TopAppBarDefaults.topAppBarColors().scrolledContainerColor)
+        navigationIcon = { NavigationIcon(navController) }
     )
 }
 

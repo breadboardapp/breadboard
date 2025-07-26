@@ -85,7 +85,9 @@ fun HomeScreen(
             ScrollToTopArrow(
                 staggeredGridState = recommendationsProvider.staggeredGridState,
                 uniformGridState = recommendationsProvider.uniformGridState
-            )
+            ) {
+                scrollBehavior.state.contentOffset = 0f
+            }
         }
     ) { padding ->
         ImageGrid(
