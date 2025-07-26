@@ -2,8 +2,6 @@ package moe.apex.rule34.viewmodel
 
 import android.annotation.SuppressLint
 import android.util.Log
-import androidx.compose.foundation.lazy.grid.LazyGridState
-import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -19,13 +17,11 @@ import moe.apex.rule34.preferences.ImageSource
 
 
 @SuppressLint("MutableCollectionMutableState")
-class SearchResultsViewModel : ViewModel() {
+class SearchResultsViewModel : ViewModel(), GridStateHolder by GridStateHolderDelegate() {
     var isReady by mutableStateOf(false)
     var doneInitialLoad by mutableStateOf(false)
     // Not great but it avoids the momentary period where the list is empty when doing a new search.
     var images by mutableStateOf(mutableStateListOf<Image>())
-    lateinit var uniformGridState: LazyGridState
-    lateinit var staggeredGridState: LazyStaggeredGridState
     private var shouldKeepSearching by mutableStateOf(true)
     private var pageNumber by mutableIntStateOf(0) // We'll set this to the proper value later
     private var auth: ImageBoardAuth? = null
@@ -42,13 +38,12 @@ class SearchResultsViewModel : ViewModel() {
         this.auth = auth
         query = imageSource.imageBoard.formatTagNameString(tags)
         pageNumber = imageSource.imageBoard.firstPageIndex
-        uniformGridState = LazyGridState()
-        staggeredGridState = LazyStaggeredGridState()
+        resetGridStates()
         isReady = true
     }
 
 
-    fun reset() {
+    fun prepareReset() {
         Log.i("SearchResults", "Resetting SearchResultsViewModel")
         isReady = false
     }

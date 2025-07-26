@@ -74,7 +74,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
                 Modifier.offset(y = 80.dp) // Height of the ratings box
             } else Modifier
         ) {
-            viewModel.reset()
+            viewModel.prepareReset()
             setUpViewModel()
             viewModel.loadMore()
         }

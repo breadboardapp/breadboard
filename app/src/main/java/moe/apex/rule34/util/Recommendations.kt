@@ -2,8 +2,6 @@ package moe.apex.rule34.util
 
 import android.annotation.SuppressLint
 import android.util.Log
-import androidx.compose.foundation.lazy.grid.LazyGridState
-import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -17,6 +15,8 @@ import moe.apex.rule34.image.ImageBoardAuth
 import moe.apex.rule34.image.ImageBoardLocalFilterType
 import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.preferences.ImageSource
+import moe.apex.rule34.viewmodel.GridStateHolderDelegate
+import moe.apex.rule34.viewmodel.GridStateHolder
 
 
 @SuppressLint("MutableCollectionMutableState")
@@ -27,7 +27,7 @@ class RecommendationsProvider(
     val showAllRatings: Boolean,
     val filterRatingsLocally: Boolean,
     val blockedTags: Set<String>
-) {
+) : GridStateHolder by GridStateHolderDelegate() {
     companion object {
         private const val POOL_SIZE = 5
         private const val SELECTION_SIZE = 3
@@ -60,8 +60,6 @@ class RecommendationsProvider(
 
     // Not great but it avoids the momentary period where the list is empty when doing a new search.
     var recommendedImages by mutableStateOf(mutableStateListOf<Image>())
-    val staggeredGridState = LazyStaggeredGridState()
-    val uniformGridState = LazyGridState()
     var doneInitialLoad by mutableStateOf(false)
     private val recommendedTags = mutableListOf<String>()
     private var pageNumber by mutableIntStateOf(imageSource.imageBoard.firstPageIndex)
