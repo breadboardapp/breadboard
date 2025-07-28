@@ -68,6 +68,7 @@ fun HomeScreen(
     val pullToRefreshController = rememberPullToRefreshController(false) {
         recommendationsProvider.prepareRecommendedTags()
         recommendationsProvider.recommendImages()
+        recommendationsProvider.resetGridStates()
     }
 
     MainScreenScaffold(
