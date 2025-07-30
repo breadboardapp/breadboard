@@ -30,7 +30,7 @@ import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -341,10 +341,10 @@ private fun GifBadge() {
             color = MaterialTheme.colorScheme.onPrimary,
             modifier = Modifier
                 .background(
-                    MaterialTheme.colorScheme.primary,
-                    RoundedCornerShape(4.dp)
+                    color = MaterialTheme.colorScheme.primary,
+                    shape = CircleShape
                 )
-                .padding(vertical = 2.dp, horizontal = 4.dp)
+                .padding(vertical = 3.dp, horizontal = 6.dp)
         )
     }
 }
