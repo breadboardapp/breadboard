@@ -29,6 +29,22 @@ To enhance your experience, Breadboard offers a feature to recommend posts based
 - **Purpose:** The sole purpose of sending this aggregated metadata is to retrieve recommendations for similar posts from the external platform.
 - **User Control:** You can choose not to use this functionality by not visiting the "Browse" page within the App. You can set the App's "Start page" setting to something other than "Browse" to prevent this feature from automatically working when you open the App.
 
+### Search History
+
+To improve your user experience and allow you to quickly revisit previous searches, Breadboard stores your search queries locally on your device.
+
+- **How it Works:** When you perform a search within the App, the search terms you use are saved to your device's local storage.
+- **User Control and Deletion:** You have full control over your search history. You can delete individual search history entries at any time within the App. You also have the option to disable the search history feature entirely through the App's settings, which will prevent any future search queries from being saved. If you disable search history, any previously saved search history will also be cleared.
+- **Data Storage:** Your search history is stored only on your device. It is not transmitted to us or any third party.
+
+### Data Export
+
+Breadboard provides you with the functionality to export your application data to a file. This allows you to back up or transfer your information.
+
+- **What is Exported:** The user has the ability to choose which data categories are exported. The categories available for export include: **App settings**, **Favourite images**, and **Search history**.
+- **Sensitive Information Exclusion:** For your security, sensitive information such as API credentials you have saved within the App will **not** be included in the exported file.
+- **User Responsibility:** Once you export your data to a file, that file is stored on your device or in a location you choose. The security and management of this exported file become your responsibility. Breadboard is not responsible for the exported file once it has been created and saved outside of the App.
+
 ### Data Security
 
 We take reasonable measures to help protect the information we process. When you provide API credentials, they are stored locally on your device, the App's developers do not have access to these credentials, and they are only used for the purpose of making requests to the external platforms you choose to interact with.
