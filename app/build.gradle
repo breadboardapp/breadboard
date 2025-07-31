@@ -11,7 +11,7 @@ android {
     compileSdk 36
 
     defaultConfig {
-        applicationId "moe.apex.rule34"
+        applicationId "moe.apex.breadboard"
         minSdk 26
         targetSdk 36
         versionCode 300
