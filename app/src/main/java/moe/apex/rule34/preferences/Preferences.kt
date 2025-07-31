@@ -51,6 +51,7 @@ import moe.apex.rule34.navigation.AboutSettings
 import moe.apex.rule34.navigation.BlockedTagsSettings
 import moe.apex.rule34.navigation.ExperimentalSettings
 import moe.apex.rule34.prefs
+import moe.apex.rule34.util.AgeVerification
 import moe.apex.rule34.util.ChevronRight
 import moe.apex.rule34.util.ExportDirectoryHandler
 import moe.apex.rule34.util.ExpressiveGroup
@@ -88,6 +89,7 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
     var importedData: JSONObject? by remember { mutableStateOf(null) }
     var importingStarted by rememberSaveable { mutableStateOf(false) }
     var showAuthDialog by remember { mutableStateOf(false) }
+    var showAgeVerificationDialog by remember { mutableStateOf(false) }
 
     val preferencesRepository = LocalContext.current.prefs
     val currentSettings = LocalPreferences.current
@@ -106,6 +108,21 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
             }
             showAuthDialog = false
         }
+    }
+
+    if (showAgeVerificationDialog) {
+        AgeVerification.AgeVerifyDialog(
+            onDismissRequest = { showAgeVerificationDialog = false },
+            onAgeVerified = {
+                scope.launch {
+                    preferencesRepository.updatePref(
+                        PreferenceKeys.HAS_VERIFIED_AGE,
+                        true
+                    )
+                }
+                showAgeVerificationDialog = false
+            }
+        )
     }
 
     if (storageLocationPromptLaunched) {
@@ -269,6 +286,10 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                             enumItems = ImageSource.entries,
                             selectedItem = currentSettings.imageSource,
                             onSelection = {
+                                if (it == ImageSource.R34) {
+                                    showAgeVerificationDialog = true
+                                    return@EnumPref
+                                }
                                 scope.launch {
                                     preferencesRepository.updatePref(
                                         PreferenceKeys.IMAGE_SOURCE,
@@ -364,8 +385,12 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                             checked = currentSettings.recommendAllRatings,
                             title = "Recommend all ratings",
                             summary = "On the browse page, show images with all ratings. If disabled, " +
-                                    "only show images rated Safe."
+                                      "only show images rated Safe."
                         ) {
+                            if (it && !AgeVerification.hasVerifiedAge(currentSettings)) {
+                                showAgeVerificationDialog = true
+                                return@SwitchPref
+                            }
                             scope.launch {
                                 preferencesRepository.updatePref(
                                     PreferenceKeys.RECOMMEND_ALL_RATINGS,

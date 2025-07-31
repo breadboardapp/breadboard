@@ -106,6 +106,7 @@ import moe.apex.rule34.preferences.PreferenceKeys
 import moe.apex.rule34.prefs
 import moe.apex.rule34.tag.TagSuggestion
 import moe.apex.rule34.ui.theme.searchField
+import moe.apex.rule34.util.AgeVerification
 import moe.apex.rule34.util.CHIP_SPACING
 import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.rule34.util.ListItemPosition
@@ -152,6 +153,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
     var cleanedSearchString by rememberSaveable { mutableStateOf("") }
     val mostRecentSuggestions = remember { mutableStateListOf<TagSuggestion>() }
 
+    var showAgeVerificationDialog by remember { mutableStateOf(false) }
     var showSourceChangeDialog by remember { mutableStateOf(false) }
     var sourceChangeDialogData by remember { mutableStateOf<SourceDialogData?>(null) }
     var showSourceRatingBox by remember { mutableStateOf(false) }
@@ -248,6 +250,22 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                 shouldShowSuggestions = false
             }
         }
+    }
+
+
+    if (showAgeVerificationDialog) {
+        AgeVerification.AgeVerifyDialog(
+            onDismissRequest = { showAgeVerificationDialog = false },
+            onAgeVerified = {
+                scope.launch {
+                    context.prefs.updatePref(
+                        PreferenceKeys.HAS_VERIFIED_AGE,
+                        true
+                    )
+                }
+                showAgeVerificationDialog = false
+            }
+        )
     }
 
 
@@ -577,6 +595,10 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                             label = { Text(it.label) },
                             onClick = {
                                 if (it == currentSource) return@FilterChip
+                                if (it == ImageSource.R34 && !AgeVerification.hasVerifiedAge(prefs)) {
+                                    showAgeVerificationDialog = true
+                                    return@FilterChip
+                                }
                                 fun confirm() {
                                     scope.launch {
                                         context.prefs.updatePref(PreferenceKeys.IMAGE_SOURCE, it)
@@ -612,6 +634,10 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                                                 it
                                             )
                                         } else {
+                                            if (it != ImageRating.SAFE && !AgeVerification.hasVerifiedAge(prefs)) {
+                                                showAgeVerificationDialog = true
+                                                return@launch
+                                            }
                                             context.prefs.addToSet(
                                                 PreferenceKeys.RATINGS_FILTER,
                                                 it

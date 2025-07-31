@@ -46,6 +46,7 @@ import kotlin.collections.toSet
 import androidx.core.net.toUri
 import moe.apex.rule34.BuildConfig
 import moe.apex.rule34.image.ImageBoardAuth
+import moe.apex.rule34.util.AgeVerification
 import moe.apex.rule34.util.MigrationOnlyField
 
 
@@ -83,6 +84,7 @@ data object PrefNames {
     const val RECOMMEND_ALL_RATINGS = "recommend_all_ratings"
     const val SEARCH_PULL_TO_REFRESH = "search_pull_to_refresh"
     const val ALWAYS_ANIMATE_SCROLL = "always_animate_scroll"
+    const val HAS_VERIFIED_AGE = "has_verified_age"
 }
 
 
@@ -108,6 +110,7 @@ object PreferenceKeys {
     val RECOMMEND_ALL_RATINGS = booleanPreferencesKey(PrefNames.RECOMMEND_ALL_RATINGS)
     val SEARCH_PULL_TO_REFRESH = booleanPreferencesKey(PrefNames.SEARCH_PULL_TO_REFRESH)
     val ALWAYS_ANIMATE_SCROLL = booleanPreferencesKey(PrefNames.ALWAYS_ANIMATE_SCROLL)
+    val HAS_VERIFIED_AGE = booleanPreferencesKey(PrefNames.HAS_VERIFIED_AGE)
 }
 
 
@@ -167,6 +170,7 @@ data class Prefs(
     val recommendAllRatings: Boolean,
     val searchPullToRefresh: Boolean,
     val alwaysAnimateScroll: Boolean,
+    private val hasVerifiedAge: Boolean,
 ) {
     companion object {
         val DEFAULT = Prefs(
@@ -191,7 +195,14 @@ data class Prefs(
             recommendAllRatings = false,
             searchPullToRefresh = false,
             alwaysAnimateScroll = false,
+            hasVerifiedAge = false,
         )
+    }
+
+
+    /** Use [AgeVerification.hasVerifiedAge] instead. */
+    fun getInternalAgeVerificationStatus(): Boolean {
+        return hasVerifiedAge
     }
 
 
@@ -233,6 +244,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             PreferenceKeys.RECOMMEND_ALL_RATINGS to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.SEARCH_PULL_TO_REFRESH to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.ALWAYS_ANIMATE_SCROLL to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.HAS_VERIFIED_AGE to PrefMeta(PrefCategory.SETTING, exportable = false),
         )
     }
 
@@ -610,6 +622,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val recommendAllRatings = preferences[PreferenceKeys.RECOMMEND_ALL_RATINGS] ?: Prefs.DEFAULT.recommendAllRatings
         val searchPullToRefresh = preferences[PreferenceKeys.SEARCH_PULL_TO_REFRESH] ?: Prefs.DEFAULT.searchPullToRefresh
         val alwaysAnimateScroll = preferences[PreferenceKeys.ALWAYS_ANIMATE_SCROLL] ?: Prefs.DEFAULT.alwaysAnimateScroll
+        val hasVerifiedAge = preferences[PreferenceKeys.HAS_VERIFIED_AGE] ?: Prefs.DEFAULT.getInternalAgeVerificationStatus()
 
         return Prefs(
             dataSaver,
@@ -633,6 +646,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             recommendAllRatings,
             searchPullToRefresh,
             alwaysAnimateScroll,
+            hasVerifiedAge,
         )
     }
 }

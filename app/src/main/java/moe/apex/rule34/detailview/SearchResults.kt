@@ -25,10 +25,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
+import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.PreferenceKeys
 import moe.apex.rule34.prefs
+import moe.apex.rule34.util.AgeVerification
 import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
 import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.rule34.util.LargeTitleBar
@@ -52,6 +54,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
     val prefs = LocalPreferences.current
     val preferencesRepository = LocalContext.current.prefs
     val filterLocally = prefs.filterRatingsLocally
+    var showAgeVerificationDialog by remember { mutableStateOf(false) }
 
     fun setUpViewModel() {
         if (!viewModel.isReady) {
@@ -89,6 +92,10 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
                     if (it in prefs.ratingsFilter) {
                         preferencesRepository.removeFromSet(PreferenceKeys.RATINGS_FILTER, it)
                     } else {
+                        if (it != ImageRating.SAFE && !AgeVerification.hasVerifiedAge(prefs)) {
+                            showAgeVerificationDialog = true
+                            return@launch
+                        }
                         preferencesRepository.addToSet(PreferenceKeys.RATINGS_FILTER, it)
                     }
                 }
@@ -101,6 +108,21 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
     val imagesToDisplay = viewModel.images.filter {
         it.metadata!!.tags.none { tag -> actuallyBlockedTags.contains(tag.lowercase()) } &&
         if (prefs.filterRatingsLocally) it.metadata.rating in prefs.ratingsFilter else true
+    }
+
+    if (showAgeVerificationDialog) {
+        AgeVerification.AgeVerifyDialog(
+            onDismissRequest = { showAgeVerificationDialog = false },
+            onAgeVerified = {
+                scope.launch {
+                    preferencesRepository.updatePref(
+                        PreferenceKeys.HAS_VERIFIED_AGE,
+                        true
+                    )
+                }
+                showAgeVerificationDialog = false
+            }
+        )
     }
 
     Scaffold(

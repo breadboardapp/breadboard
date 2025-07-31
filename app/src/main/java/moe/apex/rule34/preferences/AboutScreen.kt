@@ -66,6 +66,7 @@ import moe.apex.rule34.util.SmallVerticalSpacer
 import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.TitleSummary
 import moe.apex.rule34.util.openUrl
+import moe.apex.rule34.util.releasePlatform
 import kotlin.math.max
 
 
@@ -171,7 +172,7 @@ fun AboutScreen(navController: NavHostController) {
                         style = MaterialTheme.typography.titleLarge
                     )
                     Text(
-                        text = BuildConfig.VERSION_NAME,
+                        text = "${BuildConfig.VERSION_NAME} (${releasePlatform.displayName})",
                         style = MaterialTheme.typography.labelLarge,
                         color = Color.Gray
                     )
