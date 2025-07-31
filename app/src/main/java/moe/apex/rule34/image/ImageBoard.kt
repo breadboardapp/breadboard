@@ -32,6 +32,8 @@ interface ImageBoard {
     val imageSearchUrl: String
     val authenticatedImageSearchUrl: String
         get() = "$imageSearchUrl&api_key=%s&user_id=%s"
+    val apiKeyCreationUrl: String?
+        get() = null
     val aiTagName: String
     val firstPageIndex: Int
         get() = 0
@@ -222,6 +224,7 @@ object Gelbooru : GelbooruBasedImageBoard {
     override val autoCompleteSearchUrl = "${baseUrl}index.php?page=autocomplete2&term=%s&type=tag_query&limit=10"
     override val autoCompleteCategoryMapping = mapOf("tag" to "general")
     override val imageSearchUrl = "${baseUrl}index.php?page=dapi&json=1&s=post&q=index&limit=100&tags=%s&pid=%d"
+    override val apiKeyCreationUrl = "${baseUrl}index.php?page=account&s=options"
     override val aiTagName = "ai-generated"
     override val canLoadUnauthenticated = false
 
@@ -253,6 +256,7 @@ object Danbooru : ImageBoard {
     override val aiTagName = "ai-generated"
     override val firstPageIndex = 1
     override val authenticatedImageSearchUrl = "$imageSearchUrl&api_key=%s&login=%s"
+    override val apiKeyCreationUrl = "${baseUrl}/profile"
     override val canLoadUnauthenticated = false // Technically it can, it's just very limited
     override val localFilterType = ImageBoardLocalFilterType.RECOMMENDED
 

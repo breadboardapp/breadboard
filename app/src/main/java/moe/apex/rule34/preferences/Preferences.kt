@@ -37,14 +37,23 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import moe.apex.rule34.image.ImageBoard
 import moe.apex.rule34.image.ImageBoardAuth
 import moe.apex.rule34.image.ImageBoardLocalFilterType
 import moe.apex.rule34.navigation.AboutSettings
@@ -96,6 +105,7 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
 
     if (showAuthDialog) {
         AuthDialog(
+            selectedBoard = currentSettings.imageSource.imageBoard,
             default = currentSettings.authFor(currentSettings.imageSource),
             onDismissRequest = { showAuthDialog = false }
         ) { username, apiKey ->
@@ -569,12 +579,15 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
 
 @Composable
 private fun AuthDialog(
+    selectedBoard: ImageBoard,
     default: ImageBoardAuth?,
     onDismissRequest: () -> Unit,
     onSave: (String, String) -> Unit
 ) {
     var userId by remember { mutableStateOf(default?.user ?: "") }
     var apiKey by remember { mutableStateOf(default?.apiKey ?: "") }
+
+    val uriHandler = LocalUriHandler.current
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
@@ -597,6 +610,26 @@ private fun AuthDialog(
                     obscured = true
                 ) {
                     apiKey = it.trim()
+                }
+
+                selectedBoard.apiKeyCreationUrl?.let { url ->
+                    val apiKeyCreationText = buildAnnotatedString {
+                        val link = LinkAnnotation.Url(
+                            url,
+                            TextLinkStyles(
+                                SpanStyle(color = Color.White, textDecoration = TextDecoration.Underline)
+                            )
+                        ) {
+                            uriHandler.openUri(url)
+                        }
+
+                        withLink(link) {
+                            append("Find your credentials...")
+                        }
+                    }
+
+                    SmallVerticalSpacer()
+                    Text(text = apiKeyCreationText)
                 }
             }
         },
