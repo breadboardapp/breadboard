@@ -617,7 +617,7 @@ private fun AuthDialog(
                         val link = LinkAnnotation.Url(
                             url,
                             TextLinkStyles(
-                                SpanStyle(color = Color.White, textDecoration = TextDecoration.Underline)
+                                SpanStyle(color = MaterialTheme.colorScheme.secondary, textDecoration = TextDecoration.Underline)
                             )
                         ) {
                             uriHandler.openUri(url)
