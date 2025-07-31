@@ -286,7 +286,7 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                             enumItems = ImageSource.entries,
                             selectedItem = currentSettings.imageSource,
                             onSelection = {
-                                if (it == ImageSource.R34) {
+                                if (it == ImageSource.R34 && !AgeVerification.hasVerifiedAge(currentSettings)) {
                                     showAgeVerificationDialog = true
                                     return@EnumPref
                                 }
