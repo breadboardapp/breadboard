@@ -1,8 +1,8 @@
 package moe.apex.rule34.detailview
 
-import android.util.Log
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -11,9 +11,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -22,38 +22,66 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import moe.apex.rule34.image.Image
+import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.PreferenceKeys
 import moe.apex.rule34.prefs
+import moe.apex.rule34.util.AgeVerification
 import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
 import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
-import moe.apex.rule34.util.TitleBar
+import moe.apex.rule34.util.LargeTitleBar
+import moe.apex.rule34.util.SMALL_LARGE_SPACER
+import moe.apex.rule34.util.ScrollToTopArrow
 import moe.apex.rule34.util.availableRatingsForCurrentSource
+import moe.apex.rule34.util.rememberPullToRefreshController
 import moe.apex.rule34.util.withoutVertical
+import moe.apex.rule34.viewmodel.SearchResultsViewModel
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchResults(navController: NavController, source: ImageSource, tags: String) {
+fun SearchResults(navController: NavController, source: ImageSource, tagList: List<String>, viewModel: SearchResultsViewModel = viewModel()) {
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
     val shouldShowLargeImage = remember { mutableStateOf(false) }
     var initialPage by remember { mutableIntStateOf(0) }
-    val allImages = remember { mutableStateListOf<Image>() }
-    var shouldKeepSearching by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
 
     val prefs = LocalPreferences.current
     val preferencesRepository = LocalContext.current.prefs
-    val imageSource = source.site
     val filterLocally = prefs.filterRatingsLocally
-    var pageNumber by remember { mutableIntStateOf(imageSource.firstPageIndex) }
+    var showAgeVerificationDialog by remember { mutableStateOf(false) }
+
+    fun setUpViewModel() {
+        if (!viewModel.isReady) {
+            viewModel.setup(
+                imageSource = source,
+                auth = prefs.authFor(source),
+                tags = tagList
+            )
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        setUpViewModel()
+    }
+
+    val pullToRefreshController = if (prefs.searchPullToRefresh) {
+        rememberPullToRefreshController(
+            initialValue = false,
+            modifier = if (prefs.filterRatingsLocally) {
+                Modifier.offset(y = 80.dp) // Height of the ratings box
+            } else Modifier
+        ) {
+            viewModel.prepareReset()
+            setUpViewModel()
+            viewModel.loadMore()
+        }
+    } else null
 
     val ratingRows: List<@Composable () -> Unit> = availableRatingsForCurrentSource.map { {
         FilterChip(
@@ -64,6 +92,10 @@ fun SearchResults(navController: NavController, source: ImageSource, tags: Strin
                     if (it in prefs.ratingsFilter) {
                         preferencesRepository.removeFromSet(PreferenceKeys.RATINGS_FILTER, it)
                     } else {
+                        if (it != ImageRating.SAFE && !AgeVerification.hasVerifiedAge(prefs)) {
+                            showAgeVerificationDialog = true
+                            return@launch
+                        }
                         preferencesRepository.addToSet(PreferenceKeys.RATINGS_FILTER, it)
                     }
                 }
@@ -71,31 +103,63 @@ fun SearchResults(navController: NavController, source: ImageSource, tags: Strin
         )
     } }
 
-    val imagesToDisplay = allImages.filter {
-        if (prefs.filterRatingsLocally) it.metadata!!.rating in prefs.ratingsFilter
-        else true
+    // In case they explicitly search for a blocked tag
+    val actuallyBlockedTags = prefs.blockedTags.filter { it !in tagList }
+    val imagesToDisplay = viewModel.images.filter {
+        it.metadata!!.tags.none { tag -> actuallyBlockedTags.contains(tag.lowercase()) } &&
+        if (prefs.filterRatingsLocally) it.metadata.rating in prefs.ratingsFilter else true
+    }
+
+    if (showAgeVerificationDialog) {
+        AgeVerification.AgeVerifyDialog(
+            onDismissRequest = { showAgeVerificationDialog = false },
+            onAgeVerified = {
+                scope.launch {
+                    preferencesRepository.updatePref(
+                        PreferenceKeys.HAS_VERIFIED_AGE,
+                        true
+                    )
+                }
+                showAgeVerificationDialog = false
+            }
+        )
     }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TitleBar(
+            LargeTitleBar(
                 title = "Search results",
                 scrollBehavior = scrollBehavior,
-                navController = navController
+                navController = navController,
+                additionalActions = {
+                    if (viewModel.isReady) {
+                        ScrollToTopArrow(
+                            staggeredGridState = viewModel.staggeredGridState,
+                            uniformGridState = viewModel.uniformGridState,
+                            animate = !filterLocally || prefs.alwaysAnimateScroll,
+                        )
+                    }
+                }
             )
-        }
+        },
     ) { padding ->
+        if (!viewModel.isReady) {
+            return@Scaffold
+        }
+
         ImageGrid(
             modifier = Modifier
                 .padding(padding.withoutVertical(top = false))
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
+            staggeredGridState = viewModel.staggeredGridState,
+            uniformGridState = viewModel.uniformGridState,
             images = imagesToDisplay,
             onImageClick = { index, _ ->
                 initialPage = index
                 shouldShowLargeImage.value = true
             },
-            contentPadding = PaddingValues(top = 16.dp, start = 16.dp, end = 16.dp),
+            contentPadding = PaddingValues(top = SMALL_LARGE_SPACER.dp, start = SMALL_LARGE_SPACER.dp, end = SMALL_LARGE_SPACER.dp),
             filterComposable = if (filterLocally) { {
                 HorizontallyScrollingChipsWithLabels(
                     modifier = Modifier.padding(bottom = 4.dp),
@@ -103,36 +167,11 @@ fun SearchResults(navController: NavController, source: ImageSource, tags: Strin
                     content = listOf(ratingRows)
                 )
             } } else null,
-            initialLoad = {
-                withContext(Dispatchers.IO) {
-                    try {
-                        val newImages = imageSource.loadPage(tags, pageNumber)
-                        if (!allImages.addAll(newImages)) shouldKeepSearching = false
-                        pageNumber++
-                    } catch (e: Exception) {
-                        Log.e("SearchResults", "Error loading initial images", e)
-                        shouldKeepSearching = false
-                    }
-                }
-            }
-        ) {
-            if (shouldKeepSearching) {
-                scope.launch(Dispatchers.IO) {
-                    try {
-                        val newImages = imageSource.loadPage(tags, pageNumber)
-                        if (newImages.isNotEmpty()) {
-                            pageNumber++
-                            allImages.addAll(newImages.filter { it !in allImages })
-                        } else {
-                            shouldKeepSearching = false
-                        }
-                    } catch (e: Exception) {
-                        Log.e("SearchResults", "Error loading new images", e)
-                        shouldKeepSearching = false
-                    }
-                }
-            }
-        }
+            pullToRefreshController = pullToRefreshController,
+            doneInitialLoad = viewModel.doneInitialLoad,
+            onEndReached = viewModel::loadMore,
+            noImagesContent = { if (viewModel.doneInitialLoad) { NoImages() } }
+        )
     }
 
     AnimatedVisibilityLargeImageView(navController, shouldShowLargeImage, initialPage, imagesToDisplay)

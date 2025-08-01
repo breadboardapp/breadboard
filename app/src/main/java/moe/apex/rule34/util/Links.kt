@@ -1,5 +1,7 @@
 package moe.apex.rule34.util
 
+import androidx.core.net.toUri
+
 
 private val links = mapOf(
     "bsky.app" to "fxbsky.app",
@@ -10,9 +12,14 @@ private val links = mapOf(
 
 
 fun fixLink(link: String): String {
-    for ((key, value) in links) {
-        if (key in link) {
-            return link.replace(key, value)
+    val uri = link.toUri()
+    for ((originalHost, fixedHost) in links) {
+        if (uri.host == originalHost) {
+            return uri.buildUpon().authority(fixedHost).build().toString()
+        } else if (uri.host!!.endsWith(".$originalHost")) {
+            val subdomain = uri.host!!.substringBeforeLast(".$originalHost")
+            val newHost = "$subdomain.$fixedHost"
+            return uri.buildUpon().authority(newHost).build().toString()
         }
     }
     return link

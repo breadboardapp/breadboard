@@ -8,30 +8,24 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ContextualFlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,14 +33,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.LinkAnnotation
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLinkStyles
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
@@ -56,31 +45,43 @@ import moe.apex.rule34.image.Image
 import moe.apex.rule34.navigation.ImageView
 import moe.apex.rule34.navigation.Results
 import moe.apex.rule34.preferences.ImageSource
+import moe.apex.rule34.tag.TagCategory
+import moe.apex.rule34.ui.theme.prefTitle
+import moe.apex.rule34.util.BasicExpressiveContainer
+import moe.apex.rule34.util.BasicExpressiveGroup
 import moe.apex.rule34.util.CHIP_SPACING
-import moe.apex.rule34.util.CombinedClickableSuggestionChip
-import moe.apex.rule34.util.Heading
-import moe.apex.rule34.util.LargeVerticalSpacer
+import moe.apex.rule34.util.ChevronRight
+import moe.apex.rule34.util.CombinedClickableFilterChip
+import moe.apex.rule34.util.LARGE_SPACER
+import moe.apex.rule34.util.ListItemPosition
+import moe.apex.rule34.util.MEDIUM_LARGE_SPACER
+import moe.apex.rule34.util.MEDIUM_SPACER
+import moe.apex.rule34.util.SMALL_LARGE_SPACER
+import moe.apex.rule34.util.TitleSummary
 import moe.apex.rule34.util.TitledModalBottomSheet
 import moe.apex.rule34.util.copyText
 import moe.apex.rule34.util.isWebLink
+import moe.apex.rule34.util.largerShape
+import moe.apex.rule34.util.navBarHeight
+import moe.apex.rule34.util.openUrl
 import moe.apex.rule34.util.pluralise
 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun InfoSheet(navController: NavController, image: Image, visibilityState: MutableState<Boolean>) {
+fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -> Unit) {
     if (image.metadata == null) return
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var state: SheetState? = null
-    val clip = LocalClipboardManager.current
+    val clip = LocalClipboard.current
     var previousSheetValue by remember { mutableStateOf(SheetValue.Hidden) }
 
     fun hideAndThen(block: () -> Unit = { }) {
         scope.launch {
             state?.hide()
         }.invokeOnCompletion {
-            visibilityState.value = false
+            onDismissRequest()
             block()
         }
     }
@@ -93,20 +94,22 @@ fun InfoSheet(navController: NavController, image: Image, visibilityState: Mutab
                 val intent = createSearchIntent(context, image.imageSource, tag)
                 context.startActivity(intent)
             } else {
-                navController.navigate(Results(image.imageSource, tag))
+                navController.navigate(Results(image.imageSource, listOf(tag)))
             }
         }
     }
 
     fun chipLongClick(tag: String) {
-        copyText(context, clip, tag)
+        scope.launch {
+            copyText(context, clip, tag)
+        }
     }
 
     // We want to bypass the partially expanded state when closing but not when opening.
     state = rememberModalBottomSheetState(
         skipPartiallyExpanded = false,
         confirmValueChange = { newValue ->
-            if (newValue == SheetValue.PartiallyExpanded ) {
+            if (newValue == SheetValue.PartiallyExpanded) {
                 if (previousSheetValue == SheetValue.Expanded) {
                     hideAndThen()
                     return@rememberModalBottomSheetState false
@@ -114,142 +117,251 @@ fun InfoSheet(navController: NavController, image: Image, visibilityState: Mutab
                     previousSheetValue = newValue
                     return@rememberModalBottomSheetState true
                 }
-            }
-            else {
+            } else {
                 previousSheetValue = newValue
                 return@rememberModalBottomSheetState true
             }
         }
     )
 
-    /* The padding and window insets allow the content to draw behind the nav bar while ensuring
-       the sheet doesn't expand to behind the status bar. */
     TitledModalBottomSheet(
-        modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars),
-        onDismissRequest = { visibilityState.value = false },
+        onDismissRequest = onDismissRequest,
         sheetState = state,
-        contentWindowInsets = { BottomSheetDefaults.windowInsets.only(WindowInsetsSides.Horizontal) },
-        title = "Image info"
+        title = "About this image"
     ) {
-        Column(
+        LazyColumn(
             modifier = Modifier
-                .verticalScroll(rememberScrollState())
                 .fillMaxWidth()
+                .padding(horizontal = MEDIUM_SPACER.dp)
+                .clip(largerShape),
+            verticalArrangement = Arrangement.spacedBy(LARGE_SPACER.dp),
+            contentPadding = PaddingValues(bottom = navBarHeight * 2)
         ) {
-            image.metadata.parentId?.let {
-                TextButton(
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                    onClick = {
-                        hideAndThen {
-                            navController.navigate(ImageView(image.imageSource, it))
-                        }
+            item {
+                Row {
+                    BasicExpressiveContainer(
+                        modifier = Modifier.weight(1f),
+                        position = ListItemPosition.SINGLE_ELEMENT
+                    ) {
+                        TitleSummary(
+                            title = image.metadata.rating.label,
+                            summary = "Rating"
+                        )
                     }
-                ) {
-                    Text("View parent image")
+                    Spacer(Modifier.width(MEDIUM_LARGE_SPACER.dp))
+                    BasicExpressiveContainer(
+                        modifier = Modifier.weight(1f),
+                        position = ListItemPosition.SINGLE_ELEMENT
+                    ) {
+                        TitleSummary(
+                            title = image.imageSource.label,
+                            summary = "Imageboard"
+                        )
+                    }
                 }
             }
-            if (image.metadata.hasChildren == true) {
-                image.id?.let {
-                    TextButton(
-                        modifier = Modifier.align(Alignment.CenterHorizontally),
-                        onClick = {
-                            hideAndThen {
-                                if (context is DeepLinkActivity) {
-                                    val intent = createSearchIntent(context, image.imageSource, "parent:$it")
-                                    context.startActivity(intent)
-                                } else {
-                                    navController.navigate(Results(image.imageSource, "parent:$it"))
+            item {
+                BasicExpressiveGroup {
+                    image.metadata.source?.let {
+                        val title = "Source"
+                        item {
+                            TitleSummary(
+                                title = title,
+                                summary = it,
+                                onClick = if (it.isWebLink()) {
+                                    {
+                                        openUrl(context, it)
+                                    }
+                                } else null,
+                                trailingIcon = if (it.isWebLink()) {
+                                    {
+                                        CopyIcon(title) {
+                                            scope.launch { copyText(context, clip, it) }
+                                        }
+                                    }
+                                } else null
+                            )
+                        }
+                    }
+                    image.metadata.pixivUrl?.let {
+                        val title = "Pixiv URL"
+                        item {
+                            TitleSummary(
+                                title = title,
+                                summary = it,
+                                onClick = if (it.isWebLink()) {
+                                    {
+                                        openUrl(context, it)
+                                    }
+                                } else null,
+                                trailingIcon = if (it.isWebLink()) {
+                                    {
+                                        CopyIcon(title) {
+                                            scope.launch { copyText(context, clip, it) }
+                                        }
+                                    }
+                                } else null
+                            )
+                        }
+                    }
+                    image.highestQualityFormatUrl.let {
+                        val title = "File URL"
+                        item {
+                            TitleSummary(
+                                title = title,
+                                summary = it,
+                                onClick = { openUrl(context, it) },
+                                trailingIcon = {
+                                    CopyIcon(title) {
+                                        scope.launch { copyText(context, clip, it) }
+                                    }
                                 }
+                            )
+                        }
+                    }
+                    image.metadata.parentId?.let {
+                        item {
+                            TitleSummary(
+                                title = "View parent image",
+                                onClick = {
+                                    hideAndThen {
+                                        navController.navigate(ImageView(image.imageSource, it))
+                                    }
+                                },
+                                trailingIcon = {
+                                    ChevronRight()
+                                }
+                            )
+                        }
+                    }
+                    if (image.metadata.hasChildren == true) {
+                        image.id?.let {
+                            item {
+                                TitleSummary(
+                                    title = "View related images",
+                                    onClick = {
+                                        hideAndThen {
+                                            if (context is DeepLinkActivity) {
+                                                val intent = createSearchIntent(
+                                                    context,
+                                                    image.imageSource,
+                                                    "parent:$it"
+                                                )
+                                                context.startActivity(intent)
+                                            } else {
+                                                navController.navigate(
+                                                    Results(
+                                                        image.imageSource,
+                                                        listOf("parent:$it")
+                                                    )
+                                                )
+                                            }
+                                        }
+                                    },
+                                    trailingIcon = {
+                                        ChevronRight()
+                                    }
+                                )
                             }
                         }
-                    ) {
-                        Text("View related images")
                     }
                 }
             }
-            image.metadata.artist?.let {
-                Heading(text = "Artist")
-                CombinedClickableSuggestionChip(
-                    modifier = Modifier.padding(start = 16.dp),
-                    label = { Text(it) },
-                    onClick = { chipClick(it) },
-                    onLongClick = { chipLongClick(it) }
-                )
-                LargeVerticalSpacer()
-            }
-            image.metadata.source?.let {
-                Heading(text = "Source")
-                if (it.isWebLink()) PaddedUrlText(it) else PaddedText(it)
-                LargeVerticalSpacer()
-            }
-            Heading(text = "Rating")
-            PaddedText(image.metadata.rating.label)
-            LargeVerticalSpacer()
-            image.metadata.pixivUrl?.let {
-                Heading(text = "Pixiv URL")
-                PaddedUrlText(it)
-                LargeVerticalSpacer()
-            }
-            image.metadata.groupedTags.map {
-                Heading(text = it.category.label.pluralise(it.tags.size, it.category.pluralisedLabel))
-                ContextualFlowRow(
-                    itemCount = it.tags.size,
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp, Alignment.Start)
-                ) { index ->
-                    val tag = it.tags[index]
-                    CombinedClickableSuggestionChip(
-                        label = { Text(tag) },
-                        onClick = { chipClick(tag) },
-                        onLongClick = { chipLongClick(tag) }
+            image.metadata.artists.takeIf { it.isNotEmpty() }?.let {
+                item {
+                    TagsContainer(
+                        category = TagCategory.ARTIST,
+                        tags = it,
+                        onChipClick = ::chipClick,
+                        onChipLongClick = ::chipLongClick
                     )
                 }
-                Spacer(modifier = Modifier.height(16.dp))
             }
-
-            Spacer(Modifier.height(WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() * 2))
+            /* Artists are stored in their own field rather than in groupedTags.
+               If the artist tags are somehow also in groupedTags, we don't want to show them again. */
+            image.metadata.groupedTags.filter { it.category != TagCategory.ARTIST }.map {
+                item {
+                    TagsContainer(
+                        category = it.category,
+                        tags = it.tags,
+                        onChipClick = ::chipClick,
+                        onChipLongClick = ::chipLongClick
+                    )
+                }
+            }
         }
     }
 }
 
 
 @Composable
-private fun PaddedText(text: String) {
-    Text(
-        modifier = Modifier.padding(horizontal = 16.dp),
-        text = text
-    )
-}
-
-
-@Composable
-private fun PaddedUrlText(text: String) {
-    val annotatedString = buildAnnotatedString {
-        withLink(LinkAnnotation.Url(
-            url = text,
-            styles = TextLinkStyles(SpanStyle(
-                color = MaterialTheme.colorScheme.secondary,
-                textDecoration = TextDecoration.Underline
-            ))
-        )) {
-            append(text)
-        }
-    }
-
-    SelectionContainer {
-        Text(
-            text = annotatedString,
-            modifier = Modifier.padding(horizontal = 16.dp)
+private fun CopyIcon(itemType: String, onClick: () -> Unit) {
+    IconButton(onClick = onClick) {
+        Icon(
+            imageVector = Icons.Rounded.ContentCopy,
+            contentDescription = "Copy $itemType",
+            tint = MaterialTheme.colorScheme.primary
         )
     }
 }
 
 
+@OptIn(ExperimentalLayoutApi::class)
+@Suppress("DEPRECATION")
+@Composable
+private fun TagsContainer(
+    category: TagCategory,
+    tags: List<String>,
+    onChipClick: (String) -> Unit,
+    onChipLongClick: (String) -> Unit
+) {
+    BasicExpressiveContainer(position = ListItemPosition.SINGLE_ELEMENT) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(
+                    top = SMALL_LARGE_SPACER.dp,
+                    bottom = (SMALL_LARGE_SPACER - 8).dp, // Chips have 8dp vertical padding already
+                    start = SMALL_LARGE_SPACER.dp,
+                    end = SMALL_LARGE_SPACER.dp
+                )
+        ) {
+            Text(
+                text = category.label.pluralise(
+                    tags.size,
+                    category.pluralisedLabel
+                ),
+                style = MaterialTheme.typography.prefTitle,
+            )
+            ContextualFlowRow(
+                itemCount = tags.size,
+                horizontalArrangement = Arrangement.spacedBy(
+                    space = CHIP_SPACING.dp,
+                    alignment = Alignment.Start
+                )
+            ) { index ->
+                val tag = tags[index]
+                CombinedClickableFilterChip(
+                    label = { Text(tag) },
+                    onClick = { onChipClick(tag) },
+                    onLongClick = { onChipLongClick(tag) }
+                )
+            }
+        }
+    }
+}
+
+
 private fun createSearchIntent(context: Context, imageSource: ImageSource, query: String): Intent {
+    return createSearchIntent(context, imageSource, listOf(query))
+}
+
+
+private fun createSearchIntent(context: Context, imageSource: ImageSource, queries: List<String>): Intent {
     val intent = Intent(Intent.ACTION_VIEW)
     intent.putExtra("source", imageSource.name)
     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-    intent.putExtra("query", query)
+    intent.putExtra("query", queries.toTypedArray())
     intent.setComponent(
         ComponentName(
             context,

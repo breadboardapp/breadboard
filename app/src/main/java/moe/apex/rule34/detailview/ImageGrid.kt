@@ -1,41 +1,43 @@
 package moe.apex.rule34.detailview
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeightIn
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridItemScope
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridItemScope
+import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,107 +52,185 @@ import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.util.FullscreenLoadingSpinner
 import moe.apex.rule34.util.NavBarHeightVerticalSpacer
+import moe.apex.rule34.util.PullToRefreshController
+import moe.apex.rule34.util.SMALL_SPACER
+import moe.apex.rule34.util.largerShape
 
 
-private const val MIN_IMAGE_HEIGHT = 96
-private const val MAX_IMAGE_HEIGHT = 320
+private const val MIN_IMAGE_HEIGHT = 108
+private const val MAX_IMAGE_HEIGHT = 280
 private const val MIN_CELL_WIDTH   = 120
 private const val MAX_CELL_WIDTH   = 144
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ImageGrid(
     modifier: Modifier = Modifier,
+    staggeredGridState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
+    uniformGridState: LazyGridState = rememberLazyGridState(),
     images: List<Image>,
     onImageClick: (Int, Image) -> Unit,
+    noImagesContent: @Composable () -> Unit = { NoImages() },
     contentPadding: PaddingValues = PaddingValues(0.dp),
     filterComposable: (@Composable () -> Unit)? = null,
-    initialLoad: (suspend () -> Unit)? = null,
+    pullToRefreshController: PullToRefreshController? = null,
+    doneInitialLoad: Boolean = true,
     onEndReached: suspend () -> Unit = { }
 ) {
     val prefs = LocalPreferences.current
-    var doneInitialLoad by remember { mutableStateOf(initialLoad == null) }
 
-    if (!doneInitialLoad) {
-        LaunchedEffect(Unit) {
-            initialLoad!!.invoke()
-            doneInitialLoad = true
+    @Composable
+    fun Container(content: @Composable () -> Unit) {
+        if (pullToRefreshController != null) {
+            PullToRefreshBox(
+                modifier = modifier,
+                isRefreshing = pullToRefreshController.isRefreshing,
+                state = pullToRefreshController.state,
+                onRefresh = pullToRefreshController::refresh,
+                indicator = {
+                    pullToRefreshController.Indicator(Modifier.align(Alignment.TopCenter))
+                },
+                content = { content() }
+            )
+        } else {
+            content()
         }
-        LinearProgressIndicator(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp)
-                .padding(contentPadding)
-        )
-        return
     }
 
-    if (prefs.useStaggeredGrid) {
-        LazyVerticalStaggeredGrid(
-            columns = StaggeredGridCells.Adaptive(MIN_CELL_WIDTH.dp),
-            state = rememberLazyStaggeredGridState(),
-            modifier = modifier,
-            contentPadding = contentPadding,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalItemSpacing = 8.dp
+    Container {
+        if (prefs.useStaggeredGrid) {
+            StaggeredImageGrid(
+                modifier = if (pullToRefreshController == null) modifier else Modifier,
+                gridState = staggeredGridState,
+                contentPadding = contentPadding,
+                filterComposable = filterComposable,
+                images = images,
+                noImagesContent = noImagesContent,
+                onImageClick = onImageClick,
+                onEndReached = onEndReached
+            )
+        } else {
+            UniformImageGrid(
+                modifier = if (pullToRefreshController == null) modifier else Modifier,
+                gridState = uniformGridState,
+                contentPadding = contentPadding,
+                filterComposable = filterComposable,
+                images = images,
+                noImagesContent = noImagesContent,
+                onImageClick = onImageClick,
+                onEndReached = onEndReached
+            )
+        }
+    }
+
+    AnimatedVisibility (
+        visible = !doneInitialLoad,
+        enter = EnterTransition.None,
+        exit = fadeOut(),
+    ) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(contentPadding)
+                .background(MaterialTheme.colorScheme.background)
         ) {
-            item(span = StaggeredGridItemSpan.FullLine ) {
-                if (filterComposable != null) filterComposable()
-                else Spacer(modifier = Modifier.height(8.dp))
-            }
+            LinearProgressIndicator(
+                modifier = modifier
+                    .fillMaxWidth()
+            )
+        }
+    }
+}
 
-            itemsIndexed(images, key = { _, image -> image.previewUrl }) { index, image ->
-                StaggeredImagePreviewContainer(image, index, onImageClick)
-            }
 
-            item { LaunchedEffect(Unit) { onEndReached() } }
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun StaggeredImageGrid(
+    modifier: Modifier = Modifier,
+    gridState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
+    contentPadding: PaddingValues,
+    filterComposable: (@Composable () -> Unit)? = null,
+    images: List<Image>,
+    noImagesContent: @Composable () -> Unit,
+    onImageClick: (Int, Image) -> Unit,
+    onEndReached: suspend () -> Unit = { }
+) {
+    LazyVerticalStaggeredGrid(
+        columns = StaggeredGridCells.Adaptive(MIN_CELL_WIDTH.dp),
+        state = gridState,
+        modifier = modifier,
+        contentPadding = contentPadding,
+        horizontalArrangement = Arrangement.spacedBy(SMALL_SPACER.dp),
+        verticalItemSpacing = SMALL_SPACER.dp
+    ) {
+        filterComposable?.let {
+            item(key = "ratings-filter", span = StaggeredGridItemSpan.FullLine ) { it() }
+        }
 
-            if (images.isEmpty()) {
-                item(span = StaggeredGridItemSpan.FullLine) {
-                    NoImages()
-                }
-            }
+        itemsIndexed(images, key = { _, image -> image.previewUrl }) { index, image ->
+            StaggeredImagePreviewContainer(image, index, onImageClick)
+        }
 
+        item { LaunchedEffect(Unit) { onEndReached() } }
+
+        if (images.isEmpty()) {
             item(span = StaggeredGridItemSpan.FullLine) {
-                NavBarHeightVerticalSpacer()
+                noImagesContent()
             }
         }
-    } else {
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(MIN_CELL_WIDTH.dp),
-            state = rememberLazyGridState(),
-            modifier = modifier,
-            contentPadding = contentPadding,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                if (filterComposable != null) filterComposable()
-                else Spacer(modifier = Modifier.height(8.dp))
-            }
 
-            itemsIndexed(images, key = { _, image -> image.previewUrl }) { index, image ->
-                ImagePreviewContainer(image, index, onImageClick)
-            }
-
-            item { LaunchedEffect(Unit) { onEndReached() } }
-
-            if (images.isEmpty()) {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    NoImages()
-                }
-            }
-
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                NavBarHeightVerticalSpacer()
-            }
+        item(span = StaggeredGridItemSpan.FullLine) {
+            NavBarHeightVerticalSpacer()
         }
     }
 }
 
 
 @Composable
-private fun NoImages() {
+private fun UniformImageGrid(
+    modifier: Modifier = Modifier,
+    gridState: LazyGridState = rememberLazyGridState(),
+    contentPadding: PaddingValues,
+    filterComposable: (@Composable () -> Unit)? = null,
+    images: List<Image>,
+    noImagesContent: @Composable () -> Unit,
+    onImageClick: (Int, Image) -> Unit,
+    onEndReached: suspend () -> Unit = { }
+) {
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(MIN_CELL_WIDTH.dp),
+        state = gridState,
+        modifier = modifier,
+        contentPadding = contentPadding,
+        horizontalArrangement = Arrangement.spacedBy(SMALL_SPACER.dp),
+        verticalArrangement = Arrangement.spacedBy(SMALL_SPACER.dp)
+    ) {
+        filterComposable?.let {
+            item(span = { GridItemSpan(maxLineSpan) }) { it() }
+        }
+
+        itemsIndexed(images, key = { _, image -> image.previewUrl }) { index, image ->
+            ImagePreviewContainer(image, index, onImageClick)
+        }
+
+        item { LaunchedEffect(Unit) { onEndReached() } }
+
+        if (images.isEmpty()) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                noImagesContent()
+            }
+        }
+
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            NavBarHeightVerticalSpacer()
+        }
+    }
+}
+
+
+@Composable
+fun NoImages() {
     Text(
         text = "No images :(",
         textAlign = TextAlign.Center,
@@ -160,30 +240,30 @@ private fun NoImages() {
 
 
 @Composable
-private fun ImagePreviewContainer(
+private fun LazyGridItemScope.ImagePreviewContainer(
     image: Image,
     index: Int,
     onImageClick: (Int, Image) -> Unit
 ) {
-    Surface(
+    Box(
         modifier = Modifier
-            .widthIn(max = MAX_CELL_WIDTH.dp)
-            .aspectRatio(1f)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .clip(RoundedCornerShape(12.dp))
-        ) {
-            ImagePreview(
-                modifier = Modifier.fillMaxSize(),
-                image = image,
-                index = index,
-                onImageClick = onImageClick
+            .animateItem(
+                fadeOutSpec = null,
+                placementSpec = null
             )
-            if (image.fileFormat == "gif") {
-                GifBadge()
-            }
+            .fillMaxWidth()
+            .widthIn(MAX_CELL_WIDTH.dp)
+            .aspectRatio(1f)
+            .clip(largerShape)
+    ) {
+        ImagePreview(
+            modifier = Modifier.fillMaxSize(),
+            image = image,
+            index = index,
+            onImageClick = onImageClick
+        )
+        if (image.fileFormat == "gif") {
+            GifBadge()
         }
     }
 }
@@ -210,16 +290,20 @@ private fun ImagePreview(
 
 
 @Composable
-private fun StaggeredImagePreviewContainer(
+private fun LazyStaggeredGridItemScope.StaggeredImagePreviewContainer(
     image: Image,
     index: Int,
     onImageClick: (Int, Image) -> Unit
 ) {
     Box(
         modifier = Modifier
+            .animateItem(
+                fadeOutSpec = null,
+                placementSpec = null
+            )
             .widthIn(min = MIN_CELL_WIDTH.dp, max = MAX_CELL_WIDTH.dp)
             .heightIn(min = MIN_IMAGE_HEIGHT.dp, max = MAX_IMAGE_HEIGHT.dp)
-            .clip(RoundedCornerShape(12.dp)),
+            .clip(largerShape),
         contentAlignment = Alignment.TopEnd,
         propagateMinConstraints = true
     ) {
@@ -248,7 +332,7 @@ private fun GifBadge() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
+            .padding(SMALL_SPACER.dp),
         horizontalArrangement = Arrangement.End
     ) {
         Text(
@@ -257,10 +341,10 @@ private fun GifBadge() {
             color = MaterialTheme.colorScheme.onPrimary,
             modifier = Modifier
                 .background(
-                    MaterialTheme.colorScheme.primary,
-                    RoundedCornerShape(4.dp)
+                    color = MaterialTheme.colorScheme.primary,
+                    shape = CircleShape
                 )
-                .padding(vertical = 2.dp, horizontal = 4.dp)
+                .padding(vertical = 3.dp, horizontal = 6.dp)
         )
     }
 }

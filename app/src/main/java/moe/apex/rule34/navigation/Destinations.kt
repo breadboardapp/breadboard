@@ -46,12 +46,15 @@ data class ImageView(
 }
 
 @Serializable
+object Home
+
+@Serializable
 object Search
 
 @Serializable
 data class Results(
     val source: ImageSource,
-    val tags: String
+    val tags: List<String>
 )
 
 @Serializable
@@ -59,6 +62,22 @@ object Favourites
 
 @Serializable
 object Settings
+
+@Serializable
+object BlockedTagsSettings
+
+@Serializable
+object LibrariesSettings
+
+@Serializable
+object AboutSettings
+
+@Serializable
+object ExperimentalSettings
+
+fun NavDestination?.routeIs(routes: Collection<KClass<*>>): Boolean {
+    return routeIs(*routes.toTypedArray())
+}
 
 
 fun NavDestination?.routeIs(vararg routes: KClass<*>): Boolean {

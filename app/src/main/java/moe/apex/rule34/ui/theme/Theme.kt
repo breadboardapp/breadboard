@@ -1,6 +1,5 @@
 package moe.apex.rule34.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -11,14 +10,10 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
-import androidx.core.view.WindowCompat
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
+
 
 private val DarkColorScheme = darkColorScheme(
         primary = Purple80,
@@ -74,19 +69,13 @@ fun BreadboardTheme(
     }
 
     val extraColours = ExtraColours(outlineStrong = colorScheme.outline.copy())
-    colorScheme = colorScheme.copy(outline = colorScheme.outlineVariant)
-    val view = LocalView.current
-    val systemUiController = rememberSystemUiController()
-    val darkIcons = !darkTheme
-    if (!view.isInEditMode) {
-        SideEffect {
-            val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.background.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
-            systemUiController.setStatusBarColor(Color.Transparent, darkIcons)
-            systemUiController.setNavigationBarColor(Color.Transparent)
-        }
-    }
+    colorScheme = colorScheme.copy(
+        outline = colorScheme.outlineVariant,
+        background = colorScheme.surfaceContainerLow,
+        surface = colorScheme.surfaceContainerLow,
+        surfaceContainerLowest = colorScheme.surfaceContainerLow,
+        surfaceContainerLow = colorScheme.surfaceContainer,
+    )
 
     CompositionLocalProvider(LocalExtraColours provides extraColours) {
         MaterialTheme(
