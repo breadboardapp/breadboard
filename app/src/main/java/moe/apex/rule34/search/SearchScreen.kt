@@ -687,7 +687,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                         if (tagChipList.isNotEmpty()) {
                             item(key = "") {
                                 FilledIconButton (
-                                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
+                                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.secondary),
                                     modifier = Modifier
                                         .height(FilterChipDefaults.Height)
                                         .width(56.dp) // Match the search FAB

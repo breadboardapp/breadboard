@@ -45,7 +45,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
@@ -97,9 +96,18 @@ fun SwitchPref(
             checked = checked,
             onCheckedChange = onToggle,
             modifier = Modifier.padding(end = SMALL_LARGE_SPACER.dp),
-            colors = SwitchDefaults.colors().copy(
+            colors = SwitchDefaults.colors(
                 uncheckedThumbColor = BreadboardTheme.colors.outlineStrong,
-                uncheckedBorderColor = BreadboardTheme.colors.outlineStrong
+                uncheckedBorderColor = BreadboardTheme.colors.outlineStrong,
+                checkedIconColor = MaterialTheme.colorScheme.primary
+                /* Switches essentially have 3 "layers". The defaults are:
+                   - Track: primary
+                   - Thumb: onPrimary
+                   - Icon:  onPrimaryContainer
+                   Android 16 QPR1 can provide a dark onPrimaryContainer in dark mode
+                   which has poor contrast with the onPrimary thumb it is contained within.
+                   We'll work around this by using the primary colour for the icon.
+                   It looks good anyway. */
             ),
             thumbContent = {
                 Icon(
@@ -179,7 +187,7 @@ fun InfoSection(text: String) {
             modifier = Modifier.size(20.dp),
             imageVector = Icons.Outlined.Info,
             contentDescription = null,
-            tint = Color.Gray
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
         VerticalSpacer()
         Summary(text = text)
