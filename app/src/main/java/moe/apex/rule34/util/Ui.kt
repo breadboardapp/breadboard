@@ -1,5 +1,6 @@
 package moe.apex.rule34.util
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ClipData
 import android.content.Context
@@ -85,7 +86,6 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -1087,6 +1087,7 @@ object PullToRefreshControllerDefaults {
     Set [animate] to false to scroll immediately without animation. This option is mostly intended
     to work around what I can only assume is a Compose bug whereby the scrolling animation is jumpy
     when there is a full width item in the grid (like the filter). */
+@SuppressLint("FrequentlyChangingValue")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScrollToTopArrow(
@@ -1096,13 +1097,21 @@ fun ScrollToTopArrow(
     alsoOnClick: (() -> Unit)? = null
 ) {
     val scope = rememberCoroutineScope()
-    val staggeredFirstItem by remember { derivedStateOf { staggeredGridState.firstVisibleItemIndex } }
-    val uniformFirstItem by remember { derivedStateOf { uniformGridState.firstVisibleItemIndex } }
+    var visible by remember { mutableStateOf(false) }
+
+    /* Avoids unnecessary recompositions when the first item changes (i.e. when scrolling) compared
+       to checking the firstVisibleItem inside the AnimatedVisibility. */
+    LaunchedEffect(staggeredGridState.firstVisibleItemIndex, uniformGridState.firstVisibleItemIndex) {
+        val targetValue = staggeredGridState.firstVisibleItemIndex != 0 || uniformGridState.firstVisibleItemIndex != 0
+        if (visible != targetValue) {
+            visible = targetValue
+        }
+    }
 
     AnimatedVisibility(
         enter = fadeIn(),
         exit = fadeOut(),
-        visible = staggeredFirstItem != 0 || uniformFirstItem != 0
+        visible = visible
     ) {
         IconButton(
             onClick = {
