@@ -72,6 +72,7 @@ import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SelectableChipColors
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -509,8 +510,8 @@ fun HorizontallyScrollingChipsWithLabels(
     Surface(
         modifier = modifier,
         shape = largerShape,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        color = MaterialTheme.colorScheme.surfaceContainer
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -558,6 +559,13 @@ fun HorizontallyScrollingChipsWithLabels(
         }
     }
 }
+
+
+val filterChipSolidColor: SelectableChipColors
+    @Composable
+    get() = FilterChipDefaults.filterChipColors(
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+    )
 
 
 fun String.pluralise(count: Int, pluralised: String) : String {
@@ -632,21 +640,14 @@ fun SearchHistoryListItem(
         modifier = Modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min),
-        horizontalArrangement = Arrangement.spacedBy(2.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Surface(
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             modifier = Modifier
                 .weight(1f, true)
                 .fillMaxHeight()
-                .clip(
-                    RoundedCornerShape(
-                        topStart = largerShapeCornerSize,
-                        bottomStart = largerShapeCornerSize,
-                        topEnd = 4.dp,
-                        bottomEnd = 4.dp
-                    )
-                )
+                .clip(largerShape)
                 .clickable(
                     interactionSource = interactionSource,
                     indication = LocalIndication.current
@@ -667,6 +668,8 @@ fun SearchHistoryListItem(
                                     FilterChip(
                                         onClick = { },
                                         label = { Text(t.value) },
+                                        colors = filterChipSolidColor,
+                                        border = null,
                                         selected = !t.isExcluded
                                     )
                                 }
@@ -702,19 +705,12 @@ fun SearchHistoryListItem(
         Surface(
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             modifier = Modifier
-                .clip(
-                    RoundedCornerShape(
-                        topStart = 4.dp,
-                        topEnd = largerShapeCornerSize,
-                        bottomEnd = largerShapeCornerSize,
-                        bottomStart = 4.dp
-                    )
-                )
+                .clip(largerShape)
                 .clickable { onContainerClick() }
         ) {
             Box(
                 modifier = Modifier
-                    .width(96.dp)
+                    .width(64.dp)
                     .fillMaxHeight()
                     .clickable { scope.launch { context.prefs.removeSearchHistoryEntry(item) } },
                 contentAlignment = Alignment.Center
