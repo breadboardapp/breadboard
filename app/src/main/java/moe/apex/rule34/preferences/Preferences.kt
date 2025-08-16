@@ -37,7 +37,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -70,7 +69,6 @@ import moe.apex.rule34.util.ImportException
 import moe.apex.rule34.util.ImportHandler
 import moe.apex.rule34.util.LARGE_SPACER
 import moe.apex.rule34.util.PromptType
-import moe.apex.rule34.util.SmallVerticalSpacer
 import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.TitleSummary
 import moe.apex.rule34.util.exportData
@@ -445,6 +443,21 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                         }
                     }
                     item {
+                        EnumPref(
+                            title = "Hide app content",
+                            summary = currentSettings.flagSecureMode.label,
+                            enumItems = FlagSecureMode.entries,
+                            selectedItem = currentSettings.flagSecureMode
+                        ) {
+                            scope.launch {
+                                preferencesRepository.updatePref(
+                                    PreferenceKeys.FLAG_SECURE_MODE,
+                                    it
+                                )
+                            }
+                        }
+                    }
+                    item {
                         SwitchPref(
                             checked = currentSettings.useStaggeredGrid,
                             title = "Staggered grid",
@@ -593,7 +606,7 @@ private fun AuthDialog(
         onDismissRequest = onDismissRequest,
         title = { Text("Set API key") },
         text = {
-            Column {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 PreferenceTextBox(
                     value = userId,
                     label = "User ID/name",
@@ -602,7 +615,6 @@ private fun AuthDialog(
                 ) {
                     userId = it.trim()
                 }
-                SmallVerticalSpacer()
                 PreferenceTextBox(
                     value = apiKey,
                     label = "API key",
@@ -628,8 +640,11 @@ private fun AuthDialog(
                         }
                     }
 
-                    SmallVerticalSpacer()
-                    Text(text = apiKeyCreationText)
+                    Text(
+                        text = apiKeyCreationText,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(start = 4.dp)
+                    )
                 }
             }
         },

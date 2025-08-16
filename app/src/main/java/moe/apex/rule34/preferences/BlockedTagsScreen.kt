@@ -49,7 +49,6 @@ import moe.apex.rule34.util.ListItemPosition
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.MediumLargeVerticalSpacer
 import moe.apex.rule34.util.SMALL_SPACER
-import moe.apex.rule34.util.SmallVerticalSpacer
 import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
 import moe.apex.rule34.util.Summary
@@ -71,14 +70,13 @@ fun BlockedTagsScreen(navController: NavHostController) {
         AlertDialog(
             title = { Text("Add blocked tags") },
             text = {
-                Column {
+                Column(verticalArrangement = Arrangement.spacedBy(SMALL_SPACER.dp)) {
                     PreferenceTextBox(
                         value = content,
                         label = "Tags",
                     ) {
                         content = it.lowercase()
                     }
-                    SmallVerticalSpacer()
                     Summary(
                         modifier = Modifier.padding(start = 4.dp),
                         text = "Separate multiple tags with a space."

@@ -34,6 +34,7 @@ import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
 import moe.apex.rule34.util.ScrollToTopArrow
 import moe.apex.rule34.util.bottomAppBarAndNavBarHeight
+import moe.apex.rule34.util.filterChipSolidColor
 import moe.apex.rule34.util.onScroll
 import moe.apex.rule34.viewmodel.FavouritesViewModel
 
@@ -61,6 +62,8 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
         FilterChip(
             selected = it in prefs.favouritesFilter,
             label = { Text(it.label) },
+            colors = filterChipSolidColor,
+            border = null,
             onClick = {
                 scope.launch {
                     if (it in prefs.favouritesFilter) {
@@ -76,6 +79,8 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
         FilterChip(
             selected = it in prefs.favouritesRatingsFilter,
             label = { Text(it.label) },
+            colors = filterChipSolidColor,
+            border = null,
             onClick = {
                 scope.launch {
                     if (it in prefs.favouritesRatingsFilter) {

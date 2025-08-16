@@ -1,5 +1,6 @@
 package moe.apex.rule34.util
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ClipData
 import android.content.Context
@@ -71,6 +72,7 @@ import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SelectableChipColors
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -85,7 +87,6 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -96,7 +97,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.LocalContext
@@ -345,7 +345,7 @@ fun Summary(
 ) {
     Text(
         text = text,
-        color = Color.Gray,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         style = MaterialTheme.typography.bodySmall,
         modifier = modifier
     )
@@ -510,8 +510,8 @@ fun HorizontallyScrollingChipsWithLabels(
     Surface(
         modifier = modifier,
         shape = largerShape,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        color = MaterialTheme.colorScheme.surfaceContainer
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -559,6 +559,13 @@ fun HorizontallyScrollingChipsWithLabels(
         }
     }
 }
+
+
+val filterChipSolidColor: SelectableChipColors
+    @Composable
+    get() = FilterChipDefaults.filterChipColors(
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+    )
 
 
 fun String.pluralise(count: Int, pluralised: String) : String {
@@ -633,21 +640,14 @@ fun SearchHistoryListItem(
         modifier = Modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min),
-        horizontalArrangement = Arrangement.spacedBy(2.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Surface(
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             modifier = Modifier
                 .weight(1f, true)
                 .fillMaxHeight()
-                .clip(
-                    RoundedCornerShape(
-                        topStart = largerShapeCornerSize,
-                        bottomStart = largerShapeCornerSize,
-                        topEnd = 4.dp,
-                        bottomEnd = 4.dp
-                    )
-                )
+                .clip(largerShape)
                 .clickable(
                     interactionSource = interactionSource,
                     indication = LocalIndication.current
@@ -668,6 +668,8 @@ fun SearchHistoryListItem(
                                     FilterChip(
                                         onClick = { },
                                         label = { Text(t.value) },
+                                        colors = filterChipSolidColor,
+                                        border = null,
                                         selected = !t.isExcluded
                                     )
                                 }
@@ -703,19 +705,12 @@ fun SearchHistoryListItem(
         Surface(
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             modifier = Modifier
-                .clip(
-                    RoundedCornerShape(
-                        topStart = 4.dp,
-                        topEnd = largerShapeCornerSize,
-                        bottomEnd = largerShapeCornerSize,
-                        bottomStart = 4.dp
-                    )
-                )
+                .clip(largerShape)
                 .clickable { onContainerClick() }
         ) {
             Box(
                 modifier = Modifier
-                    .width(96.dp)
+                    .width(64.dp)
                     .fillMaxHeight()
                     .clickable { scope.launch { context.prefs.removeSearchHistoryEntry(item) } },
                 contentAlignment = Alignment.Center
@@ -1088,6 +1083,7 @@ object PullToRefreshControllerDefaults {
     Set [animate] to false to scroll immediately without animation. This option is mostly intended
     to work around what I can only assume is a Compose bug whereby the scrolling animation is jumpy
     when there is a full width item in the grid (like the filter). */
+@SuppressLint("FrequentlyChangingValue")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScrollToTopArrow(
@@ -1097,13 +1093,21 @@ fun ScrollToTopArrow(
     alsoOnClick: (() -> Unit)? = null
 ) {
     val scope = rememberCoroutineScope()
-    val staggeredFirstItem by remember { derivedStateOf { staggeredGridState.firstVisibleItemIndex } }
-    val uniformFirstItem by remember { derivedStateOf { uniformGridState.firstVisibleItemIndex } }
+    var visible by remember { mutableStateOf(false) }
+
+    /* Avoids unnecessary recompositions when the first item changes (i.e. when scrolling) compared
+       to checking the firstVisibleItem inside the AnimatedVisibility. */
+    LaunchedEffect(staggeredGridState.firstVisibleItemIndex, uniformGridState.firstVisibleItemIndex) {
+        val targetValue = staggeredGridState.firstVisibleItemIndex != 0 || uniformGridState.firstVisibleItemIndex != 0
+        if (visible != targetValue) {
+            visible = targetValue
+        }
+    }
 
     AnimatedVisibility(
         enter = fadeIn(),
         exit = fadeOut(),
-        visible = staggeredFirstItem != 0 || uniformFirstItem != 0
+        visible = visible
     ) {
         IconButton(
             onClick = {

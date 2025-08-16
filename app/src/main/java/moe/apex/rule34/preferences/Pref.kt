@@ -85,6 +85,7 @@ data object PrefNames {
     const val SEARCH_PULL_TO_REFRESH = "search_pull_to_refresh"
     const val ALWAYS_ANIMATE_SCROLL = "always_animate_scroll"
     const val HAS_VERIFIED_AGE = "has_verified_age"
+    const val FLAG_SECURE_MODE = "flag_secure_mode"
 }
 
 
@@ -111,6 +112,7 @@ object PreferenceKeys {
     val SEARCH_PULL_TO_REFRESH = booleanPreferencesKey(PrefNames.SEARCH_PULL_TO_REFRESH)
     val ALWAYS_ANIMATE_SCROLL = booleanPreferencesKey(PrefNames.ALWAYS_ANIMATE_SCROLL)
     val HAS_VERIFIED_AGE = booleanPreferencesKey(PrefNames.HAS_VERIFIED_AGE)
+    val FLAG_SECURE_MODE = stringPreferencesKey(PrefNames.FLAG_SECURE_MODE)
 }
 
 
@@ -126,9 +128,9 @@ data class PrefMeta(val category: PrefCategory, val exportable: Boolean = true)
 
 
 enum class DataSaver(override val label: String) : PrefEnum<DataSaver> {
-    ON ("Always"),
-    OFF ("Never"),
-    AUTO ("When using mobile data")
+    ON("Always"),
+    OFF("Never"),
+    AUTO("When using mobile data")
 }
 
 
@@ -145,6 +147,13 @@ enum class StartDestination(override val label: String) : PrefEnum<StartDestinat
     HOME("Browse"),
     SEARCH("Search"),
     FAVOURITES("Favourites")
+}
+
+
+enum class FlagSecureMode(override val label: String) : PrefEnum<FlagSecureMode> {
+    ON("Always"),
+    OFF("Never"),
+    AUTO("When in Incognito mode")
 }
 
 
@@ -171,6 +180,7 @@ data class Prefs(
     val searchPullToRefresh: Boolean,
     val alwaysAnimateScroll: Boolean,
     private val hasVerifiedAge: Boolean,
+    val flagSecureMode: FlagSecureMode
 ) {
     companion object {
         val DEFAULT = Prefs(
@@ -196,6 +206,7 @@ data class Prefs(
             searchPullToRefresh = false,
             alwaysAnimateScroll = false,
             hasVerifiedAge = false,
+            flagSecureMode = FlagSecureMode.AUTO
         )
     }
 
@@ -245,6 +256,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             PreferenceKeys.SEARCH_PULL_TO_REFRESH to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.ALWAYS_ANIMATE_SCROLL to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.HAS_VERIFIED_AGE to PrefMeta(PrefCategory.SETTING, exportable = false),
+            PreferenceKeys.FLAG_SECURE_MODE to PrefMeta(PrefCategory.SETTING)
         )
     }
 
@@ -623,6 +635,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val searchPullToRefresh = preferences[PreferenceKeys.SEARCH_PULL_TO_REFRESH] ?: Prefs.DEFAULT.searchPullToRefresh
         val alwaysAnimateScroll = preferences[PreferenceKeys.ALWAYS_ANIMATE_SCROLL] ?: Prefs.DEFAULT.alwaysAnimateScroll
         val hasVerifiedAge = preferences[PreferenceKeys.HAS_VERIFIED_AGE] ?: Prefs.DEFAULT.getInternalAgeVerificationStatus()
+        val flagSecureMode = preferences[PreferenceKeys.FLAG_SECURE_MODE]?.let { FlagSecureMode.valueOf(it) } ?: Prefs.DEFAULT.flagSecureMode
 
         return Prefs(
             dataSaver,
@@ -647,6 +660,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             searchPullToRefresh,
             alwaysAnimateScroll,
             hasVerifiedAge,
+            flagSecureMode,
         )
     }
 }

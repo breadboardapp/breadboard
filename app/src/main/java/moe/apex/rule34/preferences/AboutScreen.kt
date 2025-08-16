@@ -31,7 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Outline
@@ -174,7 +173,7 @@ fun AboutScreen(navController: NavHostController) {
                     Text(
                         text = "${BuildConfig.VERSION_NAME} (${releasePlatform.displayName})",
                         style = MaterialTheme.typography.labelLarge,
-                        color = Color.Gray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

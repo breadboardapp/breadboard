@@ -6,7 +6,6 @@ import android.util.Log
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.EaseOutBack
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -81,14 +80,17 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.times
 import androidx.navigation.NavController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -126,6 +128,7 @@ import moe.apex.rule34.util.availableRatingsForCurrentSource
 import moe.apex.rule34.util.availableRatingsForSource
 import moe.apex.rule34.util.bouncyAnimationSpec
 import moe.apex.rule34.util.copyText
+import moe.apex.rule34.util.filterChipSolidColor
 import moe.apex.rule34.util.largerShape
 import moe.apex.rule34.util.navBarHeight
 import moe.apex.rule34.util.pluralise
@@ -141,7 +144,7 @@ const val ANIMATION_DURATION_MS = 300
 
 
 @OptIn(ExperimentalMaterial3Api::class)
-@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
+@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter", "ConfigurationScreenWidthHeight")
 @Composable
 fun SearchScreen(navController: NavController, focusRequester: FocusRequester, viewModel: BreadboardViewModel) {
     /* We use shouldShowSuggestions for determining autocomplete section visibility because if we
@@ -497,8 +500,8 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                     colors = TextFieldDefaults.colors().copy(
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
                     ),
                     prefix = { Spacer(Modifier.width(4.dp)) },
                     trailingIcon = {
@@ -593,6 +596,8 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                         FilterChip(
                             selected = prefs.imageSource == it,
                             label = { Text(it.label) },
+                            colors = filterChipSolidColor,
+                            border = null,
                             onClick = {
                                 if (it == currentSource) return@FilterChip
                                 if (it == ImageSource.R34 && !AgeVerification.hasVerifiedAge(prefs)) {
@@ -626,6 +631,8 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                             FilterChip(
                                 selected = it in prefs.ratingsFilter,
                                 label = { Text(it.label) },
+                                colors = filterChipSolidColor,
+                                border = null,
                                 onClick = {
                                     scope.launch {
                                         if (it in prefs.ratingsFilter) {
@@ -679,6 +686,8 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                                 modifier = Modifier.animateItem(),
                                 label = { Text(tag.value) },
                                 selected = !tag.isExcluded,
+                                colors = filterChipSolidColor,
+                                border = null,
                                 onClick = {
                                     tagChipList.remove(tag)
                                 }
@@ -687,7 +696,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                         if (tagChipList.isNotEmpty()) {
                             item(key = "") {
                                 FilledIconButton (
-                                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
+                                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.secondary),
                                     modifier = Modifier
                                         .height(FilterChipDefaults.Height)
                                         .width(56.dp) // Match the search FAB
@@ -762,52 +771,66 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
     }
 
     if (showSearchHistoryPopup) {
+        val navBarHeight = navBarHeight
         TitledModalBottomSheet(
             onDismissRequest = { showSearchHistoryPopup = false },
             sheetState = historySheetState,
             title = "Search history"
         ) {
+            val density = LocalDensity.current
             val reversedSearchHistory = prefs.searchHistory.reversed()
-            LazyColumn(
-                modifier = Modifier
-                    .animateContentSize()
-                    .padding(horizontal = MEDIUM_SPACER.dp)
-                    .clip(largerShape),
-                verticalArrangement = Arrangement.spacedBy(LARGE_SPACER.dp),
-                contentPadding = PaddingValues(bottom = navBarHeight * 2)
-            ) {
-                if (prefs.searchHistory.isEmpty()) {
-                    SearchHistoryStandaloneTextItem("No search history yet. Start searching!")
-                } else {
-                    if (viewModel.incognito) {
-                        SearchHistoryStandaloneTextItem("Incognito mode is enabled. Search history will not be saved.")
-                    }
-                    items(reversedSearchHistory, key = { it.timestamp } ) { entry ->
-                        val date = Date(entry.timestamp)
-                        val formatter = SimpleDateFormat("dd MMM $timeFormat", Locale.getDefault())
-                        val formattedDate = formatter.format(date)
+            var contentHeight by remember { mutableStateOf(Float.MAX_VALUE.dp) }
+            val containerHeight by animateDpAsState(contentHeight)
 
-                        Column(
-                            modifier = Modifier.animateItem(),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            BaseHeading(
-                                modifier = Modifier.padding(start = SMALL_SPACER.dp),
-                                text = "$formattedDate  \u2022  ${entry.source.label}"
-                            )
-                            SearchHistoryListItem(entry) {
-                                tagChipList.clear()
-                                tagChipList.addAll(entry.tags)
-                                searchString = ""
-                                shouldShowSuggestions = false
-                                scope.launch {
-                                    context.prefs.updatePref(
-                                        PreferenceKeys.IMAGE_SOURCE,
-                                        entry.source
-                                    )
-                                    context.prefs.replaceImageRatings(entry.ratings)
-                                    historySheetState.hide()
-                                    showSearchHistoryPopup = false
+            /* I'd like to use animateContentSize on the LazyColumn but doing so can cause some
+               strange behaviour when opening the sheet and it's even worse on Material3 1.5.
+               The solution using a container controlled by onSizeChanged isn't perfect
+               but it's close enough to what we want. */
+            Box(modifier = Modifier.height(containerHeight)) {
+                LazyColumn(
+                    modifier = Modifier
+                        .padding(horizontal = MEDIUM_SPACER.dp)
+                        .clip(largerShape)
+                        .onSizeChanged {
+                            contentHeight = with (density) { it.height.toDp() }
+                        },
+                    verticalArrangement = Arrangement.spacedBy(LARGE_SPACER.dp, Alignment.Top),
+                    contentPadding = PaddingValues(bottom = 2 * navBarHeight)
+                ) {
+                    if (prefs.searchHistory.isEmpty()) {
+                        SearchHistoryStandaloneTextItem("No search history yet. Start searching!")
+                    } else {
+                        if (viewModel.incognito) {
+                            SearchHistoryStandaloneTextItem("Incognito mode is enabled. Search history will not be saved.")
+                        }
+                        items(reversedSearchHistory, key = { it.timestamp }) { entry ->
+                            val date = Date(entry.timestamp)
+                            val formatter =
+                                SimpleDateFormat("dd MMM $timeFormat", Locale.getDefault())
+                            val formattedDate = formatter.format(date)
+
+                            Column(
+                                modifier = Modifier.animateItem(placementSpec = bouncyAnimationSpec()),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                BaseHeading(
+                                    modifier = Modifier.padding(start = SMALL_SPACER.dp),
+                                    text = "$formattedDate  \u2022  ${entry.source.label}"
+                                )
+                                SearchHistoryListItem(entry) {
+                                    tagChipList.clear()
+                                    tagChipList.addAll(entry.tags)
+                                    searchString = ""
+                                    shouldShowSuggestions = false
+                                    scope.launch {
+                                        context.prefs.updatePref(
+                                            PreferenceKeys.IMAGE_SOURCE,
+                                            entry.source
+                                        )
+                                        context.prefs.replaceImageRatings(entry.ratings)
+                                        historySheetState.hide()
+                                        showSearchHistoryPopup = false
+                                    }
                                 }
                             }
                         }
