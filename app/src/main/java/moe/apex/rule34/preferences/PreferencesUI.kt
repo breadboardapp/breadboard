@@ -122,12 +122,12 @@ fun SwitchPref(
 
 
 @Composable
-fun EnumPref(
+fun <T: PrefEnum<*>> EnumPref(
     title: String,
     summary: String?,
-    enumItems: Collection<PrefEnum<*>>,
-    selectedItem: PrefEnum<*>,
-    onSelection: (PrefEnum<*>) -> Unit
+    enumItems: Collection<T>,
+    selectedItem: T,
+    onSelection: (T) -> Unit
 ) {
     var showDialog by remember { mutableStateOf(false) }
     if (showDialog) {
@@ -329,12 +329,12 @@ fun PreferenceTextBox(
 
 
 @Composable
-fun ReorderablePref(
+fun <T: PrefEnum<*>> ReorderablePref(
     title: String,
     dialogTitle: String? = null,
     summary: String?,
-    items: List<PrefEnum<*>>,
-    onReorder: (List<PrefEnum<*>>) -> Unit
+    items: List<T>,
+    onReorder: (List<T>) -> Unit
 ) {
     var showDialog by remember { mutableStateOf(false) }
 
