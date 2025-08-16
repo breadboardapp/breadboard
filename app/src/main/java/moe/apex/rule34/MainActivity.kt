@@ -36,6 +36,7 @@ import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.StartDestination
 import moe.apex.rule34.preferences.UserPreferencesRepository
+import moe.apex.rule34.util.FlagSecureHelper
 import moe.apex.rule34.viewmodel.BreadboardViewModel
 
 
@@ -110,6 +111,7 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity() {
                     addOnNewIntentListener(innerListener)
                     onDispose { removeOnNewIntentListener(innerListener) }
                 }
+                FlagSecureHelper.register()
                 Navigation(navController, viewModel, maybePrepareResultsDestination(intent) ?: startDestination)
             }
         }

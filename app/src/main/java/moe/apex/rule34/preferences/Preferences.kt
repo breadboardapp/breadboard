@@ -443,6 +443,21 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                         }
                     }
                     item {
+                        EnumPref(
+                            title = "Hide app content",
+                            summary = currentSettings.flagSecureMode.label,
+                            enumItems = FlagSecureMode.entries,
+                            selectedItem = currentSettings.flagSecureMode
+                        ) {
+                            scope.launch {
+                                preferencesRepository.updatePref(
+                                    PreferenceKeys.FLAG_SECURE_MODE,
+                                    it
+                                )
+                            }
+                        }
+                    }
+                    item {
                         SwitchPref(
                             checked = currentSettings.useStaggeredGrid,
                             title = "Staggered grid",

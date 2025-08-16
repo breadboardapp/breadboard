@@ -29,6 +29,7 @@ import moe.apex.rule34.navigation.Navigation
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.viewmodel.BreadboardViewModel
 import androidx.core.net.toUri
+import moe.apex.rule34.util.FlagSecureHelper
 
 
 class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity() {
@@ -58,6 +59,8 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity() {
             val viewModel = viewModel(BreadboardViewModel::class.java)
 
             CompositionLocalProvider(LocalPreferences provides prefs) {
+                FlagSecureHelper.register()
+
                 DisposableEffect(Unit) {
                     val listener = Consumer<Intent> { newIntent ->
                         val uri = newIntent.data
