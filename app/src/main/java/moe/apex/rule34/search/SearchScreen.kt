@@ -90,6 +90,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.times
 import androidx.navigation.NavController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -122,7 +123,6 @@ import moe.apex.rule34.util.SMALL_SPACER
 import moe.apex.rule34.util.SmallVerticalSpacer
 import moe.apex.rule34.util.TitledModalBottomSheet
 import moe.apex.rule34.util.MEDIUM_SPACER
-import moe.apex.rule34.util.NavBarHeightVerticalSpacer
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
 import moe.apex.rule34.util.availableRatingsForCurrentSource
 import moe.apex.rule34.util.availableRatingsForSource
@@ -130,6 +130,7 @@ import moe.apex.rule34.util.bouncyAnimationSpec
 import moe.apex.rule34.util.copyText
 import moe.apex.rule34.util.filterChipSolidColor
 import moe.apex.rule34.util.largerShape
+import moe.apex.rule34.util.navBarHeight
 import moe.apex.rule34.util.pluralise
 import moe.apex.rule34.util.showToast
 import moe.apex.rule34.viewmodel.BreadboardViewModel
@@ -770,6 +771,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
     }
 
     if (showSearchHistoryPopup) {
+        val navBarHeight = navBarHeight
         TitledModalBottomSheet(
             onDismissRequest = { showSearchHistoryPopup = false },
             sheetState = historySheetState,
@@ -778,7 +780,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
             val density = LocalDensity.current
             val reversedSearchHistory = prefs.searchHistory.reversed()
             var contentHeight by remember { mutableStateOf(Float.MAX_VALUE.dp) }
-            val containerHeight by animateDpAsState((contentHeight).coerceAtMost(Float.MAX_VALUE.dp), animationSpec = bouncyAnimationSpec())
+            val containerHeight by animateDpAsState(contentHeight)
 
             /* I'd like to use animateContentSize on the LazyColumn but doing so can cause some
                strange behaviour when opening the sheet and it's even worse on Material3 1.5.
@@ -792,7 +794,8 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                         .onSizeChanged {
                             contentHeight = with (density) { it.height.toDp() }
                         },
-                    verticalArrangement = Arrangement.spacedBy(LARGE_SPACER.dp),
+                    verticalArrangement = Arrangement.spacedBy(LARGE_SPACER.dp, Alignment.Top),
+                    contentPadding = PaddingValues(bottom = 2 * navBarHeight)
                 ) {
                     if (prefs.searchHistory.isEmpty()) {
                         SearchHistoryStandaloneTextItem("No search history yet. Start searching!")
@@ -807,10 +810,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                             val formattedDate = formatter.format(date)
 
                             Column(
-                                modifier = Modifier.animateItem(
-                                    fadeOutSpec = null,
-                                    placementSpec = bouncyAnimationSpec()
-                                ),
+                                modifier = Modifier.animateItem(placementSpec = bouncyAnimationSpec()),
                                 verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 BaseHeading(
@@ -834,9 +834,6 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                                 }
                             }
                         }
-                    }
-                    item(key = "spacer") {
-                        NavBarHeightVerticalSpacer()
                     }
                 }
             }
