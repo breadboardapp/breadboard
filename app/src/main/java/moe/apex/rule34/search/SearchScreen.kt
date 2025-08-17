@@ -21,9 +21,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -785,14 +788,30 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
             /* I'd like to use animateContentSize on the LazyColumn but doing so can cause some
                strange behaviour when opening the sheet and it's even worse on Material3 1.5.
                The solution using a container controlled by onSizeChanged isn't perfect
-               but it's close enough to what we want. */
+               but it's close enough to what we want.
+
+               We start with a very large initial height and then calculate the correct (smaller)
+               value because reducing the height doesn't cause the strange opening behaviour
+               whereas increasing the height apparently does.
+
+               ModalBottomSheet internally adds forced IME padding that causes the LazyColumn to
+               report a smaller height than desired and then it just dismisses the IME anyway.
+               This could be useful if we had a text field in the sheet but we don't
+               so it's just an annoyance.
+               To work around this we'll add the IME height to the LazyColumn's calculated height.
+               This allows it to animate to the proper height once the IME is finished dismissing.
+
+               ModalBottomSheets are just kind of bad in general.
+               They're janky to use and the API surface is annoying. */
+
             Box(modifier = Modifier.height(containerHeight)) {
+                val imeSize = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
                 LazyColumn(
                     modifier = Modifier
                         .padding(horizontal = MEDIUM_SPACER.dp)
                         .clip(largerShape)
                         .onSizeChanged {
-                            contentHeight = with (density) { it.height.toDp() }
+                            contentHeight = with (density) { it.height.toDp() } + imeSize
                         },
                     verticalArrangement = Arrangement.spacedBy(LARGE_SPACER.dp, Alignment.Top),
                     contentPadding = PaddingValues(bottom = 2 * navBarHeight)

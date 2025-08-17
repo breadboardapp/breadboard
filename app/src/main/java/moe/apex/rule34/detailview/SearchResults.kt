@@ -37,6 +37,7 @@ import moe.apex.rule34.util.LargeTitleBar
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
 import moe.apex.rule34.util.ScrollToTopArrow
 import moe.apex.rule34.util.availableRatingsForCurrentSource
+import moe.apex.rule34.util.filterChipSolidColor
 import moe.apex.rule34.util.rememberPullToRefreshController
 import moe.apex.rule34.util.withoutVertical
 import moe.apex.rule34.viewmodel.SearchResultsViewModel
@@ -87,6 +88,8 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
         FilterChip(
             selected = it in prefs.ratingsFilter,
             label = { Text(it.label) },
+            colors = filterChipSolidColor,
+            border = null,
             onClick = {
                 scope.launch {
                     if (it in prefs.ratingsFilter) {
