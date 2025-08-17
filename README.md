@@ -6,6 +6,12 @@ Breadboard is an artwork discovery and searching app for Android.
 
 Powered by multiple image boards and boorus, Breadboard makes finding your favourite artwork as fast and effortless as possible.
 
+
+> [!TIP]
+> Breadboard is now available on Google Play!
+> 
+> Download Breadboard on the Google Play Store by [joining the Breadboard group](https://groups.google.com/g/breadboard-testers) and then [visiting Breadboard's page](https://play.google.com/apps/testing/moe.apex.breadboard).
+
 ## Features
 
 - **Multiple sites supported:**
@@ -36,6 +42,11 @@ Powered by multiple image boards and boorus, Breadboard makes finding your favou
 
 - **Latest Android features:** Breadboard supports dynamic color, a themed icon, and smooth predictive back animations.
 
+## Download
+
+**[Recommended]** Download Breadboard on the Google Play Store by [joining the Breadboard group](https://groups.google.com/g/breadboard-testers) and then [visiting Breadboard's page](https://play.google.com/apps/testing/moe.apex.breadboard).
+
+Alternatively, download a GitHub release with the `-play` suffix, allow unknown sources in your device settings, and then install manually. This method will not provide automatic/notifications for updates.
 
 ## Contributing
 
