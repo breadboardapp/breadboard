@@ -1,12 +1,8 @@
 package moe.apex.rule34
 
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.content.pm.ResolveInfo
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -28,8 +24,11 @@ import moe.apex.rule34.navigation.ImageView
 import moe.apex.rule34.navigation.Navigation
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.viewmodel.BreadboardViewModel
-import androidx.core.net.toUri
 import moe.apex.rule34.util.FlagSecureHelper
+import moe.apex.rule34.util.createViewIntent
+import moe.apex.rule34.util.getDefaultPackageForIntent
+import moe.apex.rule34.util.launchInDefaultBrowser
+import moe.apex.rule34.util.launchUriWithPackage
 
 
 class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity() {
@@ -95,7 +94,7 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity() {
         val possibleBrowserPackage = intent.getStringExtra("com.android.browser.application_id")
 
         if (possibleBrowserPackage != null) {
-            launchUriWithPackage(uri, possibleBrowserPackage)
+            launchUriWithPackage(this, uri, possibleBrowserPackage)
             return
         }
 
@@ -104,7 +103,7 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity() {
            we should use it to do so. */
         referrer?.takeIf { it.scheme == "android-app" }?.host?.let { attemptingPackage ->
             val relaunchIntent = createViewIntent(uri, attemptingPackage)
-            if (getResolveInfo(relaunchIntent) != null) {
+            if (getDefaultPackageForIntent(packageManager, relaunchIntent) != null) {
                 startActivity(relaunchIntent)
                 finishAndRemoveTask()
                 return
@@ -112,31 +111,7 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity() {
         }
 
         // If all else fails, just open in the default browser.
-        val defaultBrowserIntent = Intent(Intent.ACTION_VIEW, "http://example.com".toUri())
-        val resolveInfo = getResolveInfo(defaultBrowserIntent)
-
-        if (resolveInfo?.activityInfo?.packageName != null) {
-            launchUriWithPackage(uri, resolveInfo.activityInfo.packageName)
-        } else {
-            Log.e("openInBrowser", "No browser found to handle URI: $uri")
-        }
+        launchInDefaultBrowser(this, uri)
         finishAndRemoveTask()
-    }
-
-    private fun createViewIntent(uri: Uri, targetPackage: String? = null): Intent {
-        return Intent(Intent.ACTION_VIEW, uri).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            targetPackage?.let { setPackage(it) }
-        }
-    }
-
-    private fun launchUriWithPackage(uri: Uri, packageName: String) {
-        val launchIntent = createViewIntent(uri, packageName)
-        startActivity(launchIntent)
-        finishAndRemoveTask()
-    }
-
-    private fun getResolveInfo(intent: Intent): ResolveInfo? {
-        return packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
     }
 }

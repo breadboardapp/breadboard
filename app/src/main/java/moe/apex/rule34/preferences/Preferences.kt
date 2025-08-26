@@ -39,7 +39,6 @@ import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
@@ -73,6 +72,7 @@ import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.TitleSummary
 import moe.apex.rule34.util.exportData
 import moe.apex.rule34.util.importData
+import moe.apex.rule34.util.launchInDefaultBrowser
 import moe.apex.rule34.util.preImportChecks
 import moe.apex.rule34.util.saveUriToPref
 import moe.apex.rule34.util.showToast
@@ -600,7 +600,7 @@ private fun AuthDialog(
     var userId by remember { mutableStateOf(default?.user ?: "") }
     var apiKey by remember { mutableStateOf(default?.apiKey ?: "") }
 
-    val uriHandler = LocalUriHandler.current
+    val context = LocalContext.current
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
@@ -632,7 +632,7 @@ private fun AuthDialog(
                                 SpanStyle(color = MaterialTheme.colorScheme.secondary, textDecoration = TextDecoration.Underline)
                             )
                         ) {
-                            uriHandler.openUri(url)
+                            launchInDefaultBrowser(context, url)
                         }
 
                         withLink(link) {
