@@ -1,8 +1,11 @@
 package moe.apex.rule34
 
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.provider.Browser
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -90,18 +93,29 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity() {
     private fun openInBrowser(intent: Intent) {
         val uri = intent.data!!
 
-        // Chrome and Firefox seem to set this. We should use it if available.
-        val possibleBrowserPackage = intent.getStringExtra("com.android.browser.application_id")
+        // Not all apps set this but some like Chrome and Firefox do. We should use it if available.
+        val possibleBrowserPackage = intent.getStringExtra(Browser.EXTRA_APPLICATION_ID)
 
         if (possibleBrowserPackage != null) {
-            launchUriWithPackage(this, uri, possibleBrowserPackage)
-            return
+            try {
+                return launchUriWithPackage(this, uri, possibleBrowserPackage)
+            } catch (_: ActivityNotFoundException) {
+                /* Android System Intelligence (com.google.android.as) powers the "Open" action
+                   for supported apps when long-pressing an Imageboard URL and sets the browser
+                   intent extra to its own package name, but it can't handle the links itself. */
+                Log.i("openInBrowser", "Original browser package $possibleBrowserPackage is not capable of launching URI $uri")
+            }
         }
 
         /* Chrome sets the referrer to the address. Firefox uses its package name with this scheme.
            If the referrer scheme is an android-app and the app can handle the URL,
            we should use it to do so. */
         referrer?.takeIf { it.scheme == "android-app" }?.host?.let { attemptingPackage ->
+            // If the referrer is Breadboard itself but we already know Breadboard can't handle the link in-app, we shouldn't try to do so.
+            if (attemptingPackage == BuildConfig.APPLICATION_ID) {
+                Log.w("openInBrowser", "Intent came from Breadboard itself but Breadboard can't handle URI $uri. If the intention was to open in the browser, call launchInDefaultBrowser() instead.")
+                return@let
+            }
             val relaunchIntent = createViewIntent(uri, attemptingPackage)
             if (getDefaultPackageForIntent(packageManager, relaunchIntent) != null) {
                 startActivity(relaunchIntent)
