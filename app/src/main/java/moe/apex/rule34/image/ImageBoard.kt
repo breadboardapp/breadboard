@@ -183,6 +183,8 @@ object Rule34 : GelbooruBasedImageBoard {
     override val autoCompleteCategoryMapping = emptyMap<String, String>()
     override val imageSearchUrl = "${baseUrl}index.php?page=dapi&json=1&s=post&q=index&limit=100&tags=%s&pid=%d"
     override val aiTagName = "ai_generated"
+    override val apiKeyCreationUrl = "https://rule34.xxx/index.php?page=account&s=options"
+    override val canLoadUnauthenticated = false
 
     override fun parseImage(e: JSONObject): Image? {
         return parseImage(e, ImageSource.R34)
