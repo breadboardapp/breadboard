@@ -33,7 +33,8 @@ class SearchResultsViewModel : ViewModel(), GridStateHolder by GridStateHolderDe
         if (isReady) {
             return
         }
-        Log.i("SearchResults", "Setting up SearchResultsViewModel with source: ${imageSource.name}, auth: $auth, tags: $tags")
+        val authProvided = auth != null
+        Log.i("SearchResults", "Setting up SearchResultsViewModel with source: ${imageSource.name}, authenticated: $authProvided, tags: $tags")
         this.imageSource = imageSource
         this.auth = auth
         query = imageSource.imageBoard.formatTagNameString(tags)
