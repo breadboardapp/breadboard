@@ -74,6 +74,7 @@ fun BlockedTagsScreen(navController: NavHostController) {
                     PreferenceTextBox(
                         value = content,
                         label = "Tags",
+                        autoCorrectEnabled = true
                     ) {
                         content = it.lowercase()
                     }

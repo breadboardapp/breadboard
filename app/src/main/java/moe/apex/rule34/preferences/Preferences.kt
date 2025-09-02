@@ -610,7 +610,6 @@ private fun AuthDialog(
                 PreferenceTextBox(
                     value = userId,
                     label = "User ID/name",
-                    keyboardType = KeyboardType.Password,
                     obscured = false
                 ) {
                     userId = it.trim()

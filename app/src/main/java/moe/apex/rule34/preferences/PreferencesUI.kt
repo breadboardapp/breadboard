@@ -306,6 +306,7 @@ fun PreferenceTextBox(
     value: String,
     label: String,
     keyboardType: KeyboardType = KeyboardType.Text,
+    autoCorrectEnabled: Boolean = false,
     obscured: Boolean = false,
     onValueChange: (String) -> Unit,
 ) {
@@ -314,7 +315,7 @@ fun PreferenceTextBox(
         onValueChange = onValueChange,
         label = { Text(label, style = LocalTextStyle.current.copy(fontSize = (LocalTextStyle.current.fontSize.value - 3).sp)) },
         singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType, autoCorrectEnabled = autoCorrectEnabled),
         visualTransformation = if (obscured) {
             VisualTransformation { input ->
                 TransformedText(
