@@ -10,7 +10,7 @@ Powered by multiple image boards and boorus, Breadboard makes finding your favou
 > [!TIP]
 > Breadboard is now available on Google Play!
 > 
-> Download Breadboard on the Google Play Store by [joining the Breadboard group](https://groups.google.com/g/breadboard-testers) and then [visiting Breadboard's page](https://play.google.com/apps/testing/moe.apex.breadboard).
+> [Download Breadboard on the Google Play Store](https://play.google.com/store/apps/details?id=moe.apex.breadboard) to benefit from easier installation and automatic updates.
 
 ## Features
 
