@@ -41,6 +41,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -288,7 +289,9 @@ fun LargeImageView(
     )
 
     if (showInfoSheet) {
-        InfoSheet(navController, currentImage, { showInfoSheet = false })
+        key(currentImage) {
+            InfoSheet(navController, currentImage, { showInfoSheet = false })
+        }
     }
 
     LaunchedEffect(visible?.value) {
