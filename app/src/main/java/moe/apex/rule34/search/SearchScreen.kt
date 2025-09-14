@@ -74,6 +74,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -243,8 +244,10 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                        the query in the time between getting suggestions and displaying them will cause
                        the old suggestions to be displayed. */
                     if (cleanedSearchString.isEmpty()) return@launch
-                    mostRecentSuggestions.clear()
-                    mostRecentSuggestions.addAll(suggestions)
+                    Snapshot.withMutableSnapshot {
+                        mostRecentSuggestions.clear()
+                        mostRecentSuggestions.addAll(suggestions)
+                    }
                     shouldShowSuggestions = true
                 } catch (e: Exception) {
                     withContext(Dispatchers.Main) {
