@@ -72,7 +72,7 @@ import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.TitleSummary
 import moe.apex.rule34.util.exportData
 import moe.apex.rule34.util.importData
-import moe.apex.rule34.util.launchInDefaultBrowser
+import moe.apex.rule34.util.launchInWebBrowser
 import moe.apex.rule34.util.preImportChecks
 import moe.apex.rule34.util.saveUriToPref
 import moe.apex.rule34.util.showToast
@@ -630,7 +630,7 @@ private fun AuthDialog(
                                 SpanStyle(color = MaterialTheme.colorScheme.secondary, textDecoration = TextDecoration.Underline)
                             )
                         ) {
-                            launchInDefaultBrowser(context, url)
+                            launchInWebBrowser(context, url)
                         }
 
                         withLink(link) {
