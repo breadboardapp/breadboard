@@ -12,7 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.image.ImageBoardAuth
-import moe.apex.rule34.image.ImageBoardLocalFilterType
+import moe.apex.rule34.image.ImageBoardRequirement
 import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.viewmodel.GridStateHolderDelegate
@@ -110,7 +110,7 @@ class RecommendationsProvider(
             "Fetching recommended posts for tags: ${recommendedTags.joinToString(", ")} - page $pageNumber"
         )
         val filterRatingsLocally = filterRatingsLocally ||
-                imageSource.imageBoard.localFilterType == ImageBoardLocalFilterType.REQUIRED ||
+                imageSource.imageBoard.localFilterType == ImageBoardRequirement.REQUIRED ||
                 (imageSource == ImageSource.DANBOORU && auth == null)
 
         val searchQuery = if (filterRatingsLocally) {

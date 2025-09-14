@@ -102,7 +102,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import moe.apex.rule34.R
 import moe.apex.rule34.history.SearchHistoryEntry
-import moe.apex.rule34.image.ImageBoardLocalFilterType
+import moe.apex.rule34.image.ImageBoardRequirement
 import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.navigation.Results
 import moe.apex.rule34.preferences.ImageSource
@@ -365,17 +365,21 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
 
         if (!prefs.ratingsFilter.containsAll(availableRatingsForSource(prefs.imageSource))) {
             if (
-                prefs.imageSource.imageBoard.localFilterType == ImageBoardLocalFilterType.REQUIRED &&
+                prefs.imageSource.imageBoard.localFilterType == ImageBoardRequirement.REQUIRED &&
                 !prefs.filterRatingsLocally
             ) {
                 return showToast(context, "Enable the 'Filter ratings locally' option to filter ratings on this source.")
             } else if (
-                prefs.imageSource.imageBoard.localFilterType == ImageBoardLocalFilterType.RECOMMENDED &&
+                prefs.imageSource.imageBoard.localFilterType == ImageBoardRequirement.RECOMMENDED &&
                 !prefs.filterRatingsLocally &&
                 prefs.authFor(prefs.imageSource) == null
             ) {
                 return showToast(context, "Set an API key or enable the 'Filter ratings locally' option to filter ratings on this source.")
             }
+        }
+
+        if (prefs.imageSource.imageBoard.apiKeyRequirement == ImageBoardRequirement.REQUIRED) {
+            return showToast(context, "Set an API key in Settings first.")
         }
 
         // Danbooru has the 2-tag limit and filtering by multiple negated tags simply does not work on Yande.re

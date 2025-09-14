@@ -18,7 +18,7 @@ data class ImageBoardAuth(
 )
 
 
-enum class ImageBoardLocalFilterType {
+enum class ImageBoardRequirement {
     NOT_NEEDED,
     RECOMMENDED,
     REQUIRED
@@ -37,10 +37,10 @@ interface ImageBoard {
     val aiTagName: String
     val firstPageIndex: Int
         get() = 0
-    val canLoadUnauthenticated: Boolean
-        get() = true
-    val localFilterType: ImageBoardLocalFilterType
-        get() = ImageBoardLocalFilterType.NOT_NEEDED
+    val apiKeyRequirement: ImageBoardRequirement
+        get() = ImageBoardRequirement.NOT_NEEDED
+    val localFilterType: ImageBoardRequirement
+        get() = ImageBoardRequirement.NOT_NEEDED
 
     fun loadAutoComplete(searchString: String): List<TagSuggestion> {
         val suggestions = mutableListOf<TagSuggestion>()
@@ -184,7 +184,7 @@ object Rule34 : GelbooruBasedImageBoard {
     override val imageSearchUrl = "${baseUrl}index.php?page=dapi&json=1&s=post&q=index&limit=100&tags=%s&pid=%d"
     override val aiTagName = "ai_generated"
     override val apiKeyCreationUrl = "https://rule34.xxx/index.php?page=account&s=options"
-    override val canLoadUnauthenticated = false
+    override val apiKeyRequirement = ImageBoardRequirement.NOT_NEEDED
 
     override fun parseImage(e: JSONObject): Image? {
         return parseImage(e, ImageSource.R34)
@@ -228,7 +228,7 @@ object Gelbooru : GelbooruBasedImageBoard {
     override val imageSearchUrl = "${baseUrl}index.php?page=dapi&json=1&s=post&q=index&limit=100&tags=%s&pid=%d"
     override val apiKeyCreationUrl = "${baseUrl}index.php?page=account&s=options"
     override val aiTagName = "ai-generated"
-    override val canLoadUnauthenticated = false
+    override val apiKeyRequirement = ImageBoardRequirement.REQUIRED
 
     override fun parseImage(e: JSONObject): Image? {
         return parseImage(e, ImageSource.GELBOORU)
@@ -259,8 +259,8 @@ object Danbooru : ImageBoard {
     override val firstPageIndex = 1
     override val authenticatedImageSearchUrl = "$imageSearchUrl&api_key=%s&login=%s"
     override val apiKeyCreationUrl = "${baseUrl}/profile"
-    override val canLoadUnauthenticated = false // Technically it can, it's just very limited
-    override val localFilterType = ImageBoardLocalFilterType.RECOMMENDED
+    override val apiKeyRequirement = ImageBoardRequirement.RECOMMENDED
+    override val localFilterType = ImageBoardRequirement.RECOMMENDED
 
     override fun parseImage(e: JSONObject): Image? {
         if (e.isNull("md5")) return null
@@ -357,7 +357,7 @@ object Yandere : ImageBoard {
     override val imageSearchUrl = "${baseUrl}post.json?tags=%s&page=%d&limit=100"
     override val aiTagName = "ai-generated" // Yande.re does not allow AI-generated images but this tag appears in search
     override val firstPageIndex = 1
-    override val localFilterType = ImageBoardLocalFilterType.REQUIRED
+    override val localFilterType = ImageBoardRequirement.REQUIRED
 
     override fun parseImage(e: JSONObject): Image? {
         if (e.isNull("md5")) return null
