@@ -29,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -59,6 +60,7 @@ import moe.apex.rule34.viewmodel.BreadboardViewModel
 
 @Composable
 fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel, startDestination: Any = Search) {
+    val context = LocalContext.current
     val density = LocalDensity.current
     val prefs = LocalPreferences.current
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
@@ -210,7 +212,7 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                 ) {
                     composable<ImageView> {
                         val args = it.toRoute<ImageView>()
-                        LazyLargeImageView(navController) { args.source.imageBoard.loadImage(args.id, prefs.authFor(args.source)) }
+                        LazyLargeImageView(navController) { args.source.imageBoard.loadImage(args.id, prefs.authFor(args.source, context)) }
                     }
                     composable<Home> { HomeScreen(navController, viewModel, bottomBarVisibleState) }
                     composable<Search> { SearchScreen(navController, focusRequester, viewModel) }

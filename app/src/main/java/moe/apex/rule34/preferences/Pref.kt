@@ -48,6 +48,7 @@ import moe.apex.rule34.BuildConfig
 import moe.apex.rule34.image.ImageBoardAuth
 import moe.apex.rule34.util.AgeVerification
 import moe.apex.rule34.util.MigrationOnlyField
+import moe.apex.rule34.util.SecretsManager
 
 
 val LocalPreferences = compositionLocalOf {
@@ -217,7 +218,10 @@ data class Prefs(
     }
 
 
-    fun authFor(source: ImageSource): ImageBoardAuth? {
+    fun authFor(source: ImageSource, context: Context): ImageBoardAuth? {
+        if (source == ImageSource.R34) {
+            return ImageBoardAuth(BuildConfig.R34_APP_ID, SecretsManager.getApiKey(context)!!)
+        }
         return imageBoardAuths[source]
     }
 
@@ -412,6 +416,20 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             }
         }
 
+        /* Version 3.0.5 added support for specifying a key for R34 as unauthenticated requests
+           started being blocked. Since then, Breadboard has been granted an unlimited R34 API key.
+           As a result, we no longer need to store personal API keys from the user for R34. */
+        if (lastUsedVersionCode >= 305) {
+            val data = dataStore.data.first()
+            val auths = data[PreferenceKeys.IMAGE_BOARD_AUTHS]
+            if (auths != null) {
+                val decodedAuths: Map<ImageSource, ImageBoardAuth> = Cbor.decodeFromByteArray(auths)
+                if (decodedAuths[ImageSource.R34] != null) {
+                    setAuth(ImageSource.R34, null, null)
+                }
+            }
+        }
+
 
         // Place any future migrations above this line by checking the last used version code.
         if (BuildConfig.VERSION_CODE >= lastUsedVersionCode)
@@ -550,7 +568,6 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
     }
 
 
-    @OptIn(ExperimentalSerializationApi::class)
     suspend fun setAuth(source: ImageSource, username: String?, apiKey: String?) {
         val auths = getPreferences.first().imageBoardAuths.toMutableMap()
         if (username == null && apiKey == null) {

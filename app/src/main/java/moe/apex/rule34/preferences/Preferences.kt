@@ -104,7 +104,7 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
     if (showAuthDialog) {
         AuthDialog(
             selectedBoard = currentSettings.imageSource.imageBoard,
-            default = currentSettings.authFor(currentSettings.imageSource),
+            default = currentSettings.authFor(currentSettings.imageSource, context),
             onDismissRequest = { showAuthDialog = false }
         ) { username, apiKey ->
             scope.launch {

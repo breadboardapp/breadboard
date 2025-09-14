@@ -24,6 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import moe.apex.rule34.detailview.ImageGrid
@@ -47,6 +48,7 @@ fun HomeScreen(
     viewModel: BreadboardViewModel,
     bottomBarVisibleState: MutableState<Boolean>,
 ) {
+    val context = LocalContext.current
     val prefs = LocalPreferences.current
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(topAppBarState)
@@ -57,7 +59,7 @@ fun HomeScreen(
         viewModel.recommendationsProvider = RecommendationsProvider(
             seedImages = prefs.favouriteImages,
             imageSource = prefs.imageSource,
-            auth = prefs.authFor(prefs.imageSource),
+            auth = prefs.authFor(prefs.imageSource, context),
             showAllRatings = prefs.recommendAllRatings,
             filterRatingsLocally = prefs.filterRatingsLocally,
             blockedTags = prefs.blockedTags

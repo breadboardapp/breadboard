@@ -6,6 +6,12 @@ plugins {
     id 'com.mikepenz.aboutlibraries.plugin'
 }
 
+
+Properties properties = new Properties()
+if (rootProject.file("local.properties").exists()) {
+    properties.load(rootProject.file("local.properties").newDataInputStream())
+}
+
 android {
     namespace 'moe.apex.rule34'
     compileSdk 36
@@ -21,6 +27,8 @@ android {
         vectorDrawables {
             useSupportLibrary true
         }
+
+        buildConfigField "String", "R34_APP_ID", properties.getProperty("R34_APP_ID", "\"\"")
     }
 
     buildTypes {
@@ -29,6 +37,10 @@ android {
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.debug
+            buildConfigField "String", "R34_API_KEY", properties.getProperty("R34_API_KEY", "\"\"")
+        }
+        debug {
+            buildConfigField "String", "R34_API_KEY", properties.getProperty("R34_API_KEY_DEBUG", "\"\"")
         }
     }
     compileOptions {

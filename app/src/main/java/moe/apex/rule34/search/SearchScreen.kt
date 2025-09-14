@@ -223,7 +223,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
         if (
             tagChipList.size > 2 &&
             prefs.imageSource == ImageSource.DANBOORU &&
-            prefs.authFor(ImageSource.DANBOORU) == null
+            prefs.authFor(ImageSource.DANBOORU, context) == null
         ) {
             showToast(context, "Danbooru only supports up to 2 tags without an API key")
             return false
@@ -372,7 +372,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
             } else if (
                 prefs.imageSource.imageBoard.localFilterType == ImageBoardRequirement.RECOMMENDED &&
                 !prefs.filterRatingsLocally &&
-                prefs.authFor(prefs.imageSource) == null
+                prefs.authFor(prefs.imageSource, context) == null
             ) {
                 return showToast(context, "Set an API key or enable the 'Filter ratings locally' option to filter ratings on this source.")
             }
