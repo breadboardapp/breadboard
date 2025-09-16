@@ -62,6 +62,9 @@ fun StorageLocationSelection(
             if (result.resultCode == RESULT_OK) {
                 val selectedUri = result.data?.data
                 if (selectedUri != null) {
+                    val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    context.contentResolver.takePersistableUriPermission(selectedUri, flags)
                     onSuccess(selectedUri)
                 }
             } else {
