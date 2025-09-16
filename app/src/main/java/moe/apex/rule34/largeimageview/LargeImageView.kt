@@ -134,10 +134,7 @@ fun LargeImageView(
     var storageLocationPromptLaunched by remember { mutableStateOf(false) }
 
     val isFullyZoomedOut by remember { derivedStateOf { zoomState.zoomFraction == 0f } }
-    val isMostlyZoomedOut by remember { derivedStateOf { zoomState.zoomFraction.let {
-        if (it == null) false
-        else it < 0.10
-    } } }
+    val isMostlyZoomedOut by remember { derivedStateOf { zoomState.zoomFraction.let { it == null || it < 0.10 } } }
 
     if (allImages.isEmpty()) {
         visible?.value = false
@@ -290,7 +287,9 @@ fun LargeImageView(
 
     if (showInfoSheet) {
         key(currentImage) {
-            InfoSheet(navController, currentImage, { showInfoSheet = false })
+            InfoSheet(navController, currentImage) {
+                showInfoSheet = false
+            }
         }
     }
 
