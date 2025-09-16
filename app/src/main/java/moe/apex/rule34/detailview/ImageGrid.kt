@@ -76,7 +76,7 @@ fun ImageGrid(
     filterComposable: (@Composable () -> Unit)? = null,
     pullToRefreshController: PullToRefreshController? = null,
     doneInitialLoad: Boolean = true,
-    onEndReached: suspend () -> Unit = { }
+    onEndReached: (suspend () -> Unit)? = null
 ) {
     val prefs = LocalPreferences.current
 
@@ -140,6 +140,14 @@ fun ImageGrid(
                     .fillMaxWidth()
             )
         }
+
+        LaunchedEffect(doneInitialLoad) {
+            if (doneInitialLoad) {
+                staggeredGridState.requestScrollToItem(0)
+                uniformGridState.requestScrollToItem(0)
+                println("done")
+            }
+        }
     }
 }
 
@@ -154,7 +162,7 @@ private fun StaggeredImageGrid(
     images: List<Image>,
     noImagesContent: @Composable () -> Unit,
     onImageClick: (Int, Image) -> Unit,
-    onEndReached: suspend () -> Unit = { }
+    onEndReached: (suspend () -> Unit)? = null
 ) {
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Adaptive(MIN_CELL_WIDTH.dp),
@@ -165,22 +173,30 @@ private fun StaggeredImageGrid(
         verticalItemSpacing = SMALL_SPACER.dp
     ) {
         filterComposable?.let {
-            item(key = "ratings-filter", span = StaggeredGridItemSpan.FullLine ) { it() }
+            item(key = "ratings-filter", span = StaggeredGridItemSpan.FullLine ) {
+                it()
+            }
         }
 
         itemsIndexed(images, key = { _, image -> image.previewUrl }) { index, image ->
             StaggeredImagePreviewContainer(image, index, onImageClick)
         }
 
-        item { LaunchedEffect(Unit) { onEndReached() } }
+        onEndReached?.let {
+            item(key = "end-reached") {
+                LaunchedEffect(Unit) {
+                    it()
+                }
+            }
+        }
 
         if (images.isEmpty()) {
-            item(span = StaggeredGridItemSpan.FullLine) {
+            item(key = "no-images", span = StaggeredGridItemSpan.FullLine) {
                 noImagesContent()
             }
         }
 
-        item(span = StaggeredGridItemSpan.FullLine) {
+        item(key = "spacer", span = StaggeredGridItemSpan.FullLine) {
             NavBarHeightVerticalSpacer()
         }
     }
@@ -196,7 +212,7 @@ private fun UniformImageGrid(
     images: List<Image>,
     noImagesContent: @Composable () -> Unit,
     onImageClick: (Int, Image) -> Unit,
-    onEndReached: suspend () -> Unit = { }
+    onEndReached: (suspend () -> Unit)? = null
 ) {
     LazyVerticalGrid(
         columns = GridCells.Adaptive(MIN_CELL_WIDTH.dp),
@@ -207,22 +223,30 @@ private fun UniformImageGrid(
         verticalArrangement = Arrangement.spacedBy(SMALL_SPACER.dp)
     ) {
         filterComposable?.let {
-            item(span = { GridItemSpan(maxLineSpan) }) { it() }
+            item(key = "ratings-filter", span = { GridItemSpan(maxLineSpan) }) {
+                it()
+            }
         }
 
         itemsIndexed(images, key = { _, image -> image.previewUrl }) { index, image ->
             ImagePreviewContainer(image, index, onImageClick)
         }
 
-        item { LaunchedEffect(Unit) { onEndReached() } }
+        onEndReached?.let {
+            item(key = "end-reached") {
+                LaunchedEffect(Unit) {
+                    it()
+                }
+            }
+        }
 
         if (images.isEmpty()) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
+            item(key = "no-images", span = { GridItemSpan(maxLineSpan) }) {
                 noImagesContent()
             }
         }
 
-        item(span = { GridItemSpan(maxLineSpan) }) {
+        item(key = "spacer", span = { GridItemSpan(maxLineSpan) }) {
             NavBarHeightVerticalSpacer()
         }
     }

@@ -2,6 +2,9 @@ package moe.apex.rule34.viewmodel
 
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 
 
 interface GridStateHolder {
@@ -16,6 +19,6 @@ interface GridStateHolder {
 
 
 class GridStateHolderDelegate : GridStateHolder {
-    override var staggeredGridState = LazyStaggeredGridState()
-    override var uniformGridState = LazyGridState()
+    override var staggeredGridState by mutableStateOf(LazyStaggeredGridState())
+    override var uniformGridState by mutableStateOf(LazyGridState())
 }
