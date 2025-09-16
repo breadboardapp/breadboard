@@ -62,6 +62,7 @@ import moe.apex.rule34.util.TitledModalBottomSheet
 import moe.apex.rule34.util.copyText
 import moe.apex.rule34.util.isWebLink
 import moe.apex.rule34.util.largerShape
+import moe.apex.rule34.util.launchInWebBrowser
 import moe.apex.rule34.util.navBarHeight
 import moe.apex.rule34.util.openUrl
 import moe.apex.rule34.util.pluralise
@@ -210,7 +211,7 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                             TitleSummary(
                                 title = title,
                                 summary = it,
-                                onClick = { openUrl(context, it) },
+                                onClick = { launchInWebBrowser(context, it) }, // Breadboard can handle yande.re direct image links. We'll forcibly use the browser here to prevent that here.
                                 trailingIcon = {
                                     CopyIcon(title) {
                                         scope.launch { copyText(context, clip, it) }
