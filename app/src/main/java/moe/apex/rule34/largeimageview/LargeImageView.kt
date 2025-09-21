@@ -41,6 +41,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -133,10 +134,7 @@ fun LargeImageView(
     var storageLocationPromptLaunched by remember { mutableStateOf(false) }
 
     val isFullyZoomedOut by remember { derivedStateOf { zoomState.zoomFraction == 0f } }
-    val isMostlyZoomedOut by remember { derivedStateOf { zoomState.zoomFraction.let {
-        if (it == null) false
-        else it < 0.10
-    } } }
+    val isMostlyZoomedOut by remember { derivedStateOf { zoomState.zoomFraction.let { it == null || it < 0.10 } } }
 
     if (allImages.isEmpty()) {
         visible?.value = false
@@ -288,7 +286,11 @@ fun LargeImageView(
     )
 
     if (showInfoSheet) {
-        InfoSheet(navController, currentImage, { showInfoSheet = false })
+        key(currentImage) {
+            InfoSheet(navController, currentImage) {
+                showInfoSheet = false
+            }
+        }
     }
 
     LaunchedEffect(visible?.value) {

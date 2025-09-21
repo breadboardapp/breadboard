@@ -74,6 +74,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -102,7 +103,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import moe.apex.rule34.R
 import moe.apex.rule34.history.SearchHistoryEntry
-import moe.apex.rule34.image.ImageBoardLocalFilterType
+import moe.apex.rule34.image.ImageBoardRequirement
 import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.navigation.Results
 import moe.apex.rule34.preferences.ImageSource
@@ -223,7 +224,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
         if (
             tagChipList.size > 2 &&
             prefs.imageSource == ImageSource.DANBOORU &&
-            prefs.authFor(ImageSource.DANBOORU) == null
+            prefs.authFor(ImageSource.DANBOORU, context) == null
         ) {
             showToast(context, "Danbooru only supports up to 2 tags without an API key")
             return false
@@ -243,8 +244,10 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                        the query in the time between getting suggestions and displaying them will cause
                        the old suggestions to be displayed. */
                     if (cleanedSearchString.isEmpty()) return@launch
-                    mostRecentSuggestions.clear()
-                    mostRecentSuggestions.addAll(suggestions)
+                    Snapshot.withMutableSnapshot {
+                        mostRecentSuggestions.clear()
+                        mostRecentSuggestions.addAll(suggestions)
+                    }
                     shouldShowSuggestions = true
                 } catch (e: Exception) {
                     withContext(Dispatchers.Main) {
@@ -365,17 +368,21 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
 
         if (!prefs.ratingsFilter.containsAll(availableRatingsForSource(prefs.imageSource))) {
             if (
-                prefs.imageSource.imageBoard.localFilterType == ImageBoardLocalFilterType.REQUIRED &&
+                prefs.imageSource.imageBoard.localFilterType == ImageBoardRequirement.REQUIRED &&
                 !prefs.filterRatingsLocally
             ) {
                 return showToast(context, "Enable the 'Filter ratings locally' option to filter ratings on this source.")
             } else if (
-                prefs.imageSource.imageBoard.localFilterType == ImageBoardLocalFilterType.RECOMMENDED &&
+                prefs.imageSource.imageBoard.localFilterType == ImageBoardRequirement.RECOMMENDED &&
                 !prefs.filterRatingsLocally &&
-                prefs.authFor(prefs.imageSource) == null
+                prefs.authFor(prefs.imageSource, context) == null
             ) {
                 return showToast(context, "Set an API key or enable the 'Filter ratings locally' option to filter ratings on this source.")
             }
+        }
+
+        if (prefs.imageSource.imageBoard.apiKeyRequirement == ImageBoardRequirement.REQUIRED) {
+            return showToast(context, "Add an API key in Settings to use ${prefs.imageSource.label}.")
         }
 
         // Danbooru has the 2-tag limit and filtering by multiple negated tags simply does not work on Yande.re

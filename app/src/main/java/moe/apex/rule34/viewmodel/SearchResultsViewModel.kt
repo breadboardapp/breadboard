@@ -1,13 +1,12 @@
 package moe.apex.rule34.viewmodel
 
-import android.annotation.SuppressLint
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.toMutableStateList
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -16,12 +15,10 @@ import moe.apex.rule34.image.ImageBoardAuth
 import moe.apex.rule34.preferences.ImageSource
 
 
-@SuppressLint("MutableCollectionMutableState")
 class SearchResultsViewModel : ViewModel(), GridStateHolder by GridStateHolderDelegate() {
     var isReady by mutableStateOf(false)
     var doneInitialLoad by mutableStateOf(false)
-    // Not great but it avoids the momentary period where the list is empty when doing a new search.
-    var images by mutableStateOf(mutableStateListOf<Image>())
+    val images = mutableStateListOf<Image>()
     private var shouldKeepSearching by mutableStateOf(true)
     private var pageNumber by mutableIntStateOf(0) // We'll set this to the proper value later
     private var auth: ImageBoardAuth? = null
@@ -66,7 +63,10 @@ class SearchResultsViewModel : ViewModel(), GridStateHolder by GridStateHolderDe
                     shouldKeepSearching = false
                 } else {
                     if (pageNumber == imageSource.imageBoard.firstPageIndex) {
-                        images = newImages.toMutableStateList()
+                        Snapshot.withMutableSnapshot {
+                            images.clear()
+                            images.addAll(newImages)
+                        }
                     } else {
                         images += newImages.filter { it !in images }
                     }

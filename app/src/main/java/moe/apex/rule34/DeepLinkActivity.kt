@@ -30,7 +30,7 @@ import moe.apex.rule34.viewmodel.BreadboardViewModel
 import moe.apex.rule34.util.FlagSecureHelper
 import moe.apex.rule34.util.createViewIntent
 import moe.apex.rule34.util.getDefaultPackageForIntent
-import moe.apex.rule34.util.launchInDefaultBrowser
+import moe.apex.rule34.util.launchInWebBrowser
 import moe.apex.rule34.util.launchUriWithPackage
 
 
@@ -70,7 +70,7 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity() {
                             ImageView.fromUri(uri)?.let {
                                 navController.popBackStack()
                                 navController.navigate(it)
-                            } ?: openInBrowser(newIntent)
+                            } ?: reopenInBrowser(newIntent)
                         }
                     }
                     addOnNewIntentListener(listener)
@@ -83,14 +83,14 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity() {
                             viewModel = viewModel,
                             startDestination = iv
                         )
-                    } ?: openInBrowser(intent)
+                    } ?: reopenInBrowser(intent)
                 } ?: finish()
             }
         }
     }
 
 
-    private fun openInBrowser(intent: Intent) {
+    private fun reopenInBrowser(intent: Intent) {
         val uri = intent.data!!
 
         // Not all apps set this but some like Chrome and Firefox do. We should use it if available.
@@ -113,7 +113,7 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity() {
         referrer?.takeIf { it.scheme == "android-app" }?.host?.let { attemptingPackage ->
             // If the referrer is Breadboard itself but we already know Breadboard can't handle the link in-app, we shouldn't try to do so.
             if (attemptingPackage == BuildConfig.APPLICATION_ID) {
-                Log.w("openInBrowser", "Intent came from Breadboard itself but Breadboard can't handle URI $uri. If the intention was to open in the browser, call launchInDefaultBrowser() instead.")
+                Log.w("openInBrowser", "Intent came from Breadboard itself but Breadboard can't handle URI $uri. If the intention was to open in the browser, call launchInWebBrowser() instead.")
                 return@let
             }
             val relaunchIntent = createViewIntent(uri, attemptingPackage)
@@ -125,7 +125,7 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity() {
         }
 
         // If all else fails, just open in the default browser.
-        launchInDefaultBrowser(this, uri)
+        launchInWebBrowser(this, uri)
         finishAndRemoveTask()
     }
 }

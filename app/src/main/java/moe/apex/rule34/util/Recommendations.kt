@@ -1,25 +1,23 @@
 package moe.apex.rule34.util
 
-import android.annotation.SuppressLint
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.toMutableStateList
+import androidx.compose.runtime.snapshots.Snapshot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.image.ImageBoardAuth
-import moe.apex.rule34.image.ImageBoardLocalFilterType
+import moe.apex.rule34.image.ImageBoardRequirement
 import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.viewmodel.GridStateHolderDelegate
 import moe.apex.rule34.viewmodel.GridStateHolder
 
 
-@SuppressLint("MutableCollectionMutableState")
 class RecommendationsProvider(
     private val seedImages: List<Image>,
     val imageSource: ImageSource,
@@ -58,8 +56,7 @@ class RecommendationsProvider(
         )
     }
 
-    // Not great but it avoids the momentary period where the list is empty when doing a new search.
-    var recommendedImages by mutableStateOf(mutableStateListOf<Image>())
+    val recommendedImages = mutableStateListOf<Image>()
     var doneInitialLoad by mutableStateOf(false)
     private val recommendedTags = mutableListOf<String>()
     private var pageNumber by mutableIntStateOf(imageSource.imageBoard.firstPageIndex)
@@ -110,7 +107,7 @@ class RecommendationsProvider(
             "Fetching recommended posts for tags: ${recommendedTags.joinToString(", ")} - page $pageNumber"
         )
         val filterRatingsLocally = filterRatingsLocally ||
-                imageSource.imageBoard.localFilterType == ImageBoardLocalFilterType.REQUIRED ||
+                imageSource.imageBoard.localFilterType == ImageBoardRequirement.REQUIRED ||
                 (imageSource == ImageSource.DANBOORU && auth == null)
 
         val searchQuery = if (filterRatingsLocally) {
@@ -155,9 +152,12 @@ class RecommendationsProvider(
                     shouldKeepSearching = false
                 } else {
                     if (pageNumber == imageSource.imageBoard.firstPageIndex) {
-                        recommendedImages = wantedResults.toMutableStateList()
+                        Snapshot.withMutableSnapshot {
+                            recommendedImages.clear()
+                            recommendedImages.addAll(wantedResults)
+                        }
                     } else if (wantedResults.isNotEmpty()) {
-                        recommendedImages += wantedResults.filter { it !in recommendedImages }
+                        recommendedImages.addAll(wantedResults.filter { it !in recommendedImages })
                     }
                 }
                 pageNumber++

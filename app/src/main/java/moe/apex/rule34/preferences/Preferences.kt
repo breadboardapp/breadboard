@@ -53,7 +53,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import moe.apex.rule34.image.ImageBoard
 import moe.apex.rule34.image.ImageBoardAuth
-import moe.apex.rule34.image.ImageBoardLocalFilterType
+import moe.apex.rule34.image.ImageBoardRequirement
 import moe.apex.rule34.navigation.AboutSettings
 import moe.apex.rule34.navigation.BlockedTagsSettings
 import moe.apex.rule34.navigation.ExperimentalSettings
@@ -72,7 +72,7 @@ import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.TitleSummary
 import moe.apex.rule34.util.exportData
 import moe.apex.rule34.util.importData
-import moe.apex.rule34.util.launchInDefaultBrowser
+import moe.apex.rule34.util.launchInWebBrowser
 import moe.apex.rule34.util.preImportChecks
 import moe.apex.rule34.util.saveUriToPref
 import moe.apex.rule34.util.showToast
@@ -104,7 +104,7 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
     if (showAuthDialog) {
         AuthDialog(
             selectedBoard = currentSettings.imageSource.imageBoard,
-            default = currentSettings.authFor(currentSettings.imageSource),
+            default = currentSettings.authFor(currentSettings.imageSource, context),
             onDismissRequest = { showAuthDialog = false }
         ) { username, apiKey ->
             scope.launch {
@@ -309,20 +309,19 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                         )
                     }
                     item {
-                        val noAuthNeeded =
-                            currentSettings.imageSource.imageBoard.canLoadUnauthenticated
+                        val authType = currentSettings.imageSource.imageBoard.apiKeyRequirement
                         TitleSummary(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .animateContentSize(),
                             title = "Set API key",
-                            summary = if (!noAuthNeeded) {
-                                "${currentSettings.imageSource.label} requires an API key for the best experience. " +
-                                        "Tap to set."
+                            summary = if (authType != ImageBoardRequirement.NOT_NEEDED) {
+                                "${currentSettings.imageSource.label} requires an API key${if (authType == ImageBoardRequirement.RECOMMENDED) " for the best experience." else "."} " +
+                                "Tap to set."
                             } else {
                                 "${currentSettings.imageSource.label} does not require an API key."
                             },
-                            enabled = !noAuthNeeded
+                            enabled = authType != ImageBoardRequirement.NOT_NEEDED
                         ) {
                             showAuthDialog = true
                         }
@@ -556,7 +555,7 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                 )
             }
 
-            if (currentSettings.imageSource.imageBoard.localFilterType != ImageBoardLocalFilterType.NOT_NEEDED) {
+            if (currentSettings.imageSource.imageBoard.localFilterType != ImageBoardRequirement.NOT_NEEDED) {
                 item {
                     InfoSection(
                         text = "Danbooru limits searches to 2 tags (which includes ratings) " +
@@ -631,7 +630,7 @@ private fun AuthDialog(
                                 SpanStyle(color = MaterialTheme.colorScheme.secondary, textDecoration = TextDecoration.Underline)
                             )
                         ) {
-                            launchInDefaultBrowser(context, url)
+                            launchInWebBrowser(context, url)
                         }
 
                         withLink(link) {

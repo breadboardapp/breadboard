@@ -34,6 +34,6 @@ fun createViewIntent(uri: Uri, targetPackage: String? = null): Intent {
 }
 
 
-fun createDefaultBrowserIntent(): Intent {
+fun createWebBrowserIntent(): Intent {
     return Intent(Intent.ACTION_VIEW, "http://example.com".toUri())
 }

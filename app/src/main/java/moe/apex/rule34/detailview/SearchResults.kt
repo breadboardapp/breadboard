@@ -50,6 +50,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
     val shouldShowLargeImage = remember { mutableStateOf(false) }
     var initialPage by remember { mutableIntStateOf(0) }
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     val prefs = LocalPreferences.current
@@ -61,7 +62,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
         if (!viewModel.isReady) {
             viewModel.setup(
                 imageSource = source,
-                auth = prefs.authFor(source),
+                auth = prefs.authFor(source, context),
                 tags = tagList
             )
         }

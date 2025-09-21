@@ -90,7 +90,7 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity() {
             LaunchedEffect(prefs.imageSource, prefs.imageBoardAuths, prefs.filterRatingsLocally, prefs.blockedTags, prefs.recommendAllRatings) {
                 if (
                     viewModel.recommendationsProvider?.imageSource != prefs.imageSource ||
-                    viewModel.recommendationsProvider?.auth != prefs.authFor(prefs.imageSource) ||
+                    viewModel.recommendationsProvider?.auth != prefs.authFor(prefs.imageSource, applicationContext) ||
                     viewModel.recommendationsProvider?.filterRatingsLocally != prefs.filterRatingsLocally ||
                     viewModel.recommendationsProvider?.blockedTags != prefs.blockedTags ||
                     viewModel.recommendationsProvider?.showAllRatings != prefs.recommendAllRatings
