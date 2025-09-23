@@ -1,12 +1,10 @@
 package moe.apex.rule34.detailview
 
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
@@ -34,6 +32,7 @@ import moe.apex.rule34.util.AgeVerification
 import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
 import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.rule34.util.LargeTitleBar
+import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
 import moe.apex.rule34.util.ScrollToTopArrow
 import moe.apex.rule34.util.availableRatingsForCurrentSource
@@ -129,9 +128,8 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
         )
     }
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        topBar = {
+    MainScreenScaffold(
+        topAppBar = {
             LargeTitleBar(
                 title = "Search results",
                 scrollBehavior = scrollBehavior,
@@ -147,9 +145,11 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
                 }
             )
         },
+        addBottomPadding = false,
+        blur = shouldShowLargeImage.value,
     ) { padding ->
         if (!viewModel.isReady) {
-            return@Scaffold
+            return@MainScreenScaffold
         }
 
         ImageGrid(

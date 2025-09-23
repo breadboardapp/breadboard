@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ClipData
 import android.content.Context
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.Spring
@@ -89,6 +90,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -96,6 +98,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
@@ -236,27 +239,64 @@ fun FullscreenLoadingSpinner() {
 @Composable
 fun AnimatedVisibilityLargeImageView(
     navController: NavController,
-    shouldShowLargeImage: MutableState<Boolean>,
+    visibilityState: MutableState<Boolean>,
     initialPage: Int,
     allImages: List<Image>,
     bottomBarVisibleState: MutableState<Boolean>? = null
 ) {
-    LaunchedEffect(shouldShowLargeImage.value) {
-        if (bottomBarVisibleState != null)
-            bottomBarVisibleState.value = !shouldShowLargeImage.value
+    var offsetDp by remember { mutableFloatStateOf(0f) }
+    var backgroundOpacityScale by remember { mutableFloatStateOf(1f) }
+
+    LaunchedEffect(visibilityState.value) {
+        if (bottomBarVisibleState != null) {
+            bottomBarVisibleState.value = !visibilityState.value
+        }
+        if (visibilityState.value) {
+            offsetDp = 0f
+            backgroundOpacityScale = 1f
+        }
+    }
+
+    if (allImages.isEmpty()) {
+        visibilityState.value = false
+        return
+    }
+
+    PredictiveBackHandler(visibilityState.value) { progress ->
+        try {
+            progress.collect { backEvent ->
+                offsetDp = (backEvent.progress * 300)
+                backgroundOpacityScale = 1 - (backEvent.progress / 1.5f)
+            }
+            visibilityState.value = false
+        }
+        catch (_: Exception) { }
     }
 
     AnimatedVisibility(
-        visible = shouldShowLargeImage.value,
-        enter = slideInVertically(initialOffsetY = { it }),
-        exit = slideOutVertically(targetOffsetY = { it })
+        visible = visibilityState.value,
+        enter = fadeIn(),
+        exit = fadeOut()
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background.copy(alpha = 0.5f * backgroundOpacityScale))
+        )
+    }
+
+    AnimatedVisibility(
+        visible = visibilityState.value,
+        enter = slideInVertically { it },
+        exit = slideOutVertically { it },
+        modifier = Modifier.offset(y = offsetDp.dp)
     ) {
         key(initialPage) {
             LargeImageView(
-                navController,
-                shouldShowLargeImage,
-                initialPage,
-                allImages
+                navController = navController,
+                initialPage = initialPage,
+                allImages = allImages,
+                backgroundAlpha = 0f
             )
         }
     }
@@ -283,6 +323,7 @@ fun MainScreenScaffold(
     scrollBehavior: TopAppBarScrollBehavior? = null,
     largeTopBar: Boolean = true,
     addBottomPadding: Boolean = true,
+    blur: Boolean = false,
     floatingActionButton: (@Composable () -> Unit)? = null,
     additionalActions: @Composable RowScope.() -> Unit = { },
     content: @Composable (PaddingValues) -> Unit
@@ -300,6 +341,7 @@ fun MainScreenScaffold(
             }
         },
         addBottomPadding = addBottomPadding,
+        blur = blur,
         floatingActionButton = floatingActionButton,
         content = content
     )
@@ -307,16 +349,21 @@ fun MainScreenScaffold(
 
 
 /** A lower level MainScreenScaffold that allows passing in a custom top bar for more
-    fine grained control over its behaviour and appearance. */
+    fine grained control over its behaviour and appearance.
+
+    [blur] is not supported on Android 11 or below.*/
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreenScaffold(
     topAppBar: @Composable () -> Unit,
     addBottomPadding: Boolean = true,
+    blur: Boolean = false,
     floatingActionButton: (@Composable () -> Unit)? = null,
     content: @Composable (PaddingValues) -> Unit
 ) {
+    val blurRadius by animateDpAsState(if (blur) 48.dp else 0.dp)
     Scaffold(
+        modifier = Modifier.blur(blurRadius),
         topBar = topAppBar,
         floatingActionButton = { floatingActionButton?.let {
             Box(Modifier.offset(y = if (addBottomPadding) -BOTTOM_APP_BAR_HEIGHT.dp else 0.dp)) {

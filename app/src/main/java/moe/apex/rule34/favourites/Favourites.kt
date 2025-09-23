@@ -97,6 +97,7 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
         title = "Favourite images",
         scrollBehavior = scrollBehavior,
         addBottomPadding = false,
+        blur = shouldShowLargeImage.value,
         additionalActions = {
             ScrollToTopArrow(
                 staggeredGridState = viewModel.staggeredGridState,

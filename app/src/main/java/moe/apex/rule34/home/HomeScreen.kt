@@ -78,6 +78,7 @@ fun HomeScreen(
         largeTopBar = false,
         scrollBehavior = scrollBehavior,
         addBottomPadding = false,
+        blur = shouldShowLargeImage.value,
         additionalActions = {
             ScrollToTopArrow(
                 staggeredGridState = recommendationsProvider.staggeredGridState,
