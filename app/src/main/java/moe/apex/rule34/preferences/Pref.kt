@@ -426,7 +426,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         /* Version 3.0.5 added support for specifying a key for R34 as unauthenticated requests
            started being blocked. Since then, Breadboard has been granted an unlimited R34 API key.
            As a result, we no longer need to store personal API keys from the user for R34. */
-        if (lastUsedVersionCode >= 305) {
+        if (lastUsedVersionCode in 305 .. 306) {
             val data = dataStore.data.first()
             val auths = data[PreferenceKeys.IMAGE_BOARD_AUTHS]
             if (auths != null) {
@@ -442,7 +442,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
            to the new experiments set. */
         if (lastUsedVersionCode < 310) {
             val data = dataStore.data.first()
-            val enabledExperiments = mutableSetOf<Experiment>()
+            val enabledExperiments = Prefs.DEFAULT.enabledExperiments.toMutableSet()
             val searchPtrKey = booleanPreferencesKey("search_pull_to_refresh")
             val alwaysAnimateScrollKey = booleanPreferencesKey("always_animate_scroll")
             val searchPullToRefresh = data[searchPtrKey] ?: false
