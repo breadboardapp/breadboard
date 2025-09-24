@@ -1,5 +1,6 @@
 package moe.apex.rule34.preferences
 
+import android.os.Build
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -70,6 +71,8 @@ fun ExperimentalScreen(navController: NavHostController) {
                                 title = pref.label,
                                 summary = pref.description,
                                 checked = pref.isEnabled(prefs),
+                                // Immersive carousel uses a blur modifier which requires Android 12+ to work
+                                enabled = pref != Experiment.IMMERSIVE_CAROUSEL || Build.VERSION.SDK_INT >= Build.VERSION_CODES.S,
                             ) {
                                 scope.launch {
                                     if (it) {

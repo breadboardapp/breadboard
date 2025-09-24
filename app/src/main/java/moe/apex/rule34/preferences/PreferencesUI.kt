@@ -81,18 +81,20 @@ fun SwitchPref(
     checked: Boolean,
     title: String,
     summary: String? = null,
+    enabled: Boolean = true,
     onToggle: (Boolean) -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onToggle(!checked) },
+            .clickable(enabled) { onToggle(!checked) },
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         TitleSummary(Modifier.weight(1f), title, summary)
         Spacer(Modifier.width(SMALL_LARGE_SPACER.dp))
         Switch(
+            enabled = enabled,
             checked = checked,
             onCheckedChange = onToggle,
             modifier = Modifier.padding(end = SMALL_LARGE_SPACER.dp),

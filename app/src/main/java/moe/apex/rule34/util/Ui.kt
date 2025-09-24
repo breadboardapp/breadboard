@@ -117,6 +117,8 @@ import kotlinx.coroutines.withContext
 import moe.apex.rule34.history.SearchHistoryEntry
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.largeimageview.LargeImageView
+import moe.apex.rule34.preferences.Experiment
+import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.prefs
 import moe.apex.rule34.ui.theme.prefTitle
 
@@ -244,8 +246,10 @@ fun AnimatedVisibilityLargeImageView(
     allImages: List<Image>,
     bottomBarVisibleState: MutableState<Boolean>? = null
 ) {
+    val prefs = LocalPreferences.current
     var offsetDp by remember { mutableFloatStateOf(0f) }
     var backgroundOpacityScale by remember { mutableFloatStateOf(1f) }
+    val defaultOpacity = remember { if (Experiment.IMMERSIVE_CAROUSEL.isEnabled(prefs)) 0.5f else 1f }
 
     LaunchedEffect(visibilityState.value) {
         if (bottomBarVisibleState != null) {
@@ -281,7 +285,7 @@ fun AnimatedVisibilityLargeImageView(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background.copy(alpha = 0.5f * backgroundOpacityScale))
+                .background(MaterialTheme.colorScheme.background.copy(alpha = defaultOpacity * backgroundOpacityScale))
         )
     }
 
@@ -361,7 +365,10 @@ fun MainScreenScaffold(
     floatingActionButton: (@Composable () -> Unit)? = null,
     content: @Composable (PaddingValues) -> Unit
 ) {
-    val blurRadius by animateDpAsState(if (blur) 48.dp else 0.dp)
+    val prefs = LocalPreferences.current
+    val isBlurEnabled = remember { Experiment.IMMERSIVE_CAROUSEL.isEnabled(prefs) }
+    val blurRadius by animateDpAsState(if (blur && isBlurEnabled) 48.dp else 0.dp)
+
     Scaffold(
         modifier = Modifier.blur(blurRadius),
         topBar = topAppBar,
