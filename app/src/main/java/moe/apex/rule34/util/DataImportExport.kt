@@ -31,7 +31,6 @@ import moe.apex.rule34.preferences.Prefs
 import moe.apex.rule34.preferences.UserPreferencesRepository
 import moe.apex.rule34.prefs
 import org.json.JSONArray
-import org.json.JSONException
 import org.json.JSONObject
 
 
@@ -91,36 +90,34 @@ private fun importSettings(tempPrefs: MutablePreferences, data: JSONObject) {
        we'll just create "new" ones with the same type and name as the originals instead.
      */
     val thisCategory = data.getJSONObject(PrefCategory.SETTING.name)
+    val wantedKeys = UserPreferencesRepository.keyMetaMapping
+        .filter { it.value.category == PrefCategory.SETTING }.keys
+        .map { it.name }
     tempPrefs.apply {
-        for (key in UserPreferencesRepository.keyMetaMapping.keys) {
-            if (UserPreferencesRepository.keyMetaMapping[key]!!.category != PrefCategory.SETTING) {
-                continue
+        for (key in thisCategory.keys()) {
+            if (key !in wantedKeys) {
+                Log.w("Importing", "Unknown settings key: $key. Attempting to continue.")
             }
 
-            val prefValue = try {
-                thisCategory.get(key.name)
-            } catch (_: JSONException) {
-                remove(key)
-                continue
-            } // Pref has never been set in the backup, we should use the default.
+            val prefValue = thisCategory.get(key)
 
             when (prefValue) {
                 is String -> {
                     if (!prefValue.startsWith("[")) {
-                        this[stringPreferencesKey(key.name)] = prefValue
+                        this[stringPreferencesKey(key)] = prefValue
                     } else {
                         val set = mutableSetOf<String>()
                         val ja = JSONArray(prefValue)
                         for (index in 0..<ja.length()) {
                             set.add(ja.getString(index))
                         }
-                        this[stringSetPreferencesKey(key.name)] = set
+                        this[stringSetPreferencesKey(key)] = set
                     } // Because the sets are actually serialised as strings
                 }
 
-                is Int -> this[intPreferencesKey(key.name)] = prefValue
-                is Boolean -> this[booleanPreferencesKey(key.name)] = prefValue
-                else -> throw NotImplementedError("Settings key with unhandled type: ${key.name}")
+                is Int -> this[intPreferencesKey(key)] = prefValue
+                is Boolean -> this[booleanPreferencesKey(key)] = prefValue
+                else -> throw NotImplementedError("Settings key with unhandled type: $key ($prefValue)")
             }
         }
     }
