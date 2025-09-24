@@ -83,8 +83,7 @@ data object PrefNames {
     const val IMAGE_VIEWER_ACTION_ORDER = "image_viewer_action_order"
     const val DEFAULT_START_DESTINATION = "default_start_destination"
     const val RECOMMEND_ALL_RATINGS = "recommend_all_ratings"
-    const val SEARCH_PULL_TO_REFRESH = "search_pull_to_refresh"
-    const val ALWAYS_ANIMATE_SCROLL = "always_animate_scroll"
+    const val ENABLED_EXPERIMENTS = "enabled_experiments"
     const val HAS_VERIFIED_AGE = "has_verified_age"
     const val FLAG_SECURE_MODE = "flag_secure_mode"
 }
@@ -110,8 +109,7 @@ object PreferenceKeys {
     val IMAGE_VIEWER_ACTION_ORDER = stringPreferencesKey(PrefNames.IMAGE_VIEWER_ACTION_ORDER)
     val DEFAULT_START_DESTINATION = stringPreferencesKey(PrefNames.DEFAULT_START_DESTINATION)
     val RECOMMEND_ALL_RATINGS = booleanPreferencesKey(PrefNames.RECOMMEND_ALL_RATINGS)
-    val SEARCH_PULL_TO_REFRESH = booleanPreferencesKey(PrefNames.SEARCH_PULL_TO_REFRESH)
-    val ALWAYS_ANIMATE_SCROLL = booleanPreferencesKey(PrefNames.ALWAYS_ANIMATE_SCROLL)
+    val ENABLED_EXPERIMENTS = stringSetPreferencesKey(PrefNames.ENABLED_EXPERIMENTS)
     val HAS_VERIFIED_AGE = booleanPreferencesKey(PrefNames.HAS_VERIFIED_AGE)
     val FLAG_SECURE_MODE = stringPreferencesKey(PrefNames.FLAG_SECURE_MODE)
 }
@@ -158,6 +156,18 @@ enum class FlagSecureMode(override val label: String) : PrefEnum<FlagSecureMode>
 }
 
 
+enum class Experiment(override val label: String, val description: String? = null) : PrefEnum<Experiment> {
+    SEARCH_PULL_TO_REFRESH("Pull-to-refresh in Search", "Enable pull-to-refresh in search results."),
+    ALWAYS_ANIMATE_SCROLL("Always animate scroll-to-top", "Enable smooth scrolling on all pages when using the scroll-to-top button."),
+    IMMERSIVE_CAROUSEL("Immersive image carousel", "Use a translucent and blurred background for the image carousel in the image viewer. Not all devices support this feature.");
+
+
+    fun isEnabled(prefs: Prefs): Boolean {
+        return prefs.enabledExperiments.contains(this)
+    }
+}
+
+
 data class Prefs(
     val dataSaver: DataSaver,
     val storageLocation: Uri,
@@ -178,8 +188,7 @@ data class Prefs(
     val imageViewerActions: List<ToolbarAction>,
     val defaultStartDestination: StartDestination,
     val recommendAllRatings: Boolean,
-    val searchPullToRefresh: Boolean,
-    val alwaysAnimateScroll: Boolean,
+    val enabledExperiments: Set<Experiment>,
     private val hasVerifiedAge: Boolean,
     val flagSecureMode: FlagSecureMode
 ) {
@@ -204,8 +213,7 @@ data class Prefs(
             imageViewerActions = ToolbarAction.entries.toList(),
             defaultStartDestination = StartDestination.HOME,
             recommendAllRatings = false,
-            searchPullToRefresh = false,
-            alwaysAnimateScroll = false,
+            enabledExperiments = emptySet(),
             hasVerifiedAge = false,
             flagSecureMode = FlagSecureMode.AUTO
         )
@@ -257,8 +265,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             PreferenceKeys.IMAGE_VIEWER_ACTION_ORDER to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.DEFAULT_START_DESTINATION to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.RECOMMEND_ALL_RATINGS to PrefMeta(PrefCategory.SETTING),
-            PreferenceKeys.SEARCH_PULL_TO_REFRESH to PrefMeta(PrefCategory.SETTING),
-            PreferenceKeys.ALWAYS_ANIMATE_SCROLL to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.ENABLED_EXPERIMENTS to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.HAS_VERIFIED_AGE to PrefMeta(PrefCategory.SETTING, exportable = false),
             PreferenceKeys.FLAG_SECURE_MODE to PrefMeta(PrefCategory.SETTING)
         )
@@ -427,6 +434,31 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
                 if (decodedAuths[ImageSource.R34] != null) {
                     setAuth(ImageSource.R34, null, null)
                 }
+            }
+        }
+
+        /* Version 3.1.0 changes experiments to be a set rather than individual Pref items.
+           Migrate the old "search pull to refresh" and "always animate scroll to top" settings
+           to the new experiments set. */
+        if (lastUsedVersionCode < 310) {
+            val data = dataStore.data.first()
+            val enabledExperiments = mutableSetOf<Experiment>()
+            val searchPtrKey = booleanPreferencesKey("search_pull_to_refresh")
+            val alwaysAnimateScrollKey = booleanPreferencesKey("always_animate_scroll")
+            val searchPullToRefresh = data[searchPtrKey] ?: false
+            val alwaysAnimateScroll = data[alwaysAnimateScrollKey] ?: false
+
+            if (searchPullToRefresh) {
+                enabledExperiments.add(Experiment.SEARCH_PULL_TO_REFRESH)
+            }
+            if (alwaysAnimateScroll) {
+                enabledExperiments.add(Experiment.ALWAYS_ANIMATE_SCROLL)
+            }
+
+            updateSet(PreferenceKeys.ENABLED_EXPERIMENTS, enabledExperiments.map { it.name })
+            dataStore.edit { prefs ->
+                prefs.remove(searchPtrKey)
+                prefs.remove(alwaysAnimateScrollKey)
             }
         }
 
@@ -649,8 +681,13 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
 
         val defaultStartDestination = preferences[PreferenceKeys.DEFAULT_START_DESTINATION]?.let { StartDestination.valueOf(it) } ?: Prefs.DEFAULT.defaultStartDestination
         val recommendAllRatings = preferences[PreferenceKeys.RECOMMEND_ALL_RATINGS] ?: Prefs.DEFAULT.recommendAllRatings
-        val searchPullToRefresh = preferences[PreferenceKeys.SEARCH_PULL_TO_REFRESH] ?: Prefs.DEFAULT.searchPullToRefresh
-        val alwaysAnimateScroll = preferences[PreferenceKeys.ALWAYS_ANIMATE_SCROLL] ?: Prefs.DEFAULT.alwaysAnimateScroll
+        val enabledExperiments = preferences[PreferenceKeys.ENABLED_EXPERIMENTS]?.mapNotNull {
+            try {
+                Experiment.valueOf(it)
+            } catch (_: IllegalArgumentException) {
+                null
+            }
+        }?.toSet() ?: Prefs.DEFAULT.enabledExperiments
         val hasVerifiedAge = preferences[PreferenceKeys.HAS_VERIFIED_AGE] ?: Prefs.DEFAULT.getInternalAgeVerificationStatus()
         val flagSecureMode = preferences[PreferenceKeys.FLAG_SECURE_MODE]?.let { FlagSecureMode.valueOf(it) } ?: Prefs.DEFAULT.flagSecureMode
 
@@ -674,8 +711,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             imageViewerActions,
             defaultStartDestination,
             recommendAllRatings,
-            searchPullToRefresh,
-            alwaysAnimateScroll,
+            enabledExperiments,
             hasVerifiedAge,
             flagSecureMode,
         )

@@ -24,6 +24,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import moe.apex.rule34.image.ImageRating
+import moe.apex.rule34.preferences.Experiment
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.PreferenceKeys
@@ -71,7 +72,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
         setUpViewModel()
     }
 
-    val pullToRefreshController = if (prefs.searchPullToRefresh) {
+    val pullToRefreshController = if (Experiment.SEARCH_PULL_TO_REFRESH.isEnabled(prefs)) {
         rememberPullToRefreshController(
             initialValue = false,
             modifier = if (prefs.filterRatingsLocally) {
@@ -139,7 +140,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
                         ScrollToTopArrow(
                             staggeredGridState = viewModel.staggeredGridState,
                             uniformGridState = viewModel.uniformGridState,
-                            animate = !filterLocally || prefs.alwaysAnimateScroll,
+                            animate = !filterLocally || Experiment.ALWAYS_ANIMATE_SCROLL.isEnabled(prefs),
                         )
                     }
                 }

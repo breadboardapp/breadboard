@@ -64,28 +64,20 @@ fun ExperimentalScreen(navController: NavHostController) {
             }
             item {
                 ExpressiveGroup {
-                    item {
-                        SwitchPref(
-                            title = "Pull-to-refresh in search",
-                            summary = "Enable pull-to-refresh in search results.",
-                            checked = prefs.searchPullToRefresh,
-                        ) {
-                            scope.launch {
-                                preferencesRepository.updatePref(
-                                    PreferenceKeys.SEARCH_PULL_TO_REFRESH,
-                                    it
-                                )
-                            }
-                        }
-                    }
-                    item {
-                        SwitchPref(
-                            title = "Always animate scroll-to-top",
-                            summary = "Enable smooth scrolling on all pages when using the scroll-to-top button.",
-                            checked = prefs.alwaysAnimateScroll,
-                        ) {
-                            scope.launch {
-                                preferencesRepository.updatePref(PreferenceKeys.ALWAYS_ANIMATE_SCROLL, it)
+                    for (pref in Experiment.entries) {
+                        item {
+                            SwitchPref(
+                                title = pref.label,
+                                summary = pref.description,
+                                checked = pref.isEnabled(prefs),
+                            ) {
+                                scope.launch {
+                                    if (it) {
+                                        preferencesRepository.addToSet(PreferenceKeys.ENABLED_EXPERIMENTS, pref)
+                                    } else {
+                                        preferencesRepository.removeFromSet(PreferenceKeys.ENABLED_EXPERIMENTS, pref)
+                                    }
+                                }
                             }
                         }
                     }

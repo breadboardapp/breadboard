@@ -24,6 +24,7 @@ import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import moe.apex.rule34.detailview.ImageGrid
 import moe.apex.rule34.image.ImageRating
+import moe.apex.rule34.preferences.Experiment
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.PreferenceKeys
@@ -102,7 +103,7 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
             ScrollToTopArrow(
                 staggeredGridState = viewModel.staggeredGridState,
                 uniformGridState = viewModel.uniformGridState,
-                animate = prefs.alwaysAnimateScroll
+                animate = Experiment.ALWAYS_ANIMATE_SCROLL.isEnabled(prefs)
             ) { bottomBarVisibleState.value = true }
         }
     ) { padding ->
