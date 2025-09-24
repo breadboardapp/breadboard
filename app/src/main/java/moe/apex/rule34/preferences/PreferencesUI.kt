@@ -91,7 +91,7 @@ fun SwitchPref(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        TitleSummary(Modifier.weight(1f), title, summary)
+        TitleSummary(Modifier.weight(1f), title, summary, enabled)
         Spacer(Modifier.width(SMALL_LARGE_SPACER.dp))
         Switch(
             enabled = enabled,
