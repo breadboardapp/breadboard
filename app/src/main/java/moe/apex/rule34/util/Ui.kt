@@ -796,7 +796,7 @@ fun TitledModalBottomSheet(
     sheetState: SheetState = rememberModalBottomSheetState(),
     contentWindowInsets: @Composable () -> WindowInsets = { BottomSheetDefaults.windowInsets.only(WindowInsetsSides.Horizontal) },
     title: String,
-    content: @Composable ColumnScope.() -> Unit
+    content: @Composable ColumnScope.(SheetState) -> Unit
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
@@ -813,7 +813,7 @@ fun TitledModalBottomSheet(
                 .padding(SMALL_LARGE_SPACER.dp)
         )
         VerticalSpacer()
-        content()
+        content(sheetState)
     }
 }
 

@@ -15,8 +15,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,6 +49,9 @@ import moe.apex.rule34.image.Image
 import moe.apex.rule34.navigation.ImageView
 import moe.apex.rule34.navigation.Results
 import moe.apex.rule34.preferences.ImageSource
+import moe.apex.rule34.preferences.LocalPreferences
+import moe.apex.rule34.preferences.PreferenceKeys
+import moe.apex.rule34.prefs
 import moe.apex.rule34.tag.TagCategory
 import moe.apex.rule34.ui.theme.prefTitle
 import moe.apex.rule34.util.BasicExpressiveContainer
@@ -66,6 +73,7 @@ import moe.apex.rule34.util.launchInWebBrowser
 import moe.apex.rule34.util.navBarHeight
 import moe.apex.rule34.util.openUrl
 import moe.apex.rule34.util.pluralise
+import moe.apex.rule34.util.showToast
 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -73,21 +81,30 @@ import moe.apex.rule34.util.pluralise
 fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -> Unit) {
     if (image.metadata == null) return
     val context = LocalContext.current
+    val prefs = LocalPreferences.current
+    val preferencesRepository = context.prefs
     val scope = rememberCoroutineScope()
-    var state: SheetState? = null
+
+    var sheetState: SheetState? = null
+    val optionsSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    val lazyColumnListState = rememberLazyListState()
     val clip = LocalClipboard.current
     var previousSheetValue by remember { mutableStateOf(SheetValue.Hidden) }
+    var selectedTag: String? by remember { mutableStateOf(null) }
 
-    fun hideAndThen(block: () -> Unit = { }) {
+    fun SheetState.hideAndThen(dismiss: Boolean = true, block: () -> Unit = { }) {
         scope.launch {
-            state?.hide()
+            hide()
         }.invokeOnCompletion {
-            onDismissRequest()
+            if (dismiss) {
+                onDismissRequest()
+            }
             block()
         }
     }
 
-    fun chipClick(tag: String) {
+    fun SheetState.startTagSearch(tag: String) {
         hideAndThen {
             /* Don't do new searches inside the DeepLinkActivity. We should only
                ever do them inside the main one. */
@@ -107,12 +124,12 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
     }
 
     // We want to bypass the partially expanded state when closing but not when opening.
-    state = rememberModalBottomSheetState(
+    sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = false,
         confirmValueChange = { newValue ->
             if (newValue == SheetValue.PartiallyExpanded) {
                 if (previousSheetValue == SheetValue.Expanded) {
-                    hideAndThen()
+                    sheetState?.hideAndThen()
                     return@rememberModalBottomSheetState false
                 } else {
                     previousSheetValue = newValue
@@ -125,138 +142,120 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
         }
     )
 
-    TitledModalBottomSheet(
-        onDismissRequest = onDismissRequest,
-        sheetState = state,
-        title = "About this image"
-    ) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = MEDIUM_SPACER.dp)
-                .clip(largerShape),
-            verticalArrangement = Arrangement.spacedBy(LARGE_SPACER.dp),
-            contentPadding = PaddingValues(bottom = navBarHeight * 2)
-        ) {
-            item {
-                Row {
-                    BasicExpressiveContainer(
-                        modifier = Modifier.weight(1f),
-                        position = ListItemPosition.SINGLE_ELEMENT
-                    ) {
-                        TitleSummary(
-                            title = image.metadata.rating.label,
-                            summary = "Rating"
-                        )
-                    }
-                    Spacer(Modifier.width(MEDIUM_LARGE_SPACER.dp))
-                    BasicExpressiveContainer(
-                        modifier = Modifier.weight(1f),
-                        position = ListItemPosition.SINGLE_ELEMENT
-                    ) {
-                        TitleSummary(
-                            title = image.imageSource.label,
-                            summary = "Imageboard"
-                        )
+    if (selectedTag == null) {
+        TitledModalBottomSheet(
+            onDismissRequest = onDismissRequest,
+            sheetState = sheetState,
+            title = "About this image"
+        ) { state ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = MEDIUM_SPACER.dp)
+                    .clip(largerShape),
+                state = lazyColumnListState,
+                verticalArrangement = Arrangement.spacedBy(LARGE_SPACER.dp),
+                contentPadding = PaddingValues(bottom = navBarHeight * 2)
+            ) {
+                item {
+                    Row {
+                        BasicExpressiveContainer(
+                            modifier = Modifier.weight(1f),
+                            position = ListItemPosition.SINGLE_ELEMENT
+                        ) {
+                            TitleSummary(
+                                title = image.metadata.rating.label,
+                                summary = "Rating"
+                            )
+                        }
+                        Spacer(Modifier.width(MEDIUM_LARGE_SPACER.dp))
+                        BasicExpressiveContainer(
+                            modifier = Modifier.weight(1f),
+                            position = ListItemPosition.SINGLE_ELEMENT
+                        ) {
+                            TitleSummary(
+                                title = image.imageSource.label,
+                                summary = "Imageboard"
+                            )
+                        }
                     }
                 }
-            }
-            item {
-                BasicExpressiveGroup {
-                    image.metadata.source?.let {
-                        val title = "Source"
-                        item {
-                            TitleSummary(
-                                title = title,
-                                summary = it,
-                                onClick = if (it.isWebLink()) {
-                                    {
-                                        openUrl(context, it)
-                                    }
-                                } else null,
-                                trailingIcon = if (it.isWebLink()) {
-                                    {
-                                        CopyIcon(title) {
-                                            scope.launch { copyText(context, clip, it) }
-                                        }
-                                    }
-                                } else null
-                            )
-                        }
-                    }
-                    image.metadata.pixivUrl?.let {
-                        val title = "Pixiv URL"
-                        item {
-                            TitleSummary(
-                                title = title,
-                                summary = it,
-                                onClick = if (it.isWebLink()) {
-                                    {
-                                        openUrl(context, it)
-                                    }
-                                } else null,
-                                trailingIcon = if (it.isWebLink()) {
-                                    {
-                                        CopyIcon(title) {
-                                            scope.launch { copyText(context, clip, it) }
-                                        }
-                                    }
-                                } else null
-                            )
-                        }
-                    }
-                    image.highestQualityFormatUrl.let {
-                        val title = "File URL"
-                        item {
-                            TitleSummary(
-                                title = title,
-                                summary = it,
-                                onClick = { launchInWebBrowser(context, it) }, // Breadboard can handle yande.re direct image links. We'll forcibly use the browser here to prevent that here.
-                                trailingIcon = {
-                                    CopyIcon(title) {
-                                        scope.launch { copyText(context, clip, it) }
-                                    }
-                                }
-                            )
-                        }
-                    }
-                    image.metadata.parentId?.let {
-                        item {
-                            TitleSummary(
-                                title = "View parent image",
-                                onClick = {
-                                    hideAndThen {
-                                        navController.navigate(ImageView(image.imageSource, it))
-                                    }
-                                },
-                                trailingIcon = {
-                                    ChevronRight()
-                                }
-                            )
-                        }
-                    }
-                    if (image.metadata.hasChildren == true) {
-                        image.id?.let {
+                item {
+                    BasicExpressiveGroup {
+                        image.metadata.source?.let {
+                            val title = "Source"
                             item {
                                 TitleSummary(
-                                    title = "View related images",
-                                    onClick = {
-                                        hideAndThen {
-                                            if (context is DeepLinkActivity) {
-                                                val intent = createSearchIntent(
-                                                    context,
-                                                    image.imageSource,
-                                                    "parent:$it"
-                                                )
-                                                context.startActivity(intent)
-                                            } else {
-                                                navController.navigate(
-                                                    Results(
-                                                        image.imageSource,
-                                                        listOf("parent:$it")
-                                                    )
-                                                )
+                                    title = title,
+                                    summary = it,
+                                    onClick = if (it.isWebLink()) {
+                                        {
+                                            openUrl(context, it)
+                                        }
+                                    } else null,
+                                    trailingIcon = if (it.isWebLink()) {
+                                        {
+                                            CopyIcon(title) {
+                                                scope.launch { copyText(context, clip, it) }
                                             }
+                                        }
+                                    } else null
+                                )
+                            }
+                        }
+                        image.metadata.pixivUrl?.let {
+                            val title = "Pixiv URL"
+                            item {
+                                TitleSummary(
+                                    title = title,
+                                    summary = it,
+                                    onClick = if (it.isWebLink()) {
+                                        {
+                                            openUrl(context, it)
+                                        }
+                                    } else null,
+                                    trailingIcon = if (it.isWebLink()) {
+                                        {
+                                            CopyIcon(title) {
+                                                scope.launch { copyText(context, clip, it) }
+                                            }
+                                        }
+                                    } else null
+                                )
+                            }
+                        }
+                        image.highestQualityFormatUrl.let {
+                            val title = "File URL"
+                            item {
+                                TitleSummary(
+                                    title = title,
+                                    summary = it,
+                                    onClick = {
+                                        launchInWebBrowser(
+                                            context,
+                                            it
+                                        )
+                                    }, // Breadboard can handle yande.re direct image links. We'll forcibly use the browser here to prevent that here.
+                                    trailingIcon = {
+                                        CopyIcon(title) {
+                                            scope.launch { copyText(context, clip, it) }
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                        image.metadata.parentId?.let {
+                            item {
+                                TitleSummary(
+                                    title = "View parent image",
+                                    onClick = {
+                                        state.hideAndThen {
+                                            navController.navigate(
+                                                ImageView(
+                                                    image.imageSource,
+                                                    it
+                                                )
+                                            )
                                         }
                                     },
                                     trailingIcon = {
@@ -265,29 +264,152 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                                 )
                             }
                         }
+                        if (image.metadata.hasChildren == true) {
+                            image.id?.let {
+                                item {
+                                    TitleSummary(
+                                        title = "View related images",
+                                        onClick = {
+                                            state.hideAndThen {
+                                                if (context is DeepLinkActivity) {
+                                                    val intent = createSearchIntent(
+                                                        context,
+                                                        image.imageSource,
+                                                        "parent:$it"
+                                                    )
+                                                    context.startActivity(intent)
+                                                } else {
+                                                    navController.navigate(
+                                                        Results(
+                                                            image.imageSource,
+                                                            listOf("parent:$it")
+                                                        )
+                                                    )
+                                                }
+                                            }
+                                        },
+                                        trailingIcon = {
+                                            ChevronRight()
+                                        }
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
-            }
-            image.metadata.artists.takeIf { it.isNotEmpty() }?.let {
-                item {
-                    TagsContainer(
-                        category = TagCategory.ARTIST,
-                        tags = it,
-                        onChipClick = ::chipClick,
-                        onChipLongClick = ::chipLongClick
-                    )
+                image.metadata.artists.takeIf { it.isNotEmpty() }?.let {
+                    item {
+                        TagsContainer(
+                            category = TagCategory.ARTIST,
+                            tags = it,
+                            onChipClick = { state.startTagSearch(it) },
+                            onChipLongClick = {
+                                state.hideAndThen(dismiss = false) {
+                                    selectedTag = it
+                                }
+                            }
+                        )
+                    }
                 }
+                /* Artists are stored in their own field rather than in groupedTags.
+                   If the artist tags are somehow also in groupedTags,
+                   we don't want to show them again. */
+                image.metadata.groupedTags.filter { it.category != TagCategory.ARTIST }
+                    .map {
+                        item {
+                            TagsContainer(
+                                category = it.category,
+                                tags = it.tags,
+                                onChipClick = { state.startTagSearch(it) },
+                                onChipLongClick = {
+                                    state.hideAndThen(dismiss = false) {
+                                        selectedTag = it
+                                    }
+                                }
+                            )
+                        }
+                    }
             }
-            /* Artists are stored in their own field rather than in groupedTags.
-               If the artist tags are somehow also in groupedTags, we don't want to show them again. */
-            image.metadata.groupedTags.filter { it.category != TagCategory.ARTIST }.map {
-                item {
-                    TagsContainer(
-                        category = it.category,
-                        tags = it.tags,
-                        onChipClick = ::chipClick,
-                        onChipLongClick = ::chipLongClick
+        }
+    } else {
+        TitledModalBottomSheet(
+            onDismissRequest = { selectedTag = null },
+            sheetState = optionsSheetState,
+            title = selectedTag!!
+        ) { state ->
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        start = MEDIUM_SPACER.dp,
+                        end = MEDIUM_SPACER.dp,
+                        bottom = navBarHeight * 2
                     )
+                    .clip(largerShape)
+            ) {
+                BasicExpressiveGroup {
+                    item {
+                        TitleSummary(
+                            title = "Search",
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Rounded.Search,
+                                    contentDescription = null,
+                                )
+                            },
+                            trailingIcon = { ChevronRight() },
+                            onClick = { state.startTagSearch(selectedTag!!) }
+                        )
+                    }
+                    item {
+                        TitleSummary(
+                            title = "Copy to clipboard",
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Rounded.ContentCopy,
+                                    contentDescription = null,
+                                )
+                            },
+                            onClick = { chipLongClick(selectedTag!!) }
+                        )
+                    }
+                    item {
+                        TitleSummary(
+                            title = "Block this tag",
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Rounded.Block,
+                                    contentDescription = null,
+                                )
+                            }
+                        ) {
+                            scope.launch {
+                                preferencesRepository.addToSet(
+                                    PreferenceKeys.MANUALLY_BLOCKED_TAGS,
+                                    selectedTag!!
+                                )
+                            }
+                            showToast(context, "Blocked tag \"$selectedTag\"")
+                        }
+                    }
+                    item {
+                        TitleSummary(
+                            title = "Back",
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                                    contentDescription = null,
+                                )
+                            }
+                        ) {
+                            state.hideAndThen(dismiss = false) {
+                                scope.launch {
+                                    sheetState.show()
+                                }
+                                selectedTag = null
+                            }
+                        }
+                    }
                 }
             }
         }
