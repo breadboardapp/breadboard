@@ -10,6 +10,7 @@ import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -249,7 +250,7 @@ fun AnimatedVisibilityLargeImageView(
     val prefs = LocalPreferences.current
     var offsetDp by remember { mutableFloatStateOf(0f) }
     var backgroundOpacityScale by remember { mutableFloatStateOf(1f) }
-    val defaultOpacity = remember { if (Experiment.IMMERSIVE_CAROUSEL.isEnabled(prefs)) 0.5f else 1f }
+    val isImmersiveModeEnabled = remember { Experiment.IMMERSIVE_CAROUSEL.isEnabled(prefs) }
 
     LaunchedEffect(visibilityState.value) {
         if (bottomBarVisibleState != null) {
@@ -270,23 +271,27 @@ fun AnimatedVisibilityLargeImageView(
         try {
             progress.collect { backEvent ->
                 offsetDp = (backEvent.progress * 300)
-                backgroundOpacityScale = 1 - (backEvent.progress / 1.5f)
+                if (isImmersiveModeEnabled) {
+                    backgroundOpacityScale = 1 - (backEvent.progress / 1.5f)
+                }
             }
             visibilityState.value = false
         }
         catch (_: Exception) { }
     }
 
-    AnimatedVisibility(
-        visible = visibilityState.value,
-        enter = fadeIn(),
-        exit = fadeOut()
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background.copy(alpha = defaultOpacity * backgroundOpacityScale))
-        )
+    if (isImmersiveModeEnabled) {
+        AnimatedVisibility(
+            visible = visibilityState.value,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background.copy(alpha = 0.5f * backgroundOpacityScale))
+            )
+        }
     }
 
     AnimatedVisibility(
@@ -300,7 +305,7 @@ fun AnimatedVisibilityLargeImageView(
                 navController = navController,
                 initialPage = initialPage,
                 allImages = allImages,
-                backgroundAlpha = 0f
+                backgroundAlpha = if (isImmersiveModeEnabled) 0f else 1f
             )
         }
     }
@@ -367,7 +372,10 @@ fun MainScreenScaffold(
 ) {
     val prefs = LocalPreferences.current
     val isBlurEnabled = remember { Experiment.IMMERSIVE_CAROUSEL.isEnabled(prefs) }
-    val blurRadius by animateDpAsState(if (blur && isBlurEnabled) 48.dp else 0.dp)
+    val blurRadius by animateDpAsState(
+        targetValue = if (blur && isBlurEnabled) 42.dp else 0.dp,
+        animationSpec = tween(350)
+    )
 
     Scaffold(
         modifier = Modifier.blur(blurRadius),
