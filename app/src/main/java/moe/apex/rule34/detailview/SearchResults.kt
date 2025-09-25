@@ -13,9 +13,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -58,6 +61,8 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
     val filterLocally = prefs.filterRatingsLocally
     var showAgeVerificationDialog by remember { mutableStateOf(false) }
 
+    val actuallyBlockedTags = rememberSaveable { mutableStateSetOf<String>() }
+
     fun setUpViewModel() {
         if (!viewModel.isReady) {
             viewModel.setup(
@@ -68,17 +73,31 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
         }
     }
 
+    // Populate the internal list of blocked tags
+    fun updateBlockedTags() {
+        Snapshot.withMutableSnapshot {
+            actuallyBlockedTags.clear()
+            actuallyBlockedTags.addAll(prefs.blockedTags.filter { it !in tagList })
+        }
+    }
+
     LaunchedEffect(Unit) {
         setUpViewModel()
+        // Don't automatically update on config change like screen rotation if the list is already populated
+        if (actuallyBlockedTags.isEmpty()) {
+            updateBlockedTags()
+        }
     }
 
     val pullToRefreshController = if (Experiment.SEARCH_PULL_TO_REFRESH.isEnabled(prefs)) {
         rememberPullToRefreshController(
             initialValue = false,
+            key = prefs.blockedTags,
             modifier = if (prefs.filterRatingsLocally) {
                 Modifier.offset(y = 80.dp) // Height of the ratings box
             } else Modifier
         ) {
+            updateBlockedTags()
             viewModel.prepareReset()
             setUpViewModel()
             viewModel.loadMore()
@@ -107,8 +126,6 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
         )
     } }
 
-    // In case they explicitly search for a blocked tag
-    val actuallyBlockedTags = prefs.blockedTags.filter { it !in tagList }
     val imagesToDisplay = viewModel.images.filter {
         it.metadata!!.tags.none { tag -> actuallyBlockedTags.contains(tag.lowercase()) } &&
         if (prefs.filterRatingsLocally) it.metadata.rating in prefs.ratingsFilter else true

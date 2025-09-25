@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
 import kotlinx.coroutines.Dispatchers
@@ -24,7 +25,7 @@ class RecommendationsProvider(
     val auth: ImageBoardAuth?,
     val showAllRatings: Boolean,
     val filterRatingsLocally: Boolean,
-    val blockedTags: Set<String>
+    private val initialBlockedTags: Set<String>
 ) : GridStateHolder by GridStateHolderDelegate() {
     companion object {
         private const val POOL_SIZE = 5
@@ -64,6 +65,16 @@ class RecommendationsProvider(
     private var isLoading by mutableStateOf(false)
     private var shouldKeepSearching by mutableStateOf(true)
 
+    private val mutableBlockedTags = mutableStateSetOf<String>().apply { addAll(initialBlockedTags) }
+    val blockedTags: Set<String>
+        get() = mutableBlockedTags.toSet()
+
+    fun replaceBlockedTags(tags: Set<String>) {
+        Snapshot.withMutableSnapshot {
+            mutableBlockedTags.clear()
+            mutableBlockedTags.addAll(tags)
+        }
+    }
 
     fun prepareRecommendedTags() {
         recommendedTags.clear()
@@ -75,7 +86,7 @@ class RecommendationsProvider(
             .filter { showAllRatings || it.metadata!!.rating == ImageRating.SAFE }
             .flatMap { it.metadata!!.tags }
             .filterNot { tag -> ignoredTags.contains(tag.lowercase()) }
-            .filterNot { tag -> blockedTags.contains(tag.lowercase())}
+            .filterNot { tag -> blockedTags.contains(tag.lowercase()) }
 
         if (tagsFromFavourites.isEmpty()) {
             return
@@ -175,4 +186,3 @@ class RecommendationsProvider(
         }
     }
 }
-

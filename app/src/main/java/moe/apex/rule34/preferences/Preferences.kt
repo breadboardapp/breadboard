@@ -385,6 +385,7 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                                     it
                                 )
                             }
+                            viewModel.recommendationsProvider = null
                         }
                     }
                     item {

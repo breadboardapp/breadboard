@@ -1105,12 +1105,13 @@ data class PullToRefreshController(
 @Composable
 fun rememberPullToRefreshController(
     initialValue: Boolean,
+    key: Any? = null,
     state: PullToRefreshState = rememberPullToRefreshState(),
     modifier: Modifier = Modifier,
     onRefresh: suspend () -> Unit = { }
 ): PullToRefreshController {
     val scope = rememberCoroutineScope { Dispatchers.IO }
-    return remember {
+    return remember(key) {
         PullToRefreshController(
             state = state,
             initialValue = initialValue,

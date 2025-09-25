@@ -52,11 +52,12 @@ import moe.apex.rule34.util.SMALL_SPACER
 import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
 import moe.apex.rule34.util.Summary
+import moe.apex.rule34.viewmodel.BreadboardViewModel
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BlockedTagsScreen(navController: NavHostController) {
+fun BlockedTagsScreen(navController: NavHostController, viewModel: BreadboardViewModel) {
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
     val scope = rememberCoroutineScope()
@@ -97,6 +98,7 @@ fun BlockedTagsScreen(navController: NavHostController) {
                             }
                         }
                         showAddDialog = false
+                        viewModel.recommendationsProvider = null
                     }
                 ) {
                     Text("Add")
@@ -214,6 +216,7 @@ fun BlockedTagsScreen(navController: NavHostController) {
                                         tag
                                     )
                                 }
+                                viewModel.recommendationsProvider = null
                             }
                         ) {
                             Icon(

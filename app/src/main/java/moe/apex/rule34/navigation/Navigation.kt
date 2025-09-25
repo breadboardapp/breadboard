@@ -222,7 +222,7 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                     }
                     composable<Favourites> { FavouritesPage(navController, bottomBarVisibleState) }
                     composable<Settings> { PreferencesScreen(navController, viewModel) }
-                    composable<BlockedTagsSettings> { BlockedTagsScreen(navController) }
+                    composable<BlockedTagsSettings> { BlockedTagsScreen(navController, viewModel) }
                     composable<LibrariesSettings> { LibrariesScreen(navController) }
                     composable<AboutSettings> { AboutScreen(navController) }
                     composable<ExperimentalSettings> { ExperimentalScreen(navController) }

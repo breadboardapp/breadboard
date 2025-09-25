@@ -62,12 +62,16 @@ fun HomeScreen(
             auth = prefs.authFor(prefs.imageSource, context),
             showAllRatings = prefs.recommendAllRatings,
             filterRatingsLocally = prefs.filterRatingsLocally,
-            blockedTags = prefs.blockedTags
+            initialBlockedTags = prefs.blockedTags
         )
         viewModel.recommendationsProvider!!.prepareRecommendedTags()
     }
     val recommendationsProvider = viewModel.recommendationsProvider!!
-    val pullToRefreshController = rememberPullToRefreshController(false) {
+    val pullToRefreshController = rememberPullToRefreshController(
+        initialValue = false,
+        key = prefs.blockedTags
+    ) {
+        recommendationsProvider.replaceBlockedTags(prefs.blockedTags)
         recommendationsProvider.prepareRecommendedTags()
         recommendationsProvider.recommendImages()
         recommendationsProvider.resetGridStates()

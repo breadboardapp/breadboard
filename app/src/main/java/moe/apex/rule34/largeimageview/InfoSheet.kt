@@ -8,10 +8,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ContextualFlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -85,6 +85,7 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
     val preferencesRepository = context.prefs
     val scope = rememberCoroutineScope()
 
+    var skipPartiallyExpandedState by remember { mutableStateOf(false) }
     var sheetState: SheetState? = null
     val optionsSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -125,7 +126,7 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
 
     // We want to bypass the partially expanded state when closing but not when opening.
     sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = false,
+        skipPartiallyExpanded = skipPartiallyExpandedState,
         confirmValueChange = { newValue ->
             if (newValue == SheetValue.PartiallyExpanded) {
                 if (previousSheetValue == SheetValue.Expanded) {
@@ -155,7 +156,6 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                     .clip(largerShape),
                 state = lazyColumnListState,
                 verticalArrangement = Arrangement.spacedBy(LARGE_SPACER.dp),
-                contentPadding = PaddingValues(bottom = navBarHeight * 2)
             ) {
                 item {
                     Row {
@@ -329,11 +329,23 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                             )
                         }
                     }
+                /* When switching between the info sheet and the options sheet and then back,
+                   the LazyColumn's scroll state is retained but doesn't account for the
+                   contentPadding, so it means there's a slight discrepancy once you go back.
+                   This is a hacky workaround by having a 2x navBarHeight spacer while accounting
+                   for the LARGE_SPACER height verticalItemSpacing. */
+                item {
+                    Spacer(Modifier.height((navBarHeight * 2) - LARGE_SPACER.dp))
+                }
             }
         }
     } else {
         TitledModalBottomSheet(
-            onDismissRequest = { selectedTag = null },
+            onDismissRequest = {
+                optionsSheetState.hideAndThen {
+                    selectedTag = null
+                }
+            },
             sheetState = optionsSheetState,
             title = selectedTag!!
         ) { state ->
@@ -381,7 +393,8 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                                     imageVector = Icons.Rounded.Block,
                                     contentDescription = null,
                                 )
-                            }
+                            },
+                            enabled = selectedTag !in prefs.blockedTags
                         ) {
                             scope.launch {
                                 preferencesRepository.addToSet(
@@ -403,6 +416,7 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                             }
                         ) {
                             state.hideAndThen(dismiss = false) {
+                                skipPartiallyExpandedState = true
                                 scope.launch {
                                     sheetState.show()
                                 }

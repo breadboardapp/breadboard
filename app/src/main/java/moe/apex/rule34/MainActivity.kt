@@ -15,6 +15,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.core.util.Consumer
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.datastore.preferences.preferencesDataStoreFile
@@ -84,15 +85,14 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity() {
 
         setContent {
             val navController = rememberNavController()
-            val prefs = prefs.getPreferences.collectAsState(initialPrefs).value
+            val prefs by prefs.getPreferences.collectAsState(initialPrefs)
             val viewModel = viewModel(BreadboardViewModel::class.java)
 
-            LaunchedEffect(prefs.imageSource, prefs.imageBoardAuths, prefs.filterRatingsLocally, prefs.blockedTags, prefs.recommendAllRatings) {
+            LaunchedEffect(prefs.imageSource, prefs.imageBoardAuths, prefs.filterRatingsLocally, prefs.recommendAllRatings) {
                 if (
                     viewModel.recommendationsProvider?.imageSource != prefs.imageSource ||
                     viewModel.recommendationsProvider?.auth != prefs.authFor(prefs.imageSource, applicationContext) ||
                     viewModel.recommendationsProvider?.filterRatingsLocally != prefs.filterRatingsLocally ||
-                    viewModel.recommendationsProvider?.blockedTags != prefs.blockedTags ||
                     viewModel.recommendationsProvider?.showAllRatings != prefs.recommendAllRatings
                 ) {
                     viewModel.recommendationsProvider = null
