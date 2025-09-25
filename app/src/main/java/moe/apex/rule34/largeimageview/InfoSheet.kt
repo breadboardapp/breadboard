@@ -79,6 +79,13 @@ import moe.apex.rule34.util.showToast
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -> Unit) {
+    /* I don't really like this whole info/options sheet implementation.
+       Ideally we'd use AnimatedContent or something and switch between the two in the same sheet.
+       However, unfortunately the built-in M3 ModalBottomSheet has an endless list of problems
+       that aren't getting fixed and a few of them affect what I wanted to do.
+       I've done everything I can to make the experience not suck with the two separate sheets
+       but I'm still not really happy about it.
+     */
     if (image.metadata == null) return
     val context = LocalContext.current
     val prefs = LocalPreferences.current
