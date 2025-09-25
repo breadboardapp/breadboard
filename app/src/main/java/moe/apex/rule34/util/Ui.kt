@@ -434,7 +434,9 @@ fun TitleSummary(
         leadingIcon?.let {
             Spacer(Modifier.width(SMALL_LARGE_SPACER.dp))
             Box(
-                modifier = Modifier.size(48.dp),
+                modifier = Modifier
+                    .size(48.dp)
+                    .alpha(if (enabled) 1f else DISABLED_OPACITY),
                 contentAlignment = Alignment.Center
             ) {
                 it()
@@ -467,7 +469,8 @@ fun TitleSummary(
             Box(
                 modifier = Modifier
                     .padding(end = SMALL_SPACER.dp)
-                    .size(48.dp),
+                    .size(48.dp)
+                    .alpha(if (enabled) 1f else DISABLED_OPACITY),
                 contentAlignment = Alignment.Center
             ) {
                 it()
