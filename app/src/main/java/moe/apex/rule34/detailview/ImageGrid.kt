@@ -57,7 +57,7 @@ import moe.apex.rule34.util.SMALL_SPACER
 import moe.apex.rule34.util.largerShape
 
 
-private const val MIN_IMAGE_HEIGHT = 108
+private const val MIN_IMAGE_HEIGHT = 96
 private const val MAX_IMAGE_HEIGHT = 280
 private const val MIN_CELL_WIDTH   = 120
 private const val MAX_CELL_WIDTH   = 144
