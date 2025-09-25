@@ -145,7 +145,6 @@ fun ImageGrid(
             if (doneInitialLoad) {
                 staggeredGridState.requestScrollToItem(0)
                 uniformGridState.requestScrollToItem(0)
-                println("done")
             }
         }
     }
