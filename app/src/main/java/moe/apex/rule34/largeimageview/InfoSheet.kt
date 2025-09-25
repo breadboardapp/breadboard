@@ -118,12 +118,6 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
         }
     }
 
-    fun chipLongClick(tag: String) {
-        scope.launch {
-            copyText(context, clip, tag)
-        }
-    }
-
     // We want to bypass the partially expanded state when closing but not when opening.
     sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = skipPartiallyExpandedState,
@@ -350,6 +344,7 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
             title = selectedTag!!
         ) { state ->
             Column(
+                verticalArrangement = Arrangement.spacedBy(LARGE_SPACER.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(
@@ -381,9 +376,12 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                                     imageVector = Icons.Rounded.ContentCopy,
                                     contentDescription = null,
                                 )
-                            },
-                            onClick = { chipLongClick(selectedTag!!) }
-                        )
+                            }
+                        ) {
+                            scope.launch {
+                                copyText(context, clip, selectedTag!!)
+                            }
+                        }
                     }
                     item {
                         TitleSummary(
@@ -405,6 +403,8 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                             showToast(context, "Blocked tag \"$selectedTag\"")
                         }
                     }
+                }
+                BasicExpressiveGroup {
                     item {
                         TitleSummary(
                             title = "Back",
