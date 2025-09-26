@@ -159,7 +159,7 @@ enum class FlagSecureMode(override val label: String) : PrefEnum<FlagSecureMode>
 enum class Experiment(override val label: String, val description: String? = null) : PrefEnum<Experiment> {
     SEARCH_PULL_TO_REFRESH("Pull-to-refresh in Search", "Enable pull-to-refresh in search results."),
     ALWAYS_ANIMATE_SCROLL("Always animate scroll-to-top", "Enable smooth scrolling on all pages when using the scroll-to-top button."),
-    IMMERSIVE_CAROUSEL("Immersive image carousel", "Use a translucent and blurred background for the image carousel in the image viewer. Not all devices support this feature.");
+    BLUR_EFFECTS("Blur effects", "Use translucency and blur effects in Breadboard's UI. Not all devices support this feature. Disable if you experience poor performance.");
 
 
     fun isEnabled(prefs: Prefs): Boolean {

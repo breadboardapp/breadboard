@@ -72,7 +72,7 @@ fun ExperimentalScreen(navController: NavHostController) {
                                 summary = pref.description,
                                 checked = pref.isEnabled(prefs),
                                 // Immersive carousel uses a blur modifier which requires Android 12+ to work
-                                enabled = pref != Experiment.IMMERSIVE_CAROUSEL || Build.VERSION.SDK_INT >= Build.VERSION_CODES.S,
+                                enabled = pref != Experiment.BLUR_EFFECTS || Build.VERSION.SDK_INT >= Build.VERSION_CODES.S,
                             ) {
                                 scope.launch {
                                     if (it) {

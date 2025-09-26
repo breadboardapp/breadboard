@@ -1210,7 +1210,7 @@ fun <T> bouncyAnimationSpec(): FiniteAnimationSpec<T> = spring(
 fun rememberIsBlurEnabled(): Boolean {
     val prefs = LocalPreferences.current
     return rememberSaveable {
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && Experiment.IMMERSIVE_CAROUSEL.isEnabled(prefs)
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && Experiment.BLUR_EFFECTS.isEnabled(prefs)
     }
 }
 
