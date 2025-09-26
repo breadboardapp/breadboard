@@ -43,7 +43,6 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -246,7 +245,7 @@ private fun LargeImageToolbar(
     val actions = prefs.imageViewerActions.drop(1)
     val primaryAction = prefs.imageViewerActions.first()
 
-    var showInfoSheet by rememberSaveable { mutableStateOf(false) }
+    var showInfoSheet by remember { mutableStateOf(false) }
     var storageLocationPromptLaunched by remember { mutableStateOf(false) }
 
     val actionMapping = mapOf<ToolbarAction, @Composable () -> ImageAction?>(
