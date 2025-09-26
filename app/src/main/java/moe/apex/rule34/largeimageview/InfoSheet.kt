@@ -5,7 +5,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ContextualFlowRow
@@ -14,11 +13,9 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.ContentCopy
@@ -43,9 +40,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import moe.apex.rule34.DeepLinkActivity
@@ -95,6 +90,7 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
     if (image.metadata == null) return
     val context = LocalContext.current
     val prefs = LocalPreferences.current
+    val clip = LocalClipboard.current
     val preferencesRepository = context.prefs
     val scope = rememberCoroutineScope()
 
@@ -102,14 +98,13 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
        confirmValueChange which for some reason we can't normally do in order to disable the
        partially expanded state only when dismissing.  */
     var sheetState: SheetState? by remember { mutableStateOf(null) }
-
-    val lazyColumnListState = rememberLazyListState()
-    val clip = LocalClipboard.current
     var previousSheetValue by remember { mutableStateOf(SheetValue.Hidden) }
+
+    val optionsSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var selectedTag: String? by remember { mutableStateOf(null) }
 
     val sheetModifier = if (rememberIsBlurEnabled()) {
-        val blurRadius by animateDpAsState(if (selectedTag == null) 0.dp else 24.dp)
+        val blurRadius by animateDpAsState(if (optionsSheetState.targetValue == SheetValue.Hidden) 0.dp else 24.dp)
         Modifier.blur(blurRadius)
     } else {
         Modifier
@@ -162,75 +157,76 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
         modifier = sheetModifier
     ) {
         if (selectedTag != null) {
-            /* We need to have this dialog inside the sheet otherwise it'll just automatically
-               dismiss itself and the sheet because this entire system sucks.  */
-            Dialog(onDismissRequest = { selectedTag = null }) {
-                Column {
-                    Text(
-                        text = selectedTag!!,
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = if (isSystemInDarkTheme()) {
-                            MaterialTheme.colorScheme.onSurface
-                        } else{
-                            MaterialTheme.colorScheme.inverseOnSurface
-                        },
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .align(Alignment.CenterHorizontally)
-                            .padding(horizontal = MEDIUM_LARGE_SPACER.dp)
-                    )
-                    Spacer(Modifier.height(16.dp))
-                    BasicExpressiveGroup {
-                        item {
-                            TitleSummary(
-                                title = "Search",
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Search,
-                                        contentDescription = null,
-                                    )
-                                },
-                                trailingIcon = { ChevronRight() },
-                                onClick = {
-                                    val searchTag = selectedTag!!
-                                    selectedTag = null
-                                    startTagSearch(searchTag)
-                                }
-                            )
-                        }
-                        item {
-                            TitleSummary(
-                                title = "Copy to clipboard",
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Rounded.ContentCopy,
-                                        contentDescription = null,
-                                    )
-                                }
-                            ) {
-                                scope.launch {
-                                    copyText(context, clip, selectedTag!!)
+            /* We need to have this extra sheet inside the main otherwise it'll just automatically
+               dismiss the main sheet and then also this sheet because this entire system sucks. */
+            TitledModalBottomSheet(
+                onDismissRequest = { selectedTag = null },
+                title = selectedTag!!,
+                sheetState = optionsSheetState
+            ) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = MEDIUM_SPACER.dp)
+                        .clip(largerShape),
+                    contentPadding = PaddingValues(bottom = navBarHeight * 2)
+                ) {
+                    item {
+                        BasicExpressiveGroup {
+                            item {
+                                TitleSummary(
+                                    title = "Search",
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Search,
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    trailingIcon = { ChevronRight() },
+                                    onClick = {
+                                        scope.launch {
+                                            optionsSheetState.hide()
+                                        }.invokeOnCompletion {
+                                            selectedTag = null
+                                        }
+                                        startTagSearch(selectedTag!!)
+                                    }
+                                )
+                            }
+                            item {
+                                TitleSummary(
+                                    title = "Copy to clipboard",
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Rounded.ContentCopy,
+                                            contentDescription = null,
+                                        )
+                                    }
+                                ) {
+                                    scope.launch {
+                                        copyText(context, clip, selectedTag!!)
+                                    }
                                 }
                             }
-                        }
-                        item {
-                            TitleSummary(
-                                title = "Block this tag",
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Block,
-                                        contentDescription = null,
-                                    )
-                                },
-                                enabled = selectedTag !in prefs.blockedTags
-                            ) {
-                                scope.launch {
-                                    preferencesRepository.addToSet(
-                                        PreferenceKeys.MANUALLY_BLOCKED_TAGS,
-                                        selectedTag!!
-                                    )
+                            item {
+                                TitleSummary(
+                                    title = "Block this tag",
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Block,
+                                            contentDescription = null,
+                                        )
+                                    },
+                                    enabled = selectedTag !in prefs.blockedTags
+                                ) {
+                                    scope.launch {
+                                        preferencesRepository.addToSet(
+                                            PreferenceKeys.MANUALLY_BLOCKED_TAGS,
+                                            selectedTag!!
+                                        )
+                                    }
+                                    showToast(context, "Blocked tag \"$selectedTag\"")
                                 }
-                                showToast(context, "Blocked tag \"$selectedTag\"")
                             }
                         }
                     }
@@ -243,7 +239,6 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                 .fillMaxWidth()
                 .padding(horizontal = MEDIUM_SPACER.dp)
                 .clip(largerShape),
-            state = lazyColumnListState,
             verticalArrangement = Arrangement.spacedBy(LARGE_SPACER.dp),
             contentPadding = PaddingValues(bottom = navBarHeight * 2)
         ) {
