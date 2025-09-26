@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ClipData
 import android.content.Context
+import android.os.Build
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FiniteAnimationSpec
@@ -95,6 +96,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -247,10 +249,9 @@ fun AnimatedVisibilityLargeImageView(
     allImages: List<Image>,
     bottomBarVisibleState: MutableState<Boolean>? = null
 ) {
-    val prefs = LocalPreferences.current
     var offsetDp by remember { mutableFloatStateOf(0f) }
     var backgroundOpacityScale by remember { mutableFloatStateOf(1f) }
-    val isImmersiveModeEnabled = remember { Experiment.IMMERSIVE_CAROUSEL.isEnabled(prefs) }
+    val isImmersiveModeEnabled = rememberIsBlurEnabled()
 
     LaunchedEffect(visibilityState.value) {
         if (bottomBarVisibleState != null) {
@@ -370,8 +371,7 @@ fun MainScreenScaffold(
     floatingActionButton: (@Composable () -> Unit)? = null,
     content: @Composable (PaddingValues) -> Unit
 ) {
-    val prefs = LocalPreferences.current
-    val isBlurEnabled = remember { Experiment.IMMERSIVE_CAROUSEL.isEnabled(prefs) }
+    val isBlurEnabled = rememberIsBlurEnabled()
     val blurRadius by animateDpAsState(
         targetValue = if (blur && isBlurEnabled) 42.dp else 0.dp,
         animationSpec = tween(350)
@@ -799,7 +799,7 @@ fun TitledModalBottomSheet(
     sheetState: SheetState = rememberModalBottomSheetState(),
     contentWindowInsets: @Composable () -> WindowInsets = { BottomSheetDefaults.windowInsets.only(WindowInsetsSides.Horizontal) },
     title: String,
-    content: @Composable ColumnScope.(SheetState) -> Unit
+    content: @Composable ColumnScope.() -> Unit
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
@@ -816,7 +816,7 @@ fun TitledModalBottomSheet(
                 .padding(SMALL_LARGE_SPACER.dp)
         )
         VerticalSpacer()
-        content(sheetState)
+        content()
     }
 }
 
@@ -1204,6 +1204,15 @@ fun <T> bouncyAnimationSpec(): FiniteAnimationSpec<T> = spring(
     dampingRatio = Spring.DampingRatioLowBouncy,
     stiffness = Spring.StiffnessMediumLow,
 )
+
+
+@Composable
+fun rememberIsBlurEnabled(): Boolean {
+    val prefs = LocalPreferences.current
+    return rememberSaveable {
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && Experiment.IMMERSIVE_CAROUSEL.isEnabled(prefs)
+    }
+}
 
 
 val bottomAppBarAndNavBarHeight: Dp
