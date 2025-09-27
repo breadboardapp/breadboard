@@ -16,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
@@ -57,6 +58,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
     val scope = rememberCoroutineScope()
 
     val prefs = LocalPreferences.current
+    val blockedTags by rememberUpdatedState(prefs.blockedTags)
     val preferencesRepository = LocalContext.current.prefs
     val filterLocally = prefs.filterRatingsLocally
     var showAgeVerificationDialog by remember { mutableStateOf(false) }
@@ -77,7 +79,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
     fun updateBlockedTags() {
         Snapshot.withMutableSnapshot {
             actuallyBlockedTags.clear()
-            actuallyBlockedTags.addAll(prefs.blockedTags.filter { it !in tagList })
+            actuallyBlockedTags.addAll(blockedTags.filter { it !in tagList })
         }
     }
 
@@ -92,7 +94,6 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
     val pullToRefreshController = if (Experiment.SEARCH_PULL_TO_REFRESH.isEnabled(prefs)) {
         rememberPullToRefreshController(
             initialValue = false,
-            key = prefs.blockedTags,
             modifier = if (prefs.filterRatingsLocally) {
                 Modifier.offset(y = 80.dp) // Height of the ratings box
             } else Modifier

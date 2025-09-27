@@ -1104,17 +1104,30 @@ data class PullToRefreshController(
 }
 
 
+/** Create and remember a [PullToRefreshController].
+ *
+ *  If the [onRefresh] lambda uses values that might change,
+ *  wrap each value in [androidx.compose.runtime.rememberUpdatedState] outside of the lambda
+ *  and then reference that instead of referencing the values directly.
+ *  This ensures it will use the latest value every time.
+ *
+ *   @param initialValue The initial refreshing state
+ *   @param state The [PullToRefreshState] to use.
+ *   @param modifier The modifier to apply to the default refresh indicator.
+ *   @param onRefresh The callback to execute when the user triggers a refresh.
+ *   @return A [PullToRefreshController] that can be passed into [moe.apex.rule34.detailview.ImageGrid]
+ *   to allow for pull-to-refresh functionality.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun rememberPullToRefreshController(
     initialValue: Boolean,
-    key: Any? = null,
     state: PullToRefreshState = rememberPullToRefreshState(),
     modifier: Modifier = Modifier,
     onRefresh: suspend () -> Unit = { }
 ): PullToRefreshController {
     val scope = rememberCoroutineScope { Dispatchers.IO }
-    return remember(key) {
+    return remember {
         PullToRefreshController(
             state = state,
             initialValue = initialValue,

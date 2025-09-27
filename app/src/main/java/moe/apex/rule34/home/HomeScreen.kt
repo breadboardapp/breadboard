@@ -20,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +51,7 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     val prefs = LocalPreferences.current
+    val blockedTags by rememberUpdatedState(prefs.blockedTags)
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(topAppBarState)
     val shouldShowLargeImage = remember { mutableStateOf(false) }
@@ -67,11 +69,8 @@ fun HomeScreen(
         viewModel.recommendationsProvider!!.prepareRecommendedTags()
     }
     val recommendationsProvider = viewModel.recommendationsProvider!!
-    val pullToRefreshController = rememberPullToRefreshController(
-        initialValue = false,
-        key = prefs.blockedTags
-    ) {
-        recommendationsProvider.replaceBlockedTags(prefs.blockedTags)
+    val pullToRefreshController = rememberPullToRefreshController(initialValue = false) {
+        recommendationsProvider.replaceBlockedTags(blockedTags)
         recommendationsProvider.prepareRecommendedTags()
         recommendationsProvider.recommendImages()
         recommendationsProvider.resetGridStates()
