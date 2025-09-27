@@ -4,7 +4,7 @@ package moe.apex.rule34.largeimageview
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ContextualFlowRow
@@ -18,8 +18,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Block
+import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -36,7 +38,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
@@ -56,6 +57,7 @@ import moe.apex.rule34.tag.TagCategory
 import moe.apex.rule34.ui.theme.prefTitle
 import moe.apex.rule34.util.BasicExpressiveContainer
 import moe.apex.rule34.util.BasicExpressiveGroup
+import moe.apex.rule34.util.ButtonListItem
 import moe.apex.rule34.util.CHIP_SPACING
 import moe.apex.rule34.util.ChevronRight
 import moe.apex.rule34.util.CombinedClickableFilterChip
@@ -64,6 +66,7 @@ import moe.apex.rule34.util.ListItemPosition
 import moe.apex.rule34.util.MEDIUM_LARGE_SPACER
 import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
+import moe.apex.rule34.util.SmallVerticalSpacer
 import moe.apex.rule34.util.TitleSummary
 import moe.apex.rule34.util.TitledModalBottomSheet
 import moe.apex.rule34.util.copyText
@@ -73,7 +76,6 @@ import moe.apex.rule34.util.launchInWebBrowser
 import moe.apex.rule34.util.navBarHeight
 import moe.apex.rule34.util.openUrl
 import moe.apex.rule34.util.pluralise
-import moe.apex.rule34.util.rememberIsBlurEnabled
 import moe.apex.rule34.util.showToast
 
 
@@ -99,16 +101,7 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
        partially expanded state only when dismissing.  */
     var sheetState: SheetState? by remember { mutableStateOf(null) }
     var previousSheetValue by remember { mutableStateOf(SheetValue.Hidden) }
-
-    val optionsSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var selectedTag: String? by remember { mutableStateOf(null) }
-
-    val sheetModifier = if (rememberIsBlurEnabled()) {
-        val blurRadius by animateDpAsState(if (optionsSheetState.targetValue == SheetValue.Hidden) 0.dp else 24.dp)
-        Modifier.blur(blurRadius)
-    } else {
-        Modifier
-    }
 
     fun hideAndThen(block: () -> Unit = { }) {
         scope.launch {
@@ -154,79 +147,77 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
         onDismissRequest = onDismissRequest,
         sheetState = sheetState ?: return,
         title = "About this image",
-        modifier = sheetModifier
     ) {
         if (selectedTag != null) {
-            /* We need to have this extra sheet inside the main otherwise it'll just automatically
-               dismiss the main sheet and then also this sheet because this entire system sucks. */
-            TitledModalBottomSheet(
+            /* We need to have this dialog inside the sheet otherwise it'll just automatically
+               dismiss itself and the sheet because this entire system sucks.  */
+            BasicAlertDialog(
                 onDismissRequest = { selectedTag = null },
-                title = selectedTag!!,
-                sheetState = optionsSheetState
+                modifier = Modifier.background(
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    shape = MaterialTheme.shapes.extraLarge
+                )
             ) {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = MEDIUM_SPACER.dp)
-                        .clip(largerShape),
-                    contentPadding = PaddingValues(bottom = navBarHeight * 2)
+                val blocked = selectedTag in prefs.blockedTags
+                Column(
+                    modifier = Modifier.padding(
+                        start = LARGE_SPACER.dp,
+                        end = LARGE_SPACER.dp,
+                        bottom = LARGE_SPACER.dp,
+                        top = (LARGE_SPACER - 8).dp // Chips have 8dp vertical padding already
+                    ),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    item {
-                        BasicExpressiveGroup {
-                            item {
-                                TitleSummary(
-                                    title = "Search",
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = Icons.Rounded.Search,
-                                            contentDescription = null,
-                                        )
-                                    },
-                                    trailingIcon = { ChevronRight() },
-                                    onClick = {
-                                        scope.launch {
-                                            optionsSheetState.hide()
-                                        }.invokeOnCompletion {
-                                            selectedTag = null
-                                        }
-                                        startTagSearch(selectedTag!!)
-                                    }
-                                )
+                    CombinedClickableFilterChip(
+                        label = { Text(selectedTag!!) },
+                        warning = blocked,
+                        onClick = { },
+                        onLongClick = { }
+                    )
+                    SmallVerticalSpacer()
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        ButtonListItem(
+                            text = "Search",
+                            icon = Icons.Rounded.Search,
+                            modifier = Modifier.fillMaxWidth(),
+                            position = ListItemPosition.TOP
+                        ) {
+                            val searchTag = selectedTag!!
+                            selectedTag = null
+                            startTagSearch(searchTag)
+                        }
+                        ButtonListItem(
+                            text = "Copy to clipboard",
+                            icon = Icons.Rounded.ContentCopy,
+                            modifier = Modifier.fillMaxWidth(),
+                            position = ListItemPosition.MIDDLE
+                        ) {
+                            scope.launch {
+                                copyText(context, clip, selectedTag!!)
                             }
-                            item {
-                                TitleSummary(
-                                    title = "Copy to clipboard",
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = Icons.Rounded.ContentCopy,
-                                            contentDescription = null,
-                                        )
-                                    }
-                                ) {
-                                    scope.launch {
-                                        copyText(context, clip, selectedTag!!)
-                                    }
+                        }
+                        ButtonListItem(
+                            text = "${if (blocked) "Unblock" else "Block"} this tag",
+                            icon = if (blocked) Icons.Rounded.CheckCircleOutline else Icons.Rounded.Block,
+                            modifier = Modifier.fillMaxWidth(),
+                            position = ListItemPosition.BOTTOM
+                        ) {
+                            if (blocked) {
+                                scope.launch {
+                                    preferencesRepository.removeFromSet(
+                                        PreferenceKeys.MANUALLY_BLOCKED_TAGS,
+                                        selectedTag!!
+                                    )
                                 }
-                            }
-                            item {
-                                TitleSummary(
-                                    title = "Block this tag",
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = Icons.Rounded.Block,
-                                            contentDescription = null,
-                                        )
-                                    },
-                                    enabled = selectedTag !in prefs.blockedTags
-                                ) {
-                                    scope.launch {
-                                        preferencesRepository.addToSet(
-                                            PreferenceKeys.MANUALLY_BLOCKED_TAGS,
-                                            selectedTag!!
-                                        )
-                                    }
-                                    showToast(context, "Blocked tag \"$selectedTag\"")
+                                showToast(context, "Unblocked tag ${selectedTag!!}")
+                            } else {
+                                scope.launch {
+                                    preferencesRepository.addToSet(
+                                        PreferenceKeys.MANUALLY_BLOCKED_TAGS,
+                                        selectedTag!!
+                                    )
                                 }
+                                showToast(context, "Blocked tag ${selectedTag!!}")
                             }
                         }
                     }
@@ -389,9 +380,7 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                         tags = it,
                         onChipClick = { startTagSearch(it) },
                         onChipLongClick = {
-
                             selectedTag = it
-
                         }
                     )
                 }
@@ -406,9 +395,7 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                         tags = it.tags,
                         onChipClick = { startTagSearch(it) },
                         onChipLongClick = {
-
                             selectedTag = it
-
                         }
                     )
                 }
@@ -439,6 +426,7 @@ private fun TagsContainer(
     onChipClick: (String) -> Unit,
     onChipLongClick: (String) -> Unit
 ) {
+    val prefs = LocalPreferences.current
     BasicExpressiveContainer(position = ListItemPosition.SINGLE_ELEMENT) {
         Column(
             Modifier
@@ -467,6 +455,7 @@ private fun TagsContainer(
                 val tag = tags[index]
                 CombinedClickableFilterChip(
                     label = { Text(tag) },
+                    warning = tag in prefs.blockedTags,
                     onClick = { onChipClick(tag) },
                     onLongClick = { onChipLongClick(tag) }
                 )

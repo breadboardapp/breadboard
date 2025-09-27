@@ -63,6 +63,8 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
@@ -103,6 +105,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.LocalContext
@@ -657,6 +660,7 @@ suspend fun copyText(
 fun CombinedClickableFilterChip(
     modifier: Modifier = Modifier,
     label: @Composable () -> Unit,
+    warning: Boolean = true,
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
@@ -669,10 +673,19 @@ fun CombinedClickableFilterChip(
     ) {
         FilterChip(
             onClick = onClick,
-            selected = true,
+            selected = !warning,
             label = label,
             modifier = modifier,
-            interactionSource = interactionSource
+            interactionSource = interactionSource,
+            colors = if (!warning) {
+                FilterChipDefaults.filterChipColors( )
+            } else {
+                FilterChipDefaults.filterChipColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    labelColor = MaterialTheme.colorScheme.onErrorContainer,
+                )
+            },
+            border = null
         )
     }
 }
@@ -1104,30 +1117,17 @@ data class PullToRefreshController(
 }
 
 
-/** Create and remember a [PullToRefreshController].
- *
- *  If the [onRefresh] lambda uses values that might change,
- *  wrap each value in [androidx.compose.runtime.rememberUpdatedState] outside of the lambda
- *  and then reference that instead of referencing the values directly.
- *  This ensures it will use the latest value every time.
- *
- *   @param initialValue The initial refreshing state
- *   @param state The [PullToRefreshState] to use.
- *   @param modifier The modifier to apply to the default refresh indicator.
- *   @param onRefresh The callback to execute when the user triggers a refresh.
- *   @return A [PullToRefreshController] that can be passed into [moe.apex.rule34.detailview.ImageGrid]
- *   to allow for pull-to-refresh functionality.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun rememberPullToRefreshController(
     initialValue: Boolean,
+    key: Any? = null,
     state: PullToRefreshState = rememberPullToRefreshState(),
     modifier: Modifier = Modifier,
     onRefresh: suspend () -> Unit = { }
 ): PullToRefreshController {
     val scope = rememberCoroutineScope { Dispatchers.IO }
-    return remember {
+    return remember(key) {
         PullToRefreshController(
             state = state,
             initialValue = initialValue,
@@ -1210,6 +1210,74 @@ fun ScrollToTopArrow(
             Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "Scroll to top")
         }
     }
+}
+
+
+// Sometimes it's okay to break spec :3
+@Composable
+fun ButtonListItem(
+    text: String,
+    icon: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    colors: ButtonColors = ButtonDefaults.buttonColors(),
+    position: ListItemPosition,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier.then(
+            Modifier.alpha(if (enabled) 1f else DISABLED_OPACITY)
+        ),
+        enabled = enabled,
+        color = colors.containerColor,
+        contentColor = colors.contentColor,
+        shape = RoundedCornerShape(
+            topStart = animateTopCornerSizeForPosition(position),
+            topEnd = animateTopCornerSizeForPosition(position),
+            bottomStart = animateBottomCornerSizeForPosition(position),
+            bottomEnd = animateBottomCornerSizeForPosition(position)
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .heightIn(min = 48.dp)
+                .padding(ButtonDefaults.ButtonWithIconContentPadding),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(Modifier.size(ButtonDefaults.IconSize)) {
+                icon()
+            }
+            Spacer(Modifier.width(MEDIUM_SPACER.dp))
+            Text(
+                text = text,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.titleMedium
+            )
+        }
+    }
+}
+
+
+@Composable
+fun ButtonListItem(
+    text: String,
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    colors: ButtonColors = ButtonDefaults.buttonColors(),
+    position: ListItemPosition,
+    onClick: () -> Unit,
+) {
+    ButtonListItem(
+        text = text,
+        icon = { Icon(icon, contentDescription = null) },
+        modifier = modifier,
+        enabled = enabled,
+        colors = colors,
+        position = position,
+        onClick = onClick
+    )
 }
 
 
