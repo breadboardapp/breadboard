@@ -1241,14 +1241,14 @@ fun ButtonListItem(
     ) {
         Row(
             modifier = Modifier
-                .heightIn(min = 48.dp)
-                .padding(ButtonDefaults.ButtonWithIconContentPadding),
+                .heightIn(min = 56.dp)
+                .padding(horizontal = MEDIUM_LARGE_SPACER.dp, vertical = SMALL_SPACER.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(Modifier.size(ButtonDefaults.IconSize)) {
+            Box(Modifier.size(22.dp)) {
                 icon()
             }
-            Spacer(Modifier.width(MEDIUM_SPACER.dp))
+            Spacer(Modifier.width(SMALL_LARGE_SPACER.dp))
             Text(
                 text = text,
                 modifier = Modifier.weight(1f),
