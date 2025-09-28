@@ -34,6 +34,7 @@ import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.PreferenceKeys
 import moe.apex.rule34.prefs
 import moe.apex.rule34.util.AgeVerification
+import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
 import moe.apex.rule34.util.OffsetBasedLargeImageView
 import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.rule34.util.LargeTitleBar
@@ -52,7 +53,7 @@ import moe.apex.rule34.viewmodel.SearchResultsViewModel
 fun SearchResults(navController: NavController, source: ImageSource, tagList: List<String>, viewModel: SearchResultsViewModel = viewModel()) {
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
-    val shouldShowLargeImage = remember { mutableStateOf(false) }
+    val isImageCarouselVisible = remember { mutableStateOf(false) }
     var initialPage by remember { mutableIntStateOf(0) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -91,7 +92,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
         }
     }
 
-    val pullToRefreshController = if (Experiment.SEARCH_PULL_TO_REFRESH.isEnabled(prefs)) {
+    val pullToRefreshController = if (Experiment.SEARCH_PULL_TO_REFRESH.isEnabled()) {
         rememberPullToRefreshController(
             initialValue = false,
             modifier = if (prefs.filterRatingsLocally) {
@@ -158,14 +159,14 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
                         ScrollToTopArrow(
                             staggeredGridState = viewModel.staggeredGridState,
                             uniformGridState = viewModel.uniformGridState,
-                            animate = !filterLocally || Experiment.ALWAYS_ANIMATE_SCROLL.isEnabled(prefs),
+                            animate = !filterLocally || Experiment.ALWAYS_ANIMATE_SCROLL.isEnabled(),
                         )
                     }
                 }
             )
         },
         addBottomPadding = false,
-        blur = shouldShowLargeImage.value,
+        blur = isImageCarouselVisible.value,
     ) { padding ->
         if (!viewModel.isReady) {
             return@MainScreenScaffold
@@ -180,7 +181,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
             images = imagesToDisplay,
             onImageClick = { index, _ ->
                 initialPage = index
-                shouldShowLargeImage.value = true
+                isImageCarouselVisible.value = true
             },
             contentPadding = PaddingValues(top = SMALL_LARGE_SPACER.dp, start = SMALL_LARGE_SPACER.dp, end = SMALL_LARGE_SPACER.dp),
             filterComposable = if (filterLocally) { {
@@ -197,5 +198,10 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
         )
     }
 
-    OffsetBasedLargeImageView(navController, shouldShowLargeImage, initialPage, imagesToDisplay)
+    if (Experiment.IMAGE_CAROUSEL_REWORK.isEnabled()) {
+        OffsetBasedLargeImageView(navController, isImageCarouselVisible, initialPage, imagesToDisplay)
+    } else {
+        AnimatedVisibilityLargeImageView(navController, isImageCarouselVisible, initialPage, imagesToDisplay)
+    }
 }
+

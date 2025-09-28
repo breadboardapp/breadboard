@@ -31,7 +31,6 @@ import moe.apex.rule34.util.Summary
 @Composable
 fun ExperimentalScreen(navController: NavHostController) {
     val preferencesRepository = LocalContext.current.prefs
-    val prefs = LocalPreferences.current
     val scope = rememberCoroutineScope()
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
@@ -65,20 +64,20 @@ fun ExperimentalScreen(navController: NavHostController) {
             }
             item {
                 ExpressiveGroup {
-                    for (pref in Experiment.entries) {
+                    for (experiment in Experiment.entries) {
                         item {
                             SwitchPref(
-                                title = pref.label,
-                                summary = pref.description,
-                                checked = pref.isEnabled(prefs),
+                                title = experiment.label,
+                                summary = experiment.description,
+                                checked = experiment.isEnabled(),
                                 // Immersive carousel uses a blur modifier which requires Android 12+ to work
-                                enabled = pref != Experiment.BLUR_EFFECTS || Build.VERSION.SDK_INT >= Build.VERSION_CODES.S,
+                                enabled = experiment != Experiment.IMMERSIVE_UI_EFFECTS || Build.VERSION.SDK_INT >= Build.VERSION_CODES.S,
                             ) {
                                 scope.launch {
                                     if (it) {
-                                        preferencesRepository.addToSet(PreferenceKeys.ENABLED_EXPERIMENTS, pref)
+                                        preferencesRepository.addToSet(PreferenceKeys.ENABLED_EXPERIMENTS, experiment)
                                     } else {
-                                        preferencesRepository.removeFromSet(PreferenceKeys.ENABLED_EXPERIMENTS, pref)
+                                        preferencesRepository.removeFromSet(PreferenceKeys.ENABLED_EXPERIMENTS, experiment)
                                     }
                                 }
                             }

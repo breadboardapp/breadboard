@@ -10,6 +10,7 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Hd
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Share
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.datastore.core.DataStore
@@ -159,11 +160,14 @@ enum class FlagSecureMode(override val label: String) : PrefEnum<FlagSecureMode>
 enum class Experiment(override val label: String, val description: String? = null) : PrefEnum<Experiment> {
     SEARCH_PULL_TO_REFRESH("Pull-to-refresh in Search", "Enable pull-to-refresh in search results."),
     ALWAYS_ANIMATE_SCROLL("Always animate scroll-to-top", "Enable smooth scrolling on all pages when using the scroll-to-top button."),
-    BLUR_EFFECTS("Blur effects", "Use translucency and blur effects in Breadboard's UI. Not all devices support this feature. Disable if you experience poor performance.");
+    IMAGE_CAROUSEL_REWORK("New image viewer", "Preview Breadboard's new image viewer, which allows for new features like swipe-to-dismiss."),
+    IMMERSIVE_UI_EFFECTS("Immersive UI effects", "When the new image viewer is enabled, this option enables immersive UI effects. Not all devices support this feature. Disable if you experience poor performance.");
 
 
-    fun isEnabled(prefs: Prefs): Boolean {
-        return prefs.enabledExperiments.contains(this)
+    @Composable
+    fun isEnabled(): Boolean {
+        val prefs = LocalPreferences.current
+        return prefs.isExperimentEnabled(this)
     }
 }
 
@@ -239,6 +243,11 @@ data class Prefs(
         get() = manuallyBlockedTags.toMutableSet().apply {
             if (excludeAi) addAll(ImageSource.entries.map { it.imageBoard.aiTagName })
         }
+
+
+    fun isExperimentEnabled(experiment: Experiment): Boolean {
+        return experiment in enabledExperiments
+    }
 }
 
 

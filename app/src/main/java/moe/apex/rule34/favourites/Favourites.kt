@@ -29,6 +29,7 @@ import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.PreferenceKeys
 import moe.apex.rule34.prefs
+import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
 import moe.apex.rule34.util.OffsetBasedLargeImageView
 import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.rule34.util.MainScreenScaffold
@@ -47,7 +48,7 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
     val preferencesRepository = LocalContext.current.prefs
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
-    val shouldShowLargeImage = remember { mutableStateOf(false) }
+    val isImageCarouselVisible = remember { mutableStateOf(false) }
     var initialPage by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
 
@@ -98,12 +99,12 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
         title = "Favourite images",
         scrollBehavior = scrollBehavior,
         addBottomPadding = false,
-        blur = shouldShowLargeImage.value,
+        blur = isImageCarouselVisible.value,
         additionalActions = {
             ScrollToTopArrow(
                 staggeredGridState = viewModel.staggeredGridState,
                 uniformGridState = viewModel.uniformGridState,
-                animate = Experiment.ALWAYS_ANIMATE_SCROLL.isEnabled(prefs)
+                animate = Experiment.ALWAYS_ANIMATE_SCROLL.isEnabled()
             ) { bottomBarVisibleState.value = true }
         }
     ) { padding ->
@@ -118,7 +119,7 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
             images = images,
             onImageClick = { index, _ ->
                 initialPage = index
-                shouldShowLargeImage.value = true
+                isImageCarouselVisible.value = true
             },
             contentPadding = PaddingValues(top = SMALL_LARGE_SPACER.dp, start = SMALL_LARGE_SPACER.dp, end = SMALL_LARGE_SPACER.dp, bottom = bottomAppBarAndNavBarHeight),
             filterComposable = {
@@ -131,5 +132,9 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
         )
     }
 
-    OffsetBasedLargeImageView(navController, shouldShowLargeImage, initialPage, images, bottomBarVisibleState)
+    if (Experiment.IMAGE_CAROUSEL_REWORK.isEnabled()) {
+        OffsetBasedLargeImageView(navController, isImageCarouselVisible, initialPage, images, bottomBarVisibleState)
+    } else {
+        AnimatedVisibilityLargeImageView(navController, isImageCarouselVisible, initialPage, images, bottomBarVisibleState)
+    }
 }

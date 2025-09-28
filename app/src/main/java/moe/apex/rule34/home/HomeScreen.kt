@@ -29,7 +29,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import moe.apex.rule34.detailview.ImageGrid
+import moe.apex.rule34.preferences.Experiment
 import moe.apex.rule34.preferences.LocalPreferences
+import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
 import moe.apex.rule34.util.OffsetBasedLargeImageView
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.RecommendationsProvider
@@ -140,5 +142,9 @@ fun HomeScreen(
         )
     }
 
-    OffsetBasedLargeImageView(navController, shouldShowLargeImage, initialPage, recommendationsProvider.recommendedImages, bottomBarVisibleState)
+    if (Experiment.IMAGE_CAROUSEL_REWORK.isEnabled()) {
+        OffsetBasedLargeImageView(navController, shouldShowLargeImage, initialPage, recommendationsProvider.recommendedImages, bottomBarVisibleState)
+    } else {
+        AnimatedVisibilityLargeImageView(navController, shouldShowLargeImage, initialPage, recommendationsProvider.recommendedImages, bottomBarVisibleState)
+    }
 }
