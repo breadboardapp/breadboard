@@ -64,6 +64,9 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
     val filterLocally = prefs.filterRatingsLocally
     var showAgeVerificationDialog by remember { mutableStateOf(false) }
 
+    val useOffsetBasedCarousel = prefs.isExperimentEnabled(Experiment.IMAGE_CAROUSEL_REWORK)
+    val blur = prefs.isExperimentEnabled(Experiment.IMMERSIVE_UI_EFFECTS)
+
     val actuallyBlockedTags = rememberSaveable { mutableStateSetOf<String>() }
 
     fun setUpViewModel() {
@@ -166,7 +169,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
             )
         },
         addBottomPadding = false,
-        blur = isImageCarouselVisible.value,
+        blur = isImageCarouselVisible.value && blur && useOffsetBasedCarousel,
     ) { padding ->
         if (!viewModel.isReady) {
             return@MainScreenScaffold
@@ -198,7 +201,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
         )
     }
 
-    if (Experiment.IMAGE_CAROUSEL_REWORK.isEnabled()) {
+    if (useOffsetBasedCarousel) {
         OffsetBasedLargeImageView(navController, isImageCarouselVisible, initialPage, imagesToDisplay)
     } else {
         AnimatedVisibilityLargeImageView(navController, isImageCarouselVisible, initialPage, imagesToDisplay)

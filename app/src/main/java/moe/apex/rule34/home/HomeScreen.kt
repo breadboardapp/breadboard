@@ -59,6 +59,9 @@ fun HomeScreen(
     val shouldShowLargeImage = remember { mutableStateOf(false) }
     var initialPage by remember { mutableIntStateOf(0) }
 
+    val useOffsetBasedCarousel = prefs.isExperimentEnabled(Experiment.IMAGE_CAROUSEL_REWORK)
+    val blur = prefs.isExperimentEnabled(Experiment.IMMERSIVE_UI_EFFECTS)
+
     if (viewModel.recommendationsProvider == null) {
         viewModel.recommendationsProvider = RecommendationsProvider(
             seedImages = prefs.favouriteImages,
@@ -83,7 +86,7 @@ fun HomeScreen(
         largeTopBar = false,
         scrollBehavior = scrollBehavior,
         addBottomPadding = false,
-        blur = shouldShowLargeImage.value,
+        blur = shouldShowLargeImage.value && blur && useOffsetBasedCarousel,
         additionalActions = {
             ScrollToTopArrow(
                 staggeredGridState = recommendationsProvider.staggeredGridState,
@@ -142,7 +145,7 @@ fun HomeScreen(
         )
     }
 
-    if (Experiment.IMAGE_CAROUSEL_REWORK.isEnabled()) {
+    if (useOffsetBasedCarousel) {
         OffsetBasedLargeImageView(navController, shouldShowLargeImage, initialPage, recommendationsProvider.recommendedImages, bottomBarVisibleState)
     } else {
         AnimatedVisibilityLargeImageView(navController, shouldShowLargeImage, initialPage, recommendationsProvider.recommendedImages, bottomBarVisibleState)

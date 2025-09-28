@@ -52,6 +52,9 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
     var initialPage by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
 
+    val useOffsetBasedCarousel = prefs.isExperimentEnabled(Experiment.IMAGE_CAROUSEL_REWORK)
+    val blur = prefs.isExperimentEnabled(Experiment.IMMERSIVE_UI_EFFECTS)
+
     val images = prefs.favouriteImages.reversed().filter {
         it.imageSource in prefs.favouritesFilter
         &&
@@ -99,7 +102,7 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
         title = "Favourite images",
         scrollBehavior = scrollBehavior,
         addBottomPadding = false,
-        blur = isImageCarouselVisible.value,
+        blur = isImageCarouselVisible.value && blur && useOffsetBasedCarousel,
         additionalActions = {
             ScrollToTopArrow(
                 staggeredGridState = viewModel.staggeredGridState,
@@ -132,7 +135,7 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
         )
     }
 
-    if (Experiment.IMAGE_CAROUSEL_REWORK.isEnabled()) {
+    if (useOffsetBasedCarousel) {
         OffsetBasedLargeImageView(navController, isImageCarouselVisible, initialPage, images, bottomBarVisibleState)
     } else {
         AnimatedVisibilityLargeImageView(navController, isImageCarouselVisible, initialPage, images, bottomBarVisibleState)
