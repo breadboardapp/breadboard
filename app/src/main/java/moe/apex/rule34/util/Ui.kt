@@ -320,7 +320,7 @@ fun OffsetBasedLargeImageView(
         bottomBarVisibleState?.value = !visibilityState.value
     }
 
-    PredictiveBackHandler(enabled = true) { progress ->
+    PredictiveBackHandler(enabled = visibilityState.value) { progress ->
         try {
             progress.collect { backEvent ->
                 val offsetPx = with(density) { (backEvent.progress * 300f).dp.toPx() }
