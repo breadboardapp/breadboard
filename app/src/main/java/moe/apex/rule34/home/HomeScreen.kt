@@ -30,7 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import moe.apex.rule34.detailview.ImageGrid
 import moe.apex.rule34.preferences.LocalPreferences
-import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
+import moe.apex.rule34.util.OffsetBasedLargeImageView
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.RecommendationsProvider
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
@@ -140,5 +140,5 @@ fun HomeScreen(
         )
     }
 
-    AnimatedVisibilityLargeImageView(navController, shouldShowLargeImage, initialPage, recommendationsProvider.recommendedImages, bottomBarVisibleState)
+    OffsetBasedLargeImageView(navController, shouldShowLargeImage, initialPage, recommendationsProvider.recommendedImages, bottomBarVisibleState)
 }

@@ -7,6 +7,7 @@ import android.content.Context
 import android.os.Build
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
@@ -14,14 +15,15 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -94,7 +96,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -109,10 +110,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -127,6 +131,7 @@ import moe.apex.rule34.preferences.Experiment
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.prefs
 import moe.apex.rule34.ui.theme.prefTitle
+import kotlin.math.roundToInt
 
 
 private const val LARGE_CORNER_DP = 20
@@ -245,43 +250,91 @@ fun FullscreenLoadingSpinner() {
 
 
 @Composable
-fun AnimatedVisibilityLargeImageView(
+fun OffsetBasedLargeImageView(
     navController: NavController,
     visibilityState: MutableState<Boolean>,
     initialPage: Int,
     allImages: List<Image>,
-    bottomBarVisibleState: MutableState<Boolean>? = null
+    bottomBarVisibleState: MutableState<Boolean>? = null,
 ) {
-    var offsetDp by remember { mutableFloatStateOf(0f) }
-    var backgroundOpacityScale by remember { mutableFloatStateOf(1f) }
+    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val window = LocalWindowInfo.current
     val isImmersiveModeEnabled = rememberIsBlurEnabled()
+    val windowHeightPx = window.containerSize.height.toFloat()
+    val dismissVelocityThreshold = windowHeightPx // Pixels per second
+    val dismissDistanceThreshold = windowHeightPx * 0.25f
+    var canDragDown by remember { mutableStateOf(true) }
 
-    LaunchedEffect(visibilityState.value) {
-        if (bottomBarVisibleState != null) {
-            bottomBarVisibleState.value = !visibilityState.value
+    val animatableOffset = remember { Animatable(windowHeightPx) }
+    val animationSpec = spring<Float>(stiffness = Spring.StiffnessMediumLow)
+
+    val draggableState = rememberDraggableState { delta ->
+        scope.launch {
+            val new = (animatableOffset.value + delta).coerceAtLeast(0f)
+            animatableOffset.snapTo(new)
         }
-        if (visibilityState.value) {
-            offsetDp = 0f
-            backgroundOpacityScale = 1f
+    }
+
+    fun calculateScaleFactor(offsetValue: Float): Float {
+        return (1 - ((1.5f * offsetValue) / windowHeightPx))
+    }
+
+    fun show(velocity: Float = animatableOffset.velocity) {
+        scope.launch {
+            animatableOffset.animateTo(
+                targetValue = 0f,
+                animationSpec = animationSpec,
+                initialVelocity = velocity
+            )
         }
+    }
+
+    fun snapTo(offset: Float) {
+        scope.launch {
+            animatableOffset.snapTo(offset)
+        }
+    }
+
+    fun hide(velocity: Float = animatableOffset.velocity, animate: Boolean = true) {
+        scope.launch {
+            if (animate) {
+                animatableOffset.animateTo(
+                    targetValue = windowHeightPx,
+                    animationSpec = animationSpec,
+                    initialVelocity = velocity
+                )
+            } else {
+                snapTo(windowHeightPx)
+            }
+        }
+        visibilityState.value = false
     }
 
     if (allImages.isEmpty()) {
-        visibilityState.value = false
+        hide(animate = false)
         return
     }
 
-    PredictiveBackHandler(visibilityState.value) { progress ->
+    LaunchedEffect(visibilityState.value) {
+        bottomBarVisibleState?.value = !visibilityState.value
+    }
+
+    PredictiveBackHandler(enabled = true) { progress ->
         try {
             progress.collect { backEvent ->
-                offsetDp = (backEvent.progress * 300)
-                if (isImmersiveModeEnabled) {
-                    backgroundOpacityScale = 1 - (backEvent.progress / 1.5f)
-                }
+                val offsetPx = with(density) { (backEvent.progress * 300f).dp.toPx() }
+                snapTo(offsetPx)
             }
-            visibilityState.value = false
+            hide()
+        } catch (_: Exception) { }
+    }
+
+    LaunchedEffect(visibilityState.value, initialPage) {
+        if (visibilityState.value) {
+            show()
         }
-        catch (_: Exception) { }
+        // No hide() call here because it's managed by the back handler and draggable modifier.
     }
 
     if (isImmersiveModeEnabled) {
@@ -293,24 +346,53 @@ fun AnimatedVisibilityLargeImageView(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background.copy(alpha = 0.5f * backgroundOpacityScale))
+                    .background(
+                        color = MaterialTheme.colorScheme.background.copy(
+                            alpha = 0.5f * calculateScaleFactor(animatableOffset.value)
+                    )
+                )
             )
         }
+    } else {
+        /* This is so the user doesn't see the grid/background underneath the LargeImage carousel
+           if they fling it up quickly (due to the spring animation). */
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .offset { IntOffset(0, animatableOffset.value.roundToInt().coerceAtLeast(0)) }
+                .background(MaterialTheme.colorScheme.background)
+        )
     }
 
-    AnimatedVisibility(
-        visible = visibilityState.value,
-        enter = slideInVertically { it },
-        exit = slideOutVertically { it },
-        modifier = Modifier.offset(y = offsetDp.dp)
-    ) {
+    if (animatableOffset.value != windowHeightPx) {
         key(initialPage) {
-            LargeImageView(
-                navController = navController,
-                initialPage = initialPage,
-                allImages = allImages,
-                backgroundAlpha = if (isImmersiveModeEnabled) 0f else 1f
-            )
+            Box(
+                modifier = Modifier
+                    .offset { IntOffset(0, animatableOffset.value.roundToInt()) }
+                    .draggable(
+                        enabled = canDragDown,
+                        orientation = Orientation.Vertical,
+                        state = draggableState,
+                        onDragStopped = { velocity ->
+                            scope.launch {
+                                if ((velocity > dismissVelocityThreshold || animatableOffset.value > dismissDistanceThreshold) && velocity > 0) {
+                                    hide(velocity)
+                                } else {
+                                    show(velocity)
+                                }
+                            }
+                        }
+                    )
+            ) {
+                LargeImageView(
+                    navController = navController,
+                    initialPage = initialPage,
+                    allImages = allImages,
+                    backgroundAlpha = if (isImmersiveModeEnabled) 0f else 1f
+                ) {
+                    canDragDown = it == 0f
+                }
+            }
         }
     }
 }

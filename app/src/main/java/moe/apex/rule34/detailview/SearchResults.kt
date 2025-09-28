@@ -34,7 +34,7 @@ import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.PreferenceKeys
 import moe.apex.rule34.prefs
 import moe.apex.rule34.util.AgeVerification
-import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
+import moe.apex.rule34.util.OffsetBasedLargeImageView
 import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.rule34.util.LargeTitleBar
 import moe.apex.rule34.util.MainScreenScaffold
@@ -197,5 +197,5 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
         )
     }
 
-    AnimatedVisibilityLargeImageView(navController, shouldShowLargeImage, initialPage, imagesToDisplay)
+    OffsetBasedLargeImageView(navController, shouldShowLargeImage, initialPage, imagesToDisplay)
 }

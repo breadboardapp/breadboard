@@ -29,7 +29,7 @@ import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.PreferenceKeys
 import moe.apex.rule34.prefs
-import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
+import moe.apex.rule34.util.OffsetBasedLargeImageView
 import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
@@ -131,5 +131,5 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
         )
     }
 
-    AnimatedVisibilityLargeImageView(navController, shouldShowLargeImage, initialPage, images, bottomBarVisibleState)
+    OffsetBasedLargeImageView(navController, shouldShowLargeImage, initialPage, images, bottomBarVisibleState)
 }
