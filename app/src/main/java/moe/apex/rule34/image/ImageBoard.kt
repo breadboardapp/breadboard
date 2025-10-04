@@ -1,5 +1,6 @@
 package moe.apex.rule34.image
 
+import android.util.Log
 import kotlinx.serialization.Serializable
 import moe.apex.rule34.RequestUtil
 import moe.apex.rule34.preferences.ImageSource
@@ -95,6 +96,12 @@ interface ImageBoard {
             imageSearchUrl.format(tags, page)
         }
     }
+
+    fun ensureSupportedFormat(fileFormat: String): Boolean {
+        val isSupportedFormat = fileFormat == "jpeg" || fileFormat == "jpg" || fileFormat == "png" || fileFormat == "gif" || fileFormat == "webp"
+        if (!isSupportedFormat) Log.w("ImageBoard", "Unknown file format: $fileFormat")
+        return isSupportedFormat
+    }
 }
 
 
@@ -109,8 +116,7 @@ interface GelbooruBasedImageBoard : ImageBoard {
         val imageHeight = e.optInt("height", 1)
         val aspectRatio = imageWidth.toFloat() / imageHeight.toFloat()
 
-        if (fileFormat != "jpeg" && fileFormat != "jpg" && fileFormat != "png" && fileFormat != "gif")
-            return null
+        if (!ensureSupportedFormat(fileFormat)) return null
 
         val metaParentId = e.getString("parent_id").takeIf { it != "0" }
         val metaSource = e.getString("source").takeIf { it.isNotEmpty() }
@@ -275,8 +281,7 @@ object Danbooru : ImageBoard {
         val imageHeight = e.optInt("image_height", 1)
         val aspectRatio = imageWidth.toFloat() / imageHeight.toFloat()
 
-        if (fileFormat != "jpeg" && fileFormat != "jpg" && fileFormat != "png" && fileFormat != "gif")
-            return null
+        if (!ensureSupportedFormat(fileFormat)) return null
 
         val tagStringArtist = e.getString("tag_string_artist")
         val tagCharacter = e.getString("tag_string_character").split(" ")
@@ -372,8 +377,7 @@ object Yandere : ImageBoard {
         val imageHeight = e.optInt("height", 1)
         val aspectRatio = imageWidth.toFloat() / imageHeight.toFloat()
 
-        if (fileFormat != "jpeg" && fileFormat != "jpg" && fileFormat != "png" && fileFormat != "gif")
-            return null
+        if (!ensureSupportedFormat(fileFormat)) return null
 
         val metaParentId = e.getString("parent_id").takeIf { it != "null" }
         val metaHasChildren = e.getBoolean("has_children")
