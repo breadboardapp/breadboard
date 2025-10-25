@@ -11,6 +11,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -102,7 +103,6 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -439,7 +439,7 @@ fun AnimatedVisibilityLargeImageView(
         visible = visibilityState.value,
         enter = slideInVertically { it },
         exit = slideOutVertically { it },
-        modifier = Modifier.offset(y = offsetDp.dp)
+        modifier = Modifier.offset { IntOffset(x = 0, y = offsetDp.dp.roundToPx() ) }
     ) {
         key(initialPage) {
             LargeImageView(
@@ -510,14 +510,17 @@ fun MainScreenScaffold(
     floatingActionButton: (@Composable () -> Unit)? = null,
     content: @Composable (PaddingValues) -> Unit
 ) {
+    val density = LocalDensity.current
     val isBlurEnabled = rememberIsBlurEnabled()
-    val blurRadius by animateDpAsState(
-        targetValue = if (blur && isBlurEnabled) 42.dp else 0.dp,
+    /* The blur modifier takes dp but we're going to work in px and then convert to dp afterwards
+       to ensure it looks the same between devices. */
+    val blurRadius by animateIntAsState(
+        targetValue = if (blur && isBlurEnabled) 120 else 0,
         animationSpec = tween(350)
     )
 
     Scaffold(
-        modifier = Modifier.blur(blurRadius),
+        modifier = Modifier.blur(with (density) { blurRadius.toDp() }),
         topBar = topAppBar,
         floatingActionButton = { floatingActionButton?.let {
             Box(Modifier.offset(y = if (addBottomPadding) -BOTTOM_APP_BAR_HEIGHT.dp else 0.dp)) {
@@ -1426,7 +1429,7 @@ fun <T> bouncyAnimationSpec(): FiniteAnimationSpec<T> = spring(
 @Composable
 fun rememberIsBlurEnabled(): Boolean {
     val prefs = LocalPreferences.current
-    return rememberSaveable {
+    return remember {
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && prefs.isExperimentEnabled(Experiment.IMMERSIVE_UI_EFFECTS)
     }
 }
