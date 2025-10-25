@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.ClipData
 import android.content.Context
 import android.os.Build
+import android.os.PowerManager
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
@@ -122,6 +123,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.getSystemService
 import androidx.navigation.NavController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -1429,8 +1431,13 @@ fun <T> bouncyAnimationSpec(): FiniteAnimationSpec<T> = spring(
 @Composable
 fun rememberIsBlurEnabled(): Boolean {
     val prefs = LocalPreferences.current
-    return remember {
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && prefs.isExperimentEnabled(Experiment.IMMERSIVE_UI_EFFECTS)
+    val context = LocalContext.current
+    val powerManager = context.getSystemService<PowerManager>()!!
+    // TODO: Maybe also check if the Window-level blurs developer option is enabled?
+    return remember(powerManager.isPowerSaveMode) {
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+            && prefs.isExperimentEnabled(Experiment.IMMERSIVE_UI_EFFECTS)
+            && !powerManager.isPowerSaveMode
     }
 }
 
