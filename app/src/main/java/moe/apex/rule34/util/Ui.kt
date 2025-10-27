@@ -12,7 +12,6 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -109,8 +108,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.BlurEffect
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
@@ -513,23 +516,31 @@ fun MainScreenScaffold(
     content: @Composable (PaddingValues) -> Unit
 ) {
     val isBlurEnabled = rememberIsBlurEnabled()
-    /* The blur modifier takes dp but we're going to work in px and then convert to dp afterwards
-       to ensure it looks the same between devices. */
-    val blurRadius by animateFloatAsState(
-        targetValue = if (blur && isBlurEnabled) 120f else 0f,
-        animationSpec = tween(350)
-    )
+    val graphicsLayer = rememberGraphicsLayer()
+
+    /* Animating the blur radius gets expensive and performs badly on low end devices.
+       Instead, we're going to fade in a "copy" of the content with a pre-applied blur effect.
+       It doesn't look as good as animating the radius but it is much better for performance.
+       https://developer.android.com/develop/ui/compose/graphics/draw/modifiers#composable-to-bitmap
+    */
 
     Scaffold(
-        modifier = Modifier.graphicsLayer {
-            renderEffect = BlurEffect(radiusX = blurRadius, radiusY = blurRadius)
-        },
-        topBar = topAppBar,
-        floatingActionButton = { floatingActionButton?.let {
-            Box(Modifier.offset(y = if (addBottomPadding) -BOTTOM_APP_BAR_HEIGHT.dp else 0.dp)) {
-                it()
+        modifier = if (isBlurEnabled) {
+            Modifier.drawWithContent {
+                graphicsLayer.record {
+                    this@drawWithContent.drawContent()
+                }
+                drawLayer(graphicsLayer)
             }
-        } }
+        } else Modifier,
+        topBar = topAppBar,
+        floatingActionButton = {
+            floatingActionButton?.let {
+                Box(Modifier.offset(y = if (addBottomPadding) -BOTTOM_APP_BAR_HEIGHT.dp else 0.dp)) {
+                    it()
+                }
+            }
+        }
     ) {
         val lld = LocalLayoutDirection.current
         val newPadding = PaddingValues(
@@ -539,6 +550,30 @@ fun MainScreenScaffold(
             bottom = if (addBottomPadding) it.calculateBottomPadding() + BOTTOM_APP_BAR_HEIGHT.dp else 0.dp
         )
         content(newPadding)
+    }
+
+    AnimatedVisibility(
+        visible = blur && isBlurEnabled,
+        enter = fadeIn(tween(400)),
+        exit = fadeOut(tween(400))
+    ) {
+        var bitmap: ImageBitmap? by remember { mutableStateOf(null) }
+
+        LaunchedEffect(Unit) {
+            bitmap = graphicsLayer.toImageBitmap()
+        }
+
+        if (bitmap != null) {
+            androidx.compose.foundation.Image(
+                bitmap = bitmap!!,
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        renderEffect = BlurEffect(120f, 120f)
+                    }
+            )
+        }
     }
 }
 
