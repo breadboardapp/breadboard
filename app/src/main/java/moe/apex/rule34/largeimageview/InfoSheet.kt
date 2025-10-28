@@ -4,7 +4,6 @@ package moe.apex.rule34.largeimageview
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ContextualFlowRow
@@ -21,7 +20,7 @@ import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material3.BasicAlertDialog
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -66,7 +65,6 @@ import moe.apex.rule34.util.ListItemPosition
 import moe.apex.rule34.util.MEDIUM_LARGE_SPACER
 import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
-import moe.apex.rule34.util.SmallVerticalSpacer
 import moe.apex.rule34.util.TitleSummary
 import moe.apex.rule34.util.TitledModalBottomSheet
 import moe.apex.rule34.util.copyText
@@ -82,13 +80,12 @@ import moe.apex.rule34.util.showToast
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -> Unit) {
-    /* I don't really like this whole info/options sheet implementation.
+    /* I don't really like this whole info/options implementation.
        Ideally we'd use AnimatedContent or something and switch between the two in the same sheet.
        However, unfortunately the built-in M3 ModalBottomSheet has an endless list of problems
        that aren't getting fixed and a few of them affect what I wanted to do.
-       I've done everything I can to make the experience not suck with the two separate sheets
-       but I'm still not really happy about it.
-     */
+       I'm still not totally happy with this implementation with options being a separate dialog,
+       but I think it's the best we're going to get at this time.  */
     if (image.metadata == null) return
     val context = LocalContext.current
     val prefs = LocalPreferences.current
@@ -150,31 +147,24 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
     ) {
         if (selectedTag != null) {
             /* We need to have this dialog inside the sheet otherwise it'll just automatically
-               dismiss itself and the sheet because this entire system sucks.  */
-            BasicAlertDialog(
+               dismiss itself and the sheet because this entire system sucks. */
+            val blocked = selectedTag in prefs.blockedTags
+            AlertDialog(
                 onDismissRequest = { selectedTag = null },
-                modifier = Modifier.background(
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    shape = MaterialTheme.shapes.extraLarge
-                )
-            ) {
-                val blocked = selectedTag in prefs.blockedTags
-                Column(
-                    modifier = Modifier.padding(
-                        start = LARGE_SPACER.dp,
-                        end = LARGE_SPACER.dp,
-                        bottom = LARGE_SPACER.dp,
-                        top = (LARGE_SPACER - 8).dp // Chips have 8dp vertical padding already
-                    ),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    CombinedClickableFilterChip(
-                        label = { Text(selectedTag!!) },
-                        warning = blocked,
-                        onClick = { },
-                        onLongClick = { }
-                    )
-                    SmallVerticalSpacer()
+                title = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        CombinedClickableFilterChip(
+                            label = { Text(selectedTag!!) },
+                            warning = blocked,
+                            onClick = { },
+                            onLongClick = { }
+                        )
+                    }
+                },
+                text = {
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         ButtonListItem(
                             text = "Search",
@@ -221,8 +211,9 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                             }
                         }
                     }
-                }
-            }
+                },
+                confirmButton = { }
+            )
         }
 
         LazyColumn(
