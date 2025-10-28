@@ -210,15 +210,18 @@ private fun ImagesPager(
             }
         }
 
+        /* TODO: Give each image its own zoom state.
+           Need to consider how it interacts with the LargeImageView toolbar and onZoomChange. */
         Box(
-            Modifier.zoomable(
-                zoomState,
+            modifier = Modifier.zoomable(
+                state = zoomState,
                 onClick = { onImageClick() }
             )
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .padding(SMALL_LARGE_SPACER.dp)
                     .systemBarsPadding(),
                 contentAlignment = Alignment.Center
             ) {
@@ -563,8 +566,6 @@ fun LargeImage(image: Image) {
                 )
             }
         },
-        modifier = modifier
-            .scale(0.95f)
-            .clip(MaterialTheme.shapes.extraLarge)
+        modifier = modifier.clip(MaterialTheme.shapes.extraLarge)
     )
 }
