@@ -278,6 +278,22 @@ fun OffsetBasedLargeImageView(
     val animatableOffset = remember { Animatable(windowHeightPx) }
     val animationSpec = spring<Float>(stiffness = Spring.StiffnessMediumLow)
 
+    /* In the past we used initialPage to determine whether or not we should recompose the viewer.
+       However, this causes an issue where the viewer doesn't reset when it really should,
+       just because the user swiped to a different image and then tapped the first one again.
+       For instance, lets say the user taps image 1, swipes to image 2, dismisses the viewer,
+       and taps image 1 again before the closing animation is finished. Because initialPage didn't
+       change, the user is still seeing image 2, which is bad.
+
+       This is a really poor solution to that. We will trigger a recomposition manually using
+       this flag and a LaunchedEffect that flips the flag when the visibility state becomes true.
+
+       Why not just use visibilityState directly? Because we don't want to recompose the viewer when
+       it becomes false (i.e. the user is dismissing the viewer).
+
+       TODO: Revisit this. */
+    var recompositionTrigger by remember { mutableStateOf(false) }
+
     val draggableState = rememberDraggableState { delta ->
         scope.launch {
             val new = (animatableOffset.value + delta).coerceAtLeast(0f)
@@ -325,10 +341,6 @@ fun OffsetBasedLargeImageView(
         return
     }
 
-    LaunchedEffect(visibilityState.value) {
-        bottomBarVisibleState?.value = !visibilityState.value
-    }
-
     PredictiveBackHandler(enabled = visibilityState.value) { progress ->
         try {
             progress.collect { backEvent ->
@@ -339,8 +351,10 @@ fun OffsetBasedLargeImageView(
         } catch (_: Exception) { }
     }
 
-    LaunchedEffect(visibilityState.value, initialPage) {
+    LaunchedEffect(visibilityState.value) {
+        bottomBarVisibleState?.value = !visibilityState.value
         if (visibilityState.value) {
+            recompositionTrigger = !recompositionTrigger
             show()
         }
         // No hide() call here because it's managed by the back handler and draggable modifier.
@@ -373,7 +387,7 @@ fun OffsetBasedLargeImageView(
     }
 
     if (animatableOffset.value != windowHeightPx) {
-        key(initialPage) {
+        key(recompositionTrigger) {
             Box(
                 modifier = Modifier
                     .offset { IntOffset(0, animatableOffset.value.roundToInt()) }
