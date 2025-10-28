@@ -392,7 +392,7 @@ fun OffsetBasedLargeImageView(
                 modifier = Modifier
                     .offset { IntOffset(0, animatableOffset.value.roundToInt()) }
                     .draggable(
-                        enabled = canDragDown,
+                        enabled = canDragDown && visibilityState.value,
                         orientation = Orientation.Vertical,
                         state = draggableState,
                         onDragStopped = { velocity ->
