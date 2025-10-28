@@ -115,7 +115,6 @@ fun LargeImageView(
     initialPage: Int,
     allImages: List<Image>,
     backgroundAlpha: Float = 1f,
-    toolbarModifier: Modifier = Modifier,
     onZoomChange: ((Float) -> Unit)? = null
 ) {
     val pagerState = rememberPagerState(
@@ -171,7 +170,6 @@ fun LargeImageView(
 
             Box(Modifier.align(Alignment.BottomCenter)) {
                 LargeImageToolbar(
-                    modifier = toolbarModifier,
                     toolbarState = toolbarState,
                     isMostlyZoomedOut = isMostlyZoomedOut,
                     viewModel = viewModel,
