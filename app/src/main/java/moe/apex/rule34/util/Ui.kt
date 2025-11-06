@@ -1173,7 +1173,7 @@ private class PreferencesGroupScopeImpl : ExpressiveGroupScope {
 @Composable
 fun ExpressiveGroup(
     title: String? = null,
-    content: @Composable ExpressiveGroupScope.() -> Unit
+    content: ExpressiveGroupScope.() -> Unit
 ) {
     val scope = PreferencesGroupScopeImpl()
     scope.content()
@@ -1204,7 +1204,7 @@ fun ExpressiveGroup(
 @Composable
 fun BasicExpressiveGroup(
     title: String? = null,
-    content: @Composable ExpressiveGroupScope.() -> Unit
+    content: ExpressiveGroupScope.() -> Unit
 ) {
     val scope = PreferencesGroupScopeImpl()
     scope.content()
