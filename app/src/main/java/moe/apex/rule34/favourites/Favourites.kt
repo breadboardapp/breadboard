@@ -29,7 +29,6 @@ import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.PreferenceKeys
 import moe.apex.rule34.prefs
-import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
 import moe.apex.rule34.util.OffsetBasedLargeImageView
 import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.rule34.util.MainScreenScaffold
@@ -52,7 +51,6 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
     var initialPage by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
 
-    val useOffsetBasedCarousel = prefs.isExperimentEnabled(Experiment.IMAGE_CAROUSEL_REWORK)
     val blur = prefs.isExperimentEnabled(Experiment.IMMERSIVE_UI_EFFECTS)
 
     val images = prefs.favouriteImages.reversed().filter {
@@ -102,7 +100,7 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
         title = "Favourite images",
         scrollBehavior = scrollBehavior,
         addBottomPadding = false,
-        blur = isImageCarouselVisible.value && blur && useOffsetBasedCarousel,
+        blur = isImageCarouselVisible.value && blur,
         additionalActions = {
             ScrollToTopArrow(
                 staggeredGridState = viewModel.staggeredGridState,
@@ -135,9 +133,5 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
         )
     }
 
-    if (useOffsetBasedCarousel) {
-        OffsetBasedLargeImageView(navController, isImageCarouselVisible, initialPage, images, bottomBarVisibleState)
-    } else {
-        AnimatedVisibilityLargeImageView(navController, isImageCarouselVisible, initialPage, images, bottomBarVisibleState)
-    }
+    OffsetBasedLargeImageView(navController, isImageCarouselVisible, initialPage, images, bottomBarVisibleState)
 }

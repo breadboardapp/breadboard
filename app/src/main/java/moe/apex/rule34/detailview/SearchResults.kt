@@ -34,7 +34,6 @@ import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.PreferenceKeys
 import moe.apex.rule34.prefs
 import moe.apex.rule34.util.AgeVerification
-import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
 import moe.apex.rule34.util.OffsetBasedLargeImageView
 import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.rule34.util.LargeTitleBar
@@ -64,7 +63,6 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
     val filterLocally = prefs.filterRatingsLocally
     var showAgeVerificationDialog by remember { mutableStateOf(false) }
 
-    val useOffsetBasedCarousel = prefs.isExperimentEnabled(Experiment.IMAGE_CAROUSEL_REWORK)
     val blur = prefs.isExperimentEnabled(Experiment.IMMERSIVE_UI_EFFECTS)
 
     val actuallyBlockedTags = rememberSaveable { mutableStateSetOf<String>() }
@@ -169,7 +167,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
             )
         },
         addBottomPadding = false,
-        blur = isImageCarouselVisible.value && blur && useOffsetBasedCarousel,
+        blur = isImageCarouselVisible.value && blur,
     ) { padding ->
         if (!viewModel.isReady) {
             return@MainScreenScaffold
@@ -201,10 +199,6 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
         )
     }
 
-    if (useOffsetBasedCarousel) {
-        OffsetBasedLargeImageView(navController, isImageCarouselVisible, initialPage, imagesToDisplay)
-    } else {
-        AnimatedVisibilityLargeImageView(navController, isImageCarouselVisible, initialPage, imagesToDisplay)
-    }
+    OffsetBasedLargeImageView(navController, isImageCarouselVisible, initialPage, imagesToDisplay)
 }
 

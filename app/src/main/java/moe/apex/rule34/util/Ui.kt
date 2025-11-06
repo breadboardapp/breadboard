@@ -16,8 +16,6 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalIndication
@@ -99,7 +97,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -415,57 +412,6 @@ fun OffsetBasedLargeImageView(
                     canDragDown = it == 0f
                 }
             }
-        }
-    }
-}
-
-
-@Composable
-fun AnimatedVisibilityLargeImageView(
-    navController: NavController,
-    visibilityState: MutableState<Boolean>,
-    initialPage: Int,
-    allImages: List<Image>,
-    bottomBarVisibleState: MutableState<Boolean>? = null
-) {
-    var offsetDp by remember { mutableFloatStateOf(0f) }
-
-    LaunchedEffect(visibilityState.value) {
-        if (bottomBarVisibleState != null) {
-            bottomBarVisibleState.value = !visibilityState.value
-        }
-        if (visibilityState.value) {
-            offsetDp = 0f
-        }
-    }
-
-    if (allImages.isEmpty()) {
-        visibilityState.value = false
-        return
-    }
-
-    PredictiveBackHandler(visibilityState.value) { progress ->
-        try {
-            progress.collect { backEvent ->
-                offsetDp = (backEvent.progress * 300)
-            }
-            visibilityState.value = false
-        }
-        catch (_: Exception) { }
-    }
-
-    AnimatedVisibility(
-        visible = visibilityState.value,
-        enter = slideInVertically { it },
-        exit = slideOutVertically { it },
-        modifier = Modifier.offset { IntOffset(x = 0, y = offsetDp.dp.roundToPx() ) }
-    ) {
-        key(initialPage) {
-            LargeImageView(
-                navController = navController,
-                initialPage = initialPage,
-                allImages = allImages
-            )
         }
     }
 }
