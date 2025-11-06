@@ -464,7 +464,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         /* Version 3.1.0 changes experiments to be a set rather than individual Pref items.
            Migrate the old "search pull to refresh" and "always animate scroll to top" settings
            to the new experiments set. */
-        if (lastUsedVersionCode < 309) {
+        if (lastUsedVersionCode < 310) {
             val data = dataStore.data.first()
             val enabledExperiments = Prefs.DEFAULT.enabledExperiments.toMutableSet()
             val searchPtrKey = booleanPreferencesKey("search_pull_to_refresh")
