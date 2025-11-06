@@ -87,6 +87,9 @@ data object PrefNames {
     const val ENABLED_EXPERIMENTS = "enabled_experiments"
     const val HAS_VERIFIED_AGE = "has_verified_age"
     const val FLAG_SECURE_MODE = "flag_secure_mode"
+    const val UNFOLLOWED_TAGS = "unfollowed_tags"
+    const val RECOMMENDATIONS_TAG_COUNT = "recommendations_tag_count"
+    const val RECOMMENDATIONS_POOL_SIZE = "recommendations_pool_size"
 }
 
 
@@ -113,6 +116,9 @@ object PreferenceKeys {
     val ENABLED_EXPERIMENTS = stringSetPreferencesKey(PrefNames.ENABLED_EXPERIMENTS)
     val HAS_VERIFIED_AGE = booleanPreferencesKey(PrefNames.HAS_VERIFIED_AGE)
     val FLAG_SECURE_MODE = stringPreferencesKey(PrefNames.FLAG_SECURE_MODE)
+    val UNFOLLOWED_TAGS = stringSetPreferencesKey(PrefNames.UNFOLLOWED_TAGS)
+    val RECOMMENDATIONS_TAG_COUNT = intPreferencesKey(PrefNames.RECOMMENDATIONS_TAG_COUNT)
+    val RECOMMENDATIONS_POOL_SIZE = intPreferencesKey(PrefNames.RECOMMENDATIONS_POOL_SIZE)
 }
 
 
@@ -194,7 +200,10 @@ data class Prefs(
     val recommendAllRatings: Boolean,
     val enabledExperiments: Set<Experiment>,
     private val hasVerifiedAge: Boolean,
-    val flagSecureMode: FlagSecureMode
+    val flagSecureMode: FlagSecureMode,
+    val unfollowedTags: Set<String>,
+    val recommendationsTagCount: Int,
+    val recommendationsPoolSize: Int,
 ) {
     companion object {
         val DEFAULT = Prefs(
@@ -219,7 +228,10 @@ data class Prefs(
             recommendAllRatings = false,
             enabledExperiments = emptySet(),
             hasVerifiedAge = false,
-            flagSecureMode = FlagSecureMode.AUTO
+            flagSecureMode = FlagSecureMode.AUTO,
+            unfollowedTags = emptySet(),
+            recommendationsTagCount = 3,
+            recommendationsPoolSize = 5,
         )
     }
 
@@ -276,7 +288,10 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             PreferenceKeys.RECOMMEND_ALL_RATINGS to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.ENABLED_EXPERIMENTS to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.HAS_VERIFIED_AGE to PrefMeta(PrefCategory.SETTING, exportable = false),
-            PreferenceKeys.FLAG_SECURE_MODE to PrefMeta(PrefCategory.SETTING)
+            PreferenceKeys.FLAG_SECURE_MODE to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.UNFOLLOWED_TAGS to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.RECOMMENDATIONS_TAG_COUNT to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.RECOMMENDATIONS_POOL_SIZE to PrefMeta(PrefCategory.SETTING),
         )
     }
 
@@ -449,7 +464,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         /* Version 3.1.0 changes experiments to be a set rather than individual Pref items.
            Migrate the old "search pull to refresh" and "always animate scroll to top" settings
            to the new experiments set. */
-        if (lastUsedVersionCode < 310) {
+        if (lastUsedVersionCode < 309) {
             val data = dataStore.data.first()
             val enabledExperiments = Prefs.DEFAULT.enabledExperiments.toMutableSet()
             val searchPtrKey = booleanPreferencesKey("search_pull_to_refresh")
@@ -501,6 +516,11 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
 
 
     suspend fun updatePref(key: Preferences.Key<String>, to: String) {
+        updatePrefMain(key, to)
+    }
+
+
+    suspend fun updatePref(key: Preferences.Key<Int>, to: Int) {
         updatePrefMain(key, to)
     }
 
@@ -699,6 +719,10 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         }?.toSet() ?: Prefs.DEFAULT.enabledExperiments
         val hasVerifiedAge = preferences[PreferenceKeys.HAS_VERIFIED_AGE] ?: Prefs.DEFAULT.getInternalAgeVerificationStatus()
         val flagSecureMode = preferences[PreferenceKeys.FLAG_SECURE_MODE]?.let { FlagSecureMode.valueOf(it) } ?: Prefs.DEFAULT.flagSecureMode
+        val unfollowedTags = preferences[PreferenceKeys.UNFOLLOWED_TAGS] ?: Prefs.DEFAULT.unfollowedTags
+        val recommendationsTagCount = preferences[PreferenceKeys.RECOMMENDATIONS_TAG_COUNT] ?: Prefs.DEFAULT.recommendationsTagCount
+        val recommendationsPoolSize = preferences[PreferenceKeys.RECOMMENDATIONS_POOL_SIZE] ?: Prefs.DEFAULT.recommendationsPoolSize
+
 
         return Prefs(
             dataSaver,
@@ -723,6 +747,9 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             enabledExperiments,
             hasVerifiedAge,
             flagSecureMode,
+            unfollowedTags,
+            recommendationsTagCount,
+            recommendationsPoolSize,
         )
     }
 }

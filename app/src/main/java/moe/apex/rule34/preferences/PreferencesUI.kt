@@ -30,6 +30,7 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -37,6 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -55,9 +57,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import moe.apex.rule34.ui.theme.BreadboardTheme
+import moe.apex.rule34.ui.theme.prefTitle
 import moe.apex.rule34.ui.theme.searchField
 import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
@@ -68,6 +73,7 @@ import moe.apex.rule34.util.VerticalSpacer
 import moe.apex.rule34.util.largerShape
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
+import kotlin.math.roundToInt
 
 
 private enum class ImportExport {
@@ -175,6 +181,74 @@ fun <T: PrefEnum<*>> EnumPref(
     ) {
         showDialog = true
     }
+}
+
+
+@Composable
+fun SliderPref(
+    title: String? = null,
+    label: ((Float) -> String)? = { it.roundToInt().toString() },
+    initialValue: Float,
+    displayValueRange: ClosedFloatingPointRange<Float>,
+    allowedValueRange: ClosedFloatingPointRange<Float> = displayValueRange,
+    onValueChangeFinished: (Float) -> Unit,
+) {
+    var sliderValue by remember { mutableFloatStateOf(initialValue) }
+    Column(
+        modifier = Modifier.padding(SMALL_LARGE_SPACER.dp)
+    ) {
+        if (title != null) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.prefTitle
+            )
+            Spacer(Modifier.height(SMALL_SPACER.dp))
+        }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(SMALL_SPACER.dp)
+        ) {
+            Slider(
+                modifier = Modifier.weight(1f),
+                value = sliderValue,
+                valueRange = displayValueRange,
+                onValueChange = {
+                    sliderValue = it.coerceIn(allowedValueRange)
+                },
+                onValueChangeFinished = { onValueChangeFinished(sliderValue) }
+            )
+            if (label != null) {
+                Text(
+                    text = label(sliderValue),
+                    style = MaterialTheme.typography.titleLarge,
+                    textAlign = TextAlign.End,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Visible,
+                    modifier = Modifier.width(48.dp)
+                )
+            }
+        }
+    }
+}
+
+
+@Composable
+fun SliderPref(
+    title: String? = null,
+    label: ((Float) -> String)? = { it.roundToInt().toString() },
+    initialValue: Float,
+    valueRange: ClosedFloatingPointRange<Float>,
+    onValueChangeFinished: (Float) -> Unit,
+) {
+    SliderPref(
+        title = title,
+        label = label,
+        initialValue = initialValue,
+        displayValueRange = valueRange,
+        allowedValueRange = valueRange,
+        onValueChangeFinished = onValueChangeFinished
+    )
 }
 
 

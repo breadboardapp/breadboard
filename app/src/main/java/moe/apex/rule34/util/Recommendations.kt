@@ -25,41 +25,18 @@ class RecommendationsProvider(
     val auth: ImageBoardAuth?,
     val showAllRatings: Boolean,
     val filterRatingsLocally: Boolean,
-    private val initialBlockedTags: Set<String>
+    private val initialBlockedTags: Set<String>,
+    private val initialUnfollowedTags: Set<String>,
+    private val selectionSize: Int,
+    private val poolSize: Int
 ) : GridStateHolder by GridStateHolderDelegate() {
     companion object {
-        private const val POOL_SIZE = 5
-        private const val SELECTION_SIZE = 3
         private const val SELECTION_SIZE_DANBOORU = 2
-        private val ignoredTags = setOf( // Very general or meta tags, not useful for recommendations
-            "1girl",
-            "1boy",
-            "absurdres",
-            "artist_request",
-            "bad_id",
-            "bad_pixiv_id",
-            "commentary",
-            "commentary_request",
-            "english_commentary",
-            "highres",
-            "image_macro",
-            "lowres",
-            "non-web_source",
-            "official_art",
-            "original",
-            "promotional",
-            "sample",
-            "solo",
-            "tagme",
-            "translation_request",
-            "ultra_highres",
-            "wallpaper"
-        )
     }
 
     val recommendedImages = mutableStateListOf<Image>()
     var doneInitialLoad by mutableStateOf(false)
-    private val recommendedTags = mutableListOf<String>()
+    val recommendedTags = mutableListOf<String>()
     private var pageNumber by mutableIntStateOf(imageSource.imageBoard.firstPageIndex)
 
     private var isLoading by mutableStateOf(false)
@@ -68,6 +45,9 @@ class RecommendationsProvider(
     private val mutableBlockedTags = mutableStateSetOf<String>().apply { addAll(initialBlockedTags) }
     val blockedTags: Set<String>
         get() = mutableBlockedTags.toSet()
+    private val mutableUnfollowedTags = mutableStateSetOf<String>().apply { addAll(initialUnfollowedTags) }
+    val unfollowedTags: Set<String>
+        get() = mutableUnfollowedTags.toSet()
 
     fun replaceBlockedTags(tags: Set<String>) {
         Snapshot.withMutableSnapshot {
@@ -76,33 +56,39 @@ class RecommendationsProvider(
         }
     }
 
+    fun replaceUnfollowedTags(tags: Set<String>) {
+        Snapshot.withMutableSnapshot {
+            mutableUnfollowedTags.clear()
+            mutableUnfollowedTags.addAll(tags)
+        }
+    }
+
     fun prepareRecommendedTags() {
         recommendedTags.clear()
         shouldKeepSearching = true
         pageNumber = imageSource.imageBoard.firstPageIndex
 
-        val tagsFromFavourites = seedImages
-            .filter { it.imageSource == imageSource && it.metadata != null }
-            .filter { showAllRatings || it.metadata!!.rating == ImageRating.SAFE }
-            .flatMap { it.metadata!!.tags }
-            .filterNot { tag -> ignoredTags.contains(tag.lowercase()) }
-            .filterNot { tag -> blockedTags.contains(tag.lowercase()) }
+        val tagsFromFavourites = RecommendationsHelper.getAllTags(
+            images = seedImages.filter { it.imageSource == imageSource },
+            allowAllRatings = showAllRatings,
+            excludedTags = blockedTags.toList()
+        )
 
         if (tagsFromFavourites.isEmpty()) {
             return
         }
 
-        val tagCounts = tagsFromFavourites.groupingBy { it }.eachCount()
-        val topTags = tagCounts.entries
-            .sortedByDescending { it.value }
-            .take(POOL_SIZE)
-            .map { it.key }
+        val topTags = RecommendationsHelper.getMostCommonTags(
+            allTags = tagsFromFavourites,
+            limit = poolSize,
+            excludedTags = unfollowedTags.toList()
+        )
 
-        val selectionSize = if (imageSource == ImageSource.DANBOORU && auth == null) SELECTION_SIZE_DANBOORU else SELECTION_SIZE
-        val selected = if (topTags.size <= selectionSize) {
+        val finalSelectionSize = if (imageSource == ImageSource.DANBOORU && auth == null) SELECTION_SIZE_DANBOORU else selectionSize
+        val selected = if (topTags.size <= finalSelectionSize) {
             topTags
         } else {
-            topTags.shuffled().take(selectionSize)
+            topTags.shuffled().take(finalSelectionSize)
         }
         recommendedTags.addAll(selected)
     }

@@ -54,6 +54,7 @@ fun HomeScreen(
     val context = LocalContext.current
     val prefs = LocalPreferences.current
     val blockedTags by rememberUpdatedState(prefs.blockedTags)
+    val unfollowedTags by rememberUpdatedState(prefs.unfollowedTags)
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(topAppBarState)
     val shouldShowLargeImage = remember { mutableStateOf(false) }
@@ -69,13 +70,17 @@ fun HomeScreen(
             auth = prefs.authFor(prefs.imageSource, context),
             showAllRatings = prefs.recommendAllRatings,
             filterRatingsLocally = prefs.filterRatingsLocally,
-            initialBlockedTags = prefs.blockedTags
+            initialBlockedTags = prefs.blockedTags,
+            initialUnfollowedTags = prefs.unfollowedTags,
+            selectionSize = prefs.recommendationsTagCount,
+            poolSize = prefs.recommendationsPoolSize
         )
         viewModel.recommendationsProvider!!.prepareRecommendedTags()
     }
     val recommendationsProvider = viewModel.recommendationsProvider!!
     val pullToRefreshController = rememberPullToRefreshController(initialValue = false) {
         recommendationsProvider.replaceBlockedTags(blockedTags)
+        recommendationsProvider.replaceUnfollowedTags(unfollowedTags)
         recommendationsProvider.prepareRecommendedTags()
         recommendationsProvider.recommendImages()
         recommendationsProvider.resetGridStates()

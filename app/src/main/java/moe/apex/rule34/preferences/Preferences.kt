@@ -57,6 +57,7 @@ import moe.apex.rule34.image.ImageBoardRequirement
 import moe.apex.rule34.navigation.AboutSettings
 import moe.apex.rule34.navigation.BlockedTagsSettings
 import moe.apex.rule34.navigation.ExperimentalSettings
+import moe.apex.rule34.navigation.RecommendationsSettings
 import moe.apex.rule34.prefs
 import moe.apex.rule34.util.AgeVerification
 import moe.apex.rule34.util.ChevronRight
@@ -373,6 +374,16 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                         }
                     }
                     item {
+                        TitleSummary(
+                            modifier = Modifier.fillMaxWidth(),
+                            title = "Manage recommendations",
+                            summary = "Fine-tune your recommendations by customising which tags can be used to recommend new content.",
+                            trailingIcon = { ChevronRight() }
+                        ) {
+                            navController.navigate(RecommendationsSettings)
+                        }
+                    }
+                    item {
                         SwitchPref(
                             checked = currentSettings.excludeAi,
                             title = "Hide AI-generated images",
@@ -386,25 +397,6 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                                 )
                             }
                             viewModel.recommendationsProvider = null
-                        }
-                    }
-                    item {
-                        SwitchPref(
-                            checked = currentSettings.recommendAllRatings,
-                            title = "Recommend all ratings",
-                            summary = "On the browse page, show images with all ratings. If disabled, " +
-                                      "only show images rated Safe."
-                        ) {
-                            if (it && !AgeVerification.hasVerifiedAge(currentSettings)) {
-                                showAgeVerificationDialog = true
-                                return@SwitchPref
-                            }
-                            scope.launch {
-                                preferencesRepository.updatePref(
-                                    PreferenceKeys.RECOMMEND_ALL_RATINGS,
-                                    it
-                                )
-                            }
                         }
                     }
                     item {
