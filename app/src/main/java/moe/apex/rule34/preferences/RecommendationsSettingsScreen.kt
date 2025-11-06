@@ -361,7 +361,7 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
                             "favourite images. Breadboard will use these tags to recommend " +
                             "new content.\n\n" +
                             "Ignoring a followed tag means that Breadboard will not use it to " +
-                            "recommend new content. Ignored tags are not blocked and you may" +
+                            "recommend new content. Ignored tags are not blocked and you may " +
                             "still see content with them."
                 )
             }
