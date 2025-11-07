@@ -95,6 +95,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -383,7 +384,11 @@ fun OffsetBasedLargeImageView(
         )
     }
 
-    if (animatableOffset.value != windowHeightPx) {
+    val shouldShowImageView by remember {
+        derivedStateOf { animatableOffset.value < windowHeightPx }
+    }
+
+    if (shouldShowImageView) {
         key(recompositionTrigger) {
             Box(
                 modifier = Modifier
