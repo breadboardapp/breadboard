@@ -50,7 +50,6 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.LocalPreferences
-import moe.apex.rule34.util.FullscreenLoadingSpinner
 import moe.apex.rule34.util.NavBarHeightVerticalSpacer
 import moe.apex.rule34.util.PullToRefreshController
 import moe.apex.rule34.util.SMALL_SPACER
@@ -306,7 +305,11 @@ private fun ImagePreview(
             .build(),
         contentDescription = "Image",
         contentScale = ContentScale.Crop,
-        loading = { FullscreenLoadingSpinner() },
+        loading = { Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surfaceContainer)
+        ) },
         modifier = modifier.clickable { onImageClick(index, image) }
     )
 }
