@@ -88,7 +88,7 @@ fun BlockedTagsScreen(navController: NavHostController, viewModel: BreadboardVie
             confirmButton = {
                 Button(
                     onClick = {
-                        val newBlocks = content.trim().split(" ")
+                        val newBlocks = content.trim().split(" ").filter { it.isNotBlank() }
                         scope.launch {
                             for (tag in newBlocks) {
                                 userPreferencesRepository.addToSet(
