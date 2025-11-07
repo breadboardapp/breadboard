@@ -21,29 +21,21 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
-import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -92,7 +84,6 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
     val userPreferencesRepository = LocalContext.current.prefs
     val prefs = LocalPreferences.current
     val unfollowedTags = prefs.unfollowedTags.reversed()
-    var showAddDialog by rememberSaveable { mutableStateOf(false) }
 
     val favouriteImagesPerSource = remember {
         prefs.favouriteImages.groupBy { it.imageSource }
@@ -128,53 +119,6 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
         showToast(context, "Unignored $tagName")
     }
 
-    if (showAddDialog) {
-        var content by rememberSaveable { mutableStateOf("") }
-        AlertDialog(
-            title = { Text("Unfollow tags") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(SMALL_SPACER.dp)) {
-                    PreferenceTextBox(
-                        value = content,
-                        label = "Tags",
-                        autoCorrectEnabled = true
-                    ) {
-                        content = it.lowercase()
-                    }
-                    Summary(
-                        modifier = Modifier.padding(start = 4.dp),
-                        text = "Separate multiple tags with a space."
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val newUnfollows = content.trim().split(" ")
-                        scope.launch {
-                            for (tag in newUnfollows) {
-                                userPreferencesRepository.addToSet(
-                                    PreferenceKeys.UNFOLLOWED_TAGS,
-                                    tag
-                                )
-                            }
-                            resetRecommendations()
-                        }
-                        showAddDialog = false
-                    }
-                ) {
-                    Text("Add")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddDialog = false }) {
-                    Text("Cancel")
-                }
-            },
-            onDismissRequest = { showAddDialog = false },
-        )
-    }
-
     MainScreenScaffold(
         topAppBar = {
             LargeTitleBar(
@@ -182,11 +126,6 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
                 scrollBehavior = scrollBehavior,
                 navController = navController
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { showAddDialog = true }) {
-                Icon(Icons.Rounded.Add, "Unfollow a new tag")
-            }
         }
     ) {
         val recentRecommendations = rememberSaveable { viewModel.recommendationsProvider?.recommendedTags ?: emptyList() }
@@ -195,7 +134,7 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
                 .padding(it)
                 .fillMaxSize()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
-            contentPadding = PaddingValues(top = SMALL_LARGE_SPACER.dp, bottom = 88.dp), // FAB height + 16dp vertical padding
+            contentPadding = PaddingValues(vertical = SMALL_LARGE_SPACER.dp)
         ) {
             item {
                 ExpressiveGroup("Recently recommended tags") {
