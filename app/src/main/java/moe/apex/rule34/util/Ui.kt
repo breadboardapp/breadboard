@@ -98,9 +98,11 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -283,14 +285,24 @@ fun OffsetBasedLargeImageView(
        and taps image 1 again before the closing animation is finished. Because initialPage didn't
        change, the user is still seeing image 2, which is bad.
 
-       This is a really poor solution to that. We will trigger a recomposition manually using
-       this flag and a LaunchedEffect that flips the flag when the visibility state becomes true.
+       This is a really poor solution to that. We will trigger a recomposition manually by
+       incrementing this value and use a LaunchedEffect that increments the value when the
+       visibility state becomes true.
 
        Why not just use visibilityState directly? Because we don't want to recompose the viewer when
-       it becomes false (i.e. the user is dismissing the viewer).
+       it becomes false (i.e. the user is dismissing the viewer) because if the user has swiped to
+       change page, recreating it with the original initialPage will cause that image to reappear
+       as it disappears.
 
-       TODO: Revisit this. */
-    var recompositionTrigger by remember { mutableStateOf(false) }
+       Why not use a boolean value that just flips to trigger a recomposition? Because it causes
+       other issues that are difficult to describe but easy to notice when using the app.
+
+       There is probably a really simple (and, crucially, better) solution to this
+       and I'm too stupid to see it. Quite frankly I'm sick of debugging and this works
+       so I'm keeping it.
+
+       PRs welcome (please). */
+    var stupidFuckingRecompositionCounter by rememberSaveable { mutableIntStateOf(0) }
 
     val draggableState = rememberDraggableState { delta ->
         scope.launch {
@@ -300,7 +312,7 @@ fun OffsetBasedLargeImageView(
     }
 
     fun calculateScaleFactor(offsetValue: Float): Float {
-        return (1 - ((1.5f * offsetValue) / windowHeightPx))
+        return 1 - ((offsetValue * 1.2f) / windowHeightPx)
     }
 
     fun show(velocity: Float = animatableOffset.velocity) {
@@ -346,24 +358,25 @@ fun OffsetBasedLargeImageView(
                 snapTo(offsetPx)
             }
             hide()
-        } catch (_: Exception) { }
+        } catch (_: Exception) {
+        }
     }
 
     LaunchedEffect(visibilityState.value) {
         bottomBarVisibleState?.value = !visibilityState.value
         if (visibilityState.value) {
-            recompositionTrigger = !recompositionTrigger
+            stupidFuckingRecompositionCounter ++
             show()
         }
         // No hide() call here because it's managed by the back handler and draggable modifier.
     }
 
-    if (isImmersiveModeEnabled) {
-        AnimatedVisibility(
-            visible = visibilityState.value,
-            enter = fadeIn(),
-            exit = fadeOut()
-        ) {
+    val shouldMainContentBeVisible by remember {
+        derivedStateOf { animatableOffset.value < windowHeightPx }
+    }
+
+    if (shouldMainContentBeVisible) {
+        if (isImmersiveModeEnabled) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -372,24 +385,18 @@ fun OffsetBasedLargeImageView(
                     }
                     .background(color = MaterialTheme.colorScheme.background.copy(alpha = 0.5f))
             )
+        } else {
+            /* This is so the user doesn't see the grid/background underneath the
+               LargeImage carousel if they fling it up quickly (due to the spring animation). */
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .offset { IntOffset(0, animatableOffset.value.roundToInt().coerceAtLeast(0)) }
+                    .background(MaterialTheme.colorScheme.background)
+            )
         }
-    } else {
-        /* This is so the user doesn't see the grid/background underneath the LargeImage carousel
-           if they fling it up quickly (due to the spring animation). */
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .offset { IntOffset(0, animatableOffset.value.roundToInt().coerceAtLeast(0)) }
-                .background(MaterialTheme.colorScheme.background)
-        )
-    }
 
-    val shouldShowImageView by remember {
-        derivedStateOf { animatableOffset.value < windowHeightPx }
-    }
-
-    if (shouldShowImageView) {
-        key(recompositionTrigger) {
+        key(stupidFuckingRecompositionCounter) {
             Box(
                 modifier = Modifier
                     .offset { IntOffset(0, animatableOffset.value.roundToInt()) }
