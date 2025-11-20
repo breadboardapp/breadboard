@@ -232,7 +232,6 @@ private fun ImagesPager(
 }
 
 
-// New helper composable for the bottom floating toolbar (keeps behavior identical)
 @Composable
 private fun LargeImageToolbar(
     modifier: Modifier = Modifier,
