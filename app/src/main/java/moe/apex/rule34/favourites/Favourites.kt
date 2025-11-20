@@ -15,6 +15,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -119,8 +120,10 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
             uniformGridState = viewModel.uniformGridState,
             images = images,
             onImageClick = { index, _ ->
-                initialPage = index
-                isImageCarouselVisible.value = true
+                Snapshot.withMutableSnapshot {
+                    initialPage = index
+                    isImageCarouselVisible.value = true
+                }
             },
             contentPadding = PaddingValues(top = SMALL_LARGE_SPACER.dp, start = SMALL_LARGE_SPACER.dp, end = SMALL_LARGE_SPACER.dp, bottom = bottomAppBarAndNavBarHeight),
             filterComposable = {

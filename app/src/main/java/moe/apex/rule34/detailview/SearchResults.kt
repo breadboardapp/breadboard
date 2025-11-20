@@ -181,8 +181,10 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
             uniformGridState = viewModel.uniformGridState,
             images = imagesToDisplay,
             onImageClick = { index, _ ->
-                initialPage = index
-                isImageCarouselVisible.value = true
+                Snapshot.withMutableSnapshot {
+                    initialPage = index
+                    isImageCarouselVisible.value = true
+                }
             },
             contentPadding = PaddingValues(top = SMALL_LARGE_SPACER.dp, start = SMALL_LARGE_SPACER.dp, end = SMALL_LARGE_SPACER.dp),
             filterComposable = if (filterLocally) { {

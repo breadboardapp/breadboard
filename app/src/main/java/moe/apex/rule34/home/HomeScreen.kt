@@ -22,6 +22,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -133,8 +134,10 @@ fun HomeScreen(
                 }
             },
             onImageClick = { index, _ ->
-                initialPage = index
-                shouldShowLargeImage.value = true
+                Snapshot.withMutableSnapshot {
+                    initialPage = index
+                    shouldShowLargeImage.value = true
+                }
             },
             contentPadding = PaddingValues(
                 start = SMALL_LARGE_SPACER.dp,

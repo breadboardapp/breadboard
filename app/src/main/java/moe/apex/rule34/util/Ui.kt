@@ -371,8 +371,11 @@ fun OffsetBasedLargeImageView(
         // No hide() call here because it's managed by the back handler and draggable modifier.
     }
 
+    /* We should treat this as the proper source of truth as to whether or not the content is
+       currently visible.
+       I know this whole composable is messy now but hopefully this helps somewhat. */
     val shouldMainContentBeVisible by remember {
-        derivedStateOf { animatableOffset.value < windowHeightPx }
+        derivedStateOf { visibilityState.value || animatableOffset.value < windowHeightPx }
     }
 
     if (shouldMainContentBeVisible) {
@@ -396,25 +399,25 @@ fun OffsetBasedLargeImageView(
             )
         }
 
-        key(stupidFuckingRecompositionCounter) {
-            Box(
-                modifier = Modifier
-                    .offset { IntOffset(0, animatableOffset.value.roundToInt()) }
-                    .draggable(
-                        enabled = canDragDown && visibilityState.value,
-                        orientation = Orientation.Vertical,
-                        state = draggableState,
-                        onDragStopped = { velocity ->
-                            scope.launch {
-                                if ((velocity > dismissVelocityThreshold || animatableOffset.value > dismissDistanceThreshold) && velocity > 0) {
-                                    hide(velocity)
-                                } else {
-                                    show(velocity)
-                                }
+        Box(
+            modifier = Modifier
+                .offset { IntOffset(0, animatableOffset.value.roundToInt()) }
+                .draggable(
+                    enabled = canDragDown && visibilityState.value,
+                    orientation = Orientation.Vertical,
+                    state = draggableState,
+                    onDragStopped = { velocity ->
+                        scope.launch {
+                            if ((velocity > dismissVelocityThreshold || animatableOffset.value > dismissDistanceThreshold) && velocity > 0) {
+                                hide(velocity)
+                            } else {
+                                show(velocity)
                             }
                         }
-                    )
-            ) {
+                    }
+                )
+        ) {
+            key(stupidFuckingRecompositionCounter) {
                 LargeImageView(
                     navController = navController,
                     initialPage = initialPage,
