@@ -20,7 +20,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -347,8 +346,15 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                     item {
                         SwitchPref(
                             checked = currentSettings.useFixedLinks,
-                            title = "Share fixed links",
-                            summary = "When sharing an image, use a 'fixed' link where possible."
+                            title = "Share embeddable links",
+                            summary = "When sharing an image, use a link that embeds better on external platforms when possible.",
+                            infoText = "When embeddable links are enabled, sharing an image may " +
+                                       "use an alternative link depending on the source.\n\n" +
+                                       "Bilibili links are transformed into vxbilibili.com\n" +
+                                       "Bluesky links are transformed into fxbsky.app\n" +
+                                       "Pixiv links are transformed into phixiv.net\n" +
+                                       "Twitter links are transformed into fxtwitter.com\n" +
+                                       "Weibo links are transformed into fxweibo.com."
                         ) {
                             scope.launch {
                                 preferencesRepository.updatePref(
@@ -404,7 +410,15 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                             checked = currentSettings.filterRatingsLocally,
                             title = "Filter ratings locally",
                             summary = "Rather than appending the selected ratings to the search query, " +
-                                    "filter the results by rating after searching."
+                                      "filter the results by rating after searching.",
+                            infoText = "Danbooru limits searches to 2 tags " +
+                                       "(which includes ratings) without an API key.\n\n" +
+                                       "Enabling this option will allow you to filter by rating " +
+                                       "on all sources without an API key, and also let you filter " +
+                                       "ratings mid-search, but may cause less results to be shown " +
+                                       "at once, resulting in slightly higher data usage.\n\n" +
+                                       "Yande.re always requires this option.\n\n" +
+                                       "If you're unsure, keep this option enabled."
                         ) {
                             scope.launch {
                                 preferencesRepository.updatePref(
@@ -489,6 +503,10 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                             title = "Data saver",
                             summary = currentSettings.dataSaver.label,
                             enumItems = DataSaver.entries,
+                            infoText = "When data saver is enabled, images will load in a " +
+                                       "lower resolution by default.\n\n" +
+                                       "Downloads will always be in the maximum resolution " +
+                                       "regardless of this setting.",
                             selectedItem = currentSettings.dataSaver,
                             onSelection = {
                                 scope.launch {
@@ -535,47 +553,6 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                         }
                     }
                 }
-            }
-
-            item {
-                HorizontalDivider(Modifier.padding(vertical = LARGE_SPACER.dp))
-            }
-
-            item {
-                InfoSection(
-                    text = "When data saver is enabled, images will load in a lower resolution " +
-                            "by default. Downloads will always be in the maximum resolution."
-                )
-            }
-
-            if (currentSettings.imageSource.imageBoard.localFilterType != ImageBoardRequirement.NOT_NEEDED) {
-                item {
-                    InfoSection(
-                        text = "Danbooru limits searches to 2 tags (which includes ratings) " +
-                                "without an API key. If you are using Danbooru without an API key, " +
-                                "you should enable 'Filter ratings locally' to filter by rating. " +
-                                "Yande.re always requires this option."
-                    )
-                }
-            }
-
-            item {
-                InfoSection(
-                    text = "Filtering ratings locally has the benefit of being able to " +
-                            "adjust the filter after searching and allows filtering without " +
-                            "an API key on Danbooru, but may cause less results to be shown at " +
-                            "once and result in higher data usage for the same number of " +
-                            "visible images."
-                )
-            }
-
-            item {
-                InfoSection(
-                    text = "When fixed links are enabled, sharing an image may use an " +
-                            "alternative link depending on the source. Bluesky links are " +
-                            "transformed into fxbsky.app, Pixiv links are transformed into " +
-                            "phixiv.net, and Twitter links are transformed into fxtwitter.com."
-                )
             }
         }
     }

@@ -564,7 +564,7 @@ fun Summary(
         text = text,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         style = MaterialTheme.typography.bodySmall,
-        modifier = modifier
+        modifier = modifier.fillMaxWidth()
     )
 }
 

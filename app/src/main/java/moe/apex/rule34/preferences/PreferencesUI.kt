@@ -22,10 +22,13 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.rounded.DragHandle
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -36,11 +39,13 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
@@ -64,13 +69,17 @@ import androidx.compose.ui.unit.sp
 import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.ui.theme.prefTitle
 import moe.apex.rule34.ui.theme.searchField
+import moe.apex.rule34.util.ExpressiveContainer
+import moe.apex.rule34.util.ListItemPosition
 import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
 import moe.apex.rule34.util.SMALL_SPACER
 import moe.apex.rule34.util.Summary
 import moe.apex.rule34.util.TitleSummary
+import moe.apex.rule34.util.TitledModalBottomSheet
 import moe.apex.rule34.util.VerticalSpacer
 import moe.apex.rule34.util.largerShape
+import moe.apex.rule34.util.navBarHeight
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import kotlin.math.roundToInt
@@ -82,12 +91,46 @@ private enum class ImportExport {
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun InfoButton(
+    title: String,
+    text: String,
+) {
+    var showInfoSheet by rememberSaveable { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    if (showInfoSheet) {
+        TitledModalBottomSheet(
+            onDismissRequest = { showInfoSheet = false },
+            sheetState = sheetState,
+            title = title
+        ) {
+            ExpressiveContainer(
+                modifier = Modifier.padding(bottom = navBarHeight * 2),
+                position = ListItemPosition.SINGLE_ELEMENT) {
+                Summary(Modifier.padding(SMALL_LARGE_SPACER.dp), text)
+            }
+        }
+    }
+    IconButton(
+        onClick = { showInfoSheet = true },
+        colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Info,
+            contentDescription = "What's this?"
+        )
+    }
+}
+
+
 @Composable
 fun SwitchPref(
     checked: Boolean,
     title: String,
     summary: String? = null,
     enabled: Boolean = true,
+    infoText: String? = null,
     onToggle: (Boolean) -> Unit
 ) {
     Row(
@@ -97,8 +140,15 @@ fun SwitchPref(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        TitleSummary(Modifier.weight(1f), title, summary, enabled)
-        Spacer(Modifier.width(SMALL_LARGE_SPACER.dp))
+        TitleSummary(
+            modifier = Modifier.weight(1f),
+            title = title,
+            summary = summary,
+            enabled = enabled,
+            trailingIcon = infoText?.let {
+                { InfoButton(title, it) }
+            }
+        )
         Switch(
             enabled = enabled,
             checked = checked,
@@ -133,6 +183,7 @@ fun SwitchPref(
 fun <T: PrefEnum<*>> EnumPref(
     title: String,
     summary: String?,
+    infoText: String? = null,
     enumItems: Collection<T>,
     selectedItem: T,
     onSelection: (T) -> Unit
@@ -177,7 +228,10 @@ fun <T: PrefEnum<*>> EnumPref(
     TitleSummary(
         modifier = Modifier.fillMaxWidth(),
         title = title,
-        summary = summary
+        summary = summary,
+        trailingIcon = infoText?.let {
+            { InfoButton(title, it) }
+        }
     ) {
         showDialog = true
     }
