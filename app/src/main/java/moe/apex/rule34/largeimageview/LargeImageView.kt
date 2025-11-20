@@ -192,7 +192,7 @@ private fun ImagesPager(
 ) {
     val context = LocalContext.current
     val prefs = LocalPreferences.current
-    val isUsingWifi = isUsingWiFi(context)
+    val isUsingWifi = remember { isUsingWiFi(context) }
     val dataSaver = prefs.dataSaver
 
     HorizontalPager(
