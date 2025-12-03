@@ -128,6 +128,7 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
             )
         }
     ) {
+        val hasProvider = rememberSaveable { viewModel.recommendationsProvider != null }
         val recentRecommendations = rememberSaveable { viewModel.recommendationsProvider?.recommendedTags ?: emptyList() }
         LazyColumn(
             modifier = Modifier
@@ -139,7 +140,11 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
             item {
                 ExpressiveGroup("Recently recommended tags") {
                     item {
-                        if (recentRecommendations.isNotEmpty()) {
+                        if (hasProvider) {
+                            if (recentRecommendations.isEmpty()) {
+                                TitleSummary(title = "Add images from ${prefs.imageSource.label} to your favourites to start getting personalised recommendations.")
+                                return@item
+                            }
                             FlowRow(
                                 horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp),
                                 modifier = Modifier
@@ -187,7 +192,7 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
             }
 
             item {
-                ExpressiveGroup("Followed tags") {
+                ExpressiveGroup("Frequent tags") {
                     item {
                         HorizontalPager(
                             modifier = Modifier.animateContentSize(bouncyAnimationSpec()),
@@ -198,7 +203,7 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
                             val tags = topTags[ImageSource.entries[page]] ?: throw IllegalStateException("Recommendations settings pager out of bounds.")
 
                             if (tags.isEmpty()) {
-                                TitleSummary(title = "No followed tags" )
+                                TitleSummary(title = "No frequent tags" )
                                 return@HorizontalPager
                             }
 
@@ -296,10 +301,10 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
             item {
                 Summary(
                     modifier = Modifier.padding(horizontal = MEDIUM_LARGE_SPACER.dp),
-                    text = "Your followed tags consist of the most common tags from your " +
+                    text = "Your frequent tags consist of the most common tags from your " +
                             "favourite images. Breadboard will use these tags to recommend " +
                             "new content.\n\n" +
-                            "Ignoring a followed tag means that Breadboard will not use it to " +
+                            "Ignoring a frequent tag means that Breadboard will not use it to " +
                             "recommend new content. Ignored tags are not blocked and you may " +
                             "still see content with them."
                 )
@@ -329,7 +334,7 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
                     }
                     item {
                         SliderPref(
-                            title = "Maximum followed tags",
+                            title = "Maximum frequent tags",
                             label = { it.roundToInt().toString() },
                             initialValue = remember { prefs.recommendationsPoolSize.toFloat() },
                             displayValueRange = 0f..20f,
@@ -367,7 +372,7 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
                                         end = MEDIUM_LARGE_SPACER.dp,
                                         bottom = MEDIUM_LARGE_SPACER.dp
                                     ),
-                                    text = "Your search size will be capped at the number of followed tags."
+                                    text = "Your search size will be capped at the number of frequent tags."
                                 )
                             }
                         }
