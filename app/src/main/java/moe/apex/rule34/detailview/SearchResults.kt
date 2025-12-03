@@ -1,8 +1,13 @@
 package moe.apex.rule34.detailview
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Text
@@ -20,6 +25,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -27,19 +33,25 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
+import moe.apex.rule34.image.ImageBoardRequirement
 import moe.apex.rule34.image.ImageRating
+import moe.apex.rule34.navigation.Settings
 import moe.apex.rule34.preferences.Experiment
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.PreferenceKeys
 import moe.apex.rule34.prefs
 import moe.apex.rule34.util.AgeVerification
-import moe.apex.rule34.util.OffsetBasedLargeImageView
+import moe.apex.rule34.util.ExpressiveContainer
 import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.rule34.util.LargeTitleBar
+import moe.apex.rule34.util.ListItemPosition
+import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.MainScreenScaffold
+import moe.apex.rule34.util.OffsetBasedLargeImageView
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
 import moe.apex.rule34.util.ScrollToTopArrow
+import moe.apex.rule34.util.TitleSummary
 import moe.apex.rule34.util.availableRatingsForCurrentSource
 import moe.apex.rule34.util.filterChipSolidColor
 import moe.apex.rule34.util.rememberPullToRefreshController
@@ -171,6 +183,39 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
     ) { padding ->
         if (!viewModel.isReady) {
             return@MainScreenScaffold
+        }
+
+        val needsAuth = remember {
+            prefs.imageSource.imageBoard.apiKeyRequirement == ImageBoardRequirement.REQUIRED &&
+            prefs.authFor(prefs.imageSource, context) == null
+        }
+
+        if (needsAuth) {
+            return@MainScreenScaffold Column(
+                modifier = Modifier
+                    .padding(padding)
+                    .padding(top = SMALL_LARGE_SPACER.dp)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(MEDIUM_SPACER.dp)
+            ) {
+                ExpressiveContainer(position = ListItemPosition.SINGLE_ELEMENT) {
+                    TitleSummary(
+                        title = "API Key required",
+                        summary = "${prefs.imageSource.label} requires an API key to search.\n" +
+                                  "Add an API key in Settings.\n" +
+                                  "Alternatively, use a different image source.",
+                    )
+                }
+                Button(
+                    onClick = {
+                        navController.navigate(Settings)
+                    },
+                    colors = ButtonDefaults.buttonColors()
+                ) {
+                    Text("Go to Settings")
+                }
+            }
         }
 
         ImageGrid(

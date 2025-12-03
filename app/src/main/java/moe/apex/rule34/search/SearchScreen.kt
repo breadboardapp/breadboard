@@ -381,10 +381,6 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
             }
         }
 
-        if (prefs.imageSource.imageBoard.apiKeyRequirement == ImageBoardRequirement.REQUIRED) {
-            return showToast(context, "Add an API key in Settings to use ${prefs.imageSource.label}.")
-        }
-
         // Danbooru has the 2-tag limit and filtering by multiple negated tags simply does not work on Yande.re
         if (!danbooruLimitCheck())
             return
