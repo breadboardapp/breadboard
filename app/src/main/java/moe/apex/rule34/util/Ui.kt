@@ -191,7 +191,10 @@ private fun NavigationIcon(navController: NavController? = null) {
     if (navController != null) {
         FilledIconButton(
             modifier = Modifier.padding(horizontal = SMALL_SPACER.dp),
-            colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+            colors = IconButtonDefaults.filledIconButtonColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            ),
             onClick = {
                 if (navController.previousBackStackEntry != null) {
                     navController.navigateUp()
@@ -241,6 +244,9 @@ fun SmallTitleBar(
         title = { Text(title) },
         scrollBehavior = scrollBehavior,
         actions = additionalActions,
+        colors = TopAppBarDefaults.topAppBarColors(
+            scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ),
         navigationIcon = { NavigationIcon(navController) }
     )
 }

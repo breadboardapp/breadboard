@@ -71,10 +71,13 @@ fun BreadboardTheme(
     val extraColours = ExtraColours(outlineStrong = colorScheme.outline.copy())
     colorScheme = colorScheme.copy(
         outline = colorScheme.outlineVariant,
-        background = colorScheme.surfaceContainerLow,
-        surface = colorScheme.surfaceContainerLow,
-        surfaceContainerLowest = colorScheme.surfaceContainerLow,
-        surfaceContainerLow = colorScheme.surfaceContainer,
+        background = if (darkTheme) colorScheme.surfaceContainerLow else colorScheme.surfaceContainer,
+        surface = if (darkTheme) colorScheme.surfaceContainerLow else colorScheme.surfaceContainer,
+        surfaceContainerLowest = if (darkTheme) colorScheme.surfaceContainerLow else colorScheme.surfaceContainerHigh,
+        surfaceContainerLow = if (darkTheme) colorScheme.surfaceContainer else colorScheme.surfaceContainerLow,
+        surfaceContainer = if (darkTheme) colorScheme.surfaceContainer else colorScheme.surfaceContainerLow,
+        surfaceContainerHigh = if (darkTheme) colorScheme.surfaceContainerHigh else colorScheme.surfaceBright,
+        surfaceContainerHighest = if (darkTheme) colorScheme.surfaceContainerHighest else colorScheme.surfaceContainerHigh
     )
 
     CompositionLocalProvider(LocalExtraColours provides extraColours) {

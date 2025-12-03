@@ -506,8 +506,8 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                     colors = TextFieldDefaults.colors().copy(
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceBright,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceBright
                     ),
                     prefix = { Spacer(Modifier.width(4.dp)) },
                     trailingIcon = {
