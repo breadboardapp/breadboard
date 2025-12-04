@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
+import moe.apex.rule34.image.ImageBoardAuth
 import moe.apex.rule34.image.ImageBoardRequirement
 import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.navigation.Settings
@@ -80,11 +81,11 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
 
     val actuallyBlockedTags = rememberSaveable { mutableStateSetOf<String>() }
 
-    fun setUpViewModel() {
+    fun setUpViewModel(auth: ImageBoardAuth? = null) {
         if (!viewModel.isReady) {
             viewModel.setup(
                 imageSource = source,
-                auth = prefs.authFor(source, context),
+                auth = auth ?: prefs.authFor(source, context),
                 tags = tagList
             )
         }
@@ -99,7 +100,11 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
     }
 
     LaunchedEffect(Unit) {
-        setUpViewModel()
+        val auth = prefs.authFor(source, context)
+        if (auth != viewModel.auth) {
+            viewModel.prepareReset()
+        }
+        setUpViewModel(auth)
         // Don't automatically update on config change like screen rotation if the list is already populated
         if (actuallyBlockedTags.isEmpty()) {
             updateBlockedTags()
@@ -187,8 +192,8 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
         }
 
         val needsAuth = remember {
-            prefs.imageSource.imageBoard.apiKeyRequirement == ImageBoardRequirement.REQUIRED &&
-            prefs.authFor(prefs.imageSource, context) == null
+            source.imageBoard.apiKeyRequirement == ImageBoardRequirement.REQUIRED &&
+            prefs.authFor(source, context) == null
         }
 
         if (needsAuth) {
@@ -203,7 +208,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
                 ExpressiveContainer(position = ListItemPosition.SINGLE_ELEMENT) {
                     TitleSummary(
                         title = "API Key required",
-                        summary = "${prefs.imageSource.label} requires an API key to search.\n" +
+                        summary = "${source.label} requires an API key to search.\n" +
                                   "Add an API key in Settings.\n" +
                                   "Alternatively, use a different image source.",
                     )

@@ -18,10 +18,10 @@ import moe.apex.rule34.preferences.ImageSource
 class SearchResultsViewModel : ViewModel(), GridStateHolder by GridStateHolderDelegate() {
     private var isReadyInternal by mutableStateOf(false)
     var doneInitialLoad by mutableStateOf(false)
+    var auth: ImageBoardAuth? = null
     val images = mutableStateListOf<Image>()
     private var shouldKeepSearching by mutableStateOf(true)
     private var pageNumber by mutableIntStateOf(0) // We'll set this to the proper value later
-    private var auth: ImageBoardAuth? = null
     private lateinit var imageSource: ImageSource
     private lateinit var query: String
     var isReady: Boolean = isReadyInternal
