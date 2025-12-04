@@ -295,8 +295,8 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
                     modifier = Modifier.padding(horizontal = MEDIUM_LARGE_SPACER.dp),
                     text = "Your frequent tags consist of the most common tags from your " +
                             "favourite images. Breadboard will use these tags to recommend " +
-                            "new content. You can tap a tag to ignore it, preventing it from " +
-                            "being used to recommend new content."
+                            "new content. You can tap a tag above to ignore it, preventing it " +
+                            "from being used to recommend new content."
                 )
             }
 
