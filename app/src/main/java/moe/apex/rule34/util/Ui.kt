@@ -156,6 +156,8 @@ const val SMALL_LARGE_SPACER = 16
 const val MEDIUM_SPACER = 12
 /** 8dp spacing */
 const val SMALL_SPACER = 8
+/** 4dp spacing */
+const val TINY_SPACER = 4
 private const val VERTICAL_DIVIDER_SPACING = 32
 const val BOTTOM_APP_BAR_HEIGHT = 80
 const val CHIP_SPACING = 12
@@ -1014,7 +1016,7 @@ fun HorizontalFloatingToolbar(
                 modifier = Modifier
                     .padding(horizontal = SMALL_SPACER.dp)
                     .height(48.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(TINY_SPACER.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 actions()

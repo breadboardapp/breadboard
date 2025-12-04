@@ -51,6 +51,7 @@ import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.OffsetBasedLargeImageView
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
 import moe.apex.rule34.util.ScrollToTopArrow
+import moe.apex.rule34.util.TINY_SPACER
 import moe.apex.rule34.util.TitleSummary
 import moe.apex.rule34.util.availableRatingsForCurrentSource
 import moe.apex.rule34.util.filterChipSolidColor
@@ -234,7 +235,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
             contentPadding = PaddingValues(top = SMALL_LARGE_SPACER.dp, start = SMALL_LARGE_SPACER.dp, end = SMALL_LARGE_SPACER.dp),
             filterComposable = if (filterLocally) { {
                 HorizontallyScrollingChipsWithLabels(
-                    modifier = Modifier.padding(bottom = 4.dp),
+                    modifier = Modifier.padding(bottom = TINY_SPACER.dp),
                     labels = listOf("Ratings"),
                     content = listOf(ratingRows)
                 )

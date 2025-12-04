@@ -35,6 +35,7 @@ import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
 import moe.apex.rule34.util.ScrollToTopArrow
+import moe.apex.rule34.util.TINY_SPACER
 import moe.apex.rule34.util.bottomAppBarAndNavBarHeight
 import moe.apex.rule34.util.filterChipSolidColor
 import moe.apex.rule34.util.onScroll
@@ -128,7 +129,7 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
             contentPadding = PaddingValues(top = SMALL_LARGE_SPACER.dp, start = SMALL_LARGE_SPACER.dp, end = SMALL_LARGE_SPACER.dp, bottom = bottomAppBarAndNavBarHeight),
             filterComposable = {
                 HorizontallyScrollingChipsWithLabels(
-                    modifier = Modifier.padding(bottom = 4.dp),
+                    modifier = Modifier.padding(bottom = TINY_SPACER.dp),
                     labels = listOf("Sources", "Ratings"),
                     content = chips
                 )

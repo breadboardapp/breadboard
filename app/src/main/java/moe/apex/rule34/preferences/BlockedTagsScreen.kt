@@ -52,6 +52,7 @@ import moe.apex.rule34.util.SMALL_SPACER
 import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
 import moe.apex.rule34.util.Summary
+import moe.apex.rule34.util.TINY_SPACER
 import moe.apex.rule34.viewmodel.BreadboardViewModel
 
 
@@ -80,7 +81,7 @@ fun BlockedTagsScreen(navController: NavHostController, viewModel: BreadboardVie
                         content = it.lowercase()
                     }
                     Summary(
-                        modifier = Modifier.padding(start = 4.dp),
+                        modifier = Modifier.padding(start = TINY_SPACER.dp),
                         text = "Separate multiple tags with a space."
                     )
                 }
@@ -137,7 +138,7 @@ fun BlockedTagsScreen(navController: NavHostController, viewModel: BreadboardVie
         ) {
             item {
                 Summary(
-                    modifier = Modifier.padding(horizontal = 4.dp),
+                    modifier = Modifier.padding(horizontal = TINY_SPACER.dp),
                     text = "Images with any of these tags will not appear in search results or recommendations. However, they will still show in your Favourites.",
                 )
                 LargeVerticalSpacer()

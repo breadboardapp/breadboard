@@ -69,6 +69,7 @@ import moe.apex.rule34.util.ImportHandler
 import moe.apex.rule34.util.LARGE_SPACER
 import moe.apex.rule34.util.PromptType
 import moe.apex.rule34.util.MEDIUM_SPACER
+import moe.apex.rule34.util.TINY_SPACER
 import moe.apex.rule34.util.TitleSummary
 import moe.apex.rule34.util.exportData
 import moe.apex.rule34.util.importData
@@ -611,7 +612,7 @@ private fun AuthDialog(
                     Text(
                         text = apiKeyCreationText,
                         style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(start = 4.dp)
+                        modifier = Modifier.padding(start = TINY_SPACER.dp)
                     )
                 }
             }

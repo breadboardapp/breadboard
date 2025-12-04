@@ -2,32 +2,29 @@ package moe.apex.rule34.preferences
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
-import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -42,23 +39,18 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import moe.apex.rule34.navigation.IgnoredTagsSettings
 import moe.apex.rule34.prefs
 import moe.apex.rule34.util.CHIP_SPACING
-import moe.apex.rule34.util.ExpressiveContainer
+import moe.apex.rule34.util.ChevronRight
 import moe.apex.rule34.util.ExpressiveGroup
-import moe.apex.rule34.util.ExpressiveGroupHeading
-import moe.apex.rule34.util.ExpressiveTagEntryContainer
 import moe.apex.rule34.util.LARGE_SPACER
 import moe.apex.rule34.util.LargeTitleBar
-import moe.apex.rule34.util.LargeVerticalSpacer
-import moe.apex.rule34.util.ListItemPosition
 import moe.apex.rule34.util.MEDIUM_LARGE_SPACER
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.SMALL_SPACER
-import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.RecommendationsHelper
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
-import moe.apex.rule34.util.SmallVerticalSpacer
 import moe.apex.rule34.util.Summary
 import moe.apex.rule34.util.TitleSummary
 import moe.apex.rule34.util.bouncyAnimationSpec
@@ -68,7 +60,6 @@ import moe.apex.rule34.viewmodel.BreadboardViewModel
 import kotlin.math.roundToInt
 
 
-private const val NO_UNFOLLOWED_TAGS_KEY = -1
 private const val INFO_SECTION = -2
 
 private const val PAGER_BUTTON_SIZE_DP = 64
@@ -135,14 +126,18 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
                 .padding(it)
                 .fillMaxSize()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
-            contentPadding = PaddingValues(vertical = SMALL_LARGE_SPACER.dp)
+            contentPadding = PaddingValues(vertical = SMALL_LARGE_SPACER.dp),
+            verticalArrangement = Arrangement.spacedBy(LARGE_SPACER.dp)
         ) {
             item {
                 ExpressiveGroup("Recently recommended tags") {
                     item {
                         if (hasProvider) {
                             if (recentRecommendations.isEmpty()) {
-                                TitleSummary(title = "Add images from ${prefs.imageSource.label} to your favourites to start getting personalised recommendations.")
+                                Summary(
+                                    modifier = Modifier.padding(SMALL_LARGE_SPACER.dp),
+                                    text = "Add images from ${prefs.imageSource.label} to your favourites to start getting personalised recommendations."
+                                )
                                 return@item
                             }
                             FlowRow(
@@ -184,15 +179,64 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
                                 }
                             }
                         } else {
-                            TitleSummary(title = "Refresh your recommendations to see them here.")
+                            Summary(
+                                modifier = Modifier.padding(SMALL_LARGE_SPACER.dp),
+                                text = "Refresh your recommendations to see them here."
+                            )
                         }
                     }
                 }
-                LargeVerticalSpacer()
             }
 
             item {
                 ExpressiveGroup("Frequent tags") {
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(
+                                    horizontal = SMALL_LARGE_SPACER.dp,
+                                    vertical = SMALL_SPACER.dp
+                                ),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            FilledIconButton(
+                                onClick = {
+                                    scope.launch {
+                                        pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                                    }
+                                },
+                                enabled = pagerState.currentPage > 0,
+                                modifier = Modifier.width(PAGER_BUTTON_SIZE_DP.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                                    contentDescription = "Previous page"
+                                )
+                            }
+                            Text(
+                                text = topTags.keys.elementAt(pagerState.currentPage).label,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            FilledIconButton(
+                                onClick = {
+                                    scope.launch {
+                                        pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                                    }
+                                },
+                                enabled = pagerState.currentPage != pagerState.pageCount - 1,
+                                modifier = Modifier.width(PAGER_BUTTON_SIZE_DP.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+                                    contentDescription = "Next page"
+                                )
+                            }
+                        }
+                    }
+
                     item {
                         HorizontalPager(
                             modifier = Modifier.animateContentSize(bouncyAnimationSpec()),
@@ -247,71 +291,13 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
             }
 
             item {
-                SmallVerticalSpacer()
-            }
-
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = SMALL_LARGE_SPACER.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    FilledIconButton(
-                        onClick = {
-                            scope.launch {
-                                pagerState.animateScrollToPage(pagerState.currentPage - 1)
-                            }
-                        },
-                        enabled = pagerState.currentPage > 0,
-                        modifier = Modifier.width(PAGER_BUTTON_SIZE_DP.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                            contentDescription = "Previous page"
-                        )
-                    }
-                    Text(
-                        text = topTags.keys.elementAt(pagerState.currentPage).label,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    FilledIconButton(
-                        onClick = {
-                            scope.launch {
-                                pagerState.animateScrollToPage(pagerState.currentPage + 1)
-                            }
-                        },
-                        enabled = pagerState.currentPage != pagerState.pageCount - 1,
-                        modifier = Modifier.width(PAGER_BUTTON_SIZE_DP.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
-                            contentDescription = "Next page"
-                        )
-                    }
-                }
-            }
-
-            item {
-                LargeVerticalSpacer()
-            }
-
-            item {
                 Summary(
                     modifier = Modifier.padding(horizontal = MEDIUM_LARGE_SPACER.dp),
                     text = "Your frequent tags consist of the most common tags from your " +
                             "favourite images. Breadboard will use these tags to recommend " +
-                            "new content.\n\n" +
-                            "Ignoring a frequent tag means that Breadboard will not use it to " +
-                            "recommend new content. Ignored tags are not blocked and you may " +
-                            "still see content with them."
+                            "new content. You can tap a tag to ignore it, preventing it from " +
+                            "being used to recommend new content."
                 )
-            }
-
-            item {
-                LargeVerticalSpacer()
             }
 
             item {
@@ -365,7 +351,10 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
                                 }
                                 resetRecommendations()
                             }
-                            AnimatedVisibility(prefs.recommendationsTagCount > prefs.recommendationsPoolSize) {
+                            AnimatedVisibility(
+                                visible = prefs.recommendationsTagCount > prefs.recommendationsPoolSize,
+                                enter = fadeIn() + expandVertically(bouncyAnimationSpec())
+                            ) {
                                 Summary(
                                     modifier = Modifier.padding(
                                         start = MEDIUM_LARGE_SPACER.dp,
@@ -381,68 +370,25 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
             }
 
             item {
-                LargeVerticalSpacer()
-            }
-
-            item {
-                ExpressiveGroupHeading(
-                    text = "Ignored tags",
-                    modifier = Modifier.padding(bottom = SMALL_SPACER.dp)
-                )
-            }
-
-            if (unfollowedTags.isEmpty()) {
-                item(key = NO_UNFOLLOWED_TAGS_KEY) {
-                    ExpressiveContainer(
-                        position = ListItemPosition.SINGLE_ELEMENT
-                    ) {
-                        TitleSummary(title = "No ignored tags.")
-                    }
-                }
-            } else {
-                itemsIndexed(unfollowedTags, key = { _, tag -> tag }) { index, tag ->
-                    ExpressiveTagEntryContainer(
-                        modifier = Modifier
-                            .animateItem()
-                            .padding(horizontal = MEDIUM_SPACER.dp),
-                        label = tag,
-                        position = when {
-                            prefs.unfollowedTags.size == 1 -> ListItemPosition.SINGLE_ELEMENT
-                            index == 0 -> ListItemPosition.TOP
-                            index == prefs.unfollowedTags.size - 1 -> ListItemPosition.BOTTOM
-                            else -> ListItemPosition.MIDDLE
-                        },
-                        trailingContent = {
-                            IconButton(
-                                onClick = {
-                                    scope.launch {
-                                        userPreferencesRepository.removeFromSet(
-                                            PreferenceKeys.UNFOLLOWED_TAGS,
-                                            tag
-                                        )
-                                    }
-                                    resetRecommendations()
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Delete,
-                                    contentDescription = "Remove from Unfollowing",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
+                ExpressiveGroup("Ignored tags") {
+                    item {
+                        TitleSummary(
+                            title = "Manage ignored tags",
+                            summary = "View and manage the tags that Breadboard will ignore when " +
+                                      "recommending new content.",
+                            trailingIcon = { ChevronRight() },
+                            onClick = {
+                                navController.navigate(IgnoredTagsSettings)
                             }
-                        }
-                    )
-                    if (index != unfollowedTags.size - 1) {
-                        Spacer(Modifier.height(2.dp))
+                        )
                     }
                 }
             }
+
 
             item(key = INFO_SECTION) {
                 Column(
-                    modifier = Modifier
-                        .padding(top = LARGE_SPACER.dp)
-                        .animateItem(),
+                    modifier = Modifier.padding(top = LARGE_SPACER.dp),
                     verticalArrangement = Arrangement.spacedBy(LARGE_SPACER.dp)
                 ) {
                     HorizontalDivider()

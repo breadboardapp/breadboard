@@ -128,6 +128,7 @@ import moe.apex.rule34.util.SmallVerticalSpacer
 import moe.apex.rule34.util.TitledModalBottomSheet
 import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
+import moe.apex.rule34.util.TINY_SPACER
 import moe.apex.rule34.util.availableRatingsForCurrentSource
 import moe.apex.rule34.util.availableRatingsForSource
 import moe.apex.rule34.util.bouncyAnimationSpec
@@ -509,9 +510,9 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceBright,
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceBright
                     ),
-                    prefix = { Spacer(Modifier.width(4.dp)) },
+                    prefix = { Spacer(Modifier.width(TINY_SPACER.dp)) },
                     trailingIcon = {
-                        Row(Modifier.padding(end = 4.dp)) {
+                        Row(Modifier.padding(end = TINY_SPACER.dp)) {
                             IconButton(
                                 onClick = {
                                     val tags = clipboard.nativeClipboard.primaryClip
