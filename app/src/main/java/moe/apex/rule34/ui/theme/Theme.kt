@@ -39,14 +39,16 @@ private val LightColorScheme = lightColorScheme(
 
 
 @Immutable
-data class ExtraColours(
-    val outlineStrong: Color
+data class BreadboardColors(
+    val outlineStrong: Color,
+    val titleBar: Color,
 )
 
 
-val LocalExtraColours = staticCompositionLocalOf {
-    ExtraColours(
-        outlineStrong = Color.Unspecified
+val LocalBreadboardColors = staticCompositionLocalOf {
+    BreadboardColors(
+        outlineStrong = Color.Unspecified,
+        titleBar = Color.Unspecified,
     )
 }
 
@@ -68,7 +70,15 @@ fun BreadboardTheme(
         else -> LightColorScheme
     }
 
-    val extraColours = ExtraColours(outlineStrong = colorScheme.outline.copy())
+    val extraColours = BreadboardColors(
+        outlineStrong = colorScheme.outline.copy(),
+        titleBar = if (darkTheme) {
+            colorScheme.surfaceContainer
+        } else {
+            colorScheme.surfaceContainerHigh
+        }.copy()
+    )
+
     colorScheme = colorScheme.copy(
         outline = colorScheme.outlineVariant,
         background = if (darkTheme) colorScheme.surfaceContainerLow else colorScheme.surfaceContainer,
@@ -80,7 +90,7 @@ fun BreadboardTheme(
         surfaceContainerHighest = if (darkTheme) colorScheme.surfaceContainerHighest else colorScheme.surfaceContainerHigh
     )
 
-    CompositionLocalProvider(LocalExtraColours provides extraColours) {
+    CompositionLocalProvider(LocalBreadboardColors provides extraColours) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = Typography,
@@ -91,7 +101,7 @@ fun BreadboardTheme(
 
 
 object BreadboardTheme {
-    val colors: ExtraColours
+    val colors: BreadboardColors
         @Composable
-        get() = LocalExtraColours.current
+        get() = LocalBreadboardColors.current
 }

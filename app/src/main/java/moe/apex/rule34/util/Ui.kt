@@ -139,6 +139,7 @@ import moe.apex.rule34.largeimageview.LargeImageView
 import moe.apex.rule34.preferences.Experiment
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.prefs
+import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.ui.theme.prefTitle
 import kotlin.math.roundToInt
 
@@ -192,7 +193,7 @@ private fun NavigationIcon(navController: NavController? = null) {
         FilledIconButton(
             modifier = Modifier.padding(horizontal = SMALL_SPACER.dp),
             colors = IconButtonDefaults.filledIconButtonColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                containerColor = IconButtonDefaults.filledIconButtonColors().disabledContainerColor.copy(alpha = 0.065f),
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant
             ),
             onClick = {
@@ -226,7 +227,7 @@ fun LargeTitleBar(
         actions = additionalActions,
         navigationIcon = { NavigationIcon(navController) },
         colors = TopAppBarDefaults.largeTopAppBarColors().copy(
-            scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            scrolledContainerColor = BreadboardTheme.colors.titleBar
         )
     )
 }
@@ -245,7 +246,7 @@ fun SmallTitleBar(
         scrollBehavior = scrollBehavior,
         actions = additionalActions,
         colors = TopAppBarDefaults.topAppBarColors(
-            scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            scrolledContainerColor = BreadboardTheme.colors.titleBar
         ),
         navigationIcon = { NavigationIcon(navController) }
     )
