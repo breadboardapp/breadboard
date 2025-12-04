@@ -206,7 +206,7 @@ private fun NavigationIcon(navController: NavController? = null) {
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                contentDescription = "Discover"
+                contentDescription = "Back"
             )
         }
     }
