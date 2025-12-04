@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Block
@@ -66,6 +67,7 @@ fun BlockedTagsScreen(navController: NavHostController, viewModel: BreadboardVie
     val prefs = LocalPreferences.current
     val blockedTags = prefs.manuallyBlockedTags.reversed()
     var showAddDialog by rememberSaveable { mutableStateOf(false) }
+    val aiTags = remember { ImageSource.entries.mapTo(mutableSetOf()) { it.imageBoard.aiTagName }.toList() }
 
     if (showAddDialog) {
         var content by remember { mutableStateOf("") }
@@ -89,7 +91,11 @@ fun BlockedTagsScreen(navController: NavHostController, viewModel: BreadboardVie
             confirmButton = {
                 Button(
                     onClick = {
-                        val newBlocks = content.trim().split(" ").filter { it.isNotBlank() }
+                        val newBlocks = content
+                            .trim()
+                            .split(" ")
+                            .filter { it.isNotBlank() }
+                            .filterNot { it in aiTags }
                         scope.launch {
                             for (tag in newBlocks) {
                                 userPreferencesRepository.addToSet(
@@ -167,17 +173,17 @@ fun BlockedTagsScreen(navController: NavHostController, viewModel: BreadboardVie
                 return@LazyColumn
             }
             if (prefs.excludeAi) {
-                val aiTags = ImageSource.entries.mapTo(mutableSetOf()) { it.imageBoard.aiTagName }
                 item {
                     BaseHeading(
                         modifier = Modifier.padding(start = SMALL_SPACER.dp, bottom = 6.dp),
                         text = "Automatically blocked"
                     )
                 }
-                items(aiTags.size) { index ->
+
+                itemsIndexed(aiTags) { index, tag ->
                     ExpressiveTagEntryContainer(
                         modifier = Modifier.animateItem(),
-                        label = aiTags.elementAt(index),
+                        label = tag,
                         position = when (index) {
                             0 -> ListItemPosition.TOP
                             aiTags.size - 1 -> ListItemPosition.BOTTOM
@@ -197,8 +203,8 @@ fun BlockedTagsScreen(navController: NavHostController, viewModel: BreadboardVie
                     }
                 }
             }
-            items(blockedTags.size, key = { index -> blockedTags[index] }) { index ->
-                val tag = blockedTags[index]
+
+            itemsIndexed(blockedTags, key = { index, tag -> tag }) { index, tag ->
                 ExpressiveTagEntryContainer(
                     modifier = Modifier.animateItem(),
                     label = tag,
