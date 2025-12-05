@@ -369,7 +369,7 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
             }
 
             item {
-                ExpressiveGroup(title = "Content filtering") {
+                ExpressiveGroup(title = "Content") {
                     item {
                         TitleSummary(
                             modifier = Modifier.fillMaxWidth(),
