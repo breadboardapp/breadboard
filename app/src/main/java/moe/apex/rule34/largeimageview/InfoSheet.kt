@@ -97,7 +97,6 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
        confirmValueChange which for some reason we can't normally do in order to disable the
        partially expanded state only when dismissing.  */
     var sheetState: SheetState? by remember { mutableStateOf(null) }
-    var previousSheetValue by remember { mutableStateOf(SheetValue.Hidden) }
     var selectedTag: String? by remember { mutableStateOf(null) }
 
     fun hideAndThen(block: () -> Unit = { }) {
@@ -127,15 +126,13 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
         skipPartiallyExpanded = false
     ) { newValue ->
         if (newValue == SheetValue.PartiallyExpanded) {
-            if (previousSheetValue == SheetValue.Expanded) {
+            if (sheetState?.currentValue == SheetValue.Expanded) {
                 hideAndThen()
                 return@rememberModalBottomSheetState false
             } else {
-                previousSheetValue = newValue
                 return@rememberModalBottomSheetState true
             }
         } else {
-            previousSheetValue = newValue
             return@rememberModalBottomSheetState true
         }
     }
