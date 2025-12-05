@@ -1426,7 +1426,10 @@ fun ButtonListItem(
     icon: ImageVector,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    colors: ButtonColors = ButtonDefaults.buttonColors(),
+    colors: ButtonColors = ButtonDefaults.buttonColors(
+        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+    ),
     position: ListItemPosition,
     onClick: () -> Unit,
 ) {
