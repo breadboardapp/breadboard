@@ -32,7 +32,7 @@ import androidx.navigation.NavController
 import moe.apex.rule34.detailview.ImageGrid
 import moe.apex.rule34.preferences.Experiment
 import moe.apex.rule34.preferences.LocalPreferences
-import moe.apex.rule34.util.OffsetBasedLargeImageView
+import moe.apex.rule34.largeimageview.OffsetBasedLargeImageView
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.RecommendationsProvider
 import moe.apex.rule34.util.SMALL_LARGE_SPACER

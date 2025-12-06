@@ -30,7 +30,7 @@ import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.PreferenceKeys
 import moe.apex.rule34.prefs
-import moe.apex.rule34.util.OffsetBasedLargeImageView
+import moe.apex.rule34.largeimageview.OffsetBasedLargeImageView
 import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.SMALL_LARGE_SPACER

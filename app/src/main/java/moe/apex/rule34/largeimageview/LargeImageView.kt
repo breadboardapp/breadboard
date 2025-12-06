@@ -7,9 +7,19 @@ import android.content.res.Configuration
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.util.Log
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
@@ -17,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -37,31 +48,37 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import coil3.compose.SubcomposeAsyncImage
+import coil3.compose.AsyncImage
+import coil3.compose.rememberAsyncImagePainter
 import coil3.request.ImageRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import me.saket.telephoto.zoomable.ZoomSpec
 import me.saket.telephoto.zoomable.ZoomableState
@@ -86,10 +103,12 @@ import moe.apex.rule34.util.bouncyAnimationSpec
 import moe.apex.rule34.util.downloadImage
 import moe.apex.rule34.util.fixLink
 import moe.apex.rule34.util.isWebLink
+import moe.apex.rule34.util.rememberIsBlurEnabled
 import moe.apex.rule34.util.saveUriToPref
 import moe.apex.rule34.viewmodel.BreadboardViewModel
 import java.net.SocketTimeoutException
 import java.util.concurrent.ExecutionException
+import kotlin.math.roundToInt
 
 
 private fun isUsingWiFi(context: Context): Boolean {
@@ -129,12 +148,13 @@ fun LargeImageView(
     val isFullyZoomedOut by remember { derivedStateOf { zoomState.zoomFraction == 0f } }
     val isMostlyZoomedOut by remember { derivedStateOf { zoomState.zoomFraction.let { it == null || it < 0.10 } } }
 
-    runBlocking {
-        if (pagerState.currentPage >= allImages.size)
+    LaunchedEffect(allImages.size) {
+        if (pagerState.currentPage >= allImages.size && allImages.isNotEmpty()) {
             pagerState.scrollToPage(allImages.size - 1)
+        }
     }
 
-    val currentImage = allImages[pagerState.currentPage]
+    val currentImage = allImages[pagerState.currentPage.coerceIn(0, allImages.size - 1)]
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -502,7 +522,7 @@ private fun ImageNotFound() {
 
 @Composable
 private fun LoadingContentPlaceholder(
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
     content: (@Composable () -> Unit)? = null
 ) {
     Box(
@@ -529,6 +549,7 @@ private data class ImageAction(
     val composableContent: @Composable () -> Unit
 )
 
+
 @Composable
 fun LargeImage(image: Image) {
     /* Poor method of the preliminary work to get rounded corners for favourites saved before
@@ -536,6 +557,8 @@ fun LargeImage(image: Image) {
     val aspectRatio = image.aspectRatio
     val imageUrl = if (image.preferHd) image.highestQualityFormatUrl else image.sampleUrl
     val previewImageUrl = image.previewUrl
+    var isLoading by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     val modifier = if (aspectRatio == null) {
         if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT) {
@@ -545,26 +568,211 @@ fun LargeImage(image: Image) {
         }
     } else Modifier.aspectRatio(aspectRatio)
 
-    val contextLocal = LocalContext.current
-
-    val model =
-        ImageRequest.Builder(contextLocal)
+    val model = remember(imageUrl) {
+        ImageRequest.Builder(context)
             .data(imageUrl)
             .build()
+    }
 
-    SubcomposeAsyncImage(
-        model = model,
-        contentDescription = "Image",
-        loading = {
-            LoadingContentPlaceholder(modifier) {
-                SubcomposeAsyncImage(
-                    model = previewImageUrl,
-                    contentDescription = "Image",
-                    contentScale = ContentScale.Fit,
-                    modifier = modifier.clip(MaterialTheme.shapes.extraLarge)
+    val previewModel = remember(previewImageUrl) {
+        ImageRequest.Builder(context)
+            .data(previewImageUrl)
+            .build()
+    }
+
+    Box(
+        modifier = Modifier.clip(MaterialTheme.shapes.extraLarge)
+    ) {
+        AsyncImage(
+            model = model,
+            placeholder = rememberAsyncImagePainter(previewModel),
+            onSuccess = { isLoading = false },
+            onError = { isLoading = false },
+            onLoading = { isLoading = true },
+            contentDescription = "Image",
+            modifier = modifier
+        )
+        AnimatedVisibility(
+            modifier = Modifier.align(Alignment.Center),
+            visible = isLoading,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            LoadingContentPlaceholder()
+        }
+    }
+}
+
+
+@Composable
+fun OffsetBasedLargeImageView(
+    navController: NavController,
+    visibilityState: MutableState<Boolean>,
+    initialPage: Int,
+    allImages: List<Image>,
+    bottomBarVisibleState: MutableState<Boolean>? = null,
+) {
+    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val window = LocalWindowInfo.current
+    val isImmersiveModeEnabled = rememberIsBlurEnabled()
+    val windowHeightPx = window.containerSize.height.toFloat()
+    val dismissVelocityThreshold = windowHeightPx // Pixels per second
+    val dismissDistanceThreshold = windowHeightPx * 0.25f
+    var canDragDown by remember { mutableStateOf(true) }
+
+    val animatableOffset = remember { Animatable(windowHeightPx) }
+    val animationSpec = spring<Float>(stiffness = Spring.StiffnessMediumLow)
+
+    /* In the past we used initialPage to determine whether or not we should recompose the viewer.
+       However, this causes an issue where the viewer doesn't reset when it really should,
+       just because the user swiped to a different image and then tapped the first one again.
+       For instance, lets say the user taps image 1, swipes to image 2, dismisses the viewer,
+       and taps image 1 again before the closing animation is finished. Because initialPage didn't
+       change, the user is still seeing image 2, which is bad.
+
+       This is a really poor solution to that. We will trigger a recomposition manually by
+       incrementing this value and use a LaunchedEffect that increments the value when the
+       visibility state becomes true.
+
+       Why not just use visibilityState directly? Because we don't want to recompose the viewer when
+       it becomes false (i.e. the user is dismissing the viewer) because if the user has swiped to
+       change page, recreating it with the original initialPage will cause that image to reappear
+       as it disappears.
+
+       Why not use a boolean value that just flips to trigger a recomposition? Because it causes
+       other issues that are difficult to describe but easy to notice when using the app.
+
+       There is probably a really simple (and, crucially, better) solution to this
+       and I'm too stupid to see it. Quite frankly i'm sick of debugging and this works
+       so I'm keeping it.
+
+       PRs welcome (please). */
+    var stupidFuckingRecompositionCounter by rememberSaveable { mutableIntStateOf(0) }
+
+    val draggableState = rememberDraggableState { delta ->
+        scope.launch {
+            val new = (animatableOffset.value + delta).coerceAtLeast(0f)
+            animatableOffset.snapTo(new)
+        }
+    }
+
+    fun calculateScaleFactor(offsetValue: Float): Float {
+        return 1 - ((offsetValue * 1.2f) / windowHeightPx)
+    }
+
+    fun show(velocity: Float = 0f) {
+        scope.launch {
+            animatableOffset.animateTo(
+                targetValue = 0f,
+                animationSpec = animationSpec,
+                initialVelocity = velocity
+            )
+        }
+    }
+
+    fun snapTo(offset: Float) {
+        scope.launch {
+            animatableOffset.snapTo(offset)
+        }
+    }
+
+    fun hide(velocity: Float = animatableOffset.velocity, animate: Boolean = true) {
+        scope.launch {
+            if (animate) {
+                animatableOffset.animateTo(
+                    targetValue = windowHeightPx,
+                    animationSpec = animationSpec,
+                    initialVelocity = velocity
                 )
+            } else {
+                snapTo(windowHeightPx)
             }
-        },
-        modifier = modifier.clip(MaterialTheme.shapes.extraLarge)
-    )
+        }
+        visibilityState.value = false
+    }
+
+    if (allImages.isEmpty()) {
+        hide(animate = false)
+        return
+    }
+
+    PredictiveBackHandler(enabled = visibilityState.value) { progress ->
+        try {
+            progress.collect { backEvent ->
+                val offsetPx = with(density) { (backEvent.progress * 300f).dp.toPx() }
+                snapTo(offsetPx)
+            }
+            hide()
+        } catch (_: Exception) {
+        }
+    }
+
+    LaunchedEffect(visibilityState.value) {
+        bottomBarVisibleState?.value = !visibilityState.value
+        if (visibilityState.value) {
+            stupidFuckingRecompositionCounter ++
+            show()
+        }
+        // No hide() call here because it's managed by the back handler and draggable modifier.
+    }
+
+    /* We should treat this as the proper source of truth as to whether or not the content is
+       currently visible.
+       I know this whole composable is messy now but hopefully this helps somewhat. */
+    val shouldMainContentBeVisible by remember {
+        derivedStateOf { visibilityState.value || animatableOffset.value < windowHeightPx }
+    }
+
+    if (shouldMainContentBeVisible) {
+        if (isImmersiveModeEnabled) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        alpha = calculateScaleFactor(animatableOffset.value)
+                    }
+                    .background(color = MaterialTheme.colorScheme.background.copy(alpha = 0.5f))
+            )
+        } else {
+            /* This is so the user doesn't see the grid/background underneath the
+               LargeImage carousel if they fling it up quickly (due to the spring animation). */
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .offset { IntOffset(0, animatableOffset.value.roundToInt().coerceAtLeast(0)) }
+                    .background(MaterialTheme.colorScheme.background)
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .offset { IntOffset(0, animatableOffset.value.roundToInt()) }
+                .draggable(
+                    enabled = canDragDown && visibilityState.value,
+                    orientation = Orientation.Vertical,
+                    state = draggableState,
+                    onDragStopped = { velocity ->
+                        scope.launch {
+                            if ((velocity > dismissVelocityThreshold || animatableOffset.value > dismissDistanceThreshold) && velocity > 0) {
+                                hide(velocity)
+                            } else {
+                                show(velocity)
+                            }
+                        }
+                    }
+                )
+        ) {
+            key(stupidFuckingRecompositionCounter) {
+                LargeImageView(
+                    navController = navController,
+                    initialPage = initialPage,
+                    allImages = allImages,
+                    backgroundAlpha = if (isImmersiveModeEnabled) 0f else 1f
+                ) {
+                    canDragDown = it == 0f
+                }
+            }
+        }
+    }
 }

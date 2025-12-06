@@ -49,7 +49,7 @@ import moe.apex.rule34.util.LargeTitleBar
 import moe.apex.rule34.util.ListItemPosition
 import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.MainScreenScaffold
-import moe.apex.rule34.util.OffsetBasedLargeImageView
+import moe.apex.rule34.largeimageview.OffsetBasedLargeImageView
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
 import moe.apex.rule34.util.ScrollToTopArrow
 import moe.apex.rule34.util.TINY_SPACER

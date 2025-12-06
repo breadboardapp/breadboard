@@ -6,9 +6,7 @@ import android.content.ClipData
 import android.content.Context
 import android.os.Build
 import android.os.PowerManager
-import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
@@ -22,9 +20,6 @@ import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -94,15 +89,10 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -118,13 +108,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.getSystemService
@@ -134,14 +121,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import moe.apex.rule34.history.SearchHistoryEntry
-import moe.apex.rule34.image.Image
-import moe.apex.rule34.largeimageview.LargeImageView
 import moe.apex.rule34.preferences.Experiment
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.prefs
 import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.ui.theme.prefTitle
-import kotlin.math.roundToInt
 
 
 private const val LARGE_CORNER_DP = 20
@@ -263,180 +247,6 @@ fun FullscreenLoadingSpinner() {
         horizontalArrangement = Arrangement.Center
     ) {
         CircularProgressIndicator()
-    }
-}
-
-
-@Composable
-fun OffsetBasedLargeImageView(
-    navController: NavController,
-    visibilityState: MutableState<Boolean>,
-    initialPage: Int,
-    allImages: List<Image>,
-    bottomBarVisibleState: MutableState<Boolean>? = null,
-) {
-    val scope = rememberCoroutineScope()
-    val density = LocalDensity.current
-    val window = LocalWindowInfo.current
-    val isImmersiveModeEnabled = rememberIsBlurEnabled()
-    val windowHeightPx = window.containerSize.height.toFloat()
-    val dismissVelocityThreshold = windowHeightPx // Pixels per second
-    val dismissDistanceThreshold = windowHeightPx * 0.25f
-    var canDragDown by remember { mutableStateOf(true) }
-
-    val animatableOffset = remember { Animatable(windowHeightPx) }
-    val animationSpec = spring<Float>(stiffness = Spring.StiffnessMediumLow)
-
-    /* In the past we used initialPage to determine whether or not we should recompose the viewer.
-       However, this causes an issue where the viewer doesn't reset when it really should,
-       just because the user swiped to a different image and then tapped the first one again.
-       For instance, lets say the user taps image 1, swipes to image 2, dismisses the viewer,
-       and taps image 1 again before the closing animation is finished. Because initialPage didn't
-       change, the user is still seeing image 2, which is bad.
-
-       This is a really poor solution to that. We will trigger a recomposition manually by
-       incrementing this value and use a LaunchedEffect that increments the value when the
-       visibility state becomes true.
-
-       Why not just use visibilityState directly? Because we don't want to recompose the viewer when
-       it becomes false (i.e. the user is dismissing the viewer) because if the user has swiped to
-       change page, recreating it with the original initialPage will cause that image to reappear
-       as it disappears.
-
-       Why not use a boolean value that just flips to trigger a recomposition? Because it causes
-       other issues that are difficult to describe but easy to notice when using the app.
-
-       There is probably a really simple (and, crucially, better) solution to this
-       and I'm too stupid to see it. Quite frankly I'm sick of debugging and this works
-       so I'm keeping it.
-
-       PRs welcome (please). */
-    var stupidFuckingRecompositionCounter by rememberSaveable { mutableIntStateOf(0) }
-
-    val draggableState = rememberDraggableState { delta ->
-        scope.launch {
-            val new = (animatableOffset.value + delta).coerceAtLeast(0f)
-            animatableOffset.snapTo(new)
-        }
-    }
-
-    fun calculateScaleFactor(offsetValue: Float): Float {
-        return 1 - ((offsetValue * 1.2f) / windowHeightPx)
-    }
-
-    fun show(velocity: Float = animatableOffset.velocity) {
-        scope.launch {
-            animatableOffset.animateTo(
-                targetValue = 0f,
-                animationSpec = animationSpec,
-                initialVelocity = velocity
-            )
-        }
-    }
-
-    fun snapTo(offset: Float) {
-        scope.launch {
-            animatableOffset.snapTo(offset)
-        }
-    }
-
-    fun hide(velocity: Float = animatableOffset.velocity, animate: Boolean = true) {
-        scope.launch {
-            if (animate) {
-                animatableOffset.animateTo(
-                    targetValue = windowHeightPx,
-                    animationSpec = animationSpec,
-                    initialVelocity = velocity
-                )
-            } else {
-                snapTo(windowHeightPx)
-            }
-        }
-        visibilityState.value = false
-    }
-
-    if (allImages.isEmpty()) {
-        hide(animate = false)
-        return
-    }
-
-    PredictiveBackHandler(enabled = visibilityState.value) { progress ->
-        try {
-            progress.collect { backEvent ->
-                val offsetPx = with(density) { (backEvent.progress * 300f).dp.toPx() }
-                snapTo(offsetPx)
-            }
-            hide()
-        } catch (_: Exception) {
-        }
-    }
-
-    LaunchedEffect(visibilityState.value) {
-        bottomBarVisibleState?.value = !visibilityState.value
-        if (visibilityState.value) {
-            stupidFuckingRecompositionCounter ++
-            show()
-        }
-        // No hide() call here because it's managed by the back handler and draggable modifier.
-    }
-
-    /* We should treat this as the proper source of truth as to whether or not the content is
-       currently visible.
-       I know this whole composable is messy now but hopefully this helps somewhat. */
-    val shouldMainContentBeVisible by remember {
-        derivedStateOf { visibilityState.value || animatableOffset.value < windowHeightPx }
-    }
-
-    if (shouldMainContentBeVisible) {
-        if (isImmersiveModeEnabled) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        alpha = calculateScaleFactor(animatableOffset.value)
-                    }
-                    .background(color = MaterialTheme.colorScheme.background.copy(alpha = 0.5f))
-            )
-        } else {
-            /* This is so the user doesn't see the grid/background underneath the
-               LargeImage carousel if they fling it up quickly (due to the spring animation). */
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .offset { IntOffset(0, animatableOffset.value.roundToInt().coerceAtLeast(0)) }
-                    .background(MaterialTheme.colorScheme.background)
-            )
-        }
-
-        Box(
-            modifier = Modifier
-                .offset { IntOffset(0, animatableOffset.value.roundToInt()) }
-                .draggable(
-                    enabled = canDragDown && visibilityState.value,
-                    orientation = Orientation.Vertical,
-                    state = draggableState,
-                    onDragStopped = { velocity ->
-                        scope.launch {
-                            if ((velocity > dismissVelocityThreshold || animatableOffset.value > dismissDistanceThreshold) && velocity > 0) {
-                                hide(velocity)
-                            } else {
-                                show(velocity)
-                            }
-                        }
-                    }
-                )
-        ) {
-            key(stupidFuckingRecompositionCounter) {
-                LargeImageView(
-                    navController = navController,
-                    initialPage = initialPage,
-                    allImages = allImages,
-                    backgroundAlpha = if (isImmersiveModeEnabled) 0f else 1f
-                ) {
-                    canDragDown = it == 0f
-                }
-            }
-        }
     }
 }
 
