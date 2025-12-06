@@ -80,7 +80,11 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
         prefs.favouriteImages.groupBy { it.imageSource }
     }
 
-    val topTags = rememberSaveable(prefs.recommendAllRatings, prefs.recommendationsPoolSize) {
+    val topTags = rememberSaveable(
+        prefs.recommendAllRatings,
+        prefs.recommendationsPoolSize,
+        prefs.poolSizeIncludesIgnored
+    ) {
         mutableMapOf<ImageSource, List<String>>().apply {
             ImageSource.entries.forEach {
                 val allTags = RecommendationsHelper.getAllTags(
@@ -90,7 +94,9 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
                 )
                 this[it] = RecommendationsHelper.getMostCommonTags(
                     allTags = allTags,
-                    limit = prefs.recommendationsPoolSize
+                    limit = prefs.recommendationsPoolSize,
+                    excludedTags = if (prefs.poolSizeIncludesIgnored) emptySet() else prefs.unfollowedTags,
+                    limitIncludesExcluded = prefs.poolSizeIncludesIgnored
                 )
             }
         }
@@ -136,7 +142,8 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
                             if (recentRecommendations.isEmpty()) {
                                 Summary(
                                     modifier = Modifier.padding(SMALL_LARGE_SPACER.dp),
-                                    text = "Add images from ${prefs.imageSource.label} to your favourites to start getting personalised recommendations."
+                                    text = "Add images from ${prefs.imageSource.label} to your " +
+                                           "favourites to start getting personalised recommendations."
                                 )
                                 return@item
                             }
@@ -330,6 +337,33 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
                                 userPreferencesRepository.updatePref(
                                     PreferenceKeys.RECOMMENDATIONS_POOL_SIZE,
                                     it.roundToInt()
+                                )
+                            }
+                            resetRecommendations()
+                        }
+                    }
+                    item {
+                        // I hope this option isn't too confusing.
+                        SwitchPref(
+                            checked = prefs.poolSizeIncludesIgnored,
+                            title = "Include ignored tags in limit",
+                            summary = "Whether or not the maximum tag limit should count ignored " +
+                                      "tags.",
+                            infoText = "This option determines whether or not ignored tags will " +
+                                       "count towards the maximum tag limit.\n\n" +
+                                       "If enabled, your recommendations selection size may be " +
+                                       "smaller than the limit.\n" +
+                                       "If disabled, Breadboard will try to always use the " +
+                                       "maximum limit, resulting in more variety in your " +
+                                       "recommendations.\n\n" +
+                                       "Disabling this option will prevent ignored tags from " +
+                                       "being shown in the frequent tag list and you will need " +
+                                       "to manage them with the 'Manage ignored tags' option."
+                        ) {
+                            scope.launch {
+                                userPreferencesRepository.updatePref(
+                                    PreferenceKeys.POOL_SIZE_INCLUDES_IGNORED,
+                                    it
                                 )
                             }
                             resetRecommendations()

@@ -33,7 +33,11 @@ object RecommendationsHelper {
     )
 
 
-    fun getAllTags(images: List<Image>, allowAllRatings: Boolean, excludedTags: List<String> = emptyList()): List<String> {
+    fun getAllTags(
+        images: List<Image>,
+        allowAllRatings: Boolean,
+        excludedTags: Collection<String> = emptyList()
+    ): List<String> {
         return images
             .filter { it.metadata != null }
             .filter { allowAllRatings || it.metadata!!.rating == ImageRating.SAFE }
@@ -43,12 +47,27 @@ object RecommendationsHelper {
     }
 
 
-    fun getMostCommonTags(allTags: List<String>, limit: Int = DEFAULT_POOL_SIZE, excludedTags: List<String> = emptyList()): List<String> {
-        val tagCounts = allTags.groupingBy { it }.eachCount()
-        return tagCounts.entries
+    fun getMostCommonTags(
+        allTags: List<String>,
+        limit: Int = DEFAULT_POOL_SIZE,
+        excludedTags: Collection<String> = emptyList(),
+        limitIncludesExcluded: Boolean = true
+    ): List<String> {
+        val sortedTags = allTags
+            .groupingBy { it }
+            .eachCount()
+            .entries
             .sortedByDescending { it.value }
-            .take(limit)
-            .filterNot { excludedTags.contains(it.key.lowercase()) }
-            .map { it.key }
+            .map { it.key.lowercase() }
+
+        return if (limitIncludesExcluded) {
+            sortedTags
+                .take(limit)
+                .filterNot { excludedTags.contains(it) }
+        } else {
+            sortedTags
+                .filterNot { excludedTags.contains(it) }
+                .take(limit)
+        }
     }
 }

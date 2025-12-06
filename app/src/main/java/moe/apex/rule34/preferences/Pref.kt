@@ -90,6 +90,7 @@ data object PrefNames {
     const val UNFOLLOWED_TAGS = "unfollowed_tags"
     const val RECOMMENDATIONS_TAG_COUNT = "recommendations_tag_count"
     const val RECOMMENDATIONS_POOL_SIZE = "recommendations_pool_size"
+    const val POOL_SIZE_INCLUDES_IGNORED = "pool_size_includes_ignored"
 }
 
 
@@ -119,6 +120,7 @@ object PreferenceKeys {
     val UNFOLLOWED_TAGS = stringSetPreferencesKey(PrefNames.UNFOLLOWED_TAGS)
     val RECOMMENDATIONS_TAG_COUNT = intPreferencesKey(PrefNames.RECOMMENDATIONS_TAG_COUNT)
     val RECOMMENDATIONS_POOL_SIZE = intPreferencesKey(PrefNames.RECOMMENDATIONS_POOL_SIZE)
+    val POOL_SIZE_INCLUDES_IGNORED = booleanPreferencesKey(PrefNames.POOL_SIZE_INCLUDES_IGNORED)
 }
 
 
@@ -203,6 +205,7 @@ data class Prefs(
     val unfollowedTags: Set<String>,
     val recommendationsTagCount: Int,
     val recommendationsPoolSize: Int,
+    val poolSizeIncludesIgnored: Boolean,
 ) {
     companion object {
         val DEFAULT = Prefs(
@@ -231,6 +234,7 @@ data class Prefs(
             unfollowedTags = emptySet(),
             recommendationsTagCount = 3,
             recommendationsPoolSize = 5,
+            poolSizeIncludesIgnored = true,
         )
     }
 
@@ -721,6 +725,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val unfollowedTags = preferences[PreferenceKeys.UNFOLLOWED_TAGS] ?: Prefs.DEFAULT.unfollowedTags
         val recommendationsTagCount = preferences[PreferenceKeys.RECOMMENDATIONS_TAG_COUNT] ?: Prefs.DEFAULT.recommendationsTagCount
         val recommendationsPoolSize = preferences[PreferenceKeys.RECOMMENDATIONS_POOL_SIZE] ?: Prefs.DEFAULT.recommendationsPoolSize
+        val poolSizeIncludesIgnored = preferences[PreferenceKeys.POOL_SIZE_INCLUDES_IGNORED] ?: Prefs.DEFAULT.poolSizeIncludesIgnored
 
 
         return Prefs(
@@ -749,6 +754,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             unfollowedTags,
             recommendationsTagCount,
             recommendationsPoolSize,
+            poolSizeIncludesIgnored,
         )
     }
 }
