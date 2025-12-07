@@ -30,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -39,8 +40,10 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import kotlinx.coroutines.Dispatchers
 import moe.apex.rule34.navigation.IgnoredTagsSettings
 import moe.apex.rule34.prefs
+import moe.apex.rule34.tag.IgnoredTagsHelper
 import moe.apex.rule34.util.CHIP_SPACING
 import moe.apex.rule34.util.ChevronRight
 import moe.apex.rule34.util.ExpressiveGroup
@@ -54,10 +57,13 @@ import moe.apex.rule34.util.SMALL_LARGE_SPACER
 import moe.apex.rule34.util.Summary
 import moe.apex.rule34.util.TitleSummary
 import moe.apex.rule34.util.bouncyAnimationSpec
+import moe.apex.rule34.util.differenceOlderThan
 import moe.apex.rule34.util.filterChipSolidColor
+import moe.apex.rule34.util.saveIgnoreListWithTimestamp
 import moe.apex.rule34.util.showToast
 import moe.apex.rule34.viewmodel.BreadboardViewModel
 import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.days
 
 
 private const val INFO_SECTION = -2
@@ -80,23 +86,42 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
         prefs.favouriteImages.groupBy { it.imageSource }
     }
 
+    LaunchedEffect(Unit) {
+        if (differenceOlderThan(7.days, prefs.internalIgnoreListTimestamp)) {
+            scope.launch(Dispatchers.IO) {
+                IgnoredTagsHelper.fetchTagListOnline(
+                    context = context,
+                    onSuccess = { saveIgnoreListWithTimestamp(context, it) }
+                ) { failureResult ->
+                    saveIgnoreListWithTimestamp(
+                        context = context,
+                        data = prefs.internalIgnoreList.takeIf { it.isNotEmpty() } ?: failureResult
+                    )
+                }
+            }
+        }
+    }
+
     val topTags = rememberSaveable(
         prefs.recommendAllRatings,
         prefs.recommendationsPoolSize,
-        prefs.poolSizeIncludesIgnored
+        prefs.unfollowedTags,
+        prefs.showUnfollowedTagsInFrequentsList,
+        prefs.internalIgnoreList
     ) {
         mutableMapOf<ImageSource, List<String>>().apply {
             ImageSource.entries.forEach {
                 val allTags = RecommendationsHelper.getAllTags(
                     images = favouriteImagesPerSource[it] ?: emptyList(),
                     allowAllRatings = prefs.recommendAllRatings,
-                    excludedTags = prefs.blockedTags.toList()
+                    excludedTags = prefs.blockedTags
                 )
                 this[it] = RecommendationsHelper.getMostCommonTags(
                     allTags = allTags,
-                    limit = prefs.recommendationsPoolSize,
-                    excludedTags = if (prefs.poolSizeIncludesIgnored) emptySet() else prefs.unfollowedTags,
-                    limitIncludesExcluded = prefs.poolSizeIncludesIgnored
+                    followedTagsLimit = prefs.recommendationsPoolSize,
+                    hiddenTags = prefs.internalIgnoreList,
+                    unfollowedTags = prefs.unfollowedTags,
+                    includeUnwantedTagsInResult = prefs.showUnfollowedTagsInFrequentsList
                 )
             }
         }
@@ -294,6 +319,21 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
                             }
                         }
                     }
+
+                    item {
+                        SwitchPref(
+                            checked = prefs.showUnfollowedTagsInFrequentsList,
+                            title = "Show ignored tags"
+                        ) {
+                            scope.launch {
+                                userPreferencesRepository.updatePref(
+                                    PreferenceKeys.SHOW_UNFOLLOWED_TAGS_IN_FREQUENTS_LIST,
+                                    it
+                                )
+                            }
+                            resetRecommendations()
+                        }
+                    }
                 }
             }
 
@@ -337,33 +377,6 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
                                 userPreferencesRepository.updatePref(
                                     PreferenceKeys.RECOMMENDATIONS_POOL_SIZE,
                                     it.roundToInt()
-                                )
-                            }
-                            resetRecommendations()
-                        }
-                    }
-                    item {
-                        // I hope this option isn't too confusing.
-                        SwitchPref(
-                            checked = prefs.poolSizeIncludesIgnored,
-                            title = "Include ignored tags in limit",
-                            summary = "Whether or not the maximum tag limit should count ignored " +
-                                      "tags.",
-                            infoText = "This option determines whether or not ignored tags will " +
-                                       "count towards the maximum tag limit.\n\n" +
-                                       "If enabled, your recommendations selection size may be " +
-                                       "smaller than the limit.\n" +
-                                       "If disabled, Breadboard will try to always use the " +
-                                       "maximum limit, resulting in more variety in your " +
-                                       "recommendations.\n\n" +
-                                       "Disabling this option will prevent ignored tags from " +
-                                       "being shown in the frequent tag list and you will need " +
-                                       "to manage them with the 'Manage ignored tags' option."
-                        ) {
-                            scope.launch {
-                                userPreferencesRepository.updatePref(
-                                    PreferenceKeys.POOL_SIZE_INCLUDES_IGNORED,
-                                    it
                                 )
                             }
                             resetRecommendations()

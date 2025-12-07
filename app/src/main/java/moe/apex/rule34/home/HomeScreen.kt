@@ -10,16 +10,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
@@ -29,19 +32,25 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import moe.apex.rule34.detailview.ImageGrid
 import moe.apex.rule34.preferences.Experiment
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.largeimageview.OffsetBasedLargeImageView
+import moe.apex.rule34.tag.IgnoredTagsHelper
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.RecommendationsProvider
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
 import moe.apex.rule34.util.SMALL_SPACER
 import moe.apex.rule34.util.ScrollToTopArrow
 import moe.apex.rule34.util.bottomAppBarAndNavBarHeight
+import moe.apex.rule34.util.differenceOlderThan
 import moe.apex.rule34.util.onScroll
 import moe.apex.rule34.util.rememberPullToRefreshController
+import moe.apex.rule34.util.saveIgnoreListWithTimestamp
 import moe.apex.rule34.viewmodel.BreadboardViewModel
+import kotlin.time.Duration.Companion.days
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -51,10 +60,12 @@ fun HomeScreen(
     viewModel: BreadboardViewModel,
     bottomBarVisibleState: MutableState<Boolean>,
 ) {
+    val scope = rememberCoroutineScope { Dispatchers.IO }
     val context = LocalContext.current
     val prefs = LocalPreferences.current
     val blockedTags by rememberUpdatedState(prefs.blockedTags)
     val unfollowedTags by rememberUpdatedState(prefs.unfollowedTags)
+    val builtInIgnoredTags by rememberUpdatedState(prefs.internalIgnoreList)
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(topAppBarState)
     val shouldShowLargeImage = remember { mutableStateOf(false) }
@@ -62,28 +73,13 @@ fun HomeScreen(
 
     val blur = prefs.isExperimentEnabled(Experiment.IMMERSIVE_UI_EFFECTS)
 
-    if (viewModel.recommendationsProvider == null) {
-        viewModel.recommendationsProvider = RecommendationsProvider(
-            seedImages = prefs.favouriteImages,
-            imageSource = prefs.imageSource,
-            auth = prefs.authFor(prefs.imageSource, context),
-            showAllRatings = prefs.recommendAllRatings,
-            filterRatingsLocally = prefs.filterRatingsLocally,
-            initialBlockedTags = prefs.blockedTags,
-            initialUnfollowedTags = prefs.unfollowedTags,
-            selectionSize = prefs.recommendationsTagCount,
-            poolSize = prefs.recommendationsPoolSize,
-            poolSizeIncludesUnfollowed = prefs.poolSizeIncludesIgnored
-        )
-        viewModel.recommendationsProvider!!.prepareRecommendedTags()
-    }
-    val recommendationsProvider = viewModel.recommendationsProvider!!
+    val recommendationsProvider = viewModel.recommendationsProvider
     val pullToRefreshController = rememberPullToRefreshController(initialValue = false) {
-        recommendationsProvider.replaceBlockedTags(blockedTags)
-        recommendationsProvider.replaceUnfollowedTags(unfollowedTags)
-        recommendationsProvider.prepareRecommendedTags()
-        recommendationsProvider.recommendImages()
-        recommendationsProvider.resetGridStates()
+        recommendationsProvider?.replaceBlockedTags(blockedTags)
+        recommendationsProvider?.replaceUnfollowedTags(unfollowedTags + builtInIgnoredTags)
+        recommendationsProvider?.prepareRecommendedTags()
+        recommendationsProvider?.recommendImages()
+        recommendationsProvider?.resetGridStates()
     }
 
     MainScreenScaffold(
@@ -93,14 +89,57 @@ fun HomeScreen(
         addBottomPadding = false,
         blur = shouldShowLargeImage.value && blur,
         additionalActions = {
-            ScrollToTopArrow(
-                staggeredGridState = recommendationsProvider.staggeredGridState,
-                uniformGridState = recommendationsProvider.uniformGridState
-            ) {
-                scrollBehavior.state.contentOffset = 0f
+            if (recommendationsProvider != null) {
+                ScrollToTopArrow(
+                    staggeredGridState = recommendationsProvider.staggeredGridState,
+                    uniformGridState = recommendationsProvider.uniformGridState
+                ) {
+                    scrollBehavior.state.contentOffset = 0f
+                }
             }
         }
     ) { padding ->
+        LaunchedEffect(Unit) {
+            if (differenceOlderThan(7.days, prefs.internalIgnoreListTimestamp)) {
+                scope.launch {
+                    IgnoredTagsHelper.fetchTagListOnline(
+                        context = context,
+                        onSuccess = { saveIgnoreListWithTimestamp(context, it) }
+                    ) { failureResult ->
+                        saveIgnoreListWithTimestamp(
+                            context = context,
+                            data = prefs.internalIgnoreList.takeIf { it.isNotEmpty() } ?: failureResult
+                        )
+                    }
+                }
+            }
+        }
+
+        if (builtInIgnoredTags.isEmpty()) {
+            return@MainScreenScaffold LinearProgressIndicator(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(padding)
+                    .padding(SMALL_LARGE_SPACER.dp)
+            )
+        } else {
+            if (viewModel.recommendationsProvider == null) {
+                viewModel.recommendationsProvider = RecommendationsProvider(
+                    seedImages = prefs.favouriteImages,
+                    imageSource = prefs.imageSource,
+                    auth = prefs.authFor(prefs.imageSource, context),
+                    showAllRatings = prefs.recommendAllRatings,
+                    filterRatingsLocally = prefs.filterRatingsLocally,
+                    initialBlockedTags = prefs.blockedTags,
+                    initialUnfollowedTags = prefs.unfollowedTags + builtInIgnoredTags,
+                    selectionSize = prefs.recommendationsTagCount,
+                    poolSize = prefs.recommendationsPoolSize
+                )
+                viewModel.recommendationsProvider!!.prepareRecommendedTags()
+            }
+        }
+        val recommendationsProvider = viewModel.recommendationsProvider!!
+
         ImageGrid(
             modifier = Modifier
                 .padding(padding)
@@ -152,5 +191,5 @@ fun HomeScreen(
         )
     }
 
-    OffsetBasedLargeImageView(navController, shouldShowLargeImage, initialPage, recommendationsProvider.recommendedImages, bottomBarVisibleState)
+    OffsetBasedLargeImageView(navController, shouldShowLargeImage, initialPage, recommendationsProvider?.recommendedImages ?: emptyList(), bottomBarVisibleState)
 }

@@ -1,0 +1,92 @@
+<resources>
+    <string-array name="default_ignored_tags">
+        <!-- Meta -->
+        <item>artist_request</item>
+        <item>bad_id</item>
+        <item>bad_pixiv_id</item>
+        <item>bad_twitter_id</item>
+        <item>character_request</item>
+        <item>commentary</item>
+        <item>commentary_request</item>
+        <item>copyright_request</item>
+        <item>english_commentary</item>
+        <item>parody_request</item>
+        <item>series_request</item>
+        <item>source_request</item>
+        <item>tagme</item>
+        <item>translation_request</item>
+
+        <!-- Art type -->
+        <item>animated_gif</item>
+        <item>comic</item>
+        <item>commission</item>
+        <item>non-web_source</item>
+        <item>official_art</item>
+        <item>original</item>
+        <item>parody</item>
+        <item>promotional</item>
+        <item>wallpaper</item>
+
+        <!-- Resolution and colour -->
+        <item>absurdres</item>
+        <item>highres</item>
+        <item>lowres</item>
+        <item>monochrome</item>
+        <item>ultra_highres</item>
+
+        <!-- Watermarks -->
+        <item>artist_name</item>
+        <item>sample_watermark</item>
+        <item>signature</item>
+        <item>text</item>
+        <item>watermark</item>
+
+        <!-- Characters -->
+        <item>1boy</item>
+        <item>1girl</item>
+        <item>2boys</item>
+        <item>2girls</item>
+        <item>3boys</item>
+        <item>3girls</item>
+        <item>multiple_boys</item>
+        <item>multiple_girls</item>
+        <item>solo</item>
+
+        <!-- Clothing -->
+        <item>alternate_costume</item>
+        <item>official_alternate_costume</item>
+
+        <!-- Actions -->
+        <item>arm_up</item>
+        <item>arms_up</item>
+        <item>closed_eyes</item>
+        <item>falling</item>
+        <item>holding</item>
+        <item>looking_at_another</item>
+        <item>looking_at_viewer</item>
+        <item>looking_away</item>
+        <item>looking_back</item>
+        <item>looking_down</item>
+        <item>looking_to_the_side</item>
+        <item>looking_up</item>
+        <item>open_mouth</item>
+        <item>sitting</item>
+        <item>standing</item>
+
+        <!-- Backgrounds -->
+        <item>black_background</item>
+        <item>blurry</item>
+        <item>colored_background</item>
+        <item>day</item>
+        <item>gradient_background</item>
+        <item>indoors</item>
+        <item>night</item>
+        <item>outdoors</item>
+        <item>simple_background</item>
+        <item>transparent_background</item>
+        <item>white_background</item>
+
+        <!-- Others -->
+        <item>jpeg_artifacts</item>
+    </string-array>
+</resources>

@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import kotlinx.coroutines.Dispatchers
@@ -117,6 +118,7 @@ private fun importSettings(tempPrefs: MutablePreferences, data: JSONObject) {
 
                 is Int -> this[intPreferencesKey(key)] = prefValue
                 is Boolean -> this[booleanPreferencesKey(key)] = prefValue
+                is Long -> this[longPreferencesKey(key)] = prefValue // At the time of writing this is only the ignore list timestamp which isn't exportable but I might change my mind
                 else -> throw NotImplementedError("Settings key with unhandled type: $key ($prefValue)")
             }
         }

@@ -29,7 +29,6 @@ class RecommendationsProvider(
     private val initialUnfollowedTags: Set<String>,
     private val selectionSize: Int,
     private val poolSize: Int,
-    private val poolSizeIncludesUnfollowed: Boolean
 ) : GridStateHolder by GridStateHolderDelegate() {
     companion object {
         private const val SELECTION_SIZE_DANBOORU = 2
@@ -72,7 +71,7 @@ class RecommendationsProvider(
         val tagsFromFavourites = RecommendationsHelper.getAllTags(
             images = seedImages.filter { it.imageSource == imageSource },
             allowAllRatings = showAllRatings,
-            excludedTags = blockedTags.toList()
+            excludedTags = blockedTags
         )
 
         if (tagsFromFavourites.isEmpty()) {
@@ -81,9 +80,8 @@ class RecommendationsProvider(
 
         val topTags = RecommendationsHelper.getMostCommonTags(
             allTags = tagsFromFavourites,
-            limit = poolSize,
-            excludedTags = unfollowedTags.toList(),
-            limitIncludesExcluded = poolSizeIncludesUnfollowed
+            followedTagsLimit = poolSize,
+            unfollowedTags = unfollowedTags
         )
 
         val finalSelectionSize = if (imageSource == ImageSource.DANBOORU && auth == null) SELECTION_SIZE_DANBOORU else selectionSize
