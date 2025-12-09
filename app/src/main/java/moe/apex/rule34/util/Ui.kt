@@ -24,6 +24,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -1045,12 +1046,12 @@ fun CombinedClickableAction(
 @OptIn(ExperimentalMaterial3Api::class)
 data class PullToRefreshController(
     val state: PullToRefreshState,
-    private val initialValue: Boolean = false,
-    private val modifier: Modifier = Modifier,
-    private val scope: CoroutineScope,
+    val indicator: @Composable BoxScope.(PullToRefreshController) -> Unit,
     private val refreshCallback: suspend () -> Unit
 ) {
-    var isRefreshing by mutableStateOf(initialValue)
+    private val scope = CoroutineScope(Dispatchers.IO)
+    var isRefreshing by mutableStateOf(false)
+        private set
 
     private fun startRefreshing(animate: Boolean) {
         if (isRefreshing) return
@@ -1076,34 +1077,25 @@ data class PullToRefreshController(
             stopRefreshing(animate)
         }
     }
-
-    @OptIn(ExperimentalMaterial3Api::class)
-    @Composable
-    fun Indicator(modifier: Modifier = Modifier) {
-        PullToRefreshControllerDefaults.Indicator(
-            controller = this@PullToRefreshController,
-            modifier = this.modifier.then(modifier)
-        )
-    }
 }
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun rememberPullToRefreshController(
-    initialValue: Boolean,
-    key: Any? = null,
     state: PullToRefreshState = rememberPullToRefreshState(),
-    modifier: Modifier = Modifier,
+    indicator: @Composable BoxScope.(PullToRefreshController) -> Unit = {
+        PullToRefreshControllerDefaults.Indicator(
+            modifier = Modifier.align(Alignment.TopCenter),
+            controller = it
+        )
+    },
     onRefresh: suspend () -> Unit = { }
 ): PullToRefreshController {
-    val scope = rememberCoroutineScope { Dispatchers.IO }
-    return remember(key) {
+    return remember {
         PullToRefreshController(
             state = state,
-            initialValue = initialValue,
-            modifier = modifier,
-            scope = scope,
+            indicator = indicator,
             refreshCallback = onRefresh
         )
     }
@@ -1114,8 +1106,8 @@ object PullToRefreshControllerDefaults {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun Indicator(
+        modifier: Modifier = Modifier,
         controller: PullToRefreshController,
-        modifier: Modifier
     ) {
         PullToRefreshDefaults.Indicator(
             state = controller.state,

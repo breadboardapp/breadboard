@@ -73,14 +73,18 @@ fun HomeScreen(
 
     val blur = prefs.isExperimentEnabled(Experiment.IMMERSIVE_UI_EFFECTS)
 
-    val recommendationsProvider = viewModel.recommendationsProvider
-    val pullToRefreshController = rememberPullToRefreshController(initialValue = false) {
-        recommendationsProvider?.replaceBlockedTags(blockedTags)
-        recommendationsProvider?.replaceUnfollowedTags(unfollowedTags + builtInIgnoredTags)
-        recommendationsProvider?.prepareRecommendedTags()
-        recommendationsProvider?.recommendImages()
-        recommendationsProvider?.resetGridStates()
+    val _onRefresh: suspend () -> Unit = {
+        viewModel.recommendationsProvider?.let {
+            it.replaceBlockedTags(blockedTags)
+            it.replaceUnfollowedTags(unfollowedTags + builtInIgnoredTags)
+            it.prepareRecommendedTags()
+            it.recommendImages()
+            it.resetGridStates()
+        }
     }
+    val onRefresh by rememberUpdatedState(_onRefresh)
+
+    val pullToRefreshController = rememberPullToRefreshController(onRefresh = onRefresh)
 
     MainScreenScaffold(
         title = "Breadboard",
@@ -89,10 +93,10 @@ fun HomeScreen(
         addBottomPadding = false,
         blur = shouldShowLargeImage.value && blur,
         additionalActions = {
-            if (recommendationsProvider != null) {
+            if (viewModel.recommendationsProvider != null) {
                 ScrollToTopArrow(
-                    staggeredGridState = recommendationsProvider.staggeredGridState,
-                    uniformGridState = recommendationsProvider.uniformGridState
+                    staggeredGridState = viewModel.recommendationsProvider!!.staggeredGridState,
+                    uniformGridState = viewModel.recommendationsProvider!!.uniformGridState
                 ) {
                     scrollBehavior.state.contentOffset = 0f
                 }
@@ -138,6 +142,7 @@ fun HomeScreen(
                 viewModel.recommendationsProvider!!.prepareRecommendedTags()
             }
         }
+
         val recommendationsProvider = viewModel.recommendationsProvider!!
 
         ImageGrid(
@@ -191,5 +196,5 @@ fun HomeScreen(
         )
     }
 
-    OffsetBasedLargeImageView(navController, shouldShowLargeImage, initialPage, recommendationsProvider?.recommendedImages ?: emptyList(), bottomBarVisibleState)
+    OffsetBasedLargeImageView(navController, shouldShowLargeImage, initialPage, viewModel.recommendationsProvider?.recommendedImages ?: emptyList(), bottomBarVisibleState)
 }

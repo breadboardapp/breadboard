@@ -90,7 +90,7 @@ fun ImageGrid(
                 state = pullToRefreshController.state,
                 onRefresh = pullToRefreshController::refresh,
                 indicator = {
-                    pullToRefreshController.Indicator(Modifier.align(Alignment.TopCenter))
+                    pullToRefreshController.indicator(this, pullToRefreshController)
                 },
                 content = { content() }
             )
