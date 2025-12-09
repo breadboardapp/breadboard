@@ -171,7 +171,6 @@ enum class FlagSecureMode(override val label: String) : PrefEnum<FlagSecureMode>
 
 
 enum class Experiment(override val label: String, val description: String? = null) : PrefEnum<Experiment> {
-    SEARCH_PULL_TO_REFRESH("Pull-to-refresh in Search", "Enable pull-to-refresh in search results."),
     ALWAYS_ANIMATE_SCROLL("Always animate scroll-to-top", "Enable smooth scrolling on all pages when using the scroll-to-top button."),
     IMMERSIVE_UI_EFFECTS("Immersive UI effects", "Enables immersive UI effects such as blur and translucency. Not all devices support this feature. Disable if you experience poor performance.");
 
@@ -484,19 +483,15 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             val enabledExperiments = Prefs.DEFAULT.enabledExperiments.toMutableSet()
             val searchPtrKey = booleanPreferencesKey("search_pull_to_refresh")
             val alwaysAnimateScrollKey = booleanPreferencesKey("always_animate_scroll")
-            val searchPullToRefresh = data[searchPtrKey] ?: false
             val alwaysAnimateScroll = data[alwaysAnimateScrollKey] ?: false
 
-            if (searchPullToRefresh) {
-                enabledExperiments.add(Experiment.SEARCH_PULL_TO_REFRESH)
-            }
             if (alwaysAnimateScroll) {
                 enabledExperiments.add(Experiment.ALWAYS_ANIMATE_SCROLL)
             }
 
             updateSet(PreferenceKeys.ENABLED_EXPERIMENTS, enabledExperiments.map { it.name })
             dataStore.edit { prefs ->
-                prefs.remove(searchPtrKey)
+                prefs.remove(searchPtrKey) // Now enabled by default
                 prefs.remove(alwaysAnimateScrollKey)
             }
         }

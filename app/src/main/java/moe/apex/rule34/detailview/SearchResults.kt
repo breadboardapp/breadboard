@@ -112,27 +112,25 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
         }
     }
 
-    val pullToRefreshController = if (Experiment.SEARCH_PULL_TO_REFRESH.isEnabled()) {
-        rememberPullToRefreshController(
-            indicator = {
-                PullToRefreshControllerDefaults.Indicator(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .then(
-                            if (prefs.filterRatingsLocally) {
-                                Modifier.offset(y = 80.dp) // Height of the ratings box
-                            } else Modifier
-                        ),
-                    controller = it
-                )
-            }
-        ) {
-            updateBlockedTags()
-            viewModel.prepareReset()
-            setUpViewModel()
-            viewModel.loadMore()
+    val pullToRefreshController = rememberPullToRefreshController(
+        indicator = {
+            PullToRefreshControllerDefaults.Indicator(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .then(
+                        if (prefs.filterRatingsLocally) {
+                            Modifier.offset(y = 80.dp) // Height of the ratings box
+                        } else Modifier
+                    ),
+                controller = it
+            )
         }
-    } else null
+    ) {
+        updateBlockedTags()
+        viewModel.prepareReset()
+        setUpViewModel()
+        viewModel.loadMore()
+    }
 
     val ratingRows: List<@Composable () -> Unit> = availableRatingsForCurrentSource.map { {
         FilterChip(
