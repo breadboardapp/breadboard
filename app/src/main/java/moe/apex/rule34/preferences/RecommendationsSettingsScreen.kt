@@ -80,7 +80,6 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
     val scope = rememberCoroutineScope()
     val userPreferencesRepository = LocalContext.current.prefs
     val prefs = LocalPreferences.current
-    val unfollowedTags = prefs.unfollowedTags.reversed()
 
     val favouriteImagesPerSource = remember {
         prefs.favouriteImages.groupBy { it.imageSource }
@@ -102,7 +101,7 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
         }
     }
 
-    val topTags = rememberSaveable(
+    val topTags = remember(
         prefs.recommendAllRatings,
         prefs.recommendationsPoolSize,
         prefs.unfollowedTags,
@@ -187,7 +186,7 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
                                         onClick = {
                                             if (!prefs.unfollowedTags.contains(rec)) {
                                                 scope.launch {
-                                                    if (rec in unfollowedTags) {
+                                                    if (rec in prefs.unfollowedTags) {
                                                         userPreferencesRepository.removeFromSet(
                                                             PreferenceKeys.UNFOLLOWED_TAGS,
                                                             rec
@@ -295,7 +294,7 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
                                         selected = tag !in prefs.unfollowedTags,
                                         onClick = {
                                             scope.launch {
-                                                if (tag in unfollowedTags) {
+                                                if (tag in prefs.unfollowedTags) {
                                                     userPreferencesRepository.removeFromSet(
                                                         PreferenceKeys.UNFOLLOWED_TAGS,
                                                         tag
