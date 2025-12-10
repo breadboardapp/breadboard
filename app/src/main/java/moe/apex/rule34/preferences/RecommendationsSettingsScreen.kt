@@ -126,7 +126,7 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
         }
     }
 
-    val pagerState = rememberPagerState { topTags.size }
+    val pagerState = rememberPagerState(ImageSource.entries.indexOf(prefs.imageSource)) { topTags.size }
 
     fun resetRecommendations() {
         viewModel.recommendationsProvider = null
