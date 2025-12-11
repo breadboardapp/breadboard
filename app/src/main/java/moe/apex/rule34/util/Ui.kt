@@ -1136,7 +1136,7 @@ fun ScrollToTopArrow(
     alsoOnClick: (() -> Unit)? = null
 ) {
     val scope = rememberCoroutineScope()
-    val isScrolledPastFirst by remember {
+    val isScrolledPastFirst by remember(staggeredGridState, uniformGridState) {
         derivedStateOf { staggeredGridState.firstVisibleItemIndex != 0 || uniformGridState.firstVisibleItemIndex != 0 }
     }
 
