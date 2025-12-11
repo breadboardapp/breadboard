@@ -66,6 +66,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -155,7 +156,8 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
     /* We use shouldShowSuggestions for determining autocomplete section visibility because if we
        used mostRecentSuggestions.isNotEmpty(), it would temporarily show the "No results" message
        while disappearing and that looks bad. */
-    val tagChipList = viewModel.tagSuggestions
+    val tagChipList by viewModel.tagSuggestions.collectAsState()
+    val incognito by viewModel.incognito.collectAsState()
     var shouldShowSuggestions by remember { mutableStateOf(false) }
     var searchString by rememberSaveable { mutableStateOf("") }
     var cleanedSearchString by rememberSaveable { mutableStateOf("") }
@@ -208,15 +210,14 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
         }
     }
 
+
     fun addToFilter(tag: TagSuggestion) {
         val index = tagChipList.getIndexByName(tag.value)
 
         if (index == null) {
-            tagChipList.add(tag)
+            viewModel.addTagSuggestion(tag)
         } else {
-            // For some reason `tagChipList[index] = tag` doesn't update in the UI
-            tagChipList.removeAt(index)
-            tagChipList.add(index, tag)
+            viewModel.replaceTagSuggestion(index, tag)
         }
     }
 
@@ -386,7 +387,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
         if (!danbooruLimitCheck())
             return
 
-        if (prefs.saveSearchHistory && !viewModel.incognito) {
+        if (prefs.saveSearchHistory && !incognito) {
             scope.launch {
                 context.prefs.addSearchHistoryEntry(
                     SearchHistoryEntry(
@@ -425,14 +426,14 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
         title = "Search",
         additionalActions = {
             if (prefs.saveSearchHistory) {
-                val buttonColour by animateColorAsState(if (viewModel.incognito) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background)
-                val contentColor by animateColorAsState(if (viewModel.incognito) MaterialTheme.colorScheme.onSecondaryContainer else TopAppBarDefaults.topAppBarColors().actionIconContentColor)
+                val buttonColour by animateColorAsState(if (incognito) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background)
+                val contentColor by animateColorAsState(if (incognito) MaterialTheme.colorScheme.onSecondaryContainer else TopAppBarDefaults.topAppBarColors().actionIconContentColor)
                 val contentPadding by animateDpAsState(
-                    targetValue = if (!viewModel.incognito) SMALL_SPACER.dp else SMALL_LARGE_SPACER.dp,
+                    targetValue = if (!incognito) SMALL_SPACER.dp else SMALL_LARGE_SPACER.dp,
                     animationSpec = bouncyAnimationSpec()
                 )
                 Button(
-                    onClick = { viewModel.incognito = !viewModel.incognito },
+                    onClick = { viewModel.setIncognito(!incognito) },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = buttonColour,
                         contentColor = contentColor
@@ -445,7 +446,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                         contentDescription = "Incognito mode",
                     )
                     AnimatedVisibility(
-                        visible = viewModel.incognito,
+                        visible = incognito,
                         enter = fadeIn() + expandHorizontally(
                             animationSpec = bouncyAnimationSpec()
                         ),
@@ -615,7 +616,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                                     scope.launch {
                                         context.prefs.updatePref(PreferenceKeys.IMAGE_SOURCE, it)
                                     }
-                                    tagChipList.clear()
+                                    viewModel.clearTagSuggestions()
                                     if (shouldShowSuggestions) getSuggestions(
                                         bypassDelay = true,
                                         source = it
@@ -695,9 +696,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                                 selected = !tag.isExcluded,
                                 colors = filterChipSolidColor,
                                 border = null,
-                                onClick = {
-                                    tagChipList.remove(tag)
-                                }
+                                onClick = { viewModel.removeTagSuggestion(tag) }
                             )
                         }
                         if (tagChipList.isNotEmpty()) {
@@ -823,7 +822,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                     if (prefs.searchHistory.isEmpty()) {
                         SearchHistoryStandaloneTextItem("No search history yet. Start searching!")
                     } else {
-                        if (viewModel.incognito) {
+                        if (incognito) {
                             SearchHistoryStandaloneTextItem("Incognito mode is enabled. Search history will not be saved.")
                         }
                         items(reversedSearchHistory, key = { it.timestamp }) { entry ->
@@ -841,8 +840,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
                                     text = "$formattedDate  \u2022  ${entry.source.label}"
                                 )
                                 SearchHistoryListItem(entry) {
-                                    tagChipList.clear()
-                                    tagChipList.addAll(entry.tags)
+                                    viewModel.setTagSuggestions(entry.tags.toList())
                                     searchString = ""
                                     shouldShowSuggestions = false
                                     scope.launch {

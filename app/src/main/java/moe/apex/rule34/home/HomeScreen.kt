@@ -18,6 +18,7 @@ import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -63,6 +64,7 @@ fun HomeScreen(
     val scope = rememberCoroutineScope { Dispatchers.IO }
     val context = LocalContext.current
     val prefs = LocalPreferences.current
+    val recommendationsProvider by viewModel.recommendationsProvider.collectAsState()
     val blockedTags by rememberUpdatedState(prefs.blockedTags)
     val unfollowedTags by rememberUpdatedState(prefs.unfollowedTags)
     val builtInIgnoredTags by rememberUpdatedState(prefs.internalIgnoreList)
@@ -74,7 +76,7 @@ fun HomeScreen(
     val blur = prefs.isExperimentEnabled(Experiment.IMMERSIVE_UI_EFFECTS)
 
     val _onRefresh: suspend () -> Unit = {
-        viewModel.recommendationsProvider?.let {
+        recommendationsProvider?.let {
             it.replaceBlockedTags(blockedTags)
             it.replaceUnfollowedTags(unfollowedTags + builtInIgnoredTags)
             it.prepareRecommendedTags()
@@ -93,10 +95,10 @@ fun HomeScreen(
         addBottomPadding = false,
         blur = shouldShowLargeImage.value && blur,
         additionalActions = {
-            if (viewModel.recommendationsProvider != null) {
+            recommendationsProvider?.let {
                 ScrollToTopArrow(
-                    staggeredGridState = viewModel.recommendationsProvider!!.staggeredGridState,
-                    uniformGridState = viewModel.recommendationsProvider!!.uniformGridState
+                    staggeredGridState = it.staggeredGridState,
+                    uniformGridState = it.uniformGridState
                 ) {
                     scrollBehavior.state.contentOffset = 0f
                 }
@@ -120,81 +122,90 @@ fun HomeScreen(
         }
 
         if (builtInIgnoredTags.isEmpty()) {
-            return@MainScreenScaffold LinearProgressIndicator(
+            LinearProgressIndicator(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(padding)
                     .padding(SMALL_LARGE_SPACER.dp)
             )
         } else {
-            if (viewModel.recommendationsProvider == null) {
-                viewModel.recommendationsProvider = RecommendationsProvider(
-                    seedImages = prefs.favouriteImages,
-                    imageSource = prefs.imageSource,
-                    auth = prefs.authFor(prefs.imageSource, context),
-                    showAllRatings = prefs.recommendAllRatings,
-                    filterRatingsLocally = prefs.filterRatingsLocally,
-                    initialBlockedTags = prefs.blockedTags,
-                    initialUnfollowedTags = prefs.unfollowedTags + builtInIgnoredTags,
-                    selectionSize = prefs.recommendationsTagCount,
-                    poolSize = prefs.recommendationsPoolSize
-                )
-                viewModel.recommendationsProvider!!.prepareRecommendedTags()
+            if (recommendationsProvider == null) {
+                LaunchedEffect(Unit) {
+                    val newProvider = RecommendationsProvider(
+                        seedImages = prefs.favouriteImages,
+                        imageSource = prefs.imageSource,
+                        auth = prefs.authFor(prefs.imageSource, context),
+                        showAllRatings = prefs.recommendAllRatings,
+                        filterRatingsLocally = prefs.filterRatingsLocally,
+                        initialBlockedTags = prefs.blockedTags,
+                        initialUnfollowedTags = prefs.unfollowedTags + builtInIgnoredTags,
+                        selectionSize = prefs.recommendationsTagCount,
+                        poolSize = prefs.recommendationsPoolSize
+                    )
+                    newProvider.prepareRecommendedTags()
+                    viewModel.setRecommendationsProvider(newProvider)
+                }
             }
         }
 
-        val recommendationsProvider = viewModel.recommendationsProvider!!
-
-        ImageGrid(
-            modifier = Modifier
-                .padding(padding)
-                .nestedScroll(scrollBehavior.nestedScrollConnection)
-                .onScroll(recommendationsProvider.staggeredGridState) {
-                    bottomBarVisibleState.value = !it.lastScrolledForward
-                }
-                .onScroll(recommendationsProvider.uniformGridState) {
-                    bottomBarVisibleState.value = !it.lastScrolledForward
-                },
-            staggeredGridState = recommendationsProvider.staggeredGridState,
-            uniformGridState = recommendationsProvider.uniformGridState,
-            images = recommendationsProvider.recommendedImages,
-            noImagesContent = {
-                if (!recommendationsProvider.doneInitialLoad) {
-                    return@ImageGrid
-                }
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text("No recommendations right now.")
-                    TextButton(
-                        onClick = {
-                            pullToRefreshController.refresh(animate = true)
-                        }
-                    ) {
-                        Icon(Icons.Default.Refresh, contentDescription = null)
-                        Spacer(Modifier.width(SMALL_SPACER.dp))
-                        Text("Refresh")
+        recommendationsProvider?.let { provider ->
+            ImageGrid(
+                modifier = Modifier
+                    .padding(padding)
+                    .nestedScroll(scrollBehavior.nestedScrollConnection)
+                    .onScroll(provider.staggeredGridState) {
+                        bottomBarVisibleState.value = !it.lastScrolledForward
                     }
-                }
-            },
-            onImageClick = { index, _ ->
-                Snapshot.withMutableSnapshot {
-                    initialPage = index
-                    shouldShowLargeImage.value = true
-                }
-            },
-            contentPadding = PaddingValues(
-                start = SMALL_LARGE_SPACER.dp,
-                end = SMALL_LARGE_SPACER.dp,
-                top = SMALL_LARGE_SPACER.dp,
-                bottom = bottomAppBarAndNavBarHeight
-            ),
-            pullToRefreshController = pullToRefreshController,
-            doneInitialLoad = recommendationsProvider.doneInitialLoad,
-            onEndReached = { recommendationsProvider.recommendImages() },
-        )
+                    .onScroll(provider.uniformGridState) {
+                        bottomBarVisibleState.value = !it.lastScrolledForward
+                    },
+                staggeredGridState = provider.staggeredGridState,
+                uniformGridState = provider.uniformGridState,
+                images = provider.recommendedImages,
+                noImagesContent = {
+                    if (!provider.doneInitialLoad) {
+                        return@ImageGrid
+                    }
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("No recommendations right now.")
+                        TextButton(
+                            onClick = {
+                                pullToRefreshController.refresh(animate = true)
+                            }
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = null)
+                            Spacer(Modifier.width(SMALL_SPACER.dp))
+                            Text("Refresh")
+                        }
+                    }
+                },
+                onImageClick = { index, _ ->
+                    Snapshot.withMutableSnapshot {
+                        initialPage = index
+                        shouldShowLargeImage.value = true
+                    }
+                },
+                contentPadding = PaddingValues(
+                    start = SMALL_LARGE_SPACER.dp,
+                    end = SMALL_LARGE_SPACER.dp,
+                    top = SMALL_LARGE_SPACER.dp,
+                    bottom = bottomAppBarAndNavBarHeight
+                ),
+                pullToRefreshController = pullToRefreshController,
+                doneInitialLoad = provider.doneInitialLoad,
+                onEndReached = { provider.recommendImages() },
+            )
+        }
     }
 
-    OffsetBasedLargeImageView(navController, shouldShowLargeImage, initialPage, viewModel.recommendationsProvider?.recommendedImages ?: emptyList(), bottomBarVisibleState)
+    OffsetBasedLargeImageView(
+        navController,
+        shouldShowLargeImage,
+        initialPage,
+        recommendationsProvider?.recommendedImages ?: emptyList(),
+        bottomBarVisibleState
+    )
 }

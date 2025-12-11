@@ -109,7 +109,7 @@ fun IgnoredTagsScreen(navController: NavHostController, viewModel: BreadboardVie
                                                 context = context,
                                                 onSuccess = {
                                                     saveIgnoreListWithTimestamp(context, it)
-                                                    viewModel.recommendationsProvider = null
+                                                    viewModel.setRecommendationsProvider(null)
                                                     withContext(Dispatchers.Main) {
                                                         showToast(context, "Refreshed ${it.size} tags")
                                                     }
@@ -193,7 +193,7 @@ fun IgnoredTagsScreen(navController: NavHostController, viewModel: BreadboardVie
                                         tag
                                     )
                                 }
-                                viewModel.recommendationsProvider = null
+                                viewModel.setRecommendationsProvider(null)
                             }
                         ) {
                             Icon(

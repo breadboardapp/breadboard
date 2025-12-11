@@ -31,6 +31,8 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -80,6 +82,7 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
     val scope = rememberCoroutineScope()
     val userPreferencesRepository = LocalContext.current.prefs
     val prefs = LocalPreferences.current
+    val recommendationsProvider by viewModel.recommendationsProvider.collectAsState()
 
     val favouriteImagesPerSource = remember {
         prefs.favouriteImages.groupBy { it.imageSource }
@@ -129,7 +132,7 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
     val pagerState = rememberPagerState(ImageSource.entries.indexOf(prefs.imageSource)) { topTags.size }
 
     fun resetRecommendations() {
-        viewModel.recommendationsProvider = null
+        viewModel.setRecommendationsProvider(null)
     }
 
     fun showUnfollowedToast(tagName: String) {
@@ -149,8 +152,8 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
             )
         }
     ) {
-        val hasProvider = rememberSaveable { viewModel.recommendationsProvider != null }
-        val recentRecommendations = rememberSaveable { viewModel.recommendationsProvider?.recommendedTags ?: emptyList() }
+        val hasProvider = rememberSaveable { recommendationsProvider != null }
+        val recentRecommendations = rememberSaveable { recommendationsProvider?.recommendedTags ?: emptyList() }
         LazyColumn(
             modifier = Modifier
                 .padding(it)

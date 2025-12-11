@@ -87,15 +87,14 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity() {
             val navController = rememberNavController()
             val prefs by prefs.getPreferences.collectAsState(initialPrefs)
             val viewModel = viewModel(BreadboardViewModel::class.java)
+            val recommendationsProvider by viewModel.recommendationsProvider.collectAsState()
 
-            LaunchedEffect(prefs.imageSource, prefs.imageBoardAuths, prefs.filterRatingsLocally, prefs.recommendAllRatings) {
+            LaunchedEffect(prefs.imageSource, prefs.filterRatingsLocally) {
                 if (
-                    viewModel.recommendationsProvider?.imageSource != prefs.imageSource ||
-                    viewModel.recommendationsProvider?.auth != prefs.authFor(prefs.imageSource, applicationContext) ||
-                    viewModel.recommendationsProvider?.filterRatingsLocally != prefs.filterRatingsLocally ||
-                    viewModel.recommendationsProvider?.showAllRatings != prefs.recommendAllRatings
+                    recommendationsProvider?.imageSource != prefs.imageSource ||
+                    recommendationsProvider?.filterRatingsLocally != prefs.filterRatingsLocally
                 ) {
-                    viewModel.recommendationsProvider = null
+                    viewModel.setRecommendationsProvider(null)
                 }
             }
 

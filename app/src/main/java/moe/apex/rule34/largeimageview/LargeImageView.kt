@@ -49,6 +49,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -269,6 +270,7 @@ private fun LargeImageToolbar(
     val favouriteImages = prefs.favouriteImages
     val actions = prefs.imageViewerActions.drop(1)
     val primaryAction = prefs.imageViewerActions.first()
+    val downloadingImages by viewModel.downloadingImages.collectAsState()
 
     var showInfoSheet by remember { mutableStateOf(false) }
     var storageLocationPromptLaunched by remember { mutableStateOf(false) }
@@ -354,11 +356,11 @@ private fun LargeImageToolbar(
         },
         ToolbarAction.DOWNLOAD to {
             ImageAction(
-                enabled = currentImage !in viewModel.downloadingImages,
+                enabled = currentImage !in downloadingImages,
                 onClick = {
-                    if (currentImage !in viewModel.downloadingImages) {
+                    if (currentImage !in downloadingImages) {
                         viewModel.viewModelScope.launch {
-                            viewModel.downloadingImages.add(currentImage)
+                            viewModel.addDownloadingImage(currentImage)
                             val result: Result<Boolean> = downloadImage(
                                 context,
                                 currentImage,
@@ -381,12 +383,12 @@ private fun LargeImageToolbar(
                                     exc
                                 )
                             }
-                            viewModel.downloadingImages.remove(currentImage)
+                            viewModel.removeDownloadingImage(currentImage)
                         }
                     }
                 }
             ) {
-                if (currentImage in viewModel.downloadingImages) {
+                if (currentImage in downloadingImages) {
                     CircularProgressIndicator(
                         modifier = Modifier.scale(0.5F),
                         color = LocalContentColor.current

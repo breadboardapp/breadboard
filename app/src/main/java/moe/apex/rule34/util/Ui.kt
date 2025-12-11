@@ -90,6 +90,7 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -1135,21 +1136,14 @@ fun ScrollToTopArrow(
     alsoOnClick: (() -> Unit)? = null
 ) {
     val scope = rememberCoroutineScope()
-    var visible by remember { mutableStateOf(false) }
-
-    /* Avoids unnecessary recompositions when the first item changes (i.e. when scrolling) compared
-       to checking the firstVisibleItem inside the AnimatedVisibility. */
-    LaunchedEffect(staggeredGridState.firstVisibleItemIndex, uniformGridState.firstVisibleItemIndex) {
-        val targetValue = staggeredGridState.firstVisibleItemIndex != 0 || uniformGridState.firstVisibleItemIndex != 0
-        if (visible != targetValue) {
-            visible = targetValue
-        }
+    val isScrolledPastFirst by remember {
+        derivedStateOf { staggeredGridState.firstVisibleItemIndex != 0 || uniformGridState.firstVisibleItemIndex != 0 }
     }
 
     AnimatedVisibility(
         enter = fadeIn(),
         exit = fadeOut(),
-        visible = visible
+        visible = isScrolledPastFirst
     ) {
         IconButton(
             onClick = {

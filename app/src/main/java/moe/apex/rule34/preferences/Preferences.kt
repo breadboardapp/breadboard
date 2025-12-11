@@ -116,6 +116,7 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                 )
             }
             showAuthDialog = false
+            viewModel.setRecommendationsProvider(null)
         }
     }
 
@@ -305,7 +306,7 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                                         it
                                     )
                                 }
-                                viewModel.tagSuggestions.clear()
+                                viewModel.clearTagSuggestions()
                             }
                         )
                     }
@@ -403,7 +404,7 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                                     it
                                 )
                             }
-                            viewModel.recommendationsProvider = null
+                            viewModel.setRecommendationsProvider(null)
                         }
                     }
                     item {

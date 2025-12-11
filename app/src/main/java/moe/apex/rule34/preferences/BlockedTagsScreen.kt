@@ -105,7 +105,7 @@ fun BlockedTagsScreen(navController: NavHostController, viewModel: BreadboardVie
                             }
                         }
                         showAddDialog = false
-                        viewModel.recommendationsProvider = null
+                        viewModel.setRecommendationsProvider(null)
                     }
                 ) {
                     Text("Add")
@@ -223,7 +223,7 @@ fun BlockedTagsScreen(navController: NavHostController, viewModel: BreadboardVie
                                         tag
                                     )
                                 }
-                                viewModel.recommendationsProvider = null
+                                viewModel.setRecommendationsProvider(null)
                             }
                         ) {
                             Icon(
