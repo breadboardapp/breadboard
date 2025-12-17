@@ -10,7 +10,8 @@ import moe.apex.rule34.preferences.Prefs
 
 
 enum class ReleasePlatform(val displayName: String) {
-    GITHUB("GitHub"),
+    DEBUG("Debug"),
+    LEGACY("Legacy"),
     PLAY_STORE("Play Store"),
     UNKNOWN("Unknown");
 }
@@ -19,14 +20,15 @@ enum class ReleasePlatform(val displayName: String) {
 // Ignore the warning about a when branch being unreachable
 val releasePlatform = when (BuildConfig.APPLICATION_ID) {
     "moe.apex.breadboard" -> ReleasePlatform.PLAY_STORE
-    "moe.apex.rule34" -> ReleasePlatform.GITHUB
+    "moe.apex.breadboard.debug" -> ReleasePlatform.DEBUG
+    "moe.apex.rule34" -> ReleasePlatform.LEGACY
     else -> ReleasePlatform.UNKNOWN
 }
 
 
 object AgeVerification {
     fun hasVerifiedAge(prefs: Prefs): Boolean {
-        return releasePlatform == ReleasePlatform.GITHUB || prefs.getInternalAgeVerificationStatus()
+        return releasePlatform == ReleasePlatform.LEGACY || prefs.getInternalAgeVerificationStatus()
     }
 
 

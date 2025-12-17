@@ -40,6 +40,7 @@ android {
             buildConfigField "String", "R34_API_KEY", properties.getProperty("R34_API_KEY", "\"\"")
         }
         debug {
+            applicationIdSuffix ".debug"
             buildConfigField "String", "R34_API_KEY", properties.getProperty("R34_API_KEY_DEBUG", "\"\"")
         }
     }
