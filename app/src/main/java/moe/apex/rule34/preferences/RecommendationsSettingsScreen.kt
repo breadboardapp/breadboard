@@ -130,7 +130,7 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
                     hiddenTags = prefs.internalIgnoreList,
                     unfollowedTags = prefs.unfollowedTags,
                     includeUnwantedTagsInResult = showIgnored
-                )
+                ).map { it.first }
             }
         }
     }
@@ -424,6 +424,22 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
                                     text = "Your search size will be capped at the number of frequent tags."
                                 )
                             }
+                        }
+                    }
+                    item {
+                        SwitchPref(
+                            checked = prefs.recommendationsWeightedSelection,
+                            title = "Use weighted selection",
+                            summary = "Tags that appear earlier in your frequents list will be " +
+                                      "more likely to be recommended."
+                        ) {
+                            scope.launch {
+                                userPreferencesRepository.updatePref(
+                                    PreferenceKeys.RECOMMENDATIONS_WEIGHTED_SELECTION,
+                                    it
+                                )
+                            }
+                            resetRecommendations()
                         }
                     }
                 }

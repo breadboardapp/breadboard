@@ -91,6 +91,7 @@ data object PrefNames {
     const val UNFOLLOWED_TAGS = "unfollowed_tags"
     const val RECOMMENDATIONS_TAG_COUNT = "recommendations_tag_count"
     const val RECOMMENDATIONS_POOL_SIZE = "recommendations_pool_size"
+    const val RECOMMENDATIONS_WEIGHTED_SELECTION = "recommendations_weighted_selection"
     const val INTERNAL_IGNORE_LIST_TIMESTAMP = "internal_ignore_list_timestamp"
     const val INTERNAL_IGNORE_LIST = "internal_ignore_list"
 }
@@ -122,6 +123,7 @@ object PreferenceKeys {
     val UNFOLLOWED_TAGS = stringSetPreferencesKey(PrefNames.UNFOLLOWED_TAGS)
     val RECOMMENDATIONS_TAG_COUNT = intPreferencesKey(PrefNames.RECOMMENDATIONS_TAG_COUNT)
     val RECOMMENDATIONS_POOL_SIZE = intPreferencesKey(PrefNames.RECOMMENDATIONS_POOL_SIZE)
+    val RECOMMENDATIONS_WEIGHTED_SELECTION = booleanPreferencesKey(PrefNames.RECOMMENDATIONS_WEIGHTED_SELECTION)
     val INTERNAL_IGNORE_LIST_TIMESTAMP = longPreferencesKey(PrefNames.INTERNAL_IGNORE_LIST_TIMESTAMP)
     val INTERNAL_IGNORE_LIST = stringSetPreferencesKey(PrefNames.INTERNAL_IGNORE_LIST)
 }
@@ -207,6 +209,7 @@ data class Prefs(
     val unfollowedTags: Set<String>,
     val recommendationsTagCount: Int,
     val recommendationsPoolSize: Int,
+    val recommendationsWeightedSelection: Boolean,
     val internalIgnoreListTimestamp: Long,
     val internalIgnoreList: Set<String>,
 ) {
@@ -236,7 +239,8 @@ data class Prefs(
             flagSecureMode = FlagSecureMode.AUTO,
             unfollowedTags = emptySet(),
             recommendationsTagCount = 3,
-            recommendationsPoolSize = 5,
+            recommendationsPoolSize = 7,
+            recommendationsWeightedSelection = true,
             internalIgnoreListTimestamp = 0,
             internalIgnoreList = emptySet()
         )
@@ -299,6 +303,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             PreferenceKeys.UNFOLLOWED_TAGS to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.RECOMMENDATIONS_TAG_COUNT to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.RECOMMENDATIONS_POOL_SIZE to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.RECOMMENDATIONS_WEIGHTED_SELECTION to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.INTERNAL_IGNORE_LIST_TIMESTAMP to PrefMeta(PrefCategory.SETTING, exportable = false),
             PreferenceKeys.INTERNAL_IGNORE_LIST to PrefMeta(PrefCategory.SETTING, exportable = false)
         )
@@ -743,6 +748,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val unfollowedTags = preferences[PreferenceKeys.UNFOLLOWED_TAGS] ?: Prefs.DEFAULT.unfollowedTags
         val recommendationsTagCount = preferences[PreferenceKeys.RECOMMENDATIONS_TAG_COUNT] ?: Prefs.DEFAULT.recommendationsTagCount
         val recommendationsPoolSize = preferences[PreferenceKeys.RECOMMENDATIONS_POOL_SIZE] ?: Prefs.DEFAULT.recommendationsPoolSize
+        val recommendationsWeightedSelection = preferences[PreferenceKeys.RECOMMENDATIONS_WEIGHTED_SELECTION] ?: Prefs.DEFAULT.recommendationsWeightedSelection
         val internalIgnoreListTimestamp = preferences[PreferenceKeys.INTERNAL_IGNORE_LIST_TIMESTAMP] ?: Prefs.DEFAULT.internalIgnoreListTimestamp
         val internalIgnoreList = preferences[PreferenceKeys.INTERNAL_IGNORE_LIST] ?: Prefs.DEFAULT.internalIgnoreList
 
@@ -773,6 +779,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             unfollowedTags,
             recommendationsTagCount,
             recommendationsPoolSize,
+            recommendationsWeightedSelection,
             internalIgnoreListTimestamp,
             internalIgnoreList
         )

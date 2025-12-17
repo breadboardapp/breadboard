@@ -17,6 +17,7 @@ import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.viewmodel.GridStateHolderDelegate
 import moe.apex.rule34.viewmodel.GridStateHolder
+import kotlin.random.Random
 
 
 class RecommendationsProvider(
@@ -29,6 +30,7 @@ class RecommendationsProvider(
     private val initialUnfollowedTags: Set<String>,
     private val selectionSize: Int,
     private val poolSize: Int,
+    private val useWeightedSelection: Boolean,
 ) : GridStateHolder by GridStateHolderDelegate() {
     companion object {
         private const val SELECTION_SIZE_DANBOORU = 2
@@ -86,9 +88,33 @@ class RecommendationsProvider(
 
         val finalSelectionSize = if (imageSource == ImageSource.DANBOORU && auth == null) SELECTION_SIZE_DANBOORU else selectionSize
         val selected = if (topTags.size <= finalSelectionSize) {
-            topTags
+            topTags.map { it.first }
+        } else if (useWeightedSelection) {
+            val weightedTags = topTags.toMutableList()
+            var totalWeight = weightedTags.sumOf { it.second }
+            val result = mutableSetOf<String>()
+
+            while (result.size < finalSelectionSize && weightedTags.isNotEmpty() && totalWeight > 0) {
+                var randomNumber = Random.nextInt(totalWeight)
+
+                var chosenTag: Pair<String, Int>? = null
+                for (tag in weightedTags) {
+                    if (randomNumber < tag.second) {
+                        chosenTag = tag
+                        break
+                    }
+                    randomNumber -= tag.second
+                }
+
+                chosenTag?.let {
+                    result.add(it.first)
+                    totalWeight -= it.second
+                    weightedTags.remove(it)
+                }
+            }
+            result.toList()
         } else {
-            topTags.shuffled().take(finalSelectionSize)
+            topTags.map { it.first }.shuffled().take(finalSelectionSize)
         }
         recommendedTags.addAll(selected)
     }

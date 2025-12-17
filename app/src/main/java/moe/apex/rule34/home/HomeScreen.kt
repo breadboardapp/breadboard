@@ -140,7 +140,8 @@ fun HomeScreen(
                         initialBlockedTags = prefs.blockedTags,
                         initialUnfollowedTags = prefs.unfollowedTags + builtInIgnoredTags,
                         selectionSize = prefs.recommendationsTagCount,
-                        poolSize = prefs.recommendationsPoolSize
+                        poolSize = prefs.recommendationsPoolSize,
+                        useWeightedSelection = prefs.recommendationsWeightedSelection
                     )
                     newProvider.prepareRecommendedTags()
                     viewModel.setRecommendationsProvider(newProvider)

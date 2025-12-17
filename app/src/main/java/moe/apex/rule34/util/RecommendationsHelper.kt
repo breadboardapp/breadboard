@@ -6,7 +6,7 @@ import kotlin.text.lowercase
 
 
 object RecommendationsHelper {
-    private const val DEFAULT_POOL_SIZE = 5
+    private const val DEFAULT_POOL_SIZE = 7
 
 
     fun getAllTags(
@@ -38,27 +38,27 @@ object RecommendationsHelper {
         hiddenTags: Set<String> = emptySet(),
         unfollowedTags: Set<String> = emptySet(),
         includeUnwantedTagsInResult: Boolean = false
-    ): List<String> {
+    ): List<Pair<String, Int>> {
         val sortedTags = allTags
             .groupingBy { it }
             .eachCount()
             .entries
             .sortedByDescending { it.value }
-            .map { it.key.lowercase() }
-            .filter { it !in hiddenTags  }
+            .map { it.key.lowercase() to it.value }
+            .filter { it.first !in hiddenTags  }
 
         if (!includeUnwantedTagsInResult) {
             return sortedTags
-                .filterNot { it in unfollowedTags }
+                .filterNot { it.first in unfollowedTags }
                 .take(followedTagsLimit)
         } else {
-            val wantedTags = mutableListOf<String>()
+            val wantedTags = mutableListOf<Pair<String, Int>>()
             var nonExcludedCount = 0
 
             for (tag in sortedTags) {
                 wantedTags.add(tag)
 
-                if (tag !in unfollowedTags) {
+                if (tag.first !in unfollowedTags) {
                     nonExcludedCount++
                     if (nonExcludedCount == followedTagsLimit) {
                         break
