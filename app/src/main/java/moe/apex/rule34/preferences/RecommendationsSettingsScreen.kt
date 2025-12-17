@@ -33,9 +33,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -46,6 +48,7 @@ import kotlinx.coroutines.Dispatchers
 import moe.apex.rule34.navigation.IgnoredTagsSettings
 import moe.apex.rule34.prefs
 import moe.apex.rule34.tag.IgnoredTagsHelper
+import moe.apex.rule34.util.AgeVerification
 import moe.apex.rule34.util.CHIP_SPACING
 import moe.apex.rule34.util.ChevronRight
 import moe.apex.rule34.util.ExpressiveGroup
@@ -83,6 +86,8 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
     val userPreferencesRepository = LocalContext.current.prefs
     val prefs = LocalPreferences.current
     val recommendationsProvider by viewModel.recommendationsProvider.collectAsState()
+
+    var showAgeVerificationDialog by remember { mutableStateOf(false) }
 
     val favouriteImagesPerSource = remember {
         prefs.favouriteImages.groupBy { it.imageSource }
@@ -141,6 +146,13 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
 
     fun showRefollowedToast(tagName: String) {
         showToast(context, "Unignored $tagName")
+    }
+
+    if (showAgeVerificationDialog) {
+        AgeVerification.AgeVerifyDialog(
+            onDismissRequest = { showAgeVerificationDialog = false },
+            onAgeVerified = { showAgeVerificationDialog = false }
+        )
     }
 
     MainScreenScaffold(
@@ -358,6 +370,10 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
                             summary = "Show images and tags from all ratings. If disabled, only " +
                                       "show images and tags rated Safe."
                         ) {
+                            if (it && !AgeVerification.hasVerifiedAge(prefs)) {
+                                showAgeVerificationDialog = true
+                                return@SwitchPref
+                            }
                             scope.launch {
                                 userPreferencesRepository.updatePref(
                                     PreferenceKeys.RECOMMEND_ALL_RATINGS,
