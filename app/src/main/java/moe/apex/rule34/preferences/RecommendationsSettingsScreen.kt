@@ -88,6 +88,7 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
     val recommendationsProvider by viewModel.recommendationsProvider.collectAsState()
 
     var showAgeVerificationDialog by remember { mutableStateOf(false) }
+    var showIgnored by rememberSaveable { mutableStateOf(false) }
 
     val favouriteImagesPerSource = remember {
         prefs.favouriteImages.groupBy { it.imageSource }
@@ -113,7 +114,7 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
         prefs.recommendAllRatings,
         prefs.recommendationsPoolSize,
         prefs.unfollowedTags,
-        prefs.showUnfollowedTagsInFrequentsList,
+        showIgnored,
         prefs.internalIgnoreList
     ) {
         mutableMapOf<ImageSource, List<String>>().apply {
@@ -128,7 +129,7 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
                     followedTagsLimit = prefs.recommendationsPoolSize,
                     hiddenTags = prefs.internalIgnoreList,
                     unfollowedTags = prefs.unfollowedTags,
-                    includeUnwantedTagsInResult = prefs.showUnfollowedTagsInFrequentsList
+                    includeUnwantedTagsInResult = showIgnored
                 )
             }
         }
@@ -336,16 +337,10 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
 
                     item {
                         SwitchPref(
-                            checked = prefs.showUnfollowedTagsInFrequentsList,
+                            checked = showIgnored,
                             title = "Show ignored tags"
                         ) {
-                            scope.launch {
-                                userPreferencesRepository.updatePref(
-                                    PreferenceKeys.SHOW_UNFOLLOWED_TAGS_IN_FREQUENTS_LIST,
-                                    it
-                                )
-                            }
-                            resetRecommendations()
+                            showIgnored = it
                         }
                     }
                 }
