@@ -14,9 +14,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
@@ -24,6 +26,7 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -41,6 +44,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -69,11 +73,13 @@ import androidx.compose.ui.unit.sp
 import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.ui.theme.prefTitle
 import moe.apex.rule34.ui.theme.searchField
+import moe.apex.rule34.util.BasicExpressiveContainer
 import moe.apex.rule34.util.ExpressiveContainer
 import moe.apex.rule34.util.ListItemPosition
 import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
 import moe.apex.rule34.util.SMALL_SPACER
+import moe.apex.rule34.util.SmallVerticalSpacer
 import moe.apex.rule34.util.Summary
 import moe.apex.rule34.util.TitleSummary
 import moe.apex.rule34.util.TitledModalBottomSheet
@@ -329,15 +335,19 @@ fun InfoSection(text: String) {
 fun ImportDialog(
     allowedCategories: List<PrefCategory>,
     onDismissRequest: () -> Unit,
-    onConfirm: (List<PrefCategory>) -> Unit
+    onConfirm: (List<PrefCategory>, Boolean) -> Unit
 ) {
-    val enabledCategories = allowedCategories.toMutableStateList()
+    val enabledCategories = remember { allowedCategories.toMutableStateList() }
+    var merge by remember { mutableStateOf(false) }
+
     ImportExportDialog(
         type = ImportExport.IMPORT,
         enabledCategories = enabledCategories,
         allowedCategories = allowedCategories,
         onDismissRequest = onDismissRequest,
-        onConfirm = { onConfirm(enabledCategories) }
+        merge = merge,
+        onMergeToggle = { merge = it },
+        onConfirm = { onConfirm(enabledCategories, merge) }
     )
 }
 
@@ -364,14 +374,16 @@ private fun ImportExportDialog(
     enabledCategories: MutableList<PrefCategory>,
     allowedCategories: List<PrefCategory>,
     onDismissRequest: () -> Unit,
-    onConfirm: (List<PrefCategory>) -> Unit
+    merge: Boolean = false,
+    onMergeToggle: (Boolean) -> Unit = { },
+    onConfirm: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismissRequest,
         confirmButton = {
-            TextButton(
+            Button(
                 enabled = enabledCategories.size != 1, // The BUILD category is always enabled but hidden
-                onClick = { onConfirm(enabledCategories) }
+                onClick = onConfirm
             ) {
                 Text("Confirm")
             }
@@ -383,7 +395,7 @@ private fun ImportExportDialog(
         },
         title = { Text("Select categories to ${if (type == ImportExport.IMPORT) "import" else "export"}" ) },
         text = {
-            Column {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 for (category in PrefCategory.entries.filter { it != PrefCategory.BUILD }) {
                     // Always export BUILD category (version code)
                     CheckboxSelectable(
@@ -397,6 +409,28 @@ private fun ImportExportDialog(
                             }
                         )
                     )
+                }
+                if (type == ImportExport.IMPORT) {
+                    SmallVerticalSpacer()
+                    /* This allowedToMerge is only UI-side as it only serves to make the user
+                       more aware of what can and can't be merged.
+                       We'll still pass in the unmodified `merge` value even if `allowedToMerge` is
+                       false. But that doesn't matter because it'll just get ignored if there are
+                       no mergeable prefs enabled for import. */
+                    val allowedToMerge by remember { derivedStateOf {
+                        PrefCategory.SETTING in enabledCategories ||
+                                PrefCategory.FAVOURITE_IMAGES in enabledCategories
+                    } }
+                    BasicExpressiveContainer(position = ListItemPosition.SINGLE_ELEMENT) {
+                        SwitchPref(
+                            checked = merge && allowedToMerge,
+                            title = "Merge data",
+                            summary = "Merge incoming favourites and tags with current data " +
+                                      "rather than overwriting.",
+                            enabled = allowedToMerge,
+                            onToggle = onMergeToggle
+                        )
+                    }
                 }
             }
         }

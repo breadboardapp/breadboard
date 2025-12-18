@@ -137,7 +137,11 @@ enum class PrefCategory(val label: String) {
 }
 
 
-data class PrefMeta(val category: PrefCategory, val exportable: Boolean = true)
+data class PrefMeta(
+    val category: PrefCategory,
+    val exportable: Boolean = true,
+    val mergeable: Boolean = false
+)
 
 
 enum class DataSaver(override val label: String) : PrefEnum<DataSaver> {
@@ -280,7 +284,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             // I am sorry
             PreferenceKeys.DATA_SAVER to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.STORAGE_LOCATION to PrefMeta(PrefCategory.SETTING, exportable = false),
-            PreferenceKeys.FAVOURITE_IMAGES to PrefMeta(PrefCategory.FAVOURITE_IMAGES),
+            PreferenceKeys.FAVOURITE_IMAGES to PrefMeta(PrefCategory.FAVOURITE_IMAGES, mergeable = true),
             PreferenceKeys.EXCLUDE_AI to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.IMAGE_SOURCE to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.FAVOURITES_FILTER to PrefMeta(PrefCategory.SETTING),
@@ -293,14 +297,14 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             PreferenceKeys.SEARCH_HISTORY to PrefMeta(PrefCategory.SEARCH_HISTORY),
             PreferenceKeys.USE_FIXED_LINKS to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.IMAGE_BOARD_AUTHS to PrefMeta(PrefCategory.SETTING, exportable = false),
-            PreferenceKeys.MANUALLY_BLOCKED_TAGS to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.MANUALLY_BLOCKED_TAGS to PrefMeta(PrefCategory.SETTING, mergeable = true),
             PreferenceKeys.IMAGE_VIEWER_ACTION_ORDER to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.DEFAULT_START_DESTINATION to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.RECOMMEND_ALL_RATINGS to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.ENABLED_EXPERIMENTS to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.HAS_VERIFIED_AGE to PrefMeta(PrefCategory.SETTING, exportable = false),
             PreferenceKeys.FLAG_SECURE_MODE to PrefMeta(PrefCategory.SETTING),
-            PreferenceKeys.UNFOLLOWED_TAGS to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.UNFOLLOWED_TAGS to PrefMeta(PrefCategory.SETTING, mergeable = true),
             PreferenceKeys.RECOMMENDATIONS_TAG_COUNT to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.RECOMMENDATIONS_POOL_SIZE to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.RECOMMENDATIONS_WEIGHTED_SELECTION to PrefMeta(PrefCategory.SETTING),

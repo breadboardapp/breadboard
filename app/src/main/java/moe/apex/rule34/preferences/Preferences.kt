@@ -146,7 +146,7 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
     }
 
     if (showExportDialog) {
-        val categories = PrefCategory.entries.toMutableStateList()
+        val categories = remember { PrefCategory.entries.toMutableStateList() }
         ExportDialog(
             enabledCategories = categories,
             onDismissRequest = { showExportDialog = false }
@@ -216,9 +216,9 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
         ImportDialog(
             allowedCategories = PrefCategory.entries.filter { pc -> pc == PrefCategory.BUILD || pc.name in importedData!! },
             onDismissRequest = { importedData = null}
-        ) { categories ->
+        ) { categories, merge ->
             scope.launch {
-                val result = importData(context, importedData!!, categories)
+                val result = importData(context, importedData!!, categories, merge)
                 withContext(Dispatchers.Main) {
                     if (result.isFailure) {
                         showToast(context, result.exceptionOrNull()!!.message!!)
