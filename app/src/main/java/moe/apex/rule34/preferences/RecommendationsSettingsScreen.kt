@@ -421,7 +421,8 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
                                         end = MEDIUM_LARGE_SPACER.dp,
                                         bottom = MEDIUM_LARGE_SPACER.dp
                                     ),
-                                    text = "Your search size will be capped at the number of frequent tags."
+                                    text = "Your search size will be capped at the number of " +
+                                           "frequent tags."
                                 )
                             }
                         }
@@ -429,9 +430,9 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
                     item {
                         SwitchPref(
                             checked = prefs.recommendationsWeightedSelection,
-                            title = "Use weighted selection",
-                            summary = "Tags that appear earlier in your frequents list will be " +
-                                      "more likely to be recommended."
+                            title = "Respect tag order",
+                            summary = "Tags that appear earlier in your frequent tags list are " +
+                                      "more likely to be used when recommending new content."
                         ) {
                             scope.launch {
                                 userPreferencesRepository.updatePref(
