@@ -107,6 +107,7 @@ import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.AndroidUiDispatcher
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.LocalContext
@@ -1052,7 +1053,7 @@ data class PullToRefreshController(
     /* We are using the main thread because this is the thread that animations must run on.
        In this case it's for showing/hiding the indicator.
        We'll explicitly use the IO thread when doing the callback. */
-    private val scope = CoroutineScope(Dispatchers.Main)
+    private val scope = CoroutineScope(AndroidUiDispatcher.Main)
     var isRefreshing by mutableStateOf(false)
         private set
 
