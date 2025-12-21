@@ -1049,7 +1049,10 @@ data class PullToRefreshController(
     val indicator: @Composable BoxScope.(PullToRefreshController) -> Unit,
     private val refreshCallback: suspend () -> Unit
 ) {
-    private val scope = CoroutineScope(Dispatchers.IO)
+    /* We are using the main thread because this is the thread that animations must run on.
+       In this case it's for showing/hiding the indicator.
+       We'll explicitly use the IO thread when doing the callback. */
+    private val scope = CoroutineScope(Dispatchers.Main)
     var isRefreshing by mutableStateOf(false)
         private set
 
@@ -1071,7 +1074,7 @@ data class PullToRefreshController(
 
     fun refresh(animate: Boolean = false) {
         startRefreshing(animate)
-        scope.launch {
+        scope.launch(Dispatchers.IO) {
             refreshCallback()
         }.invokeOnCompletion {
             stopRefreshing(animate)
