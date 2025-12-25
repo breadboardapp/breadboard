@@ -75,6 +75,12 @@ object AboutSettings
 @Serializable
 object ExperimentalSettings
 
+@Serializable
+object RecommendationsSettings
+
+@Serializable
+object IgnoredTagsSettings
+
 fun NavDestination?.routeIs(routes: Collection<KClass<*>>): Boolean {
     return routeIs(*routes.toTypedArray())
 }

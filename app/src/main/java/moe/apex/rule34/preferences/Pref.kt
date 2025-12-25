@@ -10,6 +10,7 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Hd
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Share
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.datastore.core.DataStore
@@ -44,6 +45,7 @@ import moe.apex.rule34.util.extractPixivId
 import java.io.IOException
 import kotlin.collections.toSet
 import androidx.core.net.toUri
+import androidx.datastore.preferences.core.longPreferencesKey
 import moe.apex.rule34.BuildConfig
 import moe.apex.rule34.image.ImageBoardAuth
 import moe.apex.rule34.util.AgeVerification
@@ -83,10 +85,15 @@ data object PrefNames {
     const val IMAGE_VIEWER_ACTION_ORDER = "image_viewer_action_order"
     const val DEFAULT_START_DESTINATION = "default_start_destination"
     const val RECOMMEND_ALL_RATINGS = "recommend_all_ratings"
-    const val SEARCH_PULL_TO_REFRESH = "search_pull_to_refresh"
-    const val ALWAYS_ANIMATE_SCROLL = "always_animate_scroll"
+    const val ENABLED_EXPERIMENTS = "enabled_experiments"
     const val HAS_VERIFIED_AGE = "has_verified_age"
     const val FLAG_SECURE_MODE = "flag_secure_mode"
+    const val UNFOLLOWED_TAGS = "unfollowed_tags"
+    const val RECOMMENDATIONS_TAG_COUNT = "recommendations_tag_count"
+    const val RECOMMENDATIONS_POOL_SIZE = "recommendations_pool_size"
+    const val RECOMMENDATIONS_WEIGHTED_SELECTION = "recommendations_weighted_selection"
+    const val INTERNAL_IGNORE_LIST_TIMESTAMP = "internal_ignore_list_timestamp"
+    const val INTERNAL_IGNORE_LIST = "internal_ignore_list"
 }
 
 
@@ -110,10 +117,15 @@ object PreferenceKeys {
     val IMAGE_VIEWER_ACTION_ORDER = stringPreferencesKey(PrefNames.IMAGE_VIEWER_ACTION_ORDER)
     val DEFAULT_START_DESTINATION = stringPreferencesKey(PrefNames.DEFAULT_START_DESTINATION)
     val RECOMMEND_ALL_RATINGS = booleanPreferencesKey(PrefNames.RECOMMEND_ALL_RATINGS)
-    val SEARCH_PULL_TO_REFRESH = booleanPreferencesKey(PrefNames.SEARCH_PULL_TO_REFRESH)
-    val ALWAYS_ANIMATE_SCROLL = booleanPreferencesKey(PrefNames.ALWAYS_ANIMATE_SCROLL)
+    val ENABLED_EXPERIMENTS = stringSetPreferencesKey(PrefNames.ENABLED_EXPERIMENTS)
     val HAS_VERIFIED_AGE = booleanPreferencesKey(PrefNames.HAS_VERIFIED_AGE)
     val FLAG_SECURE_MODE = stringPreferencesKey(PrefNames.FLAG_SECURE_MODE)
+    val UNFOLLOWED_TAGS = stringSetPreferencesKey(PrefNames.UNFOLLOWED_TAGS)
+    val RECOMMENDATIONS_TAG_COUNT = intPreferencesKey(PrefNames.RECOMMENDATIONS_TAG_COUNT)
+    val RECOMMENDATIONS_POOL_SIZE = intPreferencesKey(PrefNames.RECOMMENDATIONS_POOL_SIZE)
+    val RECOMMENDATIONS_WEIGHTED_SELECTION = booleanPreferencesKey(PrefNames.RECOMMENDATIONS_WEIGHTED_SELECTION)
+    val INTERNAL_IGNORE_LIST_TIMESTAMP = longPreferencesKey(PrefNames.INTERNAL_IGNORE_LIST_TIMESTAMP)
+    val INTERNAL_IGNORE_LIST = stringSetPreferencesKey(PrefNames.INTERNAL_IGNORE_LIST)
 }
 
 
@@ -125,7 +137,11 @@ enum class PrefCategory(val label: String) {
 }
 
 
-data class PrefMeta(val category: PrefCategory, val exportable: Boolean = true)
+data class PrefMeta(
+    val category: PrefCategory,
+    val exportable: Boolean = true,
+    val mergeable: Boolean = false
+)
 
 
 enum class DataSaver(override val label: String) : PrefEnum<DataSaver> {
@@ -158,6 +174,19 @@ enum class FlagSecureMode(override val label: String) : PrefEnum<FlagSecureMode>
 }
 
 
+enum class Experiment(override val label: String, val description: String? = null) : PrefEnum<Experiment> {
+    ALWAYS_ANIMATE_SCROLL("Always animate scroll-to-top", "Enable smooth scrolling on all pages when using the scroll-to-top button."),
+    IMMERSIVE_UI_EFFECTS("Immersive UI effects", "Enables immersive UI effects such as blur and translucency. Not all devices support this feature. Disable if you experience poor performance.");
+
+
+    @Composable
+    fun isEnabled(): Boolean {
+        val prefs = LocalPreferences.current
+        return prefs.isExperimentEnabled(this)
+    }
+}
+
+
 data class Prefs(
     val dataSaver: DataSaver,
     val storageLocation: Uri,
@@ -178,10 +207,15 @@ data class Prefs(
     val imageViewerActions: List<ToolbarAction>,
     val defaultStartDestination: StartDestination,
     val recommendAllRatings: Boolean,
-    val searchPullToRefresh: Boolean,
-    val alwaysAnimateScroll: Boolean,
+    val enabledExperiments: Set<Experiment>,
     private val hasVerifiedAge: Boolean,
-    val flagSecureMode: FlagSecureMode
+    val flagSecureMode: FlagSecureMode,
+    val unfollowedTags: Set<String>,
+    val recommendationsTagCount: Int,
+    val recommendationsPoolSize: Int,
+    val recommendationsWeightedSelection: Boolean,
+    val internalIgnoreListTimestamp: Long,
+    val internalIgnoreList: Set<String>,
 ) {
     companion object {
         val DEFAULT = Prefs(
@@ -204,10 +238,15 @@ data class Prefs(
             imageViewerActions = ToolbarAction.entries.toList(),
             defaultStartDestination = StartDestination.HOME,
             recommendAllRatings = false,
-            searchPullToRefresh = false,
-            alwaysAnimateScroll = false,
+            enabledExperiments = emptySet(),
             hasVerifiedAge = false,
-            flagSecureMode = FlagSecureMode.AUTO
+            flagSecureMode = FlagSecureMode.AUTO,
+            unfollowedTags = emptySet(),
+            recommendationsTagCount = 3,
+            recommendationsPoolSize = 7,
+            recommendationsWeightedSelection = true,
+            internalIgnoreListTimestamp = 0,
+            internalIgnoreList = emptySet()
         )
     }
 
@@ -231,6 +270,11 @@ data class Prefs(
         get() = manuallyBlockedTags.toMutableSet().apply {
             if (excludeAi) addAll(ImageSource.entries.map { it.imageBoard.aiTagName })
         }
+
+
+    fun isExperimentEnabled(experiment: Experiment): Boolean {
+        return experiment in enabledExperiments
+    }
 }
 
 
@@ -240,7 +284,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             // I am sorry
             PreferenceKeys.DATA_SAVER to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.STORAGE_LOCATION to PrefMeta(PrefCategory.SETTING, exportable = false),
-            PreferenceKeys.FAVOURITE_IMAGES to PrefMeta(PrefCategory.FAVOURITE_IMAGES),
+            PreferenceKeys.FAVOURITE_IMAGES to PrefMeta(PrefCategory.FAVOURITE_IMAGES, mergeable = true),
             PreferenceKeys.EXCLUDE_AI to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.IMAGE_SOURCE to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.FAVOURITES_FILTER to PrefMeta(PrefCategory.SETTING),
@@ -253,14 +297,19 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             PreferenceKeys.SEARCH_HISTORY to PrefMeta(PrefCategory.SEARCH_HISTORY),
             PreferenceKeys.USE_FIXED_LINKS to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.IMAGE_BOARD_AUTHS to PrefMeta(PrefCategory.SETTING, exportable = false),
-            PreferenceKeys.MANUALLY_BLOCKED_TAGS to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.MANUALLY_BLOCKED_TAGS to PrefMeta(PrefCategory.SETTING, mergeable = true),
             PreferenceKeys.IMAGE_VIEWER_ACTION_ORDER to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.DEFAULT_START_DESTINATION to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.RECOMMEND_ALL_RATINGS to PrefMeta(PrefCategory.SETTING),
-            PreferenceKeys.SEARCH_PULL_TO_REFRESH to PrefMeta(PrefCategory.SETTING),
-            PreferenceKeys.ALWAYS_ANIMATE_SCROLL to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.ENABLED_EXPERIMENTS to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.HAS_VERIFIED_AGE to PrefMeta(PrefCategory.SETTING, exportable = false),
-            PreferenceKeys.FLAG_SECURE_MODE to PrefMeta(PrefCategory.SETTING)
+            PreferenceKeys.FLAG_SECURE_MODE to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.UNFOLLOWED_TAGS to PrefMeta(PrefCategory.SETTING, mergeable = true),
+            PreferenceKeys.RECOMMENDATIONS_TAG_COUNT to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.RECOMMENDATIONS_POOL_SIZE to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.RECOMMENDATIONS_WEIGHTED_SELECTION to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.INTERNAL_IGNORE_LIST_TIMESTAMP to PrefMeta(PrefCategory.SETTING, exportable = false),
+            PreferenceKeys.INTERNAL_IGNORE_LIST to PrefMeta(PrefCategory.SETTING, exportable = false)
         )
     }
 
@@ -419,7 +468,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         /* Version 3.0.5 added support for specifying a key for R34 as unauthenticated requests
            started being blocked. Since then, Breadboard has been granted an unlimited R34 API key.
            As a result, we no longer need to store personal API keys from the user for R34. */
-        if (lastUsedVersionCode >= 305) {
+        if (lastUsedVersionCode in 305 .. 306) {
             val data = dataStore.data.first()
             val auths = data[PreferenceKeys.IMAGE_BOARD_AUTHS]
             if (auths != null) {
@@ -430,6 +479,43 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             }
         }
 
+        /* Version 3.1.0 changes experiments to be a set rather than individual Pref items.
+           Migrate the old "search pull to refresh" and "always animate scroll to top" settings
+           to the new experiments set. */
+        if (lastUsedVersionCode < 310) {
+            val data = dataStore.data.first()
+            val enabledExperiments = Prefs.DEFAULT.enabledExperiments.toMutableSet()
+            val searchPtrKey = booleanPreferencesKey("search_pull_to_refresh")
+            val alwaysAnimateScrollKey = booleanPreferencesKey("always_animate_scroll")
+            val alwaysAnimateScroll = data[alwaysAnimateScrollKey] ?: false
+
+            if (alwaysAnimateScroll) {
+                enabledExperiments.add(Experiment.ALWAYS_ANIMATE_SCROLL)
+            }
+
+            updateSet(PreferenceKeys.ENABLED_EXPERIMENTS, enabledExperiments.map { it.name })
+            dataStore.edit { prefs ->
+                prefs.remove(searchPtrKey) // Now enabled by default
+                prefs.remove(alwaysAnimateScrollKey)
+            }
+        }
+
+        /* Version 3.1.1 removes the pref to show unfollowed tags in the frequents list.
+           The option still exists at this time but is no longer persisted across sessions. */
+        if (lastUsedVersionCode == 310) {
+            val showIgnoredKey = booleanPreferencesKey("show_unfollowed_tags_in_frequents_list")
+            dataStore.edit { prefs ->
+                prefs.remove(showIgnoredKey)
+            }
+        }
+
+        /* Always clear the internal ignored list on updates. */
+        if (BuildConfig.VERSION_CODE != lastUsedVersionCode) {
+            dataStore.edit { prefs ->
+                prefs[PreferenceKeys.INTERNAL_IGNORE_LIST] = emptySet()
+                prefs[PreferenceKeys.INTERNAL_IGNORE_LIST_TIMESTAMP] = 0
+            }
+        }
 
         // Place any future migrations above this line by checking the last used version code.
         if (BuildConfig.VERSION_CODE >= lastUsedVersionCode)
@@ -460,6 +546,11 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
 
 
     suspend fun updatePref(key: Preferences.Key<String>, to: String) {
+        updatePrefMain(key, to)
+    }
+
+
+    suspend fun updatePref(key: Preferences.Key<Int>, to: Int) {
         updatePrefMain(key, to)
     }
 
@@ -649,10 +740,22 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
 
         val defaultStartDestination = preferences[PreferenceKeys.DEFAULT_START_DESTINATION]?.let { StartDestination.valueOf(it) } ?: Prefs.DEFAULT.defaultStartDestination
         val recommendAllRatings = preferences[PreferenceKeys.RECOMMEND_ALL_RATINGS] ?: Prefs.DEFAULT.recommendAllRatings
-        val searchPullToRefresh = preferences[PreferenceKeys.SEARCH_PULL_TO_REFRESH] ?: Prefs.DEFAULT.searchPullToRefresh
-        val alwaysAnimateScroll = preferences[PreferenceKeys.ALWAYS_ANIMATE_SCROLL] ?: Prefs.DEFAULT.alwaysAnimateScroll
+        val enabledExperiments = preferences[PreferenceKeys.ENABLED_EXPERIMENTS]?.mapNotNull {
+            try {
+                Experiment.valueOf(it)
+            } catch (_: IllegalArgumentException) {
+                null
+            }
+        }?.toSet() ?: Prefs.DEFAULT.enabledExperiments
         val hasVerifiedAge = preferences[PreferenceKeys.HAS_VERIFIED_AGE] ?: Prefs.DEFAULT.getInternalAgeVerificationStatus()
         val flagSecureMode = preferences[PreferenceKeys.FLAG_SECURE_MODE]?.let { FlagSecureMode.valueOf(it) } ?: Prefs.DEFAULT.flagSecureMode
+        val unfollowedTags = preferences[PreferenceKeys.UNFOLLOWED_TAGS] ?: Prefs.DEFAULT.unfollowedTags
+        val recommendationsTagCount = preferences[PreferenceKeys.RECOMMENDATIONS_TAG_COUNT] ?: Prefs.DEFAULT.recommendationsTagCount
+        val recommendationsPoolSize = preferences[PreferenceKeys.RECOMMENDATIONS_POOL_SIZE] ?: Prefs.DEFAULT.recommendationsPoolSize
+        val recommendationsWeightedSelection = preferences[PreferenceKeys.RECOMMENDATIONS_WEIGHTED_SELECTION] ?: Prefs.DEFAULT.recommendationsWeightedSelection
+        val internalIgnoreListTimestamp = preferences[PreferenceKeys.INTERNAL_IGNORE_LIST_TIMESTAMP] ?: Prefs.DEFAULT.internalIgnoreListTimestamp
+        val internalIgnoreList = preferences[PreferenceKeys.INTERNAL_IGNORE_LIST] ?: Prefs.DEFAULT.internalIgnoreList
+
 
         return Prefs(
             dataSaver,
@@ -674,10 +777,15 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             imageViewerActions,
             defaultStartDestination,
             recommendAllRatings,
-            searchPullToRefresh,
-            alwaysAnimateScroll,
+            enabledExperiments,
             hasVerifiedAge,
             flagSecureMode,
+            unfollowedTags,
+            recommendationsTagCount,
+            recommendationsPoolSize,
+            recommendationsWeightedSelection,
+            internalIgnoreListTimestamp,
+            internalIgnoreList
         )
     }
 }

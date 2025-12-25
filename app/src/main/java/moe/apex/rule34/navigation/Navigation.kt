@@ -50,9 +50,11 @@ import moe.apex.rule34.largeimageview.LazyLargeImageView
 import moe.apex.rule34.preferences.AboutScreen
 import moe.apex.rule34.preferences.BlockedTagsScreen
 import moe.apex.rule34.preferences.ExperimentalScreen
+import moe.apex.rule34.preferences.IgnoredTagsScreen
 import moe.apex.rule34.preferences.LibrariesScreen
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.PreferencesScreen
+import moe.apex.rule34.preferences.RecommendationsSettingsScreen
 import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.util.withoutVertical
 import moe.apex.rule34.viewmodel.BreadboardViewModel
@@ -83,7 +85,7 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
     val popEnterTransition = slideInHorizontally(tween(easing = easing), { -slideDistance }) + fadeIn(tween(easing = easing))
 
     val searchScreens = listOf(Search::class, Results::class)
-    val settingsScreens = listOf(Settings::class, BlockedTagsSettings::class, AboutSettings::class, LibrariesSettings::class, ExperimentalSettings::class)
+    val settingsScreens = listOf(Settings::class, BlockedTagsSettings::class, AboutSettings::class, LibrariesSettings::class, ExperimentalSettings::class, RecommendationsSettings::class, IgnoredTagsSettings::class)
     val topLevelScreens = listOf(Home::class, Search::class, Favourites::class) + settingsScreens
     val slideTransitionScreens = listOf(Results::class, ImageView::class, *settingsScreens.filter { it != Settings::class }.toTypedArray())
 
@@ -222,10 +224,12 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                     }
                     composable<Favourites> { FavouritesPage(navController, bottomBarVisibleState) }
                     composable<Settings> { PreferencesScreen(navController, viewModel) }
-                    composable<BlockedTagsSettings> { BlockedTagsScreen(navController) }
+                    composable<BlockedTagsSettings> { BlockedTagsScreen(navController, viewModel) }
                     composable<LibrariesSettings> { LibrariesScreen(navController) }
                     composable<AboutSettings> { AboutScreen(navController) }
                     composable<ExperimentalSettings> { ExperimentalScreen(navController) }
+                    composable<RecommendationsSettings> { RecommendationsSettingsScreen(navController, viewModel) }
+                    composable<IgnoredTagsSettings> { IgnoredTagsScreen(navController, viewModel) }
                 }
             }
         }

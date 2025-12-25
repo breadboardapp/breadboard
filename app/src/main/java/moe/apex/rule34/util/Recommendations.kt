@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
 import kotlinx.coroutines.Dispatchers
@@ -16,6 +17,7 @@ import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.viewmodel.GridStateHolderDelegate
 import moe.apex.rule34.viewmodel.GridStateHolder
+import kotlin.random.Random
 
 
 class RecommendationsProvider(
@@ -24,74 +26,95 @@ class RecommendationsProvider(
     val auth: ImageBoardAuth?,
     val showAllRatings: Boolean,
     val filterRatingsLocally: Boolean,
-    val blockedTags: Set<String>
+    private val initialBlockedTags: Set<String>,
+    private val initialUnfollowedTags: Set<String>,
+    private val selectionSize: Int,
+    private val poolSize: Int,
+    private val useWeightedSelection: Boolean,
 ) : GridStateHolder by GridStateHolderDelegate() {
     companion object {
-        private const val POOL_SIZE = 5
-        private const val SELECTION_SIZE = 3
         private const val SELECTION_SIZE_DANBOORU = 2
-        private val ignoredTags = setOf( // Very general or meta tags, not useful for recommendations
-            "1girl",
-            "1boy",
-            "absurdres",
-            "artist_request",
-            "bad_id",
-            "bad_pixiv_id",
-            "commentary",
-            "commentary_request",
-            "english_commentary",
-            "highres",
-            "image_macro",
-            "lowres",
-            "non-web_source",
-            "official_art",
-            "original",
-            "promotional",
-            "sample",
-            "solo",
-            "tagme",
-            "translation_request",
-            "ultra_highres",
-            "wallpaper"
-        )
     }
 
     val recommendedImages = mutableStateListOf<Image>()
     var doneInitialLoad by mutableStateOf(false)
-    private val recommendedTags = mutableListOf<String>()
+    val recommendedTags = mutableListOf<String>()
     private var pageNumber by mutableIntStateOf(imageSource.imageBoard.firstPageIndex)
 
     private var isLoading by mutableStateOf(false)
     private var shouldKeepSearching by mutableStateOf(true)
 
+    private val mutableBlockedTags = mutableStateSetOf<String>().apply { addAll(initialBlockedTags) }
+    val blockedTags: Set<String>
+        get() = mutableBlockedTags.toSet()
+    private val mutableUnfollowedTags = mutableStateSetOf<String>().apply { addAll(initialUnfollowedTags) }
+    val unfollowedTags: Set<String>
+        get() = mutableUnfollowedTags.toSet()
+
+    fun replaceBlockedTags(tags: Set<String>) {
+        Snapshot.withMutableSnapshot {
+            mutableBlockedTags.clear()
+            mutableBlockedTags.addAll(tags)
+        }
+    }
+
+    fun replaceUnfollowedTags(tags: Set<String>) {
+        Snapshot.withMutableSnapshot {
+            mutableUnfollowedTags.clear()
+            mutableUnfollowedTags.addAll(tags)
+        }
+    }
 
     fun prepareRecommendedTags() {
         recommendedTags.clear()
         shouldKeepSearching = true
         pageNumber = imageSource.imageBoard.firstPageIndex
 
-        val tagsFromFavourites = seedImages
-            .filter { it.imageSource == imageSource && it.metadata != null }
-            .filter { showAllRatings || it.metadata!!.rating == ImageRating.SAFE }
-            .flatMap { it.metadata!!.tags }
-            .filterNot { tag -> ignoredTags.contains(tag.lowercase()) }
-            .filterNot { tag -> blockedTags.contains(tag.lowercase())}
+        val tagsFromFavourites = RecommendationsHelper.getAllTags(
+            images = seedImages.filter { it.imageSource == imageSource },
+            allowAllRatings = showAllRatings,
+            excludedTags = blockedTags
+        )
 
         if (tagsFromFavourites.isEmpty()) {
             return
         }
 
-        val tagCounts = tagsFromFavourites.groupingBy { it }.eachCount()
-        val topTags = tagCounts.entries
-            .sortedByDescending { it.value }
-            .take(POOL_SIZE)
-            .map { it.key }
+        val topTags = RecommendationsHelper.getMostCommonTags(
+            allTags = tagsFromFavourites,
+            followedTagsLimit = poolSize,
+            unfollowedTags = unfollowedTags
+        )
 
-        val selectionSize = if (imageSource == ImageSource.DANBOORU && auth == null) SELECTION_SIZE_DANBOORU else SELECTION_SIZE
-        val selected = if (topTags.size <= selectionSize) {
-            topTags
+        val finalSelectionSize = if (imageSource == ImageSource.DANBOORU && auth == null) SELECTION_SIZE_DANBOORU else selectionSize
+        val selected = if (topTags.size <= finalSelectionSize) {
+            topTags.map { it.first }
+        } else if (useWeightedSelection) {
+            val weightedTags = topTags.toMutableList()
+            var totalWeight = weightedTags.sumOf { it.second }
+            val result = mutableSetOf<String>()
+
+            while (result.size < finalSelectionSize && weightedTags.isNotEmpty() && totalWeight > 0) {
+                var randomNumber = Random.nextInt(totalWeight)
+
+                var chosenTag: Pair<String, Int>? = null
+                for (tag in weightedTags) {
+                    if (randomNumber < tag.second) {
+                        chosenTag = tag
+                        break
+                    }
+                    randomNumber -= tag.second
+                }
+
+                chosenTag?.let {
+                    result.add(it.first)
+                    totalWeight -= it.second
+                    weightedTags.remove(it)
+                }
+            }
+            result.toList()
         } else {
-            topTags.shuffled().take(selectionSize)
+            topTags.map { it.first }.shuffled().take(finalSelectionSize)
         }
         recommendedTags.addAll(selected)
     }
@@ -175,4 +198,3 @@ class RecommendationsProvider(
         }
     }
 }
-

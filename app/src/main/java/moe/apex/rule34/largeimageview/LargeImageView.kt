@@ -9,8 +9,17 @@ import android.net.NetworkCapabilities
 import android.util.Log
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
@@ -23,6 +32,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -39,9 +49,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -51,23 +63,26 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import coil3.compose.SubcomposeAsyncImage
+import coil3.compose.AsyncImage
+import coil3.compose.rememberAsyncImagePainter
 import coil3.request.ImageRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import me.saket.telephoto.zoomable.ZoomSpec
+import me.saket.telephoto.zoomable.ZoomableState
 import me.saket.telephoto.zoomable.rememberZoomableState
 import me.saket.telephoto.zoomable.zoomable
 import moe.apex.rule34.R
@@ -89,10 +104,12 @@ import moe.apex.rule34.util.bouncyAnimationSpec
 import moe.apex.rule34.util.downloadImage
 import moe.apex.rule34.util.fixLink
 import moe.apex.rule34.util.isWebLink
+import moe.apex.rule34.util.rememberIsBlurEnabled
 import moe.apex.rule34.util.saveUriToPref
 import moe.apex.rule34.viewmodel.BreadboardViewModel
 import java.net.SocketTimeoutException
 import java.util.concurrent.ExecutionException
+import kotlin.math.roundToInt
 
 
 private fun isUsingWiFi(context: Context): Boolean {
@@ -115,9 +132,10 @@ private enum class ToolbarState {
 @Composable
 fun LargeImageView(
     navController: NavController,
-    visible: MutableState<Boolean>? = null,
     initialPage: Int,
-    allImages: List<Image>
+    allImages: List<Image>,
+    backgroundAlpha: Float = 1f,
+    onZoomChange: ((Float) -> Unit)? = null
 ) {
     val pagerState = rememberPagerState(
         initialPage = initialPage,
@@ -126,35 +144,136 @@ fun LargeImageView(
     var canChangePage by remember { mutableStateOf(false) }
     val zoomState = rememberZoomableState(ZoomSpec(maxZoomFactor = 3.5f))
     var toolbarState by remember { mutableStateOf(ToolbarState.DEFAULT) }
-    var offset by remember { mutableStateOf(0.dp) }
-    val context = LocalContext.current
     val viewModel = viewModel<BreadboardViewModel>()
-    val scope = rememberCoroutineScope()
-    val isUsingWifi = isUsingWiFi(context)
-    var storageLocationPromptLaunched by remember { mutableStateOf(false) }
 
     val isFullyZoomedOut by remember { derivedStateOf { zoomState.zoomFraction == 0f } }
     val isMostlyZoomedOut by remember { derivedStateOf { zoomState.zoomFraction.let { it == null || it < 0.10 } } }
 
-    if (allImages.isEmpty()) {
-        visible?.value = false
-        return
-    }
-
-    runBlocking {
-        if (pagerState.currentPage >= allImages.size)
+    LaunchedEffect(allImages.size) {
+        if (pagerState.currentPage >= allImages.size && allImages.isNotEmpty()) {
             pagerState.scrollToPage(allImages.size - 1)
+        }
     }
 
-    val currentImage = allImages[pagerState.currentPage]
-    var showInfoSheet by rememberSaveable { mutableStateOf(false) }
+    val currentImage = allImages[pagerState.currentPage.coerceIn(0, allImages.size - 1)]
 
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        containerColor = MaterialTheme.colorScheme.background.copy(alpha = backgroundAlpha)
+    ) {
+        Box(Modifier.fillMaxSize()) {
+            fun toggleToolbar() {
+                val isVisible = toolbarState == ToolbarState.FORCE_SHOW || (isMostlyZoomedOut && toolbarState != ToolbarState.FORCE_HIDE)
+                toolbarState = when (toolbarState) {
+                    ToolbarState.FORCE_SHOW -> ToolbarState.FORCE_HIDE
+                    ToolbarState.FORCE_HIDE -> ToolbarState.FORCE_SHOW
+                    ToolbarState.DEFAULT -> if (isVisible) ToolbarState.FORCE_HIDE else ToolbarState.FORCE_SHOW
+                }
+            }
+
+            ImagesPager(
+                pagerState = pagerState,
+                allImages = allImages,
+                canChangePage = canChangePage,
+                zoomState = zoomState,
+                onImageClick = ::toggleToolbar
+            )
+
+            // Disable page changing while zoomed in and reset bottom bar state
+            LaunchedEffect(isFullyZoomedOut, pagerState.currentPage) {
+                canChangePage = isFullyZoomedOut
+                toolbarState = ToolbarState.DEFAULT
+            }
+
+            LaunchedEffect(zoomState.zoomFraction) {
+                onZoomChange?.invoke(zoomState.zoomFraction ?: 0f)
+            }
+
+            Box(Modifier.align(Alignment.BottomCenter)) {
+                LargeImageToolbar(
+                    toolbarState = toolbarState,
+                    isMostlyZoomedOut = isMostlyZoomedOut,
+                    viewModel = viewModel,
+                    navController = navController,
+                    currentImage = currentImage
+                )
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun ImagesPager(
+    pagerState: PagerState,
+    allImages: List<Image>,
+    canChangePage: Boolean,
+    zoomState: ZoomableState,
+    onImageClick: () -> Unit
+) {
+    val context = LocalContext.current
     val prefs = LocalPreferences.current
+    val isUsingWifi = remember { isUsingWiFi(context) }
     val dataSaver = prefs.dataSaver
+
+    HorizontalPager(
+        state = pagerState,
+        userScrollEnabled = canChangePage,
+        beyondViewportPageCount = 1
+    ) { index ->
+        val imageAtIndex = allImages[index]
+
+        if (imageAtIndex.hdQualityOverride == null) {
+            when (dataSaver) {
+                DataSaver.ON -> imageAtIndex.preferHd = false
+                DataSaver.OFF -> imageAtIndex.preferHd = true
+                DataSaver.AUTO -> imageAtIndex.preferHd = isUsingWifi
+            }
+        }
+
+        /* TODO: Give each image its own zoom state.
+           Need to consider how it interacts with the LargeImageView toolbar and onZoomChange. */
+        Box(
+            modifier = Modifier.zoomable(
+                state = zoomState,
+                onClick = { onImageClick() }
+            )
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(SMALL_LARGE_SPACER.dp)
+                    .systemBarsPadding(),
+                contentAlignment = Alignment.Center
+            ) {
+                LargeImage(imageAtIndex)
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun LargeImageToolbar(
+    modifier: Modifier = Modifier,
+    toolbarState: ToolbarState,
+    isMostlyZoomedOut: Boolean,
+    viewModel: BreadboardViewModel,
+    navController: NavController,
+    currentImage: Image
+) {
+    val context = LocalContext.current
+    val prefs = LocalPreferences.current
+    val scope = rememberCoroutineScope()
+
     val storageLocation = prefs.storageLocation
     val favouriteImages = prefs.favouriteImages
     val actions = prefs.imageViewerActions.drop(1)
     val primaryAction = prefs.imageViewerActions.first()
+    val downloadingImages by viewModel.downloadingImages.collectAsState()
+
+    var showInfoSheet by remember { mutableStateOf(false) }
+    var storageLocationPromptLaunched by remember { mutableStateOf(false) }
 
     val actionMapping = mapOf<ToolbarAction, @Composable () -> ImageAction?>(
         ToolbarAction.TOGGLE_HD to {
@@ -237,11 +356,11 @@ fun LargeImageView(
         },
         ToolbarAction.DOWNLOAD to {
             ImageAction(
-                enabled = currentImage !in viewModel.downloadingImages,
+                enabled = currentImage !in downloadingImages,
                 onClick = {
-                    if (currentImage !in viewModel.downloadingImages) {
+                    if (currentImage !in downloadingImages) {
                         viewModel.viewModelScope.launch {
-                            viewModel.downloadingImages.add(currentImage)
+                            viewModel.addDownloadingImage(currentImage)
                             val result: Result<Boolean> = downloadImage(
                                 context,
                                 currentImage,
@@ -264,12 +383,12 @@ fun LargeImageView(
                                     exc
                                 )
                             }
-                            viewModel.downloadingImages.remove(currentImage)
+                            viewModel.removeDownloadingImage(currentImage)
                         }
                     }
                 }
             ) {
-                if (currentImage in viewModel.downloadingImages) {
+                if (currentImage in downloadingImages) {
                     CircularProgressIndicator(
                         modifier = Modifier.scale(0.5F),
                         color = LocalContentColor.current
@@ -293,56 +412,6 @@ fun LargeImageView(
         }
     }
 
-    LaunchedEffect(visible?.value) {
-        if (visible?.value == true) offset = 0.dp
-    }
-
-    PredictiveBackHandler(visible?.value == true) { progress ->
-        try {
-            progress.collect { backEvent ->
-                offset = (backEvent.progress * 300).dp
-            }
-            visible?.value = false
-        }
-        catch (_: Exception) { }
-    }
-
-    @Composable
-    fun LargeImage(imageUrl: String, previewImageUrl: String, aspectRatio: Float?) {
-        /* Poor method of the preliminary work to get rounded corners for favourites saved before
-           we started saving the aspect ratio. */
-        val modifier = if (aspectRatio == null) {
-            if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT) {
-                Modifier.fillMaxWidth()
-            } else {
-                Modifier.fillMaxHeight()
-            }
-        } else Modifier.aspectRatio(aspectRatio)
-
-        val model =
-            ImageRequest.Builder(context)
-                .data(imageUrl)
-                .build()
-
-        SubcomposeAsyncImage(
-            model = model,
-            contentDescription = "Image",
-            loading = {
-                LoadingContentPlaceholder(modifier) {
-                    SubcomposeAsyncImage(
-                        model = previewImageUrl,
-                        contentDescription = "Image",
-                        contentScale = ContentScale.Fit,
-                        modifier = modifier.clip(MaterialTheme.shapes.extraLarge)
-                    )
-                }
-            },
-            modifier = modifier
-                .scale(0.95f)
-                .clip(MaterialTheme.shapes.extraLarge)
-        )
-    }
-
     if (storageLocationPromptLaunched) {
         StorageLocationSelection(
             promptType = PromptType.DIRECTORY_PERMISSION,
@@ -352,114 +421,58 @@ fun LargeImageView(
             storageLocationPromptLaunched = false
         }
     }
-
-    Scaffold(modifier = Modifier.offset { IntOffset(y = offset.roundToPx(), x = 0) }) {
-        Box(Modifier.fillMaxSize()) {
-            HorizontalPager(
-                state = pagerState,
-                userScrollEnabled = canChangePage,
-                beyondViewportPageCount = 1
-            ) { index ->
-                val imageAtIndex = allImages[index]
-
-                if (imageAtIndex.hdQualityOverride == null) {
-                    when (dataSaver) {
-                        DataSaver.ON -> imageAtIndex.preferHd = false
-                        DataSaver.OFF -> imageAtIndex.preferHd = true
-                        DataSaver.AUTO -> imageAtIndex.preferHd = isUsingWifi
-                    }
-                }
-
-                Box(
-                    Modifier.zoomable(
-                        zoomState,
-                        onClick = {
-                            toolbarState = when (toolbarState) {
-                                ToolbarState.DEFAULT -> if (isMostlyZoomedOut) ToolbarState.FORCE_HIDE else ToolbarState.FORCE_SHOW
-                                ToolbarState.FORCE_SHOW -> ToolbarState.FORCE_HIDE
-                                ToolbarState.FORCE_HIDE -> if (isMostlyZoomedOut) ToolbarState.DEFAULT else ToolbarState.FORCE_SHOW
-                            }
-                        }
-                    )
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .systemBarsPadding(),
-                        contentAlignment = Alignment.Center
+    AnimatedVisibility(
+        visible = toolbarState == ToolbarState.FORCE_SHOW || (isMostlyZoomedOut && toolbarState != ToolbarState.FORCE_HIDE),
+        enter = slideInVertically(
+            initialOffsetY = { it },
+            animationSpec = bouncyAnimationSpec()
+        ),
+        exit = slideOutVertically(targetOffsetY = { it })
+    ) {
+        HorizontalFloatingToolbar(
+            modifier = modifier
+                .navigationBarsPadding()
+                .padding(bottom = SMALL_LARGE_SPACER.dp),
+            actions = {
+                for (action in actions) {
+                    val item = actionMapping[action]!!()
+                    if (item == null) continue
+                    val interactionSource = remember { MutableInteractionSource() }
+                    CombinedClickableAction(
+                        enabled = item.enabled,
+                        interactionSource = interactionSource,
+                        onClick = item.onClick,
+                        onLongClick = item.onLongClick
                     ) {
-                        LargeImage(
-                            imageUrl = if (imageAtIndex.preferHd) imageAtIndex.highestQualityFormatUrl
-                            else imageAtIndex.sampleUrl,
-                            previewImageUrl = imageAtIndex.previewUrl,
-                            aspectRatio = imageAtIndex.aspectRatio
-                        )
+                        IconButton(
+                            modifier = item.modifier,
+                            enabled = item.enabled,
+                            onClick = { },
+                            interactionSource = interactionSource
+                        ) {
+                            item.composableContent()
+                        }
                     }
                 }
-            }
-
-            // Disable page changing while zoomed in and reset bottom bar state
-            LaunchedEffect(isFullyZoomedOut, pagerState.currentPage) {
-                canChangePage = isFullyZoomedOut
-                toolbarState = ToolbarState.DEFAULT
-            }
-
-            Box(Modifier.align(Alignment.BottomCenter)) {
-                AnimatedVisibility(
-                    visible = toolbarState == ToolbarState.FORCE_SHOW || (isMostlyZoomedOut && toolbarState != ToolbarState.FORCE_HIDE),
-                    enter = slideInVertically(
-                        initialOffsetY = { it },
-                        animationSpec = bouncyAnimationSpec()
-                    ),
-                    exit = slideOutVertically(targetOffsetY = { it })
+            },
+            floatingActionButton = actionMapping[primaryAction]!!()?.let { {
+                val interactionSource = remember { MutableInteractionSource() }
+                CombinedClickableAction(
+                    enabled = it.enabled,
+                    interactionSource = interactionSource,
+                    onClick = it.onClick,
+                    onLongClick = it.onLongClick
                 ) {
-                    HorizontalFloatingToolbar(
-                        modifier = Modifier
-                            .navigationBarsPadding()
-                            .padding(bottom = SMALL_LARGE_SPACER.dp),
-                        actions = {
-                            for (action in actions) {
-                                val item = actionMapping[action]!!()
-                                if (item == null) continue
-                                val interactionSource = remember { MutableInteractionSource() }
-                                CombinedClickableAction(
-                                    enabled = item.enabled,
-                                    interactionSource = interactionSource,
-                                    onClick = item.onClick,
-                                    onLongClick = item.onLongClick
-                                ) {
-                                    IconButton(
-                                        modifier = item.modifier,
-                                        enabled = item.enabled,
-                                        onClick = { },
-                                        interactionSource = interactionSource
-                                    ) {
-                                        item.composableContent()
-                                    }
-                                }
-                            }
-                        },
-                        floatingActionButton = actionMapping[primaryAction]!!()?.let { {
-                            val interactionSource = remember { MutableInteractionSource() }
-                            CombinedClickableAction(
-                                enabled = it.enabled,
-                                interactionSource = interactionSource,
-                                onClick = it.onClick,
-                                onLongClick = it.onLongClick
-                            ) {
-                                FloatingActionButton(
-                                    modifier = it.modifier,
-                                    onClick = { },
-                                    interactionSource = interactionSource
-                                ) {
-                                    it.composableContent()
-                                }
-                            }
-                        } }
-                    )
+                    FloatingActionButton(
+                        modifier = it.modifier,
+                        onClick = { },
+                        interactionSource = interactionSource
+                    ) {
+                        it.composableContent()
+                    }
                 }
-            }
-        }
+            } }
+        )
     }
 }
 
@@ -491,7 +504,7 @@ fun LazyLargeImageView(
     else if (image == null)
         ImageNotFound()
     else
-        LargeImageView(navController, null, 0, listOf(image!!))
+        LargeImageView(navController, 0, listOf(image!!))
 }
 
 
@@ -511,7 +524,7 @@ private fun ImageNotFound() {
 
 @Composable
 private fun LoadingContentPlaceholder(
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
     content: (@Composable () -> Unit)? = null
 ) {
     Box(
@@ -538,3 +551,230 @@ private data class ImageAction(
     val composableContent: @Composable () -> Unit
 )
 
+
+@Composable
+fun LargeImage(image: Image) {
+    /* Poor method of the preliminary work to get rounded corners for favourites saved before
+       we started saving the aspect ratio. */
+    val aspectRatio = image.aspectRatio
+    val imageUrl = if (image.preferHd) image.highestQualityFormatUrl else image.sampleUrl
+    val previewImageUrl = image.previewUrl
+    var isLoading by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    val modifier = if (aspectRatio == null) {
+        if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT) {
+            Modifier.fillMaxWidth()
+        } else {
+            Modifier.fillMaxHeight()
+        }
+    } else Modifier.aspectRatio(aspectRatio)
+
+    val model = remember(imageUrl) {
+        ImageRequest.Builder(context)
+            .data(imageUrl)
+            .build()
+    }
+
+    val previewModel = remember(previewImageUrl) {
+        ImageRequest.Builder(context)
+            .data(previewImageUrl)
+            .build()
+    }
+
+    Box(
+        modifier = Modifier.clip(MaterialTheme.shapes.extraLarge)
+    ) {
+        AsyncImage(
+            model = model,
+            placeholder = rememberAsyncImagePainter(previewModel),
+            onSuccess = { isLoading = false },
+            onError = { isLoading = false },
+            onLoading = { isLoading = true },
+            contentDescription = "Image",
+            modifier = modifier
+        )
+        AnimatedVisibility(
+            modifier = Modifier.align(Alignment.Center),
+            visible = isLoading,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            LoadingContentPlaceholder()
+        }
+    }
+}
+
+
+@Composable
+fun OffsetBasedLargeImageView(
+    navController: NavController,
+    visibilityState: MutableState<Boolean>,
+    initialPage: Int,
+    allImages: List<Image>,
+    bottomBarVisibleState: MutableState<Boolean>? = null,
+) {
+    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val window = LocalWindowInfo.current
+    val isImmersiveModeEnabled = rememberIsBlurEnabled()
+    val windowHeightPx = window.containerSize.height.toFloat()
+    val dismissVelocityThreshold = windowHeightPx // Pixels per second
+    val dismissDistanceThreshold = windowHeightPx * 0.25f
+    var canDragDown by remember { mutableStateOf(true) }
+
+    val animatableOffset = remember { Animatable(windowHeightPx) }
+    val animationSpec = spring<Float>(stiffness = Spring.StiffnessMediumLow)
+
+    /* In the past we used initialPage to determine whether or not we should recompose the viewer.
+       However, this causes an issue where the viewer doesn't reset when it really should,
+       just because the user swiped to a different image and then tapped the first one again.
+       For instance, lets say the user taps image 1, swipes to image 2, dismisses the viewer,
+       and taps image 1 again before the closing animation is finished. Because initialPage didn't
+       change, the user is still seeing image 2, which is bad.
+
+       This is a really poor solution to that. We will trigger a recomposition manually by
+       incrementing this value and use a LaunchedEffect that increments the value when the
+       visibility state becomes true.
+
+       Why not just use visibilityState directly? Because we don't want to recompose the viewer when
+       it becomes false (i.e. the user is dismissing the viewer) because if the user has swiped to
+       change page, recreating it with the original initialPage will cause that image to reappear
+       as it disappears.
+
+       Why not use a boolean value that just flips to trigger a recomposition? Because it causes
+       other issues that are difficult to describe but easy to notice when using the app.
+
+       There is probably a really simple (and, crucially, better) solution to this
+       and I'm too stupid to see it. Quite frankly i'm sick of debugging and this works
+       so I'm keeping it.
+
+       PRs welcome (please). */
+    var stupidFuckingRecompositionCounter by rememberSaveable { mutableIntStateOf(0) }
+
+    val draggableState = rememberDraggableState { delta ->
+        scope.launch {
+            val new = (animatableOffset.value + delta).coerceAtLeast(0f)
+            animatableOffset.snapTo(new)
+        }
+    }
+
+    fun calculateScaleFactor(offsetValue: Float): Float {
+        return 1 - ((offsetValue * 1.2f) / windowHeightPx)
+    }
+
+    fun show(velocity: Float = 0f) {
+        scope.launch {
+            animatableOffset.animateTo(
+                targetValue = 0f,
+                animationSpec = animationSpec,
+                initialVelocity = velocity
+            )
+        }
+    }
+
+    fun snapTo(offset: Float) {
+        scope.launch {
+            animatableOffset.snapTo(offset)
+        }
+    }
+
+    fun hide(velocity: Float = animatableOffset.velocity, animate: Boolean = true) {
+        scope.launch {
+            if (animate) {
+                animatableOffset.animateTo(
+                    targetValue = windowHeightPx,
+                    animationSpec = animationSpec,
+                    initialVelocity = velocity
+                )
+            } else {
+                snapTo(windowHeightPx)
+            }
+        }
+        visibilityState.value = false
+    }
+
+    if (allImages.isEmpty()) {
+        hide(animate = false)
+        return
+    }
+
+    PredictiveBackHandler(enabled = visibilityState.value) { progress ->
+        try {
+            progress.collect { backEvent ->
+                val offsetPx = with(density) { (backEvent.progress * 300f).dp.toPx() }
+                snapTo(offsetPx)
+            }
+            hide()
+        } catch (_: Exception) {
+        }
+    }
+
+    LaunchedEffect(visibilityState.value) {
+        bottomBarVisibleState?.value = !visibilityState.value
+        if (visibilityState.value) {
+            stupidFuckingRecompositionCounter ++
+            show()
+        }
+        // No hide() call here because it's managed by the back handler and draggable modifier.
+    }
+
+    /* We should treat this as the proper source of truth as to whether or not the content is
+       currently visible.
+       I know this whole composable is messy now but hopefully this helps somewhat. */
+    val shouldMainContentBeVisible by remember {
+        derivedStateOf { visibilityState.value || animatableOffset.value < windowHeightPx }
+    }
+
+    if (shouldMainContentBeVisible) {
+        if (isImmersiveModeEnabled) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        alpha = calculateScaleFactor(animatableOffset.value)
+                    }
+                    .background(color = MaterialTheme.colorScheme.background.copy(alpha = 0.5f))
+            )
+        } else {
+            /* This is so the user doesn't see the grid/background underneath the
+               LargeImage carousel if they fling it up quickly (due to the spring animation). */
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .offset { IntOffset(0, animatableOffset.value.roundToInt().coerceAtLeast(0)) }
+                    .background(MaterialTheme.colorScheme.background)
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .offset { IntOffset(0, animatableOffset.value.roundToInt()) }
+                .draggable(
+                    enabled = canDragDown && visibilityState.value,
+                    orientation = Orientation.Vertical,
+                    state = draggableState,
+                    onDragStopped = { velocity ->
+                        scope.launch {
+                            if ((velocity > dismissVelocityThreshold || animatableOffset.value > dismissDistanceThreshold) && velocity > 0) {
+                                hide(velocity)
+                            } else {
+                                show(velocity)
+                            }
+                        }
+                    }
+                )
+        ) {
+            key(stupidFuckingRecompositionCounter) {
+                LargeImageView(
+                    navController = navController,
+                    initialPage = initialPage,
+                    allImages = allImages,
+                    backgroundAlpha = if (isImmersiveModeEnabled) 0f else 1f
+                ) {
+                    canDragDown = it == 0f
+                }
+            }
+        }
+    }
+}

@@ -1,5 +1,6 @@
 package moe.apex.rule34.preferences
 
+import android.os.Build
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,7 +31,6 @@ import moe.apex.rule34.util.Summary
 @Composable
 fun ExperimentalScreen(navController: NavHostController) {
     val preferencesRepository = LocalContext.current.prefs
-    val prefs = LocalPreferences.current
     val scope = rememberCoroutineScope()
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
@@ -64,28 +64,22 @@ fun ExperimentalScreen(navController: NavHostController) {
             }
             item {
                 ExpressiveGroup {
-                    item {
-                        SwitchPref(
-                            title = "Pull-to-refresh in search",
-                            summary = "Enable pull-to-refresh in search results.",
-                            checked = prefs.searchPullToRefresh,
-                        ) {
-                            scope.launch {
-                                preferencesRepository.updatePref(
-                                    PreferenceKeys.SEARCH_PULL_TO_REFRESH,
-                                    it
-                                )
-                            }
-                        }
-                    }
-                    item {
-                        SwitchPref(
-                            title = "Always animate scroll-to-top",
-                            summary = "Enable smooth scrolling on all pages when using the scroll-to-top button.",
-                            checked = prefs.alwaysAnimateScroll,
-                        ) {
-                            scope.launch {
-                                preferencesRepository.updatePref(PreferenceKeys.ALWAYS_ANIMATE_SCROLL, it)
+                    for (experiment in Experiment.entries) {
+                        item {
+                            SwitchPref(
+                                title = experiment.label,
+                                summary = experiment.description,
+                                checked = experiment.isEnabled(),
+                                // Immersive carousel uses a blur modifier which requires Android 12+ to work
+                                enabled = experiment != Experiment.IMMERSIVE_UI_EFFECTS || Build.VERSION.SDK_INT >= Build.VERSION_CODES.S,
+                            ) {
+                                scope.launch {
+                                    if (it) {
+                                        preferencesRepository.addToSet(PreferenceKeys.ENABLED_EXPERIMENTS, experiment)
+                                    } else {
+                                        preferencesRepository.removeFromSet(PreferenceKeys.ENABLED_EXPERIMENTS, experiment)
+                                    }
+                                }
                             }
                         }
                     }

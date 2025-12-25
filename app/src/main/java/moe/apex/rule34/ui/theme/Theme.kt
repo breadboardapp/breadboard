@@ -39,14 +39,16 @@ private val LightColorScheme = lightColorScheme(
 
 
 @Immutable
-data class ExtraColours(
-    val outlineStrong: Color
+data class BreadboardColors(
+    val outlineStrong: Color,
+    val titleBar: Color,
 )
 
 
-val LocalExtraColours = staticCompositionLocalOf {
-    ExtraColours(
-        outlineStrong = Color.Unspecified
+val LocalBreadboardColors = staticCompositionLocalOf {
+    BreadboardColors(
+        outlineStrong = Color.Unspecified,
+        titleBar = Color.Unspecified,
     )
 }
 
@@ -68,16 +70,27 @@ fun BreadboardTheme(
         else -> LightColorScheme
     }
 
-    val extraColours = ExtraColours(outlineStrong = colorScheme.outline.copy())
-    colorScheme = colorScheme.copy(
-        outline = colorScheme.outlineVariant,
-        background = colorScheme.surfaceContainerLow,
-        surface = colorScheme.surfaceContainerLow,
-        surfaceContainerLowest = colorScheme.surfaceContainerLow,
-        surfaceContainerLow = colorScheme.surfaceContainer,
+    val extraColours = BreadboardColors(
+        outlineStrong = colorScheme.outline.copy(),
+        titleBar = if (darkTheme) {
+            colorScheme.surfaceContainer
+        } else {
+            colorScheme.surfaceContainerHigh
+        }.copy()
     )
 
-    CompositionLocalProvider(LocalExtraColours provides extraColours) {
+    colorScheme = colorScheme.copy(
+        outline = colorScheme.outlineVariant,
+        background = if (darkTheme) colorScheme.surfaceContainerLow else colorScheme.surfaceContainer,
+        surface = if (darkTheme) colorScheme.surfaceContainerLow else colorScheme.surfaceContainer,
+        surfaceContainerLowest = if (darkTheme) colorScheme.surfaceContainerLow else colorScheme.surfaceContainerHigh,
+        surfaceContainerLow = if (darkTheme) colorScheme.surfaceContainer else colorScheme.surfaceContainerLow,
+        surfaceContainer = if (darkTheme) colorScheme.surfaceContainer else colorScheme.surfaceContainerLow,
+        surfaceContainerHigh = if (darkTheme) colorScheme.surfaceContainerHigh else colorScheme.surfaceBright,
+        surfaceContainerHighest = if (darkTheme) colorScheme.surfaceContainerHighest else colorScheme.surfaceContainerHigh
+    )
+
+    CompositionLocalProvider(LocalBreadboardColors provides extraColours) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = Typography,
@@ -88,7 +101,7 @@ fun BreadboardTheme(
 
 
 object BreadboardTheme {
-    val colors: ExtraColours
+    val colors: BreadboardColors
         @Composable
-        get() = LocalExtraColours.current
+        get() = LocalBreadboardColors.current
 }

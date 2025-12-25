@@ -4,15 +4,16 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ClipData
 import android.content.Context
+import android.os.Build
+import android.os.PowerManager
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalIndication
@@ -23,6 +24,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -60,6 +62,8 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
@@ -86,9 +90,8 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -96,7 +99,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.AndroidUiDispatcher
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.LocalContext
@@ -106,15 +117,17 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.getSystemService
 import androidx.navigation.NavController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import moe.apex.rule34.history.SearchHistoryEntry
-import moe.apex.rule34.image.Image
-import moe.apex.rule34.largeimageview.LargeImageView
+import moe.apex.rule34.preferences.Experiment
+import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.prefs
+import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.ui.theme.prefTitle
 
 
@@ -130,6 +143,8 @@ const val SMALL_LARGE_SPACER = 16
 const val MEDIUM_SPACER = 12
 /** 8dp spacing */
 const val SMALL_SPACER = 8
+/** 4dp spacing */
+const val TINY_SPACER = 4
 private const val VERTICAL_DIVIDER_SPACING = 32
 const val BOTTOM_APP_BAR_HEIGHT = 80
 const val CHIP_SPACING = 12
@@ -166,7 +181,10 @@ private fun NavigationIcon(navController: NavController? = null) {
     if (navController != null) {
         FilledIconButton(
             modifier = Modifier.padding(horizontal = SMALL_SPACER.dp),
-            colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+            colors = IconButtonDefaults.filledIconButtonColors(
+                containerColor = IconButtonDefaults.filledIconButtonColors().disabledContainerColor.copy(alpha = 0.065f),
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            ),
             onClick = {
                 if (navController.previousBackStackEntry != null) {
                     navController.navigateUp()
@@ -177,7 +195,7 @@ private fun NavigationIcon(navController: NavController? = null) {
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                contentDescription = "Discover"
+                contentDescription = "Back"
             )
         }
     }
@@ -198,7 +216,7 @@ fun LargeTitleBar(
         actions = additionalActions,
         navigationIcon = { NavigationIcon(navController) },
         colors = TopAppBarDefaults.largeTopAppBarColors().copy(
-            scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            scrolledContainerColor = BreadboardTheme.colors.titleBar
         )
     )
 }
@@ -216,6 +234,9 @@ fun SmallTitleBar(
         title = { Text(title) },
         scrollBehavior = scrollBehavior,
         actions = additionalActions,
+        colors = TopAppBarDefaults.topAppBarColors(
+            scrolledContainerColor = BreadboardTheme.colors.titleBar
+        ),
         navigationIcon = { NavigationIcon(navController) }
     )
 }
@@ -229,36 +250,6 @@ fun FullscreenLoadingSpinner() {
         horizontalArrangement = Arrangement.Center
     ) {
         CircularProgressIndicator()
-    }
-}
-
-
-@Composable
-fun AnimatedVisibilityLargeImageView(
-    navController: NavController,
-    shouldShowLargeImage: MutableState<Boolean>,
-    initialPage: Int,
-    allImages: List<Image>,
-    bottomBarVisibleState: MutableState<Boolean>? = null
-) {
-    LaunchedEffect(shouldShowLargeImage.value) {
-        if (bottomBarVisibleState != null)
-            bottomBarVisibleState.value = !shouldShowLargeImage.value
-    }
-
-    AnimatedVisibility(
-        visible = shouldShowLargeImage.value,
-        enter = slideInVertically(initialOffsetY = { it }),
-        exit = slideOutVertically(targetOffsetY = { it })
-    ) {
-        key(initialPage) {
-            LargeImageView(
-                navController,
-                shouldShowLargeImage,
-                initialPage,
-                allImages
-            )
-        }
     }
 }
 
@@ -283,6 +274,7 @@ fun MainScreenScaffold(
     scrollBehavior: TopAppBarScrollBehavior? = null,
     largeTopBar: Boolean = true,
     addBottomPadding: Boolean = true,
+    blur: Boolean = false,
     floatingActionButton: (@Composable () -> Unit)? = null,
     additionalActions: @Composable RowScope.() -> Unit = { },
     content: @Composable (PaddingValues) -> Unit
@@ -300,6 +292,7 @@ fun MainScreenScaffold(
             }
         },
         addBottomPadding = addBottomPadding,
+        blur = blur,
         floatingActionButton = floatingActionButton,
         content = content
     )
@@ -307,22 +300,44 @@ fun MainScreenScaffold(
 
 
 /** A lower level MainScreenScaffold that allows passing in a custom top bar for more
-    fine grained control over its behaviour and appearance. */
+    fine grained control over its behaviour and appearance.
+
+    [blur] is not supported on Android 11 or below.*/
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreenScaffold(
     topAppBar: @Composable () -> Unit,
     addBottomPadding: Boolean = true,
+    blur: Boolean = false,
     floatingActionButton: (@Composable () -> Unit)? = null,
     content: @Composable (PaddingValues) -> Unit
 ) {
+    val isBlurEnabled = rememberIsBlurEnabled()
+    val graphicsLayer = rememberGraphicsLayer()
+
+    /* Animating the blur radius gets expensive and performs badly on low end devices.
+       Instead, we're going to fade in a "copy" of the content with a pre-applied blur effect.
+       It doesn't look as good as animating the radius but it is much better for performance.
+       https://developer.android.com/develop/ui/compose/graphics/draw/modifiers#composable-to-bitmap
+    */
+
     Scaffold(
-        topBar = topAppBar,
-        floatingActionButton = { floatingActionButton?.let {
-            Box(Modifier.offset(y = if (addBottomPadding) -BOTTOM_APP_BAR_HEIGHT.dp else 0.dp)) {
-                it()
+        modifier = if (isBlurEnabled) {
+            Modifier.drawWithContent {
+                graphicsLayer.record {
+                    this@drawWithContent.drawContent()
+                }
+                drawLayer(graphicsLayer)
             }
-        } }
+        } else Modifier,
+        topBar = topAppBar,
+        floatingActionButton = {
+            floatingActionButton?.let {
+                Box(Modifier.offset(y = if (addBottomPadding) -BOTTOM_APP_BAR_HEIGHT.dp else 0.dp)) {
+                    it()
+                }
+            }
+        }
     ) {
         val lld = LocalLayoutDirection.current
         val newPadding = PaddingValues(
@@ -332,6 +347,29 @@ fun MainScreenScaffold(
             bottom = if (addBottomPadding) it.calculateBottomPadding() + BOTTOM_APP_BAR_HEIGHT.dp else 0.dp
         )
         content(newPadding)
+    }
+
+    AnimatedVisibility(
+        visible = blur && isBlurEnabled,
+        enter = fadeIn(tween(400)),
+        exit = fadeOut(tween(400))
+    ) {
+        var bitmap: ImageBitmap? by remember { mutableStateOf(null) }
+
+        LaunchedEffect(Unit) {
+            bitmap = graphicsLayer.toImageBitmap()
+        }
+
+        if (bitmap != null) {
+            androidx.compose.foundation.Image(
+                bitmap = bitmap!!,
+                contentDescription = null,
+                contentScale = ContentScale.FillBounds,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .blur(48.dp)
+            )
+        }
     }
 }
 
@@ -347,7 +385,7 @@ fun Summary(
         text = text,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         style = MaterialTheme.typography.bodySmall,
-        modifier = modifier
+        modifier = modifier.fillMaxWidth()
     )
 }
 
@@ -372,7 +410,9 @@ fun TitleSummary(
         leadingIcon?.let {
             Spacer(Modifier.width(SMALL_LARGE_SPACER.dp))
             Box(
-                modifier = Modifier.size(48.dp),
+                modifier = Modifier
+                    .size(48.dp)
+                    .alpha(if (enabled) 1f else DISABLED_OPACITY),
                 contentAlignment = Alignment.Center
             ) {
                 it()
@@ -405,7 +445,8 @@ fun TitleSummary(
             Box(
                 modifier = Modifier
                     .padding(end = SMALL_SPACER.dp)
-                    .size(48.dp),
+                    .size(48.dp)
+                    .alpha(if (enabled) 1f else DISABLED_OPACITY),
                 contentAlignment = Alignment.Center
             ) {
                 it()
@@ -592,6 +633,7 @@ suspend fun copyText(
 fun CombinedClickableFilterChip(
     modifier: Modifier = Modifier,
     label: @Composable () -> Unit,
+    warning: Boolean = true,
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
@@ -604,10 +646,19 @@ fun CombinedClickableFilterChip(
     ) {
         FilterChip(
             onClick = onClick,
-            selected = true,
+            selected = !warning,
             label = label,
             modifier = modifier,
-            interactionSource = interactionSource
+            interactionSource = interactionSource,
+            colors = if (!warning) {
+                FilterChipDefaults.filterChipColors( )
+            } else {
+                FilterChipDefaults.filterChipColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    labelColor = MaterialTheme.colorScheme.onErrorContainer,
+                )
+            },
+            border = null
         )
     }
 }
@@ -777,7 +828,7 @@ fun HorizontalFloatingToolbar(
                 modifier = Modifier
                     .padding(horizontal = SMALL_SPACER.dp)
                     .height(48.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(TINY_SPACER.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 actions()
@@ -904,7 +955,7 @@ private class PreferencesGroupScopeImpl : ExpressiveGroupScope {
 @Composable
 fun ExpressiveGroup(
     title: String? = null,
-    content: @Composable ExpressiveGroupScope.() -> Unit
+    content: ExpressiveGroupScope.() -> Unit
 ) {
     val scope = PreferencesGroupScopeImpl()
     scope.content()
@@ -935,7 +986,7 @@ fun ExpressiveGroup(
 @Composable
 fun BasicExpressiveGroup(
     title: String? = null,
-    content: @Composable ExpressiveGroupScope.() -> Unit
+    content: ExpressiveGroupScope.() -> Unit
 ) {
     val scope = PreferencesGroupScopeImpl()
     scope.content()
@@ -996,12 +1047,15 @@ fun CombinedClickableAction(
 @OptIn(ExperimentalMaterial3Api::class)
 data class PullToRefreshController(
     val state: PullToRefreshState,
-    private val initialValue: Boolean = false,
-    private val modifier: Modifier = Modifier,
-    private val scope: CoroutineScope,
+    val indicator: @Composable BoxScope.(PullToRefreshController) -> Unit,
     private val refreshCallback: suspend () -> Unit
 ) {
-    var isRefreshing by mutableStateOf(initialValue)
+    /* We are using the main thread because this is the thread that animations must run on.
+       In this case it's for showing/hiding the indicator.
+       We'll explicitly use the IO thread when doing the callback. */
+    private val scope = CoroutineScope(AndroidUiDispatcher.Main)
+    var isRefreshing by mutableStateOf(false)
+        private set
 
     private fun startRefreshing(animate: Boolean) {
         if (isRefreshing) return
@@ -1021,20 +1075,11 @@ data class PullToRefreshController(
 
     fun refresh(animate: Boolean = false) {
         startRefreshing(animate)
-        scope.launch {
+        scope.launch(Dispatchers.IO) {
             refreshCallback()
         }.invokeOnCompletion {
             stopRefreshing(animate)
         }
-    }
-
-    @OptIn(ExperimentalMaterial3Api::class)
-    @Composable
-    fun Indicator(modifier: Modifier = Modifier) {
-        PullToRefreshControllerDefaults.Indicator(
-            controller = this@PullToRefreshController,
-            modifier = this.modifier.then(modifier)
-        )
     }
 }
 
@@ -1042,18 +1087,19 @@ data class PullToRefreshController(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun rememberPullToRefreshController(
-    initialValue: Boolean,
     state: PullToRefreshState = rememberPullToRefreshState(),
-    modifier: Modifier = Modifier,
+    indicator: @Composable BoxScope.(PullToRefreshController) -> Unit = {
+        PullToRefreshControllerDefaults.Indicator(
+            modifier = Modifier.align(Alignment.TopCenter),
+            controller = it
+        )
+    },
     onRefresh: suspend () -> Unit = { }
 ): PullToRefreshController {
-    val scope = rememberCoroutineScope { Dispatchers.IO }
     return remember {
         PullToRefreshController(
             state = state,
-            initialValue = initialValue,
-            modifier = modifier,
-            scope = scope,
+            indicator = indicator,
             refreshCallback = onRefresh
         )
     }
@@ -1064,8 +1110,8 @@ object PullToRefreshControllerDefaults {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun Indicator(
+        modifier: Modifier = Modifier,
         controller: PullToRefreshController,
-        modifier: Modifier
     ) {
         PullToRefreshDefaults.Indicator(
             state = controller.state,
@@ -1093,21 +1139,14 @@ fun ScrollToTopArrow(
     alsoOnClick: (() -> Unit)? = null
 ) {
     val scope = rememberCoroutineScope()
-    var visible by remember { mutableStateOf(false) }
-
-    /* Avoids unnecessary recompositions when the first item changes (i.e. when scrolling) compared
-       to checking the firstVisibleItem inside the AnimatedVisibility. */
-    LaunchedEffect(staggeredGridState.firstVisibleItemIndex, uniformGridState.firstVisibleItemIndex) {
-        val targetValue = staggeredGridState.firstVisibleItemIndex != 0 || uniformGridState.firstVisibleItemIndex != 0
-        if (visible != targetValue) {
-            visible = targetValue
-        }
+    val isScrolledPastFirst by remember(staggeredGridState, uniformGridState) {
+        derivedStateOf { staggeredGridState.firstVisibleItemIndex != 0 || uniformGridState.firstVisibleItemIndex != 0 }
     }
 
     AnimatedVisibility(
         enter = fadeIn(),
         exit = fadeOut(),
-        visible = visible
+        visible = isScrolledPastFirst
     ) {
         IconButton(
             onClick = {
@@ -1134,10 +1173,95 @@ fun ScrollToTopArrow(
 }
 
 
+// Sometimes it's okay to break spec :3
+@Composable
+fun ButtonListItem(
+    text: String,
+    icon: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    colors: ButtonColors = ButtonDefaults.buttonColors(),
+    position: ListItemPosition,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier.then(
+            Modifier.alpha(if (enabled) 1f else DISABLED_OPACITY)
+        ),
+        enabled = enabled,
+        color = colors.containerColor,
+        contentColor = colors.contentColor,
+        shape = RoundedCornerShape(
+            topStart = animateTopCornerSizeForPosition(position),
+            topEnd = animateTopCornerSizeForPosition(position),
+            bottomStart = animateBottomCornerSizeForPosition(position),
+            bottomEnd = animateBottomCornerSizeForPosition(position)
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .heightIn(min = 56.dp)
+                .padding(horizontal = MEDIUM_LARGE_SPACER.dp, vertical = SMALL_SPACER.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(Modifier.size(22.dp)) {
+                icon()
+            }
+            Spacer(Modifier.width(SMALL_LARGE_SPACER.dp))
+            Text(
+                text = text,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.titleMedium
+            )
+        }
+    }
+}
+
+
+@Composable
+fun ButtonListItem(
+    text: String,
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    colors: ButtonColors = ButtonDefaults.buttonColors(
+        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+    ),
+    position: ListItemPosition,
+    onClick: () -> Unit,
+) {
+    ButtonListItem(
+        text = text,
+        icon = { Icon(icon, contentDescription = null) },
+        modifier = modifier,
+        enabled = enabled,
+        colors = colors,
+        position = position,
+        onClick = onClick
+    )
+}
+
+
 fun <T> bouncyAnimationSpec(): FiniteAnimationSpec<T> = spring(
     dampingRatio = Spring.DampingRatioLowBouncy,
     stiffness = Spring.StiffnessMediumLow,
 )
+
+
+@Composable
+fun rememberIsBlurEnabled(): Boolean {
+    val prefs = LocalPreferences.current
+    val context = LocalContext.current
+    val powerManager = context.getSystemService<PowerManager>()!!
+    // TODO: Maybe also check if the Window-level blurs developer option is enabled?
+    return remember(powerManager.isPowerSaveMode) {
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+            && prefs.isExperimentEnabled(Experiment.IMMERSIVE_UI_EFFECTS)
+            && !powerManager.isPowerSaveMode
+    }
+}
 
 
 val bottomAppBarAndNavBarHeight: Dp

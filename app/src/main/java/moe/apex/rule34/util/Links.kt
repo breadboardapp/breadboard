@@ -8,6 +8,8 @@ private val links = mapOf(
     "pixiv.net" to "phixiv.net",
     "twitter.com" to "fxtwitter.com",
     "x.com" to "fxtwitter.com",
+    "bilibili.com" to "vxbilibili.com",
+    "weibo.com" to "fxweibo.com", // FxWeibo is provided and run by Breadboard
 )
 
 

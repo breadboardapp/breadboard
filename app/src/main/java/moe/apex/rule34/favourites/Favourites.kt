@@ -15,6 +15,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -24,15 +25,17 @@ import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import moe.apex.rule34.detailview.ImageGrid
 import moe.apex.rule34.image.ImageRating
+import moe.apex.rule34.preferences.Experiment
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.PreferenceKeys
 import moe.apex.rule34.prefs
-import moe.apex.rule34.util.AnimatedVisibilityLargeImageView
+import moe.apex.rule34.largeimageview.OffsetBasedLargeImageView
 import moe.apex.rule34.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
 import moe.apex.rule34.util.ScrollToTopArrow
+import moe.apex.rule34.util.TINY_SPACER
 import moe.apex.rule34.util.bottomAppBarAndNavBarHeight
 import moe.apex.rule34.util.filterChipSolidColor
 import moe.apex.rule34.util.onScroll
@@ -46,9 +49,11 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
     val preferencesRepository = LocalContext.current.prefs
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
-    val shouldShowLargeImage = remember { mutableStateOf(false) }
+    val isImageCarouselVisible = remember { mutableStateOf(false) }
     var initialPage by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
+
+    val blur = prefs.isExperimentEnabled(Experiment.IMMERSIVE_UI_EFFECTS)
 
     val images = prefs.favouriteImages.reversed().filter {
         it.imageSource in prefs.favouritesFilter
@@ -97,11 +102,12 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
         title = "Favourite images",
         scrollBehavior = scrollBehavior,
         addBottomPadding = false,
+        blur = isImageCarouselVisible.value && blur,
         additionalActions = {
             ScrollToTopArrow(
                 staggeredGridState = viewModel.staggeredGridState,
                 uniformGridState = viewModel.uniformGridState,
-                animate = prefs.alwaysAnimateScroll
+                animate = Experiment.ALWAYS_ANIMATE_SCROLL.isEnabled()
             ) { bottomBarVisibleState.value = true }
         }
     ) { padding ->
@@ -115,13 +121,15 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
             uniformGridState = viewModel.uniformGridState,
             images = images,
             onImageClick = { index, _ ->
-                initialPage = index
-                shouldShowLargeImage.value = true
+                Snapshot.withMutableSnapshot {
+                    initialPage = index
+                    isImageCarouselVisible.value = true
+                }
             },
             contentPadding = PaddingValues(top = SMALL_LARGE_SPACER.dp, start = SMALL_LARGE_SPACER.dp, end = SMALL_LARGE_SPACER.dp, bottom = bottomAppBarAndNavBarHeight),
             filterComposable = {
                 HorizontallyScrollingChipsWithLabels(
-                    modifier = Modifier.padding(bottom = 4.dp),
+                    modifier = Modifier.padding(bottom = TINY_SPACER.dp),
                     labels = listOf("Sources", "Ratings"),
                     content = chips
                 )
@@ -129,5 +137,5 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
         )
     }
 
-    AnimatedVisibilityLargeImageView(navController, shouldShowLargeImage, initialPage, images, bottomBarVisibleState)
+    OffsetBasedLargeImageView(navController, isImageCarouselVisible, initialPage, images, bottomBarVisibleState)
 }

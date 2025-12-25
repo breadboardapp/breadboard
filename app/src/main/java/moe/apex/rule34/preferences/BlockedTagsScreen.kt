@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Block
@@ -52,11 +53,13 @@ import moe.apex.rule34.util.SMALL_SPACER
 import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
 import moe.apex.rule34.util.Summary
+import moe.apex.rule34.util.TINY_SPACER
+import moe.apex.rule34.viewmodel.BreadboardViewModel
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BlockedTagsScreen(navController: NavHostController) {
+fun BlockedTagsScreen(navController: NavHostController, viewModel: BreadboardViewModel) {
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
     val scope = rememberCoroutineScope()
@@ -64,6 +67,7 @@ fun BlockedTagsScreen(navController: NavHostController) {
     val prefs = LocalPreferences.current
     val blockedTags = prefs.manuallyBlockedTags.reversed()
     var showAddDialog by rememberSaveable { mutableStateOf(false) }
+    val aiTags = remember { ImageSource.entries.mapTo(mutableSetOf()) { it.imageBoard.aiTagName }.toList() }
 
     if (showAddDialog) {
         var content by remember { mutableStateOf("") }
@@ -79,7 +83,7 @@ fun BlockedTagsScreen(navController: NavHostController) {
                         content = it.lowercase()
                     }
                     Summary(
-                        modifier = Modifier.padding(start = 4.dp),
+                        modifier = Modifier.padding(start = TINY_SPACER.dp),
                         text = "Separate multiple tags with a space."
                     )
                 }
@@ -87,7 +91,11 @@ fun BlockedTagsScreen(navController: NavHostController) {
             confirmButton = {
                 Button(
                     onClick = {
-                        val newBlocks = content.trim().split(" ")
+                        val newBlocks = content
+                            .trim()
+                            .split(" ")
+                            .filter { it.isNotBlank() }
+                            .filterNot { it in aiTags }
                         scope.launch {
                             for (tag in newBlocks) {
                                 userPreferencesRepository.addToSet(
@@ -97,6 +105,7 @@ fun BlockedTagsScreen(navController: NavHostController) {
                             }
                         }
                         showAddDialog = false
+                        viewModel.setRecommendationsProvider(null)
                     }
                 ) {
                     Text("Add")
@@ -135,7 +144,7 @@ fun BlockedTagsScreen(navController: NavHostController) {
         ) {
             item {
                 Summary(
-                    modifier = Modifier.padding(horizontal = 4.dp),
+                    modifier = Modifier.padding(horizontal = TINY_SPACER.dp),
                     text = "Images with any of these tags will not appear in search results or recommendations. However, they will still show in your Favourites.",
                 )
                 LargeVerticalSpacer()
@@ -164,17 +173,17 @@ fun BlockedTagsScreen(navController: NavHostController) {
                 return@LazyColumn
             }
             if (prefs.excludeAi) {
-                val aiTags = ImageSource.entries.mapTo(mutableSetOf()) { it.imageBoard.aiTagName }
                 item {
                     BaseHeading(
                         modifier = Modifier.padding(start = SMALL_SPACER.dp, bottom = 6.dp),
                         text = "Automatically blocked"
                     )
                 }
-                items(aiTags.size) { index ->
+
+                itemsIndexed(aiTags) { index, tag ->
                     ExpressiveTagEntryContainer(
                         modifier = Modifier.animateItem(),
-                        label = aiTags.elementAt(index),
+                        label = tag,
                         position = when (index) {
                             0 -> ListItemPosition.TOP
                             aiTags.size - 1 -> ListItemPosition.BOTTOM
@@ -194,8 +203,8 @@ fun BlockedTagsScreen(navController: NavHostController) {
                     }
                 }
             }
-            items(blockedTags.size, key = { index -> blockedTags[index] }) { index ->
-                val tag = blockedTags[index]
+
+            itemsIndexed(blockedTags, key = { index, tag -> tag }) { index, tag ->
                 ExpressiveTagEntryContainer(
                     modifier = Modifier.animateItem(),
                     label = tag,
@@ -214,6 +223,7 @@ fun BlockedTagsScreen(navController: NavHostController) {
                                         tag
                                     )
                                 }
+                                viewModel.setRecommendationsProvider(null)
                             }
                         ) {
                             Icon(

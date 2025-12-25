@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import kotlinx.coroutines.Dispatchers
@@ -19,6 +20,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.cbor.Cbor
+import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.decodeFromHexString
 import kotlinx.serialization.encodeToByteArray
 import kotlinx.serialization.encodeToHexString
@@ -31,7 +33,6 @@ import moe.apex.rule34.preferences.Prefs
 import moe.apex.rule34.preferences.UserPreferencesRepository
 import moe.apex.rule34.prefs
 import org.json.JSONArray
-import org.json.JSONException
 import org.json.JSONObject
 
 
@@ -84,43 +85,51 @@ fun preImportChecks(currentPreferences: Prefs, json: JSONObject): Result<Boolean
 }
 
 
-private fun importSettings(tempPrefs: MutablePreferences, data: JSONObject) {
+private fun importSettings(tempPrefs: MutablePreferences, data: JSONObject, merge: Boolean) {
     /* We can't check the inner type of each preference key because
        Preferences.Key<Int> == Preferences.Key<String> when the key names match.
        We also can't determine the type of each key so we can't directly assign prefValue to it, so
        we'll just create "new" ones with the same type and name as the originals instead.
      */
     val thisCategory = data.getJSONObject(PrefCategory.SETTING.name)
+    val wantedKeysMeta = UserPreferencesRepository.keyMetaMapping
+        .filter { it.value.category == PrefCategory.SETTING }
+    val wantedKeys = wantedKeysMeta.keys.map { it.name }
+
     tempPrefs.apply {
-        for (key in UserPreferencesRepository.keyMetaMapping.keys) {
-            if (UserPreferencesRepository.keyMetaMapping[key]!!.category != PrefCategory.SETTING) {
-                continue
+        for (key in thisCategory.keys()) {
+            if (key !in wantedKeys) {
+                Log.w("Importing", "Unknown settings key: $key. Attempting to continue.")
             }
 
-            val prefValue = try {
-                thisCategory.get(key.name)
-            } catch (_: JSONException) {
-                remove(key)
-                continue
-            } // Pref has never been set in the backup, we should use the default.
+            val prefValue = thisCategory.get(key)
+            val meta = wantedKeysMeta.entries.find { it.key.name == key }?.value
+            val mergeThis = merge && meta?.mergeable == true
 
             when (prefValue) {
                 is String -> {
                     if (!prefValue.startsWith("[")) {
-                        this[stringPreferencesKey(key.name)] = prefValue
+                        this[stringPreferencesKey(key)] = prefValue
                     } else {
                         val set = mutableSetOf<String>()
                         val ja = JSONArray(prefValue)
                         for (index in 0..<ja.length()) {
                             set.add(ja.getString(index))
                         }
-                        this[stringSetPreferencesKey(key.name)] = set
+
+                        if (mergeThis) {
+                            val currentSet = this[stringSetPreferencesKey(key)] ?: emptySet()
+                            this[stringSetPreferencesKey(key)] = currentSet + set
+                        } else {
+                            this[stringSetPreferencesKey(key)] = set
+                        }
                     } // Because the sets are actually serialised as strings
                 }
 
-                is Int -> this[intPreferencesKey(key.name)] = prefValue
-                is Boolean -> this[booleanPreferencesKey(key.name)] = prefValue
-                else -> throw NotImplementedError("Settings key with unhandled type: ${key.name}")
+                is Int -> this[intPreferencesKey(key)] = prefValue
+                is Boolean -> this[booleanPreferencesKey(key)] = prefValue
+                is Long -> this[longPreferencesKey(key)] = prefValue // At the time of writing this is only the ignore list timestamp which isn't exportable but I might change my mind
+                else -> throw NotImplementedError("Settings key with unhandled type: $key ($prefValue)")
             }
         }
     }
@@ -128,9 +137,22 @@ private fun importSettings(tempPrefs: MutablePreferences, data: JSONObject) {
 
 
 @OptIn(ExperimentalSerializationApi::class)
-private fun importFavouriteImages(editable: MutablePreferences, data: JSONObject) {
-    val images = Cbor.decodeFromHexString(data.getString(PrefCategory.FAVOURITE_IMAGES.name)) as List<Image>
-    updateByteArrayPref(editable, data, PreferenceKeys.FAVOURITE_IMAGES, PrefCategory.FAVOURITE_IMAGES.name, images)
+private fun importFavouriteImages(editable: MutablePreferences, data: JSONObject, merge: Boolean) {
+    val incomingImages = Cbor.decodeFromHexString(data.getString(PrefCategory.FAVOURITE_IMAGES.name)) as List<Image>
+    if (merge) {
+        val currentImagesRaw = editable[PreferenceKeys.FAVOURITE_IMAGES]
+        val currentImages: List<Image> = currentImagesRaw?.let { Cbor.decodeFromByteArray(it) } ?: emptyList()
+
+        val mergedImages = currentImages.toMutableList()
+        for (incoming in incomingImages) {
+            if (mergedImages.none { it.fileName == incoming.fileName && it.imageSource == incoming.imageSource }) {
+                mergedImages.add(incoming)
+            }
+        }
+        updateByteArrayPref(editable, data, PreferenceKeys.FAVOURITE_IMAGES, PrefCategory.FAVOURITE_IMAGES.name, mergedImages)
+    } else {
+        updateByteArrayPref(editable, data, PreferenceKeys.FAVOURITE_IMAGES, PrefCategory.FAVOURITE_IMAGES.name, incomingImages)
+    }
 }
 
 
@@ -157,7 +179,7 @@ private inline fun <reified T> updateByteArrayPref(
 
 
 @Suppress("Deprecation")
-suspend fun importData(context: Context, data: JSONObject, categories: Collection<PrefCategory>): Result<Boolean> {
+suspend fun importData(context: Context, data: JSONObject, categories: Collection<PrefCategory>, merge: Boolean = false): Result<Boolean> {
     /* This really is not great but we're working with what we've got.
 
        If search history is selected for import but saving search history is disabled (i.e. disabled
@@ -178,8 +200,8 @@ suspend fun importData(context: Context, data: JSONObject, categories: Collectio
                 PrefCategory.BUILD -> {
                     editable[PreferenceKeys.LAST_USED_VERSION_CODE] = data.getInt(category.name)
                 }
-                PrefCategory.SETTING -> importSettings(editable, data)
-                PrefCategory.FAVOURITE_IMAGES -> importFavouriteImages(editable, data)
+                PrefCategory.SETTING -> importSettings(editable, data, merge)
+                PrefCategory.FAVOURITE_IMAGES -> importFavouriteImages(editable, data, merge)
                 PrefCategory.SEARCH_HISTORY -> importSearchHistory(editable, data)
             }
         }

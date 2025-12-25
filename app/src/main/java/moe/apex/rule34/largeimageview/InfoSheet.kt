@@ -16,7 +16,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Block
+import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,10 +49,14 @@ import moe.apex.rule34.image.Image
 import moe.apex.rule34.navigation.ImageView
 import moe.apex.rule34.navigation.Results
 import moe.apex.rule34.preferences.ImageSource
+import moe.apex.rule34.preferences.LocalPreferences
+import moe.apex.rule34.preferences.PreferenceKeys
+import moe.apex.rule34.prefs
 import moe.apex.rule34.tag.TagCategory
 import moe.apex.rule34.ui.theme.prefTitle
 import moe.apex.rule34.util.BasicExpressiveContainer
 import moe.apex.rule34.util.BasicExpressiveGroup
+import moe.apex.rule34.util.ButtonListItem
 import moe.apex.rule34.util.CHIP_SPACING
 import moe.apex.rule34.util.ChevronRight
 import moe.apex.rule34.util.CombinedClickableFilterChip
@@ -66,28 +74,41 @@ import moe.apex.rule34.util.launchInWebBrowser
 import moe.apex.rule34.util.navBarHeight
 import moe.apex.rule34.util.openUrl
 import moe.apex.rule34.util.pluralise
+import moe.apex.rule34.util.showToast
 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -> Unit) {
+    /* I don't really like this whole info/options implementation.
+       Ideally we'd use AnimatedContent or something and switch between the two in the same sheet.
+       However, unfortunately the built-in M3 ModalBottomSheet has an endless list of problems
+       that aren't getting fixed and a few of them affect what I wanted to do.
+       I'm still not totally happy with this implementation with options being a separate dialog,
+       but I think it's the best we're going to get at this time.  */
     if (image.metadata == null) return
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var state: SheetState? = null
+    val prefs = LocalPreferences.current
     val clip = LocalClipboard.current
-    var previousSheetValue by remember { mutableStateOf(SheetValue.Hidden) }
+    val preferencesRepository = context.prefs
+    val scope = rememberCoroutineScope()
+
+    /* This is sketchy but we need to be able to access the sheet state itself in its own
+       confirmValueChange which for some reason we can't normally do in order to disable the
+       partially expanded state only when dismissing.  */
+    var sheetState: SheetState? by remember { mutableStateOf(null) }
+    var selectedTag: String? by remember { mutableStateOf(null) }
 
     fun hideAndThen(block: () -> Unit = { }) {
         scope.launch {
-            state?.hide()
+            sheetState?.hide()
         }.invokeOnCompletion {
             onDismissRequest()
             block()
         }
     }
 
-    fun chipClick(tag: String) {
+    fun startTagSearch(tag: String) {
         hideAndThen {
             /* Don't do new searches inside the DeepLinkActivity. We should only
                ever do them inside the main one. */
@@ -100,36 +121,98 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
         }
     }
 
-    fun chipLongClick(tag: String) {
-        scope.launch {
-            copyText(context, clip, tag)
+    // We want to bypass the partially expanded state when closing but not when opening.
+    sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = false
+    ) { newValue ->
+        if (newValue == SheetValue.PartiallyExpanded) {
+            if (sheetState?.currentValue == SheetValue.Expanded) {
+                hideAndThen()
+                return@rememberModalBottomSheetState false
+            } else {
+                return@rememberModalBottomSheetState true
+            }
+        } else {
+            return@rememberModalBottomSheetState true
         }
     }
 
-    // We want to bypass the partially expanded state when closing but not when opening.
-    state = rememberModalBottomSheetState(
-        skipPartiallyExpanded = false,
-        confirmValueChange = { newValue ->
-            if (newValue == SheetValue.PartiallyExpanded) {
-                if (previousSheetValue == SheetValue.Expanded) {
-                    hideAndThen()
-                    return@rememberModalBottomSheetState false
-                } else {
-                    previousSheetValue = newValue
-                    return@rememberModalBottomSheetState true
-                }
-            } else {
-                previousSheetValue = newValue
-                return@rememberModalBottomSheetState true
-            }
-        }
-    )
-
     TitledModalBottomSheet(
         onDismissRequest = onDismissRequest,
-        sheetState = state,
-        title = "About this image"
+        sheetState = sheetState ?: return,
+        title = "About this image",
     ) {
+        if (selectedTag != null) {
+            /* We need to have this dialog inside the sheet otherwise it'll just automatically
+               dismiss itself and the sheet because this entire system sucks. */
+            val blocked = selectedTag in prefs.blockedTags
+            AlertDialog(
+                onDismissRequest = { selectedTag = null },
+                title = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        CombinedClickableFilterChip(
+                            label = { Text(selectedTag!!) },
+                            warning = blocked,
+                            onClick = { },
+                            onLongClick = { }
+                        )
+                    }
+                },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        ButtonListItem(
+                            text = "Search",
+                            icon = Icons.Rounded.Search,
+                            modifier = Modifier.fillMaxWidth(),
+                            position = ListItemPosition.TOP
+                        ) {
+                            val searchTag = selectedTag!!
+                            selectedTag = null
+                            startTagSearch(searchTag)
+                        }
+                        ButtonListItem(
+                            text = "Copy to clipboard",
+                            icon = Icons.Rounded.ContentCopy,
+                            modifier = Modifier.fillMaxWidth(),
+                            position = ListItemPosition.MIDDLE
+                        ) {
+                            scope.launch {
+                                copyText(context, clip, selectedTag!!)
+                            }
+                        }
+                        ButtonListItem(
+                            text = "${if (blocked) "Unblock" else "Block"} this tag",
+                            icon = if (blocked) Icons.Rounded.CheckCircleOutline else Icons.Rounded.Block,
+                            modifier = Modifier.fillMaxWidth(),
+                            position = ListItemPosition.BOTTOM
+                        ) {
+                            if (blocked) {
+                                scope.launch {
+                                    preferencesRepository.removeFromSet(
+                                        PreferenceKeys.MANUALLY_BLOCKED_TAGS,
+                                        selectedTag!!
+                                    )
+                                }
+                                showToast(context, "Unblocked tag ${selectedTag!!}")
+                            } else {
+                                scope.launch {
+                                    preferencesRepository.addToSet(
+                                        PreferenceKeys.MANUALLY_BLOCKED_TAGS,
+                                        selectedTag!!
+                                    )
+                                }
+                                showToast(context, "Blocked tag ${selectedTag!!}")
+                            }
+                        }
+                    }
+                },
+                confirmButton = { }
+            )
+        }
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
@@ -211,7 +294,12 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                             TitleSummary(
                                 title = title,
                                 summary = it,
-                                onClick = { launchInWebBrowser(context, it) }, // Breadboard can handle yande.re direct image links. We'll forcibly use the browser here to prevent that here.
+                                onClick = {
+                                    launchInWebBrowser(
+                                        context,
+                                        it
+                                    )
+                                }, // Breadboard can handle yande.re direct image links. We'll forcibly use the browser here to prevent that here.
                                 trailingIcon = {
                                     CopyIcon(title) {
                                         scope.launch { copyText(context, clip, it) }
@@ -226,7 +314,12 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                                 title = "View parent image",
                                 onClick = {
                                     hideAndThen {
-                                        navController.navigate(ImageView(image.imageSource, it))
+                                        navController.navigate(
+                                            ImageView(
+                                                image.imageSource,
+                                                it
+                                            )
+                                        )
                                     }
                                 },
                                 trailingIcon = {
@@ -273,20 +366,25 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                     TagsContainer(
                         category = TagCategory.ARTIST,
                         tags = it,
-                        onChipClick = ::chipClick,
-                        onChipLongClick = ::chipLongClick
+                        onChipClick = { startTagSearch(it) },
+                        onChipLongClick = {
+                            selectedTag = it
+                        }
                     )
                 }
             }
             /* Artists are stored in their own field rather than in groupedTags.
-               If the artist tags are somehow also in groupedTags, we don't want to show them again. */
+               If the artist tags are somehow also in groupedTags,
+               we don't want to show them again. */
             image.metadata.groupedTags.filter { it.category != TagCategory.ARTIST }.map {
                 item {
                     TagsContainer(
                         category = it.category,
                         tags = it.tags,
-                        onChipClick = ::chipClick,
-                        onChipLongClick = ::chipLongClick
+                        onChipClick = { startTagSearch(it) },
+                        onChipLongClick = {
+                            selectedTag = it
+                        }
                     )
                 }
             }
@@ -316,6 +414,7 @@ private fun TagsContainer(
     onChipClick: (String) -> Unit,
     onChipLongClick: (String) -> Unit
 ) {
+    val prefs = LocalPreferences.current
     BasicExpressiveContainer(position = ListItemPosition.SINGLE_ELEMENT) {
         Column(
             Modifier
@@ -344,6 +443,7 @@ private fun TagsContainer(
                 val tag = tags[index]
                 CombinedClickableFilterChip(
                     label = { Text(tag) },
+                    warning = tag in prefs.blockedTags,
                     onClick = { onChipClick(tag) },
                     onLongClick = { onChipLongClick(tag) }
                 )

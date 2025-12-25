@@ -38,26 +38,27 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import coil3.compose.SubcomposeAsyncImage
+import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.LocalPreferences
-import moe.apex.rule34.util.FullscreenLoadingSpinner
 import moe.apex.rule34.util.NavBarHeightVerticalSpacer
 import moe.apex.rule34.util.PullToRefreshController
 import moe.apex.rule34.util.SMALL_SPACER
 import moe.apex.rule34.util.largerShape
 
 
-private const val MIN_IMAGE_HEIGHT = 108
+private const val MIN_IMAGE_HEIGHT = 96
 private const val MAX_IMAGE_HEIGHT = 280
 private const val MIN_CELL_WIDTH   = 120
 private const val MAX_CELL_WIDTH   = 144
@@ -89,7 +90,7 @@ fun ImageGrid(
                 state = pullToRefreshController.state,
                 onRefresh = pullToRefreshController::refresh,
                 indicator = {
-                    pullToRefreshController.Indicator(Modifier.align(Alignment.TopCenter))
+                    pullToRefreshController.indicator(this, pullToRefreshController)
                 },
                 content = { content() }
             )
@@ -145,7 +146,6 @@ fun ImageGrid(
             if (doneInitialLoad) {
                 staggeredGridState.requestScrollToItem(0)
                 uniformGridState.requestScrollToItem(0)
-                println("done")
             }
         }
     }
@@ -300,14 +300,18 @@ private fun ImagePreview(
     index: Int,
     onImageClick: (Int, Image) -> Unit
 ) {
-    SubcomposeAsyncImage(
-        model = ImageRequest.Builder(LocalContext.current)
-            .data(image.previewUrl)
-            .crossfade(true)
-            .build(),
+    val context = LocalContext.current
+    val model = remember { ImageRequest.Builder(context)
+        .data(image.previewUrl)
+        .crossfade(true)
+        .build()
+    }
+
+    AsyncImage(
+        model = model,
         contentDescription = "Image",
         contentScale = ContentScale.Crop,
-        loading = { FullscreenLoadingSpinner() },
+        placeholder = ColorPainter(MaterialTheme.colorScheme.surfaceContainer),
         modifier = modifier.clickable { onImageClick(index, image) }
     )
 }
