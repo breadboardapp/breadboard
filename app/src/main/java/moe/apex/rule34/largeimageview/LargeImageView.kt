@@ -10,6 +10,7 @@ import android.util.Log
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.EaseIn
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
@@ -62,6 +63,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
@@ -133,7 +135,6 @@ fun LargeImageView(
     navController: NavController,
     initialPage: Int,
     allImages: List<Image>,
-    backgroundAlpha: Float = 1f,
     onZoomChange: ((Float) -> Unit)? = null
 ) {
     val pagerState = rememberPagerState(
@@ -158,7 +159,7 @@ fun LargeImageView(
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.background.copy(alpha = backgroundAlpha)
+        containerColor = Color.Transparent
     ) {
         Box(Modifier.fillMaxSize()) {
             fun toggleToolbar() {
@@ -634,10 +635,6 @@ fun OffsetBasedLargeImageView(
         }
     }
 
-    fun calculateScaleFactor(offsetValue: Float): Float {
-        return 1 - ((offsetValue * 1.2f) / windowHeightPx)
-    }
-
     fun show(velocity: Float = 0f) {
         scope.launch {
             animatableOffset.animateTo(
@@ -704,25 +701,20 @@ fun OffsetBasedLargeImageView(
     }
 
     if (shouldMainContentBeVisible) {
-        if (isImmersiveModeEnabled) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        alpha = calculateScaleFactor(animatableOffset.value)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    alpha = (1 - (animatableOffset.value / windowHeightPx)).let {
+                        if (isImmersiveModeEnabled) {
+                            it * 0.5f // Linear
+                        } else {
+                            EaseIn.transform(it)
+                        }
                     }
-                    .background(color = MaterialTheme.colorScheme.background.copy(alpha = 0.5f))
-            )
-        } else {
-            /* This is so the user doesn't see the grid/background underneath the
-               LargeImage carousel if they fling it up quickly (due to the spring animation). */
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .offset { IntOffset(0, animatableOffset.value.roundToInt().coerceAtLeast(0)) }
-                    .background(MaterialTheme.colorScheme.background)
-            )
-        }
+                }
+                .background(color = MaterialTheme.colorScheme.background)
+        )
 
         Box(
             modifier = Modifier
@@ -747,7 +739,6 @@ fun OffsetBasedLargeImageView(
                     navController = navController,
                     initialPage = initialPage,
                     allImages = allImages,
-                    backgroundAlpha = if (isImmersiveModeEnabled) 0f else 1f,
                     onZoomChange = { canDragDown = it == 0f }
                 )
             }
