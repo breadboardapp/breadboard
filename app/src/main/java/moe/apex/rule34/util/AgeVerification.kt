@@ -5,8 +5,14 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
 import moe.apex.rule34.BuildConfig
+import moe.apex.rule34.preferences.PreferenceKeys
 import moe.apex.rule34.preferences.Prefs
+import moe.apex.rule34.preferences.UserPreferencesRepository
+import moe.apex.rule34.prefs
 
 
 enum class ReleasePlatform(val displayName: String) {
@@ -32,11 +38,19 @@ object AgeVerification {
     }
 
 
+    private suspend fun setVerifiedAge(preferencesRepository: UserPreferencesRepository) {
+        preferencesRepository.updatePref(PreferenceKeys.HAS_VERIFIED_AGE, true)
+    }
+
+
     @Composable
     fun AgeVerifyDialog(
         onDismissRequest: () -> Unit,
         onAgeVerified: () -> Unit,
     ) {
+        val scope = rememberCoroutineScope()
+        val preferencesRepository = LocalContext.current.prefs
+
         AlertDialog(
             onDismissRequest = onDismissRequest,
             title = { Text("Age verification") },
@@ -49,7 +63,12 @@ object AgeVerification {
                 )
             },
             confirmButton = {
-                Button(onClick = onAgeVerified) {
+                Button(
+                    onClick = {
+                        scope.launch { setVerifiedAge(preferencesRepository) }
+                        onAgeVerified()
+                    }
+                ) {
                     Text("Confirm")
                 }
             },

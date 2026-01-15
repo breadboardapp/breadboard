@@ -162,15 +162,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
     if (showAgeVerificationDialog) {
         AgeVerification.AgeVerifyDialog(
             onDismissRequest = { showAgeVerificationDialog = false },
-            onAgeVerified = {
-                scope.launch {
-                    preferencesRepository.updatePref(
-                        PreferenceKeys.HAS_VERIFIED_AGE,
-                        true
-                    )
-                }
-                showAgeVerificationDialog = false
-            }
+            onAgeVerified = { showAgeVerificationDialog = false }
         )
     }
 

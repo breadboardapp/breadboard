@@ -123,15 +123,7 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
     if (showAgeVerificationDialog) {
         AgeVerification.AgeVerifyDialog(
             onDismissRequest = { showAgeVerificationDialog = false },
-            onAgeVerified = {
-                scope.launch {
-                    preferencesRepository.updatePref(
-                        PreferenceKeys.HAS_VERIFIED_AGE,
-                        true
-                    )
-                }
-                showAgeVerificationDialog = false
-            }
+            onAgeVerified = { showAgeVerificationDialog = false }
         )
     }
 
