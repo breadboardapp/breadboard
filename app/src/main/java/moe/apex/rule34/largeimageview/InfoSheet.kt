@@ -4,6 +4,7 @@ package moe.apex.rule34.largeimageview
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ContextualFlowRow
@@ -20,7 +21,7 @@ import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -146,25 +147,33 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
             /* We need to have this dialog inside the sheet otherwise it'll just automatically
                dismiss itself and the sheet because this entire system sucks. */
             val blocked = selectedTag in prefs.blockedTags
-            AlertDialog(
+            BasicAlertDialog(
                 onDismissRequest = { selectedTag = null },
-                title = {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        CombinedClickableFilterChip(
-                            label = { Text(selectedTag!!) },
-                            warning = blocked,
-                            onClick = { },
-                            onLongClick = { }
-                        )
-                    }
-                },
-                text = {
+                modifier = Modifier.background(
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    shape = MaterialTheme.shapes.extraLarge
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(
+                        start = LARGE_SPACER.dp,
+                        end = LARGE_SPACER.dp,
+                        top = LARGE_SPACER.dp,
+                        bottom = LARGE_SPACER.dp + MEDIUM_SPACER.dp // The chip has 8dp padding so we should really match them but I think looks more balanced.
+                    ),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(SMALL_LARGE_SPACER.dp)
+                ) {
+                    CombinedClickableFilterChip(
+                        label = { Text(selectedTag!!) },
+                        warning = blocked,
+                        onClick = { },
+                        onLongClick = { },
+                    )
+
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         ButtonListItem(
-                            text = "Search",
+                            label = "Search",
                             icon = Icons.Rounded.Search,
                             modifier = Modifier.fillMaxWidth(),
                             position = ListItemPosition.TOP
@@ -174,7 +183,7 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                             startTagSearch(searchTag)
                         }
                         ButtonListItem(
-                            text = "Copy to clipboard",
+                            label = "Copy to clipboard",
                             icon = Icons.Rounded.ContentCopy,
                             modifier = Modifier.fillMaxWidth(),
                             position = ListItemPosition.MIDDLE
@@ -184,7 +193,7 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                             }
                         }
                         ButtonListItem(
-                            text = "${if (blocked) "Unblock" else "Block"} this tag",
+                            label = "${if (blocked) "Unblock" else "Block"} this tag",
                             icon = if (blocked) Icons.Rounded.CheckCircleOutline else Icons.Rounded.Block,
                             modifier = Modifier.fillMaxWidth(),
                             position = ListItemPosition.BOTTOM
@@ -208,9 +217,8 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                             }
                         }
                     }
-                },
-                confirmButton = { }
-            )
+                }
+            }
         }
 
         LazyColumn(

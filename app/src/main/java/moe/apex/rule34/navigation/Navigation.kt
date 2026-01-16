@@ -79,10 +79,10 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
     }
 
     val easing = CubicBezierEasing(0.4f, 0.0f, 0.0f, 1f)
-    val enterTransition = slideInHorizontally(tween(easing = easing), { slideDistance }) + fadeIn(tween(easing = easing))
-    val exitTransition = slideOutHorizontally(tween(easing = easing), { -slideDistance }) + fadeOut(tween(easing = easing))
-    val popExitTransition = slideOutHorizontally(tween(easing = easing),  { slideDistance }) + fadeOut( tween(easing = easing))
-    val popEnterTransition = slideInHorizontally(tween(easing = easing), { -slideDistance }) + fadeIn(tween(easing = easing))
+    val enterTransition = slideInHorizontally(tween(easing = easing)) { slideDistance } + fadeIn(tween(easing = easing))
+    val exitTransition = slideOutHorizontally(tween(easing = easing)) { -slideDistance } + fadeOut(tween(easing = easing))
+    val popExitTransition = slideOutHorizontally(tween(easing = easing)) { slideDistance } + fadeOut( tween(easing = easing))
+    val popEnterTransition = slideInHorizontally(tween(easing = easing)) { -slideDistance } + fadeIn(tween(easing = easing))
 
     val searchScreens = listOf(Search::class, Results::class)
     val settingsScreens = listOf(Settings::class, BlockedTagsSettings::class, AboutSettings::class, LibrariesSettings::class, ExperimentalSettings::class, RecommendationsSettings::class, IgnoredTagsSettings::class)
@@ -107,7 +107,7 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                         enter = slideInVertically { it /3} + fadeIn(),
                         exit = slideOutVertically { it/3 } + fadeOut()
                     ) {
-                        NavigationBar {
+                        NavigationBar(containerColor = BreadboardTheme.colors.titleBar) {
                             NavigationBarItem(
                                 label = { Text("Browse") },
                                 selected = currentRoute.routeIs(Home::class),

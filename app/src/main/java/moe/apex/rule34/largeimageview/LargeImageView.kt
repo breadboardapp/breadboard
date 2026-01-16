@@ -11,6 +11,7 @@ import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.EaseIn
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
@@ -65,10 +66,10 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -78,6 +79,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.colorspace.ColorSpaces
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -105,6 +107,7 @@ import moe.apex.rule34.R
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.AutoplayVideosMode
 import moe.apex.rule34.preferences.DataSaver
+import moe.apex.rule34.preferences.Experiment
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.ToolbarAction
 import moe.apex.rule34.prefs
@@ -119,6 +122,7 @@ import moe.apex.rule34.util.SMALL_LARGE_SPACER
 import moe.apex.rule34.util.StorageLocationSelection
 import moe.apex.rule34.util.bouncyAnimationSpec
 import moe.apex.rule34.util.downloadImage
+import moe.apex.rule34.util.downloadImageToClipboard
 import moe.apex.rule34.util.fixLink
 import moe.apex.rule34.util.isWebLink
 import moe.apex.rule34.util.rememberIsBlurEnabled
@@ -151,7 +155,6 @@ fun LargeImageView(
     navController: NavController,
     initialPage: Int,
     allImages: List<Image>,
-    backgroundAlpha: Float = 1f,
     onZoomChange: ((Float) -> Unit)? = null
 ) {
     val pagerState = rememberPagerState(
@@ -176,7 +179,7 @@ fun LargeImageView(
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.background.copy(alpha = backgroundAlpha)
+        containerColor = Color.Transparent
     ) {
         Box(Modifier.fillMaxSize()) {
             fun toggleToolbar() {
@@ -293,6 +296,7 @@ private fun LargeImageToolbar(
 ) {
     val context = LocalContext.current
     val prefs = LocalPreferences.current
+    val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
 
     val storageLocation = prefs.storageLocation
@@ -403,12 +407,41 @@ private fun LargeImageToolbar(
                                 exc.printStackTrace()
 
                                 if (exc is MustSetLocation) {
+                                    showToast(context, exc.message!!)
                                     storageLocationPromptLaunched = true
+                                } else {
+                                    showToast(context, exc.message ?: "Unknown error")
                                 }
-                                showToast(context, exc.message ?: "Unknown error")
                                 Log.e(
                                     "Downloader",
                                     exc.message ?: "Error downloading image",
+                                    exc
+                                )
+                            }
+                            viewModel.removeDownloadingImage(currentImage)
+                        }
+                    }
+                },
+                onLongClick = {
+                    if (!prefs.isExperimentEnabled(Experiment.COPY_TO_CLIPBOARD)) return@ImageAction
+
+                    if (currentImage !in downloadingImages) {
+                        viewModel.viewModelScope.launch {
+                            viewModel.addDownloadingImage(currentImage)
+                            val result: Result<Boolean> = downloadImageToClipboard(
+                                context = context,
+                                clipboard = clipboard,
+                                image = currentImage
+                            )
+
+                            if (result.isSuccess) {
+                                showToast(context, "Copied to clipboard.")
+                            } else {
+                                val exc = result.exceptionOrNull()!!
+                                showToast(context, "Error copying image")
+                                Log.e(
+                                    "Downloader",
+                                    exc.message ?: "Error copying image",
                                     exc
                                 )
                             }
@@ -821,41 +854,13 @@ fun OffsetBasedLargeImageView(
     val animatableOffset = remember { Animatable(windowHeightPx) }
     val animationSpec = spring<Float>(stiffness = Spring.StiffnessMediumLow)
 
-    /* In the past we used initialPage to determine whether or not we should recompose the viewer.
-       However, this causes an issue where the viewer doesn't reset when it really should,
-       just because the user swiped to a different image and then tapped the first one again.
-       For instance, lets say the user taps image 1, swipes to image 2, dismisses the viewer,
-       and taps image 1 again before the closing animation is finished. Because initialPage didn't
-       change, the user is still seeing image 2, which is bad.
-
-       This is a really poor solution to that. We will trigger a recomposition manually by
-       incrementing this value and use a LaunchedEffect that increments the value when the
-       visibility state becomes true.
-
-       Why not just use visibilityState directly? Because we don't want to recompose the viewer when
-       it becomes false (i.e. the user is dismissing the viewer) because if the user has swiped to
-       change page, recreating it with the original initialPage will cause that image to reappear
-       as it disappears.
-
-       Why not use a boolean value that just flips to trigger a recomposition? Because it causes
-       other issues that are difficult to describe but easy to notice when using the app.
-
-       There is probably a really simple (and, crucially, better) solution to this
-       and I'm too stupid to see it. Quite frankly i'm sick of debugging and this works
-       so I'm keeping it.
-
-       PRs welcome (please). */
-    var stupidFuckingRecompositionCounter by rememberSaveable { mutableIntStateOf(0) }
+    var viewerSessionId by remember { mutableLongStateOf(0L) }
 
     val draggableState = rememberDraggableState { delta ->
         scope.launch {
             val new = (animatableOffset.value + delta).coerceAtLeast(0f)
             animatableOffset.snapTo(new)
         }
-    }
-
-    fun calculateScaleFactor(offsetValue: Float): Float {
-        return 1 - ((offsetValue * 1.2f) / windowHeightPx)
     }
 
     fun show(velocity: Float = 0f) {
@@ -908,7 +913,9 @@ fun OffsetBasedLargeImageView(
     LaunchedEffect(visibilityState.value) {
         bottomBarVisibleState?.value = !visibilityState.value
         if (visibilityState.value) {
-            stupidFuckingRecompositionCounter ++
+            /* Theoretically breakable if someone spoofs the system clock to never update,
+               that's rather unlikely. */
+            viewerSessionId = System.currentTimeMillis()
             show()
         }
         // No hide() call here because it's managed by the back handler and draggable modifier.
@@ -922,25 +929,20 @@ fun OffsetBasedLargeImageView(
     }
 
     if (shouldMainContentBeVisible) {
-        if (isImmersiveModeEnabled) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        alpha = calculateScaleFactor(animatableOffset.value)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    alpha = (1 - (animatableOffset.value / windowHeightPx)).let {
+                        if (isImmersiveModeEnabled) {
+                            it * 0.5f // Linear
+                        } else {
+                            EaseIn.transform(it)
+                        }
                     }
-                    .background(color = MaterialTheme.colorScheme.background.copy(alpha = 0.5f))
-            )
-        } else {
-            /* This is so the user doesn't see the grid/background underneath the
-               LargeImage carousel if they fling it up quickly (due to the spring animation). */
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .offset { IntOffset(0, animatableOffset.value.roundToInt().coerceAtLeast(0)) }
-                    .background(MaterialTheme.colorScheme.background)
-            )
-        }
+                }
+                .background(color = MaterialTheme.colorScheme.background)
+        )
 
         Box(
             modifier = Modifier
@@ -960,15 +962,13 @@ fun OffsetBasedLargeImageView(
                     }
                 )
         ) {
-            key(stupidFuckingRecompositionCounter) {
+            key(viewerSessionId) {
                 LargeImageView(
                     navController = navController,
                     initialPage = initialPage,
                     allImages = allImages,
-                    backgroundAlpha = if (isImmersiveModeEnabled) 0f else 1f
-                ) {
-                    canDragDown = it == 0f
-                }
+                    onZoomChange = { canDragDown = it == 0f }
+                )
             }
         }
     }

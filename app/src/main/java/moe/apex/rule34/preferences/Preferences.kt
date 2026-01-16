@@ -2,11 +2,13 @@ package moe.apex.rule34.preferences
 
 import android.net.Uri
 import android.provider.OpenableColumns
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -35,6 +37,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -69,6 +72,7 @@ import moe.apex.rule34.util.ImportHandler
 import moe.apex.rule34.util.LARGE_SPACER
 import moe.apex.rule34.util.PromptType
 import moe.apex.rule34.util.MEDIUM_SPACER
+import moe.apex.rule34.util.SMALL_SPACER
 import moe.apex.rule34.util.TINY_SPACER
 import moe.apex.rule34.util.TitleSummary
 import moe.apex.rule34.util.exportData
@@ -123,15 +127,7 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
     if (showAgeVerificationDialog) {
         AgeVerification.AgeVerifyDialog(
             onDismissRequest = { showAgeVerificationDialog = false },
-            onAgeVerified = {
-                scope.launch {
-                    preferencesRepository.updatePref(
-                        PreferenceKeys.HAS_VERIFIED_AGE,
-                        true
-                    )
-                }
-                showAgeVerificationDialog = false
-            }
+            onAgeVerified = { showAgeVerificationDialog = false }
         )
     }
 
@@ -584,6 +580,11 @@ private fun AuthDialog(
     onDismissRequest: () -> Unit,
     onSave: (String, String) -> Unit
 ) {
+    var inQueryParamMode by remember { mutableStateOf(false) }
+    val queryRegex = remember { Regex("&api_key=([^&]+)&user_id=(\\d+)") }
+    var queryString by remember { mutableStateOf("") }
+    var isQueryStringValid by remember { mutableStateOf(false) }
+
     var userId by remember { mutableStateOf(default?.user ?: "") }
     var apiKey by remember { mutableStateOf(default?.apiKey ?: "") }
 
@@ -591,23 +592,71 @@ private fun AuthDialog(
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
-        title = { Text("Set API key") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                PreferenceTextBox(
-                    value = userId,
-                    label = "User ID/name",
-                    obscured = false
-                ) {
-                    userId = it.trim()
+        title = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Set API key")
+                Box {
+                    var showMenu by remember { mutableStateOf(false) }
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(
+                            imageVector = Icons.Rounded.MoreVert,
+                            contentDescription = "Options"
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false },
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        shape = MaterialTheme.shapes.small
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(if (inQueryParamMode) "Enter credentials normally" else "Enter query string") },
+                            onClick = {
+                                inQueryParamMode = !inQueryParamMode
+                                showMenu = false
+                            }
+                        )
+                    }
                 }
-                PreferenceTextBox(
-                    value = apiKey,
-                    label = "API key",
-                    keyboardType = KeyboardType.Password,
-                    obscured = true
-                ) {
-                    apiKey = it.trim()
+            }
+        },
+        text = {
+            Column {
+                if (inQueryParamMode) {
+                    PreferenceTextBox(
+                        value = queryString,
+                        label = "Query string",
+                        obscured = false,
+                        keyboardType = KeyboardType.Uri,
+                        isError = !isQueryStringValid && queryString.isNotEmpty()
+                    ) { newValue ->
+                        queryString = newValue.trim()
+                        isQueryStringValid = queryRegex.containsMatchIn(queryString)
+                    }
+                } else {
+                    PreferenceTextBox(
+                        value = userId,
+                        label = "User ID/name",
+                        obscured = false
+                    ) {
+                        userId = it.trim()
+                    }
+                }
+
+                AnimatedVisibility(!inQueryParamMode) {
+                    PreferenceTextBox(
+                        modifier = Modifier.padding(top = SMALL_SPACER.dp),
+                        value = apiKey,
+                        label = "API key",
+                        keyboardType = KeyboardType.Password,
+                        obscured = true
+                    ) {
+                        apiKey = it.trim()
+                    }
                 }
 
                 selectedBoard.apiKeyCreationUrl?.let { url ->
@@ -629,15 +678,38 @@ private fun AuthDialog(
                     Text(
                         text = apiKeyCreationText,
                         style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(start = TINY_SPACER.dp)
+                        modifier = Modifier.padding(
+                            start = TINY_SPACER.dp,
+                            top = SMALL_SPACER.dp
+                        )
                     )
                 }
             }
         },
         confirmButton = {
             Button(
-                enabled = (userId.isNotBlank() && apiKey.isNotBlank()) || (userId.isBlank() && apiKey.isBlank()),
-                onClick = { onSave(userId, apiKey) }) {
+                enabled = if (inQueryParamMode) {
+                    isQueryStringValid || queryString.isBlank()
+                } else {
+                    (userId.isNotBlank() && apiKey.isNotBlank()) || (userId.isBlank() && apiKey.isBlank())
+                },
+                onClick = {
+                    if (inQueryParamMode) {
+                        if (queryString.isBlank()) {
+                            onSave("", "")
+                            return@Button
+                        }
+
+                        val match = queryRegex.find(queryString)
+                        if (match != null) {
+                            onSave(match.groupValues[2], match.groupValues[1])
+                        }
+
+                    } else {
+                        onSave(userId, apiKey)
+                    }
+                }
+            ) {
                 Text("Save")
             }
         },
