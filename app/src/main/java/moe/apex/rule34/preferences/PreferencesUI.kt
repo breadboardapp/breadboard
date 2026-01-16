@@ -472,13 +472,17 @@ fun PreferenceTextBox(
     keyboardType: KeyboardType = KeyboardType.Text,
     autoCorrectEnabled: Boolean = false,
     obscured: Boolean = false,
+    isError: Boolean = false,
+    modifier: Modifier = Modifier,
     onValueChange: (String) -> Unit,
 ) {
     OutlinedTextField(
+        modifier = modifier,
         value = value,
         onValueChange = onValueChange,
         label = { Text(label, style = LocalTextStyle.current.copy(fontSize = (LocalTextStyle.current.fontSize.value - 3).sp)) },
         singleLine = true,
+        isError = isError,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType, autoCorrectEnabled = autoCorrectEnabled),
         visualTransformation = if (obscured) {
             VisualTransformation { input ->
