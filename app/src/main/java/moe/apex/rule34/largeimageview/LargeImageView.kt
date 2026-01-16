@@ -287,7 +287,7 @@ private fun ImagesPager(
                         .systemBarsPadding(),
                     contentAlignment = Alignment.Center
                 ) {
-                    LargeVideo(imageAtIndex)
+                    LargeVideo(imageAtIndex, pagerState.currentPage == index)
                 }
             }
         }
@@ -681,7 +681,7 @@ fun LargeImage(image: Image) {
 }
 
 @Composable
-fun LargeVideo(image: Image) {
+fun LargeVideo(image: Image, isCurrentPage: Boolean) {
     var wasPlaying by remember { mutableStateOf(false) }
     var muted by remember { mutableStateOf(false) }
     var videoLoaded by remember { mutableStateOf(false) }
@@ -714,10 +714,6 @@ fun LargeVideo(image: Image) {
 
     LaunchedEffect(Unit) {
         player.loop = true
-        if (shouldAutoplay) {
-            player.openUri(image.fileUrl)
-            videoLoaded = true
-        }
     }
 
     LaunchedEffect(controlInteractionCounter) {
@@ -733,6 +729,22 @@ fun LargeVideo(image: Image) {
             player.volume = 0.0f
         } else {
             player.volume = 0.5f
+        }
+    }
+
+    LaunchedEffect(isCurrentPage) {
+        if (!isCurrentPage) {
+            player.pause()
+        } else {
+            player.sliderPos = 0.0f
+            if (shouldAutoplay) {
+                if (videoLoaded) {
+                    player.play()
+                } else {
+                    player.openUri(image.fileUrl)
+                    videoLoaded = true
+                }
+            }
         }
     }
 
