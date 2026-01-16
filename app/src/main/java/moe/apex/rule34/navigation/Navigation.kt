@@ -107,7 +107,7 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                         enter = slideInVertically { it /3} + fadeIn(),
                         exit = slideOutVertically { it/3 } + fadeOut()
                     ) {
-                        NavigationBar {
+                        NavigationBar(containerColor = BreadboardTheme.colors.titleBar) {
                             NavigationBarItem(
                                 label = { Text("Browse") },
                                 selected = currentRoute.routeIs(Home::class),
