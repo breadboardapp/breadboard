@@ -98,7 +98,7 @@ interface ImageBoard {
     }
 
     fun ensureSupportedFormat(fileFormat: String): Boolean {
-        val isSupportedFormat = fileFormat == "jpeg" || fileFormat == "jpg" || fileFormat == "png" || fileFormat == "gif" || fileFormat == "webp"
+        val isSupportedFormat = fileFormat == "jpeg" || fileFormat == "jpg" || fileFormat == "png" || fileFormat == "gif" || fileFormat == "webp" || fileFormat == "mp4"
         if (!isSupportedFormat) Log.w("ImageBoard", "Unknown file format: $fileFormat")
         return isSupportedFormat
     }

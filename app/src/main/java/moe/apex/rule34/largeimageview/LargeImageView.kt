@@ -8,6 +8,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.util.Log
 import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
@@ -17,11 +18,14 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -31,19 +35,26 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -63,6 +74,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.colorspace.ColorSpaces
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
@@ -78,7 +91,10 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import coil3.compose.rememberAsyncImagePainter
 import coil3.request.ImageRequest
+import io.github.kdroidfilter.composemediaplayer.VideoPlayerSurface
+import io.github.kdroidfilter.composemediaplayer.rememberVideoPlayerState
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.saket.telephoto.zoomable.ZoomSpec
@@ -87,6 +103,7 @@ import me.saket.telephoto.zoomable.rememberZoomableState
 import me.saket.telephoto.zoomable.zoomable
 import moe.apex.rule34.R
 import moe.apex.rule34.image.Image
+import moe.apex.rule34.preferences.AutoplayVideosMode
 import moe.apex.rule34.preferences.DataSaver
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.ToolbarAction
@@ -233,12 +250,24 @@ private fun ImagesPager(
 
         /* TODO: Give each image its own zoom state.
            Need to consider how it interacts with the LargeImageView toolbar and onZoomChange. */
-        Box(
-            modifier = Modifier.zoomable(
-                state = zoomState,
-                onClick = { onImageClick() }
-            )
-        ) {
+        if (imageAtIndex.fileFormat != "mp4") {
+            Box(
+                modifier = Modifier.zoomable(
+                    state = zoomState,
+                    onClick = { onImageClick() }
+                )
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(SMALL_LARGE_SPACER.dp)
+                        .systemBarsPadding(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    LargeImage(imageAtIndex)
+                }
+            }
+        } else {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -246,7 +275,7 @@ private fun ImagesPager(
                     .systemBarsPadding(),
                 contentAlignment = Alignment.Center
             ) {
-                LargeImage(imageAtIndex)
+                LargeVideo(imageAtIndex)
             }
         }
     }
@@ -605,6 +634,172 @@ fun LargeImage(image: Image) {
     }
 }
 
+@Composable
+fun LargeVideo(image: Image) {
+    val player = rememberVideoPlayerState()
+    var wasPlaying by remember { mutableStateOf(false) }
+    var muted by remember { mutableStateOf(false) }
+
+    var showControls by remember { mutableStateOf(false) }
+    var controlInteractionCounter by remember { mutableIntStateOf(0) }
+
+    val pref = LocalPreferences.current
+    val shouldAutoplay = when (pref.autoplayVideos) {
+        AutoplayVideosMode.ON -> true
+        AutoplayVideosMode.OFF -> false
+        AutoplayVideosMode.DATA_SAVER -> isUsingWiFi(LocalContext.current)
+    }
+
+    val aspectRatio = image.aspectRatio
+
+    val modifier = if (aspectRatio == null) {
+        if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT) {
+            Modifier.fillMaxWidth()
+        } else {
+            Modifier.fillMaxHeight()
+        }
+    } else Modifier.aspectRatio(aspectRatio)
+
+    LaunchedEffect(Unit) {
+        player.loop = true
+        player.openUri(image.fileUrl)
+        if (!shouldAutoplay) {
+            player.stop()
+        }
+    }
+
+    LaunchedEffect(controlInteractionCounter) {
+        if (showControls) {
+            delay(2_000)
+            showControls = false
+            controlInteractionCounter = 0
+        }
+    }
+
+    LaunchedEffect(muted) {
+        if (muted) {
+            player.volume = 0.0f
+        } else {
+            player.volume = 0.5f
+        }
+    }
+
+    Box(
+        modifier = Modifier.clip(MaterialTheme.shapes.extraLarge)
+    ) {
+        Box(modifier = Modifier.clickable {
+            if (showControls) {
+                showControls = false
+                controlInteractionCounter = 0
+            } else {
+                showControls = true
+                controlInteractionCounter++
+            }
+        }) {
+            VideoPlayerSurface(modifier = modifier, playerState = player)
+
+            AnimatedVisibility(
+                modifier = modifier,
+                visible = showControls
+            ) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .background(Color(0.0f, 0.0f, 0.0f, 0.4f, ColorSpaces.Srgb)),
+                ) {
+                    IconButton(
+                        modifier = Modifier.align(Alignment.Center),
+                        onClick = {
+                            controlInteractionCounter++
+                            if (player.isPlaying) {
+                                player.pause()
+                            } else {
+                                player.play()
+                            }
+                        },
+                    ) {
+                        if (player.isPlaying) {
+                            Icon(
+                                Icons.Filled.Pause,
+                                contentDescription = "Pause",
+                                Modifier.size(64.dp)
+                            )
+                        } else {
+                            Icon(
+                                Icons.Filled.PlayArrow,
+                                contentDescription = "Resume",
+                                Modifier.size(64.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            AnimatedContent(
+                modifier = Modifier.align(Alignment.BottomStart),
+                targetState = showControls,
+            ) {
+                if (it) {
+                    Row(
+                        modifier = Modifier.padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Slider(
+                            modifier = Modifier.weight(1f),
+                            value = player.sliderPos / 1000,
+                            onValueChange = { v ->
+                                controlInteractionCounter++
+                                if (player.isPlaying) {
+                                    player.pause()
+                                    wasPlaying = true
+                                }
+                                player.sliderPos = v * 1000
+                            },
+                            onValueChangeFinished = {
+                                if (wasPlaying) {
+                                    player.play()
+                                    wasPlaying = false
+                                }
+                            }
+                        )
+
+                        IconButton(
+                            modifier = Modifier.size(24.dp),
+                            onClick = {
+                                controlInteractionCounter++
+                                muted = !muted
+                            }
+                        ) {
+                            if (muted) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.VolumeOff,
+                                    contentDescription = "Volume off",
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            } else {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.VolumeUp,
+                                    contentDescription = "Volume on",
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    LinearProgressIndicator(
+                        progress = { player.sliderPos / 1000 },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(2.dp),
+                        trackColor = MaterialTheme.colorScheme.background
+                    )
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun OffsetBasedLargeImageView(
