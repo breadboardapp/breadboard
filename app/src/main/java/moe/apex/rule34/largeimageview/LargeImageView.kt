@@ -99,6 +99,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import me.saket.telephoto.zoomable.EnabledZoomGestures
 import me.saket.telephoto.zoomable.ZoomSpec
 import me.saket.telephoto.zoomable.ZoomableState
 import me.saket.telephoto.zoomable.rememberZoomableState
@@ -253,9 +254,9 @@ private fun ImagesPager(
             }
         }
 
-        /* TODO: Give each image its own zoom state.
-           Need to consider how it interacts with the LargeImageView toolbar and onZoomChange. */
         if (imageAtIndex.fileFormat != "mp4") {
+            /* TODO: Give each image its own zoom state.
+               Need to consider how it interacts with the LargeImageView toolbar and onZoomChange. */
             Box(
                 modifier = Modifier.zoomable(
                     state = zoomState,
@@ -274,13 +275,20 @@ private fun ImagesPager(
             }
         } else {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(SMALL_LARGE_SPACER.dp)
-                    .systemBarsPadding(),
-                contentAlignment = Alignment.Center
+                modifier = Modifier.zoomable(
+                    state = zoomState,
+                    gestures = EnabledZoomGestures.None,
+                )
             ) {
-                LargeVideo(imageAtIndex)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(SMALL_LARGE_SPACER.dp)
+                        .systemBarsPadding(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    LargeVideo(imageAtIndex)
+                }
             }
         }
     }
