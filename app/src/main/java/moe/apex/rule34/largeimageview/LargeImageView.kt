@@ -134,7 +134,8 @@ import kotlin.math.roundToInt
 
 
 private fun isUsingWiFi(context: Context): Boolean {
-    val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    val connectivityManager =
+        context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
     val networkInfo = connectivityManager.activeNetwork
     val networkCapabilities = connectivityManager.getNetworkCapabilities(networkInfo)
 
@@ -183,7 +184,8 @@ fun LargeImageView(
     ) {
         Box(Modifier.fillMaxSize()) {
             fun toggleToolbar() {
-                val isVisible = toolbarState == ToolbarState.FORCE_SHOW || (isMostlyZoomedOut && toolbarState != ToolbarState.FORCE_HIDE)
+                val isVisible =
+                    toolbarState == ToolbarState.FORCE_SHOW || (isMostlyZoomedOut && toolbarState != ToolbarState.FORCE_HIDE)
                 toolbarState = when (toolbarState) {
                     ToolbarState.FORCE_SHOW -> ToolbarState.FORCE_HIDE
                     ToolbarState.FORCE_HIDE -> ToolbarState.FORCE_SHOW
@@ -326,7 +328,8 @@ private fun LargeImageToolbar(
             }
         },
         ToolbarAction.FAVOURITE to {
-            val isFavourited = favouriteImages.any { it.fileName == currentImage.fileName && it.imageSource == currentImage.imageSource }
+            val isFavourited =
+                favouriteImages.any { it.fileName == currentImage.fileName && it.imageSource == currentImage.imageSource }
             ImageAction(
                 onClick = {
                     scope.launch {
@@ -517,23 +520,25 @@ private fun LargeImageToolbar(
                     }
                 }
             },
-            floatingActionButton = actionMapping[primaryAction]!!()?.let { {
-                val interactionSource = remember { MutableInteractionSource() }
-                CombinedClickableAction(
-                    enabled = it.enabled,
-                    interactionSource = interactionSource,
-                    onClick = it.onClick,
-                    onLongClick = it.onLongClick
-                ) {
-                    FloatingActionButton(
-                        modifier = it.modifier,
-                        onClick = { },
-                        interactionSource = interactionSource
+            floatingActionButton = actionMapping[primaryAction]!!()?.let {
+                {
+                    val interactionSource = remember { MutableInteractionSource() }
+                    CombinedClickableAction(
+                        enabled = it.enabled,
+                        interactionSource = interactionSource,
+                        onClick = it.onClick,
+                        onLongClick = it.onLongClick
                     ) {
-                        it.composableContent()
+                        FloatingActionButton(
+                            modifier = it.modifier,
+                            onClick = { },
+                            interactionSource = interactionSource
+                        ) {
+                            it.composableContent()
+                        }
                     }
                 }
-            } }
+            }
         )
     }
 }
@@ -669,18 +674,24 @@ fun LargeImage(image: Image) {
 
 @Composable
 fun LargeVideo(image: Image) {
-    val player = rememberVideoPlayerState()
     var wasPlaying by remember { mutableStateOf(false) }
     var muted by remember { mutableStateOf(false) }
+    var videoLoaded by remember { mutableStateOf(false) }
+    val player = rememberVideoPlayerState()
 
     var showControls by remember { mutableStateOf(false) }
     var controlInteractionCounter by remember { mutableIntStateOf(0) }
 
-    val pref = LocalPreferences.current
-    val shouldAutoplay = when (pref.autoplayVideos) {
+    val prefs = LocalPreferences.current
+    val shouldAutoplay = when (prefs.autoplayVideos) {
         AutoplayVideosMode.ON -> true
         AutoplayVideosMode.OFF -> false
-        AutoplayVideosMode.DATA_SAVER -> isUsingWiFi(LocalContext.current)
+        AutoplayVideosMode.DATA_SAVER ->
+            when (prefs.dataSaver) {
+                DataSaver.ON -> false
+                DataSaver.OFF -> true
+                DataSaver.AUTO -> isUsingWiFi(LocalContext.current)
+            }
     }
 
     val aspectRatio = image.aspectRatio
@@ -695,9 +706,9 @@ fun LargeVideo(image: Image) {
 
     LaunchedEffect(Unit) {
         player.loop = true
-        player.openUri(image.fileUrl)
-        if (!shouldAutoplay) {
-            player.stop()
+        if (shouldAutoplay) {
+            player.openUri(image.fileUrl)
+            videoLoaded = true
         }
     }
 
@@ -729,7 +740,15 @@ fun LargeVideo(image: Image) {
                 controlInteractionCounter++
             }
         }) {
-            VideoPlayerSurface(modifier = modifier, playerState = player)
+            if (videoLoaded) {
+                VideoPlayerSurface(modifier = modifier, playerState = player)
+            } else {
+                AsyncImage(
+                    modifier = modifier,
+                    model = image.previewUrl,
+                    contentDescription = "Thumbnail",
+                )
+            }
 
             AnimatedVisibility(
                 modifier = modifier,
@@ -745,14 +764,17 @@ fun LargeVideo(image: Image) {
                         modifier = Modifier.align(Alignment.Center),
                         onClick = {
                             controlInteractionCounter++
-                            if (player.isPlaying) {
+                            if (!videoLoaded) {
+                                player.openUri(image.fileUrl)
+                                videoLoaded = true
+                            } else if (player.isPlaying) {
                                 player.pause()
                             } else {
                                 player.play()
                             }
                         },
                     ) {
-                        if (player.isPlaying) {
+                        if (player.isPlaying && videoLoaded) {
                             Icon(
                                 Icons.Filled.Pause,
                                 contentDescription = "Pause",
@@ -782,6 +804,7 @@ fun LargeVideo(image: Image) {
                         Slider(
                             modifier = Modifier.weight(1f),
                             value = player.sliderPos / 1000,
+                            enabled = videoLoaded,
                             onValueChange = { v ->
                                 controlInteractionCounter++
                                 if (player.isPlaying) {
