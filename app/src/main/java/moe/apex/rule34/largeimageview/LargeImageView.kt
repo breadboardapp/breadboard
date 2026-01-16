@@ -66,6 +66,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -89,6 +90,7 @@ import me.saket.telephoto.zoomable.zoomable
 import moe.apex.rule34.R
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.DataSaver
+import moe.apex.rule34.preferences.Experiment
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.ToolbarAction
 import moe.apex.rule34.prefs
@@ -103,6 +105,7 @@ import moe.apex.rule34.util.SMALL_LARGE_SPACER
 import moe.apex.rule34.util.StorageLocationSelection
 import moe.apex.rule34.util.bouncyAnimationSpec
 import moe.apex.rule34.util.downloadImage
+import moe.apex.rule34.util.downloadImageToClipboard
 import moe.apex.rule34.util.fixLink
 import moe.apex.rule34.util.isWebLink
 import moe.apex.rule34.util.rememberIsBlurEnabled
@@ -264,6 +267,7 @@ private fun LargeImageToolbar(
 ) {
     val context = LocalContext.current
     val prefs = LocalPreferences.current
+    val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
 
     val storageLocation = prefs.storageLocation
@@ -374,12 +378,41 @@ private fun LargeImageToolbar(
                                 exc.printStackTrace()
 
                                 if (exc is MustSetLocation) {
+                                    showToast(context, exc.message!!)
                                     storageLocationPromptLaunched = true
+                                } else {
+                                    showToast(context, exc.message ?: "Unknown error")
                                 }
-                                showToast(context, exc.message ?: "Unknown error")
                                 Log.e(
                                     "Downloader",
                                     exc.message ?: "Error downloading image",
+                                    exc
+                                )
+                            }
+                            viewModel.removeDownloadingImage(currentImage)
+                        }
+                    }
+                },
+                onLongClick = {
+                    if (!prefs.isExperimentEnabled(Experiment.COPY_TO_CLIPBOARD)) return@ImageAction
+
+                    if (currentImage !in downloadingImages) {
+                        viewModel.viewModelScope.launch {
+                            viewModel.addDownloadingImage(currentImage)
+                            val result: Result<Boolean> = downloadImageToClipboard(
+                                context = context,
+                                clipboard = clipboard,
+                                image = currentImage
+                            )
+
+                            if (result.isSuccess) {
+                                showToast(context, "Copied to clipboard.")
+                            } else {
+                                val exc = result.exceptionOrNull()!!
+                                showToast(context, "Error copying image")
+                                Log.e(
+                                    "Downloader",
+                                    exc.message ?: "Error copying image",
                                     exc
                                 )
                             }
