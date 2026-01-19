@@ -65,22 +65,28 @@ import moe.apex.rule34.viewmodel.SearchResultsViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchResults(navController: NavController, source: ImageSource, tagList: List<String>, viewModel: SearchResultsViewModel = viewModel()) {
-    val topAppBarState = rememberTopAppBarState()
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
-    val isImageCarouselVisible = remember { mutableStateOf(false) }
-    var initialPage by remember { mutableIntStateOf(0) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-
     val prefs = LocalPreferences.current
-    val blockedTags by rememberUpdatedState(prefs.blockedTags)
-    val preferencesRepository = LocalContext.current.prefs
-    val filterLocally = prefs.filterRatingsLocally
+
+    val topAppBarState = rememberTopAppBarState()
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
+
+    val isImageCarouselVisible = remember { mutableStateOf(false) }
+    var initialPage by remember { mutableIntStateOf(0) }
     var showAgeVerificationDialog by remember { mutableStateOf(false) }
 
+    val preferencesRepository = LocalContext.current.prefs
+    val filterLocally = prefs.filterRatingsLocally
+    val blockedTags by rememberUpdatedState(prefs.blockedTags)
     val blur = prefs.isExperimentEnabled(Experiment.IMMERSIVE_UI_EFFECTS)
 
     val actuallyBlockedTags = rememberSaveable { mutableStateSetOf<String>() }
+    val actuallySelectedRatings = rememberSaveable {
+        mutableStateSetOf<ImageRating>().apply {
+            addAll(prefs.ratingsFilter)
+        }
+    }
 
     fun setUpViewModel(auth: ImageBoardAuth? = null) {
         if (!viewModel.isReady) {
@@ -134,21 +140,25 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
 
     val ratingRows: List<@Composable () -> Unit> = availableRatingsForCurrentSource.map { {
         FilterChip(
-            selected = it in prefs.ratingsFilter,
+            selected = it in actuallySelectedRatings,
             label = { Text(it.label) },
             colors = filterChipSolidColor,
             border = null,
             onClick = {
-                scope.launch {
-                    if (it in prefs.ratingsFilter) {
-                        preferencesRepository.removeFromSet(PreferenceKeys.RATINGS_FILTER, it)
+                if (it in actuallySelectedRatings) {
+                    actuallySelectedRatings.remove(it)
+                } else {
+                    if (it != ImageRating.SAFE && !AgeVerification.hasVerifiedAge(prefs)) {
+                        showAgeVerificationDialog = true
+                        return@FilterChip
                     } else {
-                        if (it != ImageRating.SAFE && !AgeVerification.hasVerifiedAge(prefs)) {
-                            showAgeVerificationDialog = true
-                            return@launch
-                        }
-                        preferencesRepository.addToSet(PreferenceKeys.RATINGS_FILTER, it)
+                        actuallySelectedRatings.add(it)
                     }
+                }
+                scope.launch {
+                    preferencesRepository.updateSet(
+                        PreferenceKeys.RATINGS_FILTER,
+                        actuallySelectedRatings.map { it.name })
                 }
             }
         )

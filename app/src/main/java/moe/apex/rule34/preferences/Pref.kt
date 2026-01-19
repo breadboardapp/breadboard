@@ -561,7 +561,9 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
     }
 
 
-    private suspend fun updateSet(key: Preferences.Key<Set<String>>, to: Collection<String>) {
+    /** You should probably use [addToSet] or [removeFromSet] instead.
+     *  Only use this if using the alternatives would complicate things. */
+    suspend fun updateSet(key: Preferences.Key<Set<String>>, to: Collection<String>) {
         updatePrefMain(key, to.toSet())
     }
 
