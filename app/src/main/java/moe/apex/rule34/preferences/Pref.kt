@@ -175,9 +175,9 @@ enum class FlagSecureMode(override val label: String) : PrefEnum<FlagSecureMode>
 }
 
 enum class AutoplayVideosMode(override val label: String) : PrefEnum<AutoplayVideosMode> {
-    ON("On"),
-    OFF("Off"),
-    DATA_SAVER("When data saver is disabled")
+    ON("Always"),
+    OFF("Never"),
+    AUTO("When data saver is inactive")
 }
 
 enum class Experiment(override val label: String, val description: String? = null) : PrefEnum<Experiment> {

@@ -254,39 +254,28 @@ private fun ImagesPager(
             }
         }
 
-        if (imageAtIndex.fileFormat != "mp4") {
-            /* TODO: Give each image its own zoom state.
-               Need to consider how it interacts with the LargeImageView toolbar and onZoomChange. */
+        val gestures =
+            if (imageAtIndex.fileFormat != "mp4") EnabledZoomGestures.ZoomAndPan else EnabledZoomGestures.None
+
+        /* TODO: Give each image its own zoom state.
+           Need to consider how it interacts with the LargeImageView toolbar and onZoomChange. */
+        Box(
+            modifier = Modifier.zoomable(
+                state = zoomState,
+                onClick = { onImageClick() },
+                gestures = gestures
+            )
+        ) {
             Box(
-                modifier = Modifier.zoomable(
-                    state = zoomState,
-                    onClick = { onImageClick() }
-                )
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(SMALL_LARGE_SPACER.dp)
+                    .systemBarsPadding(),
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(SMALL_LARGE_SPACER.dp)
-                        .systemBarsPadding(),
-                    contentAlignment = Alignment.Center
-                ) {
+                if (imageAtIndex.fileFormat != "mp4") {
                     LargeImage(imageAtIndex)
-                }
-            }
-        } else {
-            Box(
-                modifier = Modifier.zoomable(
-                    state = zoomState,
-                    gestures = EnabledZoomGestures.None,
-                )
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(SMALL_LARGE_SPACER.dp)
-                        .systemBarsPadding(),
-                    contentAlignment = Alignment.Center
-                ) {
+                } else {
                     LargeVideo(imageAtIndex, pagerState.currentPage == index)
                 }
             }
@@ -694,7 +683,7 @@ fun LargeVideo(image: Image, isCurrentPage: Boolean) {
     val shouldAutoplay = when (prefs.autoplayVideos) {
         AutoplayVideosMode.ON -> true
         AutoplayVideosMode.OFF -> false
-        AutoplayVideosMode.DATA_SAVER ->
+        AutoplayVideosMode.AUTO ->
             when (prefs.dataSaver) {
                 DataSaver.ON -> false
                 DataSaver.OFF -> true
