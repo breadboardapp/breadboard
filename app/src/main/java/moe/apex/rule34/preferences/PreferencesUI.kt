@@ -20,9 +20,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.AlertDialog
@@ -175,7 +175,7 @@ fun SwitchPref(
             ),
             thumbContent = {
                 Icon(
-                    imageVector = if (checked) Icons.Default.Check else Icons.Default.Clear,
+                    imageVector = if (checked) Icons.Rounded.Check else Icons.Rounded.Clear,
                     contentDescription = if (checked) "Enabled" else "Disabled",
                     modifier = Modifier.size(SwitchDefaults.IconSize)
                 )
@@ -321,7 +321,7 @@ fun InfoSection(text: String) {
     ) {
         Icon(
             modifier = Modifier.size(20.dp),
-            imageVector = Icons.Outlined.Info,
+            imageVector = Icons.Outlined.Info, // Outlined looks better than (filled) rounded here.
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )

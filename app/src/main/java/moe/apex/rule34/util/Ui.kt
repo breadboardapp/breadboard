@@ -58,9 +58,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
@@ -1176,7 +1176,7 @@ fun ScrollToTopArrow(
                 alsoOnClick?.invoke()
             }
         ) {
-            Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "Scroll to top")
+            Icon(Icons.Rounded.KeyboardArrowUp, contentDescription = "Scroll to top")
         }
     }
 }
