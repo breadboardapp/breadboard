@@ -65,8 +65,9 @@ object AgeVerification {
             confirmButton = {
                 Button(
                     onClick = {
-                        scope.launch { setVerifiedAge(preferencesRepository) }
-                        onAgeVerified()
+                        scope.launch { setVerifiedAge(preferencesRepository) }.invokeOnCompletion {
+                            onAgeVerified()
+                        }
                     }
                 ) {
                     Text("Confirm")
