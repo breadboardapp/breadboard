@@ -58,9 +58,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
@@ -628,14 +628,23 @@ suspend fun copyText(
 }
 
 
+/** A FilterChip that supports both click and long click actions.
+ *  @param modifier The modifier to be applied to the chip.
+ *  @param label The composable content to be displayed inside the chip.
+ *  @param selected Whether the chip is selected or not.
+ *  @param warning Whether the chip is in a warning state. If true, will override `selected`.
+ *  @param onLongClick The action to be performed when the chip is long clicked.
+ *  @param onClick The action to be performed when the chip is clicked.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CombinedClickableFilterChip(
     modifier: Modifier = Modifier,
     label: @Composable () -> Unit,
-    warning: Boolean = true,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit
+    selected: Boolean = true,
+    warning: Boolean = false,
+    onLongClick: () -> Unit,
+    onClick: () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
 
@@ -646,12 +655,12 @@ fun CombinedClickableFilterChip(
     ) {
         FilterChip(
             onClick = onClick,
-            selected = !warning,
+            selected = selected && !warning,
             label = label,
             modifier = modifier,
             interactionSource = interactionSource,
             colors = if (!warning) {
-                FilterChipDefaults.filterChipColors( )
+                filterChipSolidColor
             } else {
                 FilterChipDefaults.filterChipColors(
                     containerColor = MaterialTheme.colorScheme.errorContainer,
@@ -1167,78 +1176,118 @@ fun ScrollToTopArrow(
                 alsoOnClick?.invoke()
             }
         ) {
-            Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "Scroll to top")
+            Icon(Icons.Rounded.KeyboardArrowUp, contentDescription = "Scroll to top")
         }
     }
 }
 
 
 // Sometimes it's okay to break spec :3
+/** An button intended to be used inside a list (of buttons).
+ *
+ *  @param label The composable content to be displayed inside the button.
+ *  @param icon An optional icon to display before the label.
+ *  @param modifier The modifier to be applied to the button.
+ *  @param enabled Whether or not the button is enabled.
+ *  @param colors The colors to be used for the button. If null, the default light colours will be used.
+ *  @param position The position of the button in the list, used to determine its shape.
+ *  @param horizontalArrangement The horizontal arrangement of the button's content. If [icon] is null, defaults to [Arrangement.Center], otherwise defaults to [Arrangement.Start].
+ *  @param onClick The action to be performed when the button is clicked.
+ */
 @Composable
 fun ButtonListItem(
-    text: String,
-    icon: @Composable () -> Unit,
+    label: @Composable () -> Unit,
+    icon: (@Composable () -> Unit)? = null,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    colors: ButtonColors = ButtonDefaults.buttonColors(),
+    colors: ButtonColors? = null,
     position: ListItemPosition,
+    horizontalArrangement: Arrangement.Horizontal = if (icon == null) Arrangement.Center else Arrangement.Start,
     onClick: () -> Unit,
 ) {
-    Surface(
-        onClick = onClick,
-        modifier = modifier.then(
-            Modifier.alpha(if (enabled) 1f else DISABLED_OPACITY)
-        ),
-        enabled = enabled,
-        color = colors.containerColor,
-        contentColor = colors.contentColor,
-        shape = RoundedCornerShape(
-            topStart = animateTopCornerSizeForPosition(position),
-            topEnd = animateTopCornerSizeForPosition(position),
-            bottomStart = animateBottomCornerSizeForPosition(position),
-            bottomEnd = animateBottomCornerSizeForPosition(position)
+    /* We're going to use the system colours but always the light variants.
+       Android's permission dialogs used to do this until they made them subjectively worse.
+       https://www.androidauthority.com/android-16-permissions-dialog-redesign-3573255/ */
+    BreadboardTheme(darkTheme = false) {
+       val colors = colors ?: ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
         )
-    ) {
-        Row(
-            modifier = Modifier
-                .heightIn(min = 56.dp)
-                .padding(horizontal = MEDIUM_LARGE_SPACER.dp, vertical = SMALL_SPACER.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(Modifier.size(22.dp)) {
-                icon()
-            }
-            Spacer(Modifier.width(SMALL_LARGE_SPACER.dp))
-            Text(
-                text = text,
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.titleMedium
+        Surface(
+            onClick = onClick,
+            modifier = modifier.then(
+                Modifier.alpha(if (enabled) 1f else DISABLED_OPACITY)
+            ),
+            enabled = enabled,
+            color = colors.containerColor,
+            contentColor = colors.contentColor,
+            shape = RoundedCornerShape(
+                topStart = animateTopCornerSizeForPosition(position),
+                topEnd = animateTopCornerSizeForPosition(position),
+                bottomStart = animateBottomCornerSizeForPosition(position),
+                bottomEnd = animateBottomCornerSizeForPosition(position)
             )
+        ) {
+            Row(
+                modifier = Modifier
+                    .heightIn(min = 56.dp)
+                    .padding(horizontal = MEDIUM_LARGE_SPACER.dp, vertical = SMALL_SPACER.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = horizontalArrangement
+            ) {
+                icon?.let {
+                    it()
+                    Spacer(Modifier.width(SMALL_LARGE_SPACER.dp))
+                }
+
+                label()
+            }
         }
     }
 }
 
 
+/** An button intended to be used inside a list (of buttons).
+ *
+ *  @param label The text to be displayed inside the button.
+ *  @param icon An optional icon to display before the label.
+ *  @param modifier The modifier to be applied to the button.
+ *  @param enabled Whether or not the button is enabled.
+ *  @param colors The colors to be used for the button. If null, the default light colours will be used.
+ *  @param position The position of the button in the list, used to determine its shape.
+ *  @param horizontalArrangement The horizontal arrangement of the button's label. If [icon] is null, defaults to [Arrangement.Center], otherwise defaults to [Arrangement.Start].
+ *  @param onClick The action to be performed when the button is clicked.
+ */
 @Composable
 fun ButtonListItem(
-    text: String,
-    icon: ImageVector,
+    label: String,
+    icon: ImageVector? = null,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    colors: ButtonColors = ButtonDefaults.buttonColors(
-        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-    ),
+    colors: ButtonColors? = null,
     position: ListItemPosition,
+    horizontalArrangement: Arrangement.Horizontal = if (icon == null) Arrangement.Center else Arrangement.Start,
     onClick: () -> Unit,
 ) {
     ButtonListItem(
-        text = text,
-        icon = { Icon(icon, contentDescription = null) },
+        label = {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge
+            )
+        },
+        icon = icon?.let { {
+            Icon(
+                imageVector = it,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp)
+            )
+        } },
         modifier = modifier,
         enabled = enabled,
         colors = colors,
         position = position,
+        horizontalArrangement = horizontalArrangement,
         onClick = onClick
     )
 }

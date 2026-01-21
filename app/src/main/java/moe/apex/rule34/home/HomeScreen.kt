@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -177,7 +177,7 @@ fun HomeScreen(
                                 pullToRefreshController.refresh(animate = true)
                             }
                         ) {
-                            Icon(Icons.Default.Refresh, contentDescription = null)
+                            Icon(Icons.Rounded.Refresh, contentDescription = null)
                             Spacer(Modifier.width(SMALL_SPACER.dp))
                             Text("Refresh")
                         }

@@ -1,6 +1,7 @@
 package moe.apex.rule34.util
 
 import android.app.Activity.RESULT_OK
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -9,7 +10,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.platform.Clipboard
+import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.FileProvider
 import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -20,9 +24,8 @@ import moe.apex.rule34.preferences.PreferenceKeys
 import moe.apex.rule34.prefs
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okio.buffer
-import okio.sink
 import java.io.IOException
+import java.io.OutputStream
 
 
 class MustSetLocation(message: String): Exception(message)
@@ -93,46 +96,99 @@ fun StorageLocationSelection(
 
 private val client = OkHttpClient()
 
-suspend fun downloadImage(context: Context, image: Image, location: Uri): Result<Boolean> {
-    if (location == Uri.EMPTY) {
-        return Result.failure(MustSetLocation("Set save location and try again."))
-    }
-    val fileName = image.fileName
+
+private suspend fun downloadToStream(image: Image, outputStream: OutputStream): Result<Unit> {
     val url = image.highestQualityFormatUrl
-    val mimeType = when (image.fileFormat) {
-        "jpeg", "jpg" -> "image/jpeg"
-        "png"         -> "image/png"
-        "gif"         -> "image/gif"
-        else -> return Result.failure(UnsupportedFileType("Unsupported file format."))
-    }
-
-    val outputFolder = DocumentFile.fromTreeUri(context, location)
-    val outputFile = outputFolder!!.createFile(mimeType, fileName)
-        ?: return Result.failure(MustSetLocation("Set save location and try again."))
-
-    val outputUri = outputFile.uri
     val request = Request.Builder().url(url).build()
 
-    return context.contentResolver.openOutputStream(outputUri).use { file ->
-        withContext(Dispatchers.IO) {
-            try {
-                val response = client.newCall(request).execute()
-
+    return withContext(Dispatchers.IO) {
+        try {
+            client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
                     return@withContext Result.failure(Exception(response.code.toString()))
                 }
 
-                response.body?.source()?.use { source ->
-                    file!!.sink().buffer().use { sink ->
-                        sink.writeAll(source)
-                    }
+                response.body.byteStream().use { inputStream ->
+                    inputStream.copyTo(outputStream)
                 }
 
-                Result.success(true)
-            } catch (e: IOException) {
-                e.printStackTrace()
-                return@withContext Result.failure(e)
+                Result.success(Unit)
             }
+        } catch (e: IOException) {
+            Result.failure(e)
         }
+    }
+}
+
+
+suspend fun downloadImage(context: Context, image: Image, location: Uri): Result<Boolean> {
+    if (location == Uri.EMPTY) {
+        return Result.failure(MustSetLocation("Set save location and try again."))
+    }
+
+    val mimeType = getMimeType(image.fileFormat)
+        ?: return Result.failure(UnsupportedFileType("Unsupported file format."))
+
+    val fileName = image.fileName
+    val outputFolder = DocumentFile.fromTreeUri(context, location)
+    
+    return withContext(Dispatchers.IO) {
+        val outputFile = outputFolder!!.createFile(mimeType, fileName)
+            ?: return@withContext Result.failure(MustSetLocation("Set save location and try again."))
+
+        try {
+            context.contentResolver.openOutputStream(outputFile.uri).use { outputStream ->
+                if (outputStream == null) return@withContext Result.failure(IOException("Could not open output stream"))
+                downloadToStream(image, outputStream).getOrThrow()
+            }
+            Result.success(true)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+}
+
+
+suspend fun downloadImageToClipboard(context: Context, clipboard: Clipboard, image: Image): Result<Boolean> {
+    return withContext(Dispatchers.IO) {
+        try {
+            val clipboardDir = java.io.File(context.cacheDir, "clipboard_images")
+
+            if (clipboardDir.exists()) {
+                // Our cache usage is already bad enough, lets clean up old clipboard images
+                clipboardDir.listFiles()?.forEach { it.delete() }
+            } else {
+                clipboardDir.mkdirs()
+            }
+
+            val tempFile = java.io.File(clipboardDir, "clipboard_${System.currentTimeMillis()}.${image.fileFormat}")
+
+            tempFile.outputStream().use { outputStream ->
+                downloadToStream(image, outputStream).getOrThrow()
+            }
+
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                tempFile
+            )
+
+            val clip = ClipEntry(ClipData.newUri(context.contentResolver, "image", uri))
+            clipboard.setClipEntry(clip)
+            Result.success(true)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+}
+
+
+private fun getMimeType(fileFormat: String): String? {
+    return when (fileFormat) {
+        "jpeg", "jpg" -> "image/jpeg"
+        "png"         -> "image/png"
+        "gif"         -> "image/gif"
+        "webp"        -> "image/webp"
+        else -> null
     }
 }

@@ -149,6 +149,26 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
         showToast(context, "Unignored $tagName")
     }
 
+    fun onChipClick(tagName: String) {
+        scope.launch {
+            if (tagName in prefs.unfollowedTags) {
+                userPreferencesRepository.removeFromSet(
+                    PreferenceKeys.UNFOLLOWED_TAGS,
+                    tagName
+                )
+                showRefollowedToast(tagName)
+            } else {
+                userPreferencesRepository.addToSet(
+                    PreferenceKeys.UNFOLLOWED_TAGS,
+                    tagName
+                )
+                showUnfollowedToast(tagName)
+            }
+        }.invokeOnCompletion {
+            resetRecommendations()
+        }
+    }
+
     if (showAgeVerificationDialog) {
         AgeVerification.AgeVerifyDialog(
             onDismissRequest = { showAgeVerificationDialog = false },
@@ -199,26 +219,7 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
                                 for (rec in recentRecommendations) {
                                     FilterChip(
                                         selected = rec !in prefs.unfollowedTags,
-                                        onClick = {
-                                            if (!prefs.unfollowedTags.contains(rec)) {
-                                                scope.launch {
-                                                    if (rec in prefs.unfollowedTags) {
-                                                        userPreferencesRepository.removeFromSet(
-                                                            PreferenceKeys.UNFOLLOWED_TAGS,
-                                                            rec
-                                                        )
-                                                        showRefollowedToast(rec)
-                                                    } else {
-                                                        userPreferencesRepository.addToSet(
-                                                            PreferenceKeys.UNFOLLOWED_TAGS,
-                                                            rec
-                                                        )
-                                                        showUnfollowedToast(rec)
-                                                    }
-                                                }
-                                                resetRecommendations()
-                                            }
-                                        },
+                                        onClick = { onChipClick(rec) },
                                         label = { Text(rec) },
                                         colors = filterChipSolidColor,
                                         border = null
@@ -308,24 +309,7 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
                                 for (tag in tags) {
                                     FilterChip(
                                         selected = tag !in prefs.unfollowedTags,
-                                        onClick = {
-                                            scope.launch {
-                                                if (tag in prefs.unfollowedTags) {
-                                                    userPreferencesRepository.removeFromSet(
-                                                        PreferenceKeys.UNFOLLOWED_TAGS,
-                                                        tag
-                                                    )
-                                                    showRefollowedToast(tag)
-                                                } else {
-                                                    userPreferencesRepository.addToSet(
-                                                        PreferenceKeys.UNFOLLOWED_TAGS,
-                                                        tag
-                                                    )
-                                                    showUnfollowedToast(tag)
-                                                }
-                                            }
-                                            resetRecommendations()
-                                        },
+                                        onClick = { onChipClick(tag) },
                                         label = { Text(tag) },
                                         colors = filterChipSolidColor,
                                         border = null

@@ -176,7 +176,8 @@ enum class FlagSecureMode(override val label: String) : PrefEnum<FlagSecureMode>
 
 enum class Experiment(override val label: String, val description: String? = null) : PrefEnum<Experiment> {
     ALWAYS_ANIMATE_SCROLL("Always animate scroll-to-top", "Enable smooth scrolling on all pages when using the scroll-to-top button."),
-    IMMERSIVE_UI_EFFECTS("Immersive UI effects", "Enables immersive UI effects such as blur and translucency. Not all devices support this feature. Disable if you experience poor performance.");
+    IMMERSIVE_UI_EFFECTS("Immersive UI effects", "Enables immersive UI effects such as blur and translucency. Not all devices support this feature. Disable if you experience poor performance."),
+    COPY_TO_CLIPBOARD("Copy images to clipboard", "Adds the ability to long-press the download button to copy images to the clipboard instead of saving them."),;
 
 
     @Composable
@@ -560,7 +561,9 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
     }
 
 
-    private suspend fun updateSet(key: Preferences.Key<Set<String>>, to: Collection<String>) {
+    /** You should probably use [addToSet] or [removeFromSet] instead.
+     *  Only use this if using the alternatives would complicate things. */
+    suspend fun updateSet(key: Preferences.Key<Set<String>>, to: Collection<String>) {
         updatePrefMain(key, to.toSet())
     }
 

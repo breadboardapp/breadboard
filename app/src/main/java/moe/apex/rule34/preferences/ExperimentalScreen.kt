@@ -25,12 +25,15 @@ import moe.apex.rule34.util.MainScreenScaffold
 import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
 import moe.apex.rule34.util.Summary
+import moe.apex.rule34.util.TitleSummary
+import moe.apex.rule34.util.showToast
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExperimentalScreen(navController: NavHostController) {
-    val preferencesRepository = LocalContext.current.prefs
+    val context = LocalContext.current
+    val preferencesRepository = context.prefs
     val scope = rememberCoroutineScope()
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
@@ -62,6 +65,7 @@ fun ExperimentalScreen(navController: NavHostController) {
                            "Please report any issues you find with these features on GitHub.",
                 )
             }
+
             item {
                 ExpressiveGroup {
                     for (experiment in Experiment.entries) {
@@ -80,6 +84,25 @@ fun ExperimentalScreen(navController: NavHostController) {
                                         preferencesRepository.removeFromSet(PreferenceKeys.ENABLED_EXPERIMENTS, experiment)
                                     }
                                 }
+                            }
+                        }
+                    }
+                }
+            }
+
+            item {
+                ExpressiveGroup("Debug") {
+                    item {
+                        TitleSummary(
+                            title = "Reset age verification",
+                            summary = "This will not disable any currently enabled age-gated " +
+                                      "features, but you will need to re-verify if you manually " +
+                                      "disable and enable them again."
+                        ) {
+                            scope.launch {
+                                preferencesRepository.updatePref(PreferenceKeys.HAS_VERIFIED_AGE, false)
+                            }.invokeOnCompletion {
+                                showToast(context, "Done")
                             }
                         }
                     }

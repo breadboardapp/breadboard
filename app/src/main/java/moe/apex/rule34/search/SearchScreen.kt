@@ -267,15 +267,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester, v
     if (showAgeVerificationDialog) {
         AgeVerification.AgeVerifyDialog(
             onDismissRequest = { showAgeVerificationDialog = false },
-            onAgeVerified = {
-                scope.launch {
-                    context.prefs.updatePref(
-                        PreferenceKeys.HAS_VERIFIED_AGE,
-                        true
-                    )
-                }
-                showAgeVerificationDialog = false
-            }
+            onAgeVerified = { showAgeVerificationDialog = false }
         )
     }
 
