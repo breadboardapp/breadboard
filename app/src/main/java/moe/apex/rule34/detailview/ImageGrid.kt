@@ -287,7 +287,9 @@ private fun LazyGridItemScope.ImagePreviewContainer(
             onImageClick = onImageClick
         )
         if (image.fileFormat == "gif") {
-            GifBadge()
+            FormatBadge("GIF")
+        } else if (image.fileFormat == "mp4") {
+            FormatBadge("Video")
         }
     }
 }
@@ -349,14 +351,15 @@ private fun LazyStaggeredGridItemScope.StaggeredImagePreviewContainer(
            very tall or wide images. While widthIn/heightIn cannot 'override' the aspectRatio,
            requiredWidthIn/requiredHeightIn can. */
         if (image.fileFormat == "gif") {
-            GifBadge()
+            FormatBadge("GIF")
+        } else if (image.fileFormat == "mp4") {
+            FormatBadge("Video")
         }
     }
 }
 
-
 @Composable
-private fun GifBadge() {
+private fun FormatBadge(text: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -364,7 +367,7 @@ private fun GifBadge() {
         horizontalArrangement = Arrangement.End
     ) {
         Text(
-            text = "GIF",
+            text = text,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onPrimary,
             modifier = Modifier

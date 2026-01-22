@@ -8,6 +8,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.util.Log
 import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseIn
@@ -18,11 +19,14 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,19 +36,26 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,6 +65,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -64,6 +76,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.colorspace.ColorSpaces
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboard
@@ -80,15 +93,20 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import coil3.compose.rememberAsyncImagePainter
 import coil3.request.ImageRequest
+import io.github.kdroidfilter.composemediaplayer.VideoPlayerSurface
+import io.github.kdroidfilter.composemediaplayer.rememberVideoPlayerState
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import me.saket.telephoto.zoomable.EnabledZoomGestures
 import me.saket.telephoto.zoomable.ZoomSpec
 import me.saket.telephoto.zoomable.ZoomableState
 import me.saket.telephoto.zoomable.rememberZoomableState
 import me.saket.telephoto.zoomable.zoomable
 import moe.apex.rule34.R
 import moe.apex.rule34.image.Image
+import moe.apex.rule34.preferences.AutoplayVideosMode
 import moe.apex.rule34.preferences.DataSaver
 import moe.apex.rule34.preferences.Experiment
 import moe.apex.rule34.preferences.LocalPreferences
@@ -117,7 +135,8 @@ import kotlin.math.roundToInt
 
 
 private fun isUsingWiFi(context: Context): Boolean {
-    val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    val connectivityManager =
+        context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
     val networkInfo = connectivityManager.activeNetwork
     val networkCapabilities = connectivityManager.getNetworkCapabilities(networkInfo)
 
@@ -166,7 +185,8 @@ fun LargeImageView(
     ) {
         Box(Modifier.fillMaxSize()) {
             fun toggleToolbar() {
-                val isVisible = toolbarState == ToolbarState.FORCE_SHOW || (isMostlyZoomedOut && toolbarState != ToolbarState.FORCE_HIDE)
+                val isVisible =
+                    toolbarState == ToolbarState.FORCE_SHOW || (isMostlyZoomedOut && toolbarState != ToolbarState.FORCE_HIDE)
                 toolbarState = when (toolbarState) {
                     ToolbarState.FORCE_SHOW -> ToolbarState.FORCE_HIDE
                     ToolbarState.FORCE_HIDE -> ToolbarState.FORCE_SHOW
@@ -234,12 +254,16 @@ private fun ImagesPager(
             }
         }
 
+        val gestures =
+            if (imageAtIndex.fileFormat != "mp4") EnabledZoomGestures.ZoomAndPan else EnabledZoomGestures.None
+
         /* TODO: Give each image its own zoom state.
            Need to consider how it interacts with the LargeImageView toolbar and onZoomChange. */
         Box(
             modifier = Modifier.zoomable(
                 state = zoomState,
-                onClick = { onImageClick() }
+                onClick = { onImageClick() },
+                gestures = gestures
             )
         ) {
             Box(
@@ -249,7 +273,11 @@ private fun ImagesPager(
                     .systemBarsPadding(),
                 contentAlignment = Alignment.Center
             ) {
-                LargeImage(imageAtIndex)
+                if (imageAtIndex.fileFormat != "mp4") {
+                    LargeImage(imageAtIndex)
+                } else {
+                    LargeVideo(imageAtIndex, pagerState.currentPage == index)
+                }
             }
         }
     }
@@ -297,7 +325,8 @@ private fun LargeImageToolbar(
             }
         },
         ToolbarAction.FAVOURITE to {
-            val isFavourited = favouriteImages.any { it.fileName == currentImage.fileName && it.imageSource == currentImage.imageSource }
+            val isFavourited =
+                favouriteImages.any { it.fileName == currentImage.fileName && it.imageSource == currentImage.imageSource }
             ImageAction(
                 onClick = {
                     scope.launch {
@@ -488,23 +517,25 @@ private fun LargeImageToolbar(
                     }
                 }
             },
-            floatingActionButton = actionMapping[primaryAction]!!()?.let { {
-                val interactionSource = remember { MutableInteractionSource() }
-                CombinedClickableAction(
-                    enabled = it.enabled,
-                    interactionSource = interactionSource,
-                    onClick = it.onClick,
-                    onLongClick = it.onLongClick
-                ) {
-                    FloatingActionButton(
-                        modifier = it.modifier,
-                        onClick = { },
-                        interactionSource = interactionSource
+            floatingActionButton = actionMapping[primaryAction]!!()?.let {
+                {
+                    val interactionSource = remember { MutableInteractionSource() }
+                    CombinedClickableAction(
+                        enabled = it.enabled,
+                        interactionSource = interactionSource,
+                        onClick = it.onClick,
+                        onLongClick = it.onLongClick
                     ) {
-                        it.composableContent()
+                        FloatingActionButton(
+                            modifier = it.modifier,
+                            onClick = { },
+                            interactionSource = interactionSource
+                        ) {
+                            it.composableContent()
+                        }
                     }
                 }
-            } }
+            }
         )
     }
 }
@@ -638,6 +669,202 @@ fun LargeImage(image: Image) {
     }
 }
 
+@Composable
+fun LargeVideo(image: Image, isCurrentPage: Boolean) {
+    var wasPlaying by remember { mutableStateOf(false) }
+    var muted by remember { mutableStateOf(false) }
+    var videoLoaded by remember { mutableStateOf(false) }
+    val player = rememberVideoPlayerState()
+
+    var showControls by remember { mutableStateOf(false) }
+    var controlInteractionCounter by remember { mutableIntStateOf(0) }
+
+    val prefs = LocalPreferences.current
+    val shouldAutoplay = when (prefs.autoplayVideos) {
+        AutoplayVideosMode.ON -> true
+        AutoplayVideosMode.OFF -> false
+        AutoplayVideosMode.AUTO ->
+            when (prefs.dataSaver) {
+                DataSaver.ON -> false
+                DataSaver.OFF -> true
+                DataSaver.AUTO -> isUsingWiFi(LocalContext.current)
+            }
+    }
+
+    val aspectRatio = image.aspectRatio
+
+    val modifier = if (aspectRatio == null) {
+        if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT) {
+            Modifier.fillMaxWidth()
+        } else {
+            Modifier.fillMaxHeight()
+        }
+    } else Modifier.aspectRatio(aspectRatio)
+
+    LaunchedEffect(Unit) {
+        player.loop = true
+    }
+
+    LaunchedEffect(controlInteractionCounter) {
+        if (showControls) {
+            delay(2_000)
+            showControls = false
+            controlInteractionCounter = 0
+        }
+    }
+
+    LaunchedEffect(muted) {
+        if (muted) {
+            player.volume = 0.0f
+        } else {
+            player.volume = 0.5f
+        }
+    }
+
+    LaunchedEffect(isCurrentPage) {
+        if (!isCurrentPage) {
+            player.pause()
+        } else {
+            player.sliderPos = 0.0f
+            if (shouldAutoplay) {
+                if (videoLoaded) {
+                    player.play()
+                } else {
+                    player.openUri(image.fileUrl)
+                    videoLoaded = true
+                }
+            }
+        }
+    }
+
+    Box(
+        modifier = Modifier.clip(MaterialTheme.shapes.extraLarge)
+    ) {
+        Box(modifier = Modifier.clickable {
+            if (showControls) {
+                showControls = false
+                controlInteractionCounter = 0
+            } else {
+                showControls = true
+                controlInteractionCounter++
+            }
+        }) {
+            if (videoLoaded) {
+                VideoPlayerSurface(modifier = modifier, playerState = player)
+            } else {
+                AsyncImage(
+                    modifier = modifier,
+                    model = image.previewUrl,
+                    contentDescription = "Thumbnail",
+                )
+            }
+
+            AnimatedVisibility(
+                modifier = modifier,
+                visible = showControls
+            ) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .background(Color(0.0f, 0.0f, 0.0f, 0.4f, ColorSpaces.Srgb)),
+                ) {
+                    IconButton(
+                        modifier = Modifier.align(Alignment.Center),
+                        onClick = {
+                            controlInteractionCounter++
+                            if (!videoLoaded) {
+                                player.openUri(image.fileUrl)
+                                videoLoaded = true
+                            } else if (player.isPlaying) {
+                                player.pause()
+                            } else {
+                                player.play()
+                            }
+                        },
+                    ) {
+                        if (player.isPlaying && videoLoaded) {
+                            Icon(
+                                Icons.Filled.Pause,
+                                contentDescription = "Pause",
+                                Modifier.size(64.dp)
+                            )
+                        } else {
+                            Icon(
+                                Icons.Filled.PlayArrow,
+                                contentDescription = "Resume",
+                                Modifier.size(64.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            AnimatedContent(
+                modifier = Modifier.align(Alignment.BottomStart),
+                targetState = showControls,
+            ) {
+                if (it) {
+                    Row(
+                        modifier = Modifier.padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Slider(
+                            modifier = Modifier.weight(1f),
+                            value = player.sliderPos / 1000,
+                            enabled = videoLoaded,
+                            onValueChange = { v ->
+                                controlInteractionCounter++
+                                if (player.isPlaying) {
+                                    player.pause()
+                                    wasPlaying = true
+                                }
+                                player.sliderPos = v * 1000
+                            },
+                            onValueChangeFinished = {
+                                if (wasPlaying) {
+                                    player.play()
+                                    wasPlaying = false
+                                }
+                            }
+                        )
+
+                        IconButton(
+                            modifier = Modifier.size(24.dp),
+                            onClick = {
+                                controlInteractionCounter++
+                                muted = !muted
+                            }
+                        ) {
+                            if (muted) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.VolumeOff,
+                                    contentDescription = "Volume off",
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            } else {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.VolumeUp,
+                                    contentDescription = "Volume on",
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    LinearProgressIndicator(
+                        progress = { player.sliderPos / 1000 },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(2.dp),
+                        trackColor = MaterialTheme.colorScheme.background
+                    )
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun OffsetBasedLargeImageView(

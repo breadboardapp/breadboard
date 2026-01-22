@@ -13,6 +13,7 @@ import androidx.compose.material.icons.rounded.Share
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.core.net.toUri
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -20,6 +21,7 @@ import androidx.datastore.preferences.core.byteArrayPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import kotlinx.coroutines.flow.Flow
@@ -30,27 +32,24 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.cbor.Cbor
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToByteArray
+import moe.apex.rule34.BuildConfig
 import moe.apex.rule34.history.SearchHistoryEntry
 import moe.apex.rule34.image.Danbooru
 import moe.apex.rule34.image.Gelbooru
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.image.ImageBoard
+import moe.apex.rule34.image.ImageBoardAuth
 import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.image.Rule34
 import moe.apex.rule34.image.Safebooru
 import moe.apex.rule34.image.Yandere
 import moe.apex.rule34.tag.TagCategory
-import moe.apex.rule34.util.availableRatingsForSource
-import moe.apex.rule34.util.extractPixivId
-import java.io.IOException
-import kotlin.collections.toSet
-import androidx.core.net.toUri
-import androidx.datastore.preferences.core.longPreferencesKey
-import moe.apex.rule34.BuildConfig
-import moe.apex.rule34.image.ImageBoardAuth
 import moe.apex.rule34.util.AgeVerification
 import moe.apex.rule34.util.MigrationOnlyField
 import moe.apex.rule34.util.SecretsManager
+import moe.apex.rule34.util.availableRatingsForSource
+import moe.apex.rule34.util.extractPixivId
+import java.io.IOException
 
 
 val LocalPreferences = compositionLocalOf {
@@ -94,6 +93,7 @@ data object PrefNames {
     const val RECOMMENDATIONS_WEIGHTED_SELECTION = "recommendations_weighted_selection"
     const val INTERNAL_IGNORE_LIST_TIMESTAMP = "internal_ignore_list_timestamp"
     const val INTERNAL_IGNORE_LIST = "internal_ignore_list"
+    const val AUTOPLAY_VIDEOS = "autoplay_videos"
 }
 
 
@@ -126,6 +126,7 @@ object PreferenceKeys {
     val RECOMMENDATIONS_WEIGHTED_SELECTION = booleanPreferencesKey(PrefNames.RECOMMENDATIONS_WEIGHTED_SELECTION)
     val INTERNAL_IGNORE_LIST_TIMESTAMP = longPreferencesKey(PrefNames.INTERNAL_IGNORE_LIST_TIMESTAMP)
     val INTERNAL_IGNORE_LIST = stringSetPreferencesKey(PrefNames.INTERNAL_IGNORE_LIST)
+    val AUTOPLAY_VIDEOS = stringPreferencesKey(PrefNames.AUTOPLAY_VIDEOS)
 }
 
 
@@ -173,6 +174,11 @@ enum class FlagSecureMode(override val label: String) : PrefEnum<FlagSecureMode>
     AUTO("When in Incognito mode")
 }
 
+enum class AutoplayVideosMode(override val label: String) : PrefEnum<AutoplayVideosMode> {
+    ON("Always"),
+    OFF("Never"),
+    AUTO("When data saver is inactive")
+}
 
 enum class Experiment(override val label: String, val description: String? = null) : PrefEnum<Experiment> {
     ALWAYS_ANIMATE_SCROLL("Always animate scroll-to-top", "Enable smooth scrolling on all pages when using the scroll-to-top button."),
@@ -217,6 +223,7 @@ data class Prefs(
     val recommendationsWeightedSelection: Boolean,
     val internalIgnoreListTimestamp: Long,
     val internalIgnoreList: Set<String>,
+    val autoplayVideos: AutoplayVideosMode
 ) {
     companion object {
         val DEFAULT = Prefs(
@@ -247,7 +254,8 @@ data class Prefs(
             recommendationsPoolSize = 7,
             recommendationsWeightedSelection = true,
             internalIgnoreListTimestamp = 0,
-            internalIgnoreList = emptySet()
+            internalIgnoreList = emptySet(),
+            autoplayVideos = AutoplayVideosMode.OFF
         )
     }
 
@@ -758,7 +766,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val recommendationsWeightedSelection = preferences[PreferenceKeys.RECOMMENDATIONS_WEIGHTED_SELECTION] ?: Prefs.DEFAULT.recommendationsWeightedSelection
         val internalIgnoreListTimestamp = preferences[PreferenceKeys.INTERNAL_IGNORE_LIST_TIMESTAMP] ?: Prefs.DEFAULT.internalIgnoreListTimestamp
         val internalIgnoreList = preferences[PreferenceKeys.INTERNAL_IGNORE_LIST] ?: Prefs.DEFAULT.internalIgnoreList
-
+        val autoplayVideos = preferences[PreferenceKeys.AUTOPLAY_VIDEOS]?.let { AutoplayVideosMode.valueOf(it) } ?: Prefs.DEFAULT.autoplayVideos
 
         return Prefs(
             dataSaver,
@@ -788,7 +796,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             recommendationsPoolSize,
             recommendationsWeightedSelection,
             internalIgnoreListTimestamp,
-            internalIgnoreList
+            internalIgnoreList,
+            autoplayVideos
         )
     }
 }
