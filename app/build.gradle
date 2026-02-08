@@ -89,6 +89,7 @@ dependencies {
     implementation libs.aboutlibraries.core
     implementation libs.aboutlibraries.compose.m3
     implementation libs.androidx.graphics.shapes
+    implementation libs.composemediaplayer
     testImplementation libs.junit
     androidTestImplementation libs.androidx.test.ext.junit
     androidTestImplementation libs.androidx.test.espresso.core

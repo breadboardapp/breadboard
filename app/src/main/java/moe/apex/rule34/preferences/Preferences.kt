@@ -426,6 +426,22 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                             }
                         }
                     }
+                    item {
+                        EnumPref(
+                            title = "Autoplay videos",
+                            summary = currentSettings.autoplayVideos.label,
+                            enumItems = AutoplayVideosMode.entries,
+                            selectedItem = currentSettings.autoplayVideos,
+                            onSelection = {
+                                scope.launch {
+                                    preferencesRepository.updatePref(
+                                        PreferenceKeys.AUTOPLAY_VIDEOS,
+                                        it
+                                    )
+                                }
+                            }
+                        )
+                    }
                 }
             }
 
