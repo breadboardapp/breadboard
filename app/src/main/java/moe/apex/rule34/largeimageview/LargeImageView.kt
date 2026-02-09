@@ -10,22 +10,34 @@ import android.util.Log
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseIn
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -36,11 +48,12 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeOff
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
@@ -48,6 +61,8 @@ import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilledIconToggleButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -59,13 +74,13 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -73,10 +88,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.colorspace.ColorSpaces
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboard
@@ -87,6 +102,9 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -95,10 +113,8 @@ import coil3.compose.rememberAsyncImagePainter
 import coil3.request.ImageRequest
 import io.github.kdroidfilter.composemediaplayer.VideoPlayerSurface
 import io.github.kdroidfilter.composemediaplayer.rememberVideoPlayerState
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import me.saket.telephoto.zoomable.EnabledZoomGestures
 import me.saket.telephoto.zoomable.ZoomSpec
 import me.saket.telephoto.zoomable.ZoomableState
@@ -112,14 +128,17 @@ import moe.apex.rule34.preferences.Experiment
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.ToolbarAction
 import moe.apex.rule34.prefs
+import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.ui.theme.Typography
 import moe.apex.rule34.util.CombinedClickableAction
 import moe.apex.rule34.util.showToast
 import moe.apex.rule34.util.FullscreenLoadingSpinner
 import moe.apex.rule34.util.HorizontalFloatingToolbar
+import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.PromptType
 import moe.apex.rule34.util.MustSetLocation
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
+import moe.apex.rule34.util.SMALL_SPACER
 import moe.apex.rule34.util.StorageLocationSelection
 import moe.apex.rule34.util.bouncyAnimationSpec
 import moe.apex.rule34.util.downloadImage
@@ -669,26 +688,41 @@ fun LargeImage(image: Image) {
     }
 }
 
+
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun LargeVideo(image: Image, isCurrentPage: Boolean) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
     var wasPlaying by remember { mutableStateOf(false) }
     var muted by remember { mutableStateOf(false) }
-    var videoLoaded by remember { mutableStateOf(false) }
     val player = rememberVideoPlayerState()
 
+    var doneInitialLoad by remember { mutableStateOf(false) }
+
     var showControls by remember { mutableStateOf(false) }
-    var controlInteractionCounter by remember { mutableIntStateOf(0) }
+    var controlsLastTriggeredAt by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    val controlsInteractionSource = remember { MutableInteractionSource() }
+    val isHovered by controlsInteractionSource.collectIsHoveredAsState()
+
+    val sliderInteractionSource = remember { MutableInteractionSource() }
+    val isSliderDragging by sliderInteractionSource.collectIsDraggedAsState()
+    val isSliderPressed by sliderInteractionSource.collectIsPressedAsState()
+
 
     val prefs = LocalPreferences.current
-    val shouldAutoplay = when (prefs.autoplayVideos) {
-        AutoplayVideosMode.ON -> true
-        AutoplayVideosMode.OFF -> false
-        AutoplayVideosMode.AUTO ->
-            when (prefs.dataSaver) {
-                DataSaver.ON -> false
-                DataSaver.OFF -> true
-                DataSaver.AUTO -> isUsingWiFi(LocalContext.current)
-            }
+    val shouldAutoplay = remember {
+        when (prefs.autoplayVideos) {
+            AutoplayVideosMode.ON -> true
+            AutoplayVideosMode.OFF -> false
+            AutoplayVideosMode.AUTO ->
+                when (prefs.dataSaver) {
+                    DataSaver.ON -> false
+                    DataSaver.OFF -> true
+                    DataSaver.AUTO -> isUsingWiFi(context)
+                }
+        }
     }
 
     val aspectRatio = image.aspectRatio
@@ -701,170 +735,238 @@ fun LargeVideo(image: Image, isCurrentPage: Boolean) {
         }
     } else Modifier.aspectRatio(aspectRatio)
 
+    fun updateControlsLastTriggeredTime() {
+        controlsLastTriggeredAt = System.currentTimeMillis()
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) {
+                player.pause()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    /* While most of these run very infrequently or only once,
+       I still don't like this LaunchedEffect hell.  */
+
     LaunchedEffect(Unit) {
         player.loop = true
     }
 
-    LaunchedEffect(controlInteractionCounter) {
-        if (showControls) {
-            delay(2_000)
+    LaunchedEffect(player.isLoading) {
+        if (player.hasMedia && !player.isLoading) {
+            doneInitialLoad = true
+        }
+    }
+
+    LaunchedEffect(isHovered) {
+        showControls = isHovered
+    }
+
+    LaunchedEffect(controlsLastTriggeredAt) {
+        if (showControls && !isHovered && !isSliderDragging && !isSliderPressed) {
+            delay(3000)
             showControls = false
-            controlInteractionCounter = 0
         }
     }
 
     LaunchedEffect(muted) {
-        if (muted) {
-            player.volume = 0.0f
-        } else {
-            player.volume = 0.5f
-        }
+        player.volume = if (muted) 0f else 0.5f
     }
 
     LaunchedEffect(isCurrentPage) {
         if (!isCurrentPage) {
             player.pause()
         } else {
-            player.sliderPos = 0.0f
             if (shouldAutoplay) {
-                if (videoLoaded) {
+                if (player.hasMedia) {
                     player.play()
                 } else {
                     player.openUri(image.fileUrl)
-                    videoLoaded = true
                 }
             }
         }
     }
 
     Box(
-        modifier = Modifier.clip(MaterialTheme.shapes.extraLarge)
+        modifier = Modifier
+            .clip(MaterialTheme.shapes.extraLarge)
+            .width(IntrinsicSize.Min),
+        contentAlignment = Alignment.Center
     ) {
-        Box(modifier = Modifier.clickable {
-            if (showControls) {
-                showControls = false
-                controlInteractionCounter = 0
-            } else {
-                showControls = true
-                controlInteractionCounter++
-            }
-        }) {
-            if (videoLoaded) {
+        Box(
+            modifier = Modifier
+                .clickable(
+                    interactionSource = controlsInteractionSource,
+                    indication = null
+                ) {
+                    updateControlsLastTriggeredTime()
+                    if (showControls) {
+                        showControls = false
+                    } else {
+                        showControls = true
+                    }
+                }
+        ) {
+            if (doneInitialLoad) {
+                // The SurfaceView type performs much better but seems to have scaling issues?
                 VideoPlayerSurface(modifier = modifier, playerState = player)
             } else {
                 AsyncImage(
-                    modifier = modifier,
+                    modifier = modifier.blur(16.dp),
                     model = image.previewUrl,
                     contentDescription = "Thumbnail",
                 )
             }
 
-            AnimatedVisibility(
-                modifier = modifier,
-                visible = showControls
-            ) {
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .background(Color(0.0f, 0.0f, 0.0f, 0.4f, ColorSpaces.Srgb)),
+            // We're always using dark theme here to give us light buttons since the scrim is black.
+            BreadboardTheme(darkTheme = true) {
+                AnimatedVisibility(
+                    modifier = modifier,
+                    visible = showControls || player.isLoading || !player.hasMedia,
                 ) {
-                    IconButton(
-                        modifier = Modifier.align(Alignment.Center),
-                        onClick = {
-                            controlInteractionCounter++
-                            if (!videoLoaded) {
-                                player.openUri(image.fileUrl)
-                                videoLoaded = true
-                            } else if (player.isPlaying) {
-                                player.pause()
-                            } else {
-                                player.play()
-                            }
-                        },
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.4f)),
                     ) {
-                        if (player.isPlaying && videoLoaded) {
-                            Icon(
-                                Icons.Rounded.Pause,
-                                contentDescription = "Pause",
-                                Modifier.size(64.dp)
-                            )
-                        } else {
-                            Icon(
-                                Icons.Rounded.PlayArrow,
-                                contentDescription = "Resume",
-                                Modifier.size(64.dp)
+                        FilledIconButton(
+                            modifier = Modifier.align(Alignment.Center).size(56.dp),
+                            onClick = {
+                                updateControlsLastTriggeredTime()
+                                if (!player.hasMedia) {
+                                    player.openUri(image.fileUrl)
+                                } else if (player.isPlaying) {
+                                    player.pause()
+                                } else {
+                                    player.play()
+                                }
+                            }
+                        ) {
+                            AnimatedContent(
+                                targetState = player.isPlaying,
+                                transitionSpec = { fadeIn() + scaleIn() togetherWith fadeOut() + scaleOut() },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (it) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Pause,
+                                        contentDescription = "Pause",
+                                        modifier = Modifier.size(32.dp) // It looks more balanced.
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Rounded.PlayArrow,
+                                        contentDescription = "Resume",
+                                        modifier = Modifier.size(36.dp)
+                                    )
+                                }
+                            }
+                        }
+                        if (player.isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .align(Alignment.Center),
+                                strokeWidth = 6.dp
                             )
                         }
                     }
                 }
-            }
 
-            AnimatedContent(
-                modifier = Modifier.align(Alignment.BottomStart),
-                targetState = showControls,
-            ) {
-                if (it) {
-                    Row(
-                        modifier = Modifier.padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                SharedTransitionLayout(Modifier.align(Alignment.BottomStart)) {
+                    AnimatedContent(
+                        targetState = showControls || player.isLoading || !player.hasMedia,
+                        transitionSpec = { fadeIn() togetherWith fadeOut() },
                     ) {
-                        Slider(
-                            modifier = Modifier.weight(1f),
-                            value = player.sliderPos / 1000,
-                            enabled = videoLoaded,
-                            onValueChange = { v ->
-                                controlInteractionCounter++
-                                if (player.isPlaying) {
-                                    player.pause()
-                                    wasPlaying = true
-                                }
-                                player.sliderPos = v * 1000
-                            },
-                            onValueChangeFinished = {
-                                if (wasPlaying) {
-                                    player.play()
-                                    wasPlaying = false
-                                }
-                            }
-                        )
+                        if (it) {
+                            Row(
+                                modifier = Modifier.padding(MEDIUM_SPACER.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(SMALL_SPACER.dp),
+                            ) {
+                                Slider(
+                                    interactionSource = sliderInteractionSource,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .sharedBounds(
+                                            sharedContentState = rememberSharedContentState("progress_bar"),
+                                            animatedVisibilityScope = this@AnimatedContent
+                                        ),
+                                    value = player.sliderPos,
+                                    valueRange = 0f..1000f,
+                                    enabled = doneInitialLoad,
+                                    onValueChange = { v ->
+                                        showControls = true // For mouse users because the hover gets stopped once they click
+                                        updateControlsLastTriggeredTime()
+                                        if (player.isPlaying) {
+                                            player.pause()
+                                            wasPlaying = true
+                                        }
+                                        player.userDragging = true
+                                        player.sliderPos = v // Yes this is still needed despite the above
+                                    },
+                                    onValueChangeFinished = {
+                                        player.userDragging = false
+                                        player.seekTo(player.sliderPos)
+                                        if (wasPlaying) {
+                                            player.play()
+                                            wasPlaying = false
+                                        }
+                                    }
+                                )
 
-                        IconButton(
-                            modifier = Modifier.size(24.dp),
-                            onClick = {
-                                controlInteractionCounter++
-                                muted = !muted
+                                FilledIconToggleButton(
+                                    modifier = Modifier.animateEnterExit(
+                                        enter = slideInHorizontally { it * 2 },
+                                        exit = slideOutHorizontally { it * 2 }
+                                    ),
+                                    checked = !muted,
+                                    shape = RoundedCornerShape(animateIntAsState(if (!muted) 25 else 50).value),
+                                    onCheckedChange = {
+                                        updateControlsLastTriggeredTime()
+                                        muted = !it
+                                    },
+                                ) {
+                                    if (muted) {
+                                        Icon(
+                                            Icons.AutoMirrored.Rounded.VolumeOff,
+                                            contentDescription = "Volume muted. Tap to unmute.",
+                                        )
+                                    } else {
+                                        Icon(
+                                            Icons.AutoMirrored.Rounded.VolumeUp,
+                                            contentDescription = "Volume on. Tap to mute.",
+                                        )
+                                    }
+                                }
                             }
-                        ) {
-                            if (muted) {
-                                Icon(
-                                    Icons.AutoMirrored.Rounded.VolumeOff,
-                                    contentDescription = "Volume off",
-                                    modifier = Modifier.size(28.dp)
-                                )
-                            } else {
-                                Icon(
-                                    Icons.AutoMirrored.Rounded.VolumeUp,
-                                    contentDescription = "Volume on",
-                                    modifier = Modifier.size(28.dp)
-                                )
-                            }
+                        } else {
+                            LinearProgressIndicator(
+                                progress = { player.sliderPos / 1000 },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .sharedBounds(
+                                        sharedContentState = rememberSharedContentState("progress_bar"),
+                                        animatedVisibilityScope = this@AnimatedContent
+                                    ),
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
                         }
                     }
-                } else {
-                    LinearProgressIndicator(
-                        progress = { player.sliderPos / 1000 },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .widthIn(2.dp),
-                        trackColor = MaterialTheme.colorScheme.background
-                    )
                 }
             }
         }
     }
 }
+
 
 @Composable
 fun OffsetBasedLargeImageView(
