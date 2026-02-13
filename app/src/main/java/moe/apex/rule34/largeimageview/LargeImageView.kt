@@ -15,6 +15,7 @@ import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseIn
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
@@ -61,13 +62,16 @@ import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconToggleButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialShapes.Companion.Circle
+import androidx.compose.material3.MaterialShapes.Companion.Cookie7Sided
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -125,6 +129,7 @@ import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.AutoplayVideosMode
 import moe.apex.rule34.preferences.DataSaver
 import moe.apex.rule34.preferences.Experiment
+import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.ToolbarAction
 import moe.apex.rule34.prefs
@@ -133,8 +138,9 @@ import moe.apex.rule34.ui.theme.Typography
 import moe.apex.rule34.util.CombinedClickableAction
 import moe.apex.rule34.util.showToast
 import moe.apex.rule34.util.FullscreenLoadingSpinner
-import moe.apex.rule34.util.HorizontalFloatingToolbar
+import moe.apex.rule34.util.HorizontalFloatingToolbarOptionalFab
 import moe.apex.rule34.util.MEDIUM_SPACER
+import moe.apex.rule34.util.MorphableRoundedPolygon
 import moe.apex.rule34.util.PromptType
 import moe.apex.rule34.util.MustSetLocation
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
@@ -148,9 +154,13 @@ import moe.apex.rule34.util.isWebLink
 import moe.apex.rule34.util.rememberIsBlurEnabled
 import moe.apex.rule34.util.saveUriToPref
 import moe.apex.rule34.viewmodel.BreadboardViewModel
+import moe.apex.rule34.util.morphingBackground
 import java.net.SocketTimeoutException
 import java.util.concurrent.ExecutionException
 import kotlin.math.roundToInt
+
+
+private const val VIDEO_PRIMARY_CONTROL_SIZE_DP = 60
 
 
 private fun isUsingWiFi(context: Context): Boolean {
@@ -326,7 +336,7 @@ private fun LargeImageToolbar(
     var showInfoSheet by remember { mutableStateOf(false) }
     var storageLocationPromptLaunched by remember { mutableStateOf(false) }
 
-    val actionMapping = mapOf<ToolbarAction, @Composable () -> ImageAction?>(
+    val actionMapping = mapOf(
         ToolbarAction.TOGGLE_HD to {
             ImageAction(
                 onClick = { currentImage.toggleHd() }
@@ -502,6 +512,7 @@ private fun LargeImageToolbar(
             storageLocationPromptLaunched = false
         }
     }
+
     AnimatedVisibility(
         visible = toolbarState == ToolbarState.FORCE_SHOW || (isMostlyZoomedOut && toolbarState != ToolbarState.FORCE_HIDE),
         enter = slideInVertically(
@@ -510,32 +521,10 @@ private fun LargeImageToolbar(
         ),
         exit = slideOutVertically(targetOffsetY = { it })
     ) {
-        HorizontalFloatingToolbar(
+        HorizontalFloatingToolbarOptionalFab(
             modifier = modifier
                 .navigationBarsPadding()
                 .padding(bottom = SMALL_LARGE_SPACER.dp),
-            actions = {
-                for (action in actions) {
-                    val item = actionMapping[action]!!()
-                    if (item == null) continue
-                    val interactionSource = remember { MutableInteractionSource() }
-                    CombinedClickableAction(
-                        enabled = item.enabled,
-                        interactionSource = interactionSource,
-                        onClick = item.onClick,
-                        onLongClick = item.onLongClick
-                    ) {
-                        IconButton(
-                            modifier = item.modifier,
-                            enabled = item.enabled,
-                            onClick = { },
-                            interactionSource = interactionSource
-                        ) {
-                            item.composableContent()
-                        }
-                    }
-                }
-            },
             floatingActionButton = actionMapping[primaryAction]!!()?.let {
                 {
                     val interactionSource = remember { MutableInteractionSource() }
@@ -555,7 +544,27 @@ private fun LargeImageToolbar(
                     }
                 }
             }
-        )
+        ) {
+            for (action in actions) {
+                val item = actionMapping[action]!!() ?: continue
+                val interactionSource = remember { MutableInteractionSource() }
+                CombinedClickableAction(
+                    enabled = item.enabled,
+                    interactionSource = interactionSource,
+                    onClick = item.onClick,
+                    onLongClick = item.onLongClick
+                ) {
+                    IconButton(
+                        modifier = item.modifier,
+                        enabled = item.enabled,
+                        onClick = { },
+                        interactionSource = interactionSource
+                    ) {
+                        item.composableContent()
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -564,7 +573,7 @@ private fun LargeImageToolbar(
 fun LazyLargeImageView(
     navController: NavController,
     id: String,
-    imageSource: moe.apex.rule34.preferences.ImageSource,
+    imageSource: ImageSource,
 ) {
     val context = LocalContext.current
     val prefs = LocalPreferences.current
@@ -689,7 +698,7 @@ fun LargeImage(image: Image) {
 }
 
 
-@OptIn(ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun LargeVideo(image: Image, isCurrentPage: Boolean) {
     val context = LocalContext.current
@@ -709,7 +718,6 @@ fun LargeVideo(image: Image, isCurrentPage: Boolean) {
     val sliderInteractionSource = remember { MutableInteractionSource() }
     val isSliderDragging by sliderInteractionSource.collectIsDraggedAsState()
     val isSliderPressed by sliderInteractionSource.collectIsPressedAsState()
-
 
     val prefs = LocalPreferences.current
     val shouldAutoplay = remember {
@@ -837,8 +845,20 @@ fun LargeVideo(image: Image, isCurrentPage: Boolean) {
                                 .fillMaxSize()
                                 .background(Color.Black.copy(alpha = 0.4f)),
                     ) {
-                        FilledIconButton(
-                            modifier = Modifier.align(Alignment.Center).size(56.dp),
+                        val morphProgress by animateFloatAsState(if (player.isPlaying) 1f else 0f)
+                        IconButton(
+                            colors = IconButtonDefaults.iconButtonColors(
+                                contentColor = MaterialTheme.colorScheme.onPrimary,
+                            ),
+                            modifier = Modifier
+                                .size(VIDEO_PRIMARY_CONTROL_SIZE_DP.dp)
+                                .align(Alignment.Center)
+                                .morphingBackground(
+                                    start = MorphableRoundedPolygon(Circle),
+                                    end = MorphableRoundedPolygon(Cookie7Sided, 1.1f), // So it looks closer in size to the circle
+                                    progress = morphProgress,
+                                    color = MaterialTheme.colorScheme.primary
+                                ),
                             onClick = {
                                 updateControlsLastTriggeredTime()
                                 if (!player.hasMedia) {
@@ -870,11 +890,14 @@ fun LargeVideo(image: Image, isCurrentPage: Boolean) {
                                 }
                             }
                         }
-                        if (player.isLoading) {
+                        AnimatedVisibility(
+                            visible = player.isLoading,
+                            enter = fadeIn(),
+                            exit = fadeOut(),
+                            modifier = Modifier.align(Alignment.Center)
+                        ) {
                             CircularProgressIndicator(
-                                modifier = Modifier
-                                    .size(72.dp)
-                                    .align(Alignment.Center),
+                                modifier = Modifier.size((VIDEO_PRIMARY_CONTROL_SIZE_DP + 16).dp),
                                 strokeWidth = 6.dp
                             )
                         }

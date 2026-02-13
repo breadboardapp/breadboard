@@ -16,7 +16,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.LocalOverscrollFactory
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -54,7 +56,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -64,15 +65,17 @@ import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
@@ -89,6 +92,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -215,7 +219,7 @@ fun LargeTitleBar(
         scrollBehavior = scrollBehavior,
         actions = additionalActions,
         navigationIcon = { NavigationIcon(navController) },
-        colors = TopAppBarDefaults.largeTopAppBarColors().copy(
+        colors = TopAppBarDefaults.topAppBarColors().copy(
             scrolledContainerColor = BreadboardTheme.colors.titleBar
         )
     )
@@ -242,6 +246,7 @@ fun SmallTitleBar(
 }
 
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun FullscreenLoadingSpinner() {
     Row(
@@ -249,7 +254,7 @@ fun FullscreenLoadingSpinner() {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
-        CircularProgressIndicator()
+        LoadingIndicator()
     }
 }
 
@@ -361,7 +366,7 @@ fun MainScreenScaffold(
         }
 
         if (bitmap != null) {
-            androidx.compose.foundation.Image(
+            Image(
                 bitmap = bitmap!!,
                 contentDescription = null,
                 contentScale = ContentScale.FillBounds,
@@ -811,42 +816,34 @@ fun TitledModalBottomSheet(
                 .padding(SMALL_LARGE_SPACER.dp)
         )
         VerticalSpacer()
-        content()
+        CompositionLocalProvider(LocalOverscrollFactory provides null) {
+            // https://issuetracker.google.com/issues/483795433
+            content()
+        }
     }
 }
 
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun HorizontalFloatingToolbar(
+fun HorizontalFloatingToolbarOptionalFab(
     modifier: Modifier = Modifier,
     floatingActionButton: (@Composable () -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit
 ) {
-    // TODO: When Material3 1.4 drops, switch to the native implementation
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            shape = CircleShape,
-            modifier = Modifier.height(64.dp),
-            shadowElevation = 3.dp
-        ) {
-            Row(
-                modifier = Modifier
-                    .padding(horizontal = SMALL_SPACER.dp)
-                    .height(48.dp),
-                horizontalArrangement = Arrangement.spacedBy(TINY_SPACER.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                actions()
-            }
-        }
-        floatingActionButton?.let {
-            Spacer(Modifier.width(SMALL_SPACER.dp))
-            it()
-        }
+    if (floatingActionButton != null) {
+        HorizontalFloatingToolbar(
+            modifier = modifier,
+            expanded = true,
+            floatingActionButton = floatingActionButton,
+            content = actions
+        )
+    } else {
+        HorizontalFloatingToolbar(
+            modifier = modifier,
+            expanded = true,
+            content = actions
+        )
     }
 }
 

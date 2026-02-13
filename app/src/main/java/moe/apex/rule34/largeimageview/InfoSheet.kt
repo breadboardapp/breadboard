@@ -26,11 +26,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SheetState
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -94,20 +94,26 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
     val preferencesRepository = context.prefs
     val scope = rememberCoroutineScope()
 
-    /* This is sketchy but we need to be able to access the sheet state itself in its own
-       confirmValueChange which for some reason we can't normally do in order to disable the
-       partially expanded state only when dismissing.  */
-    var sheetState: SheetState? by remember { mutableStateOf(null) }
-    var selectedTag: String? by remember { mutableStateOf(null) }
+    // We want to open partially expanded by default, but when collapsing (swipe down or back)
+    // the sheet should animate straight to Hidden.
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
 
     fun hideAndThen(block: () -> Unit = { }) {
         scope.launch {
-            sheetState?.hide()
+            sheetState.hide()
         }.invokeOnCompletion {
             onDismissRequest()
             block()
         }
     }
+
+    LaunchedEffect(sheetState.targetValue) {
+        if (sheetState.currentValue == SheetValue.Expanded && sheetState.targetValue == SheetValue.PartiallyExpanded) {
+            hideAndThen()
+        }
+    }
+
+    var selectedTag: String? by remember { mutableStateOf(null) }
 
     fun startTagSearch(tag: String) {
         hideAndThen {
@@ -122,25 +128,9 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
         }
     }
 
-    // We want to bypass the partially expanded state when closing but not when opening.
-    sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = false
-    ) { newValue ->
-        if (newValue == SheetValue.PartiallyExpanded) {
-            if (sheetState?.currentValue == SheetValue.Expanded) {
-                hideAndThen()
-                return@rememberModalBottomSheetState false
-            } else {
-                return@rememberModalBottomSheetState true
-            }
-        } else {
-            return@rememberModalBottomSheetState true
-        }
-    }
-
     TitledModalBottomSheet(
         onDismissRequest = onDismissRequest,
-        sheetState = sheetState ?: return,
+        sheetState = sheetState,
         title = "About this image",
     ) {
         if (selectedTag != null) {

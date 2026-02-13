@@ -15,10 +15,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.MaterialShapes.Companion.Cookie9Sided
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
+import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -29,25 +32,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.Matrix
-import androidx.compose.ui.graphics.Outline
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.asComposePath
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.core.graphics.rotationMatrix
-import androidx.graphics.shapes.CornerRounding
-import androidx.graphics.shapes.RoundedPolygon
-import androidx.graphics.shapes.star
-import androidx.graphics.shapes.toPath
-import androidx.graphics.shapes.transformed
 import androidx.navigation.NavHostController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -66,7 +54,6 @@ import moe.apex.rule34.util.MEDIUM_SPACER
 import moe.apex.rule34.util.TitleSummary
 import moe.apex.rule34.util.openUrl
 import moe.apex.rule34.util.releasePlatform
-import kotlin.math.max
 
 
 private data class GitHubUser(
@@ -82,21 +69,12 @@ private val apex2504 = GitHubUser("apex2504", "apex2504")
 private val devoxin = GitHubUser("devoxin", "devoxin")
 
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AboutScreen(navController: NavHostController) {
     val context = LocalContext.current
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
-
-    val cookieShape = remember {
-        RoundedPolygon.star(
-            numVerticesPerRadius = 9,
-            innerRadius = .8f,
-            rounding = CornerRounding(0.5f),
-        ).transformed(rotationMatrix(-90f))
-    }
-    val clippable = remember { RoundedPolygonShape(cookieShape) }
 
     MainScreenScaffold(
         topAppBar = {
@@ -138,7 +116,7 @@ fun AboutScreen(navController: NavHostController) {
                     Box(
                         modifier = Modifier
                             .size(96.dp)
-                            .clip(clippable)
+                            .clip(Cookie9Sided.toShape())
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                             .clickable {
                                 if (easterEggCounter == 5) {
@@ -233,29 +211,3 @@ private fun GitHubUserContainer(user: GitHubUser) {
         onClick = { openUrl(context, user.url) }
     )
 }
-
-// https://developer.android.com/develop/ui/compose/quick-guides/content/clipped-image#create_a_shape
-private fun RoundedPolygon.getBounds() = calculateBounds().let { Rect(it[0], it[1], it[2], it[3]) }
-
-private class RoundedPolygonShape(private val polygon: RoundedPolygon) : Shape {
-    private val matrix: Matrix = Matrix()
-    private var path = Path()
-
-    override fun createOutline(
-        size: Size,
-        layoutDirection: LayoutDirection,
-        density: Density
-    ): Outline {
-        path.rewind()
-        path = polygon.toPath().asComposePath()
-        matrix.reset()
-        val bounds = polygon.getBounds()
-        val maxDimension = max(bounds.width, bounds.height)
-        matrix.scale(size.width / maxDimension, size.height / maxDimension)
-        matrix.translate(-bounds.left, -bounds.top)
-
-        path.transform(matrix)
-        return Outline.Generic(path)
-    }
-}
-
