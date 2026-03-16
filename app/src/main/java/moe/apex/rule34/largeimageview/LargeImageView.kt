@@ -524,7 +524,7 @@ private fun LargeImageToolbar(
         HorizontalFloatingToolbarOptionalFab(
             modifier = modifier
                 .navigationBarsPadding()
-                .padding(bottom = SMALL_LARGE_SPACER.dp),
+                .padding(bottom = SMALL_SPACER.dp),
             floatingActionButton = actionMapping[primaryAction]!!()?.let {
                 {
                     val interactionSource = remember { MutableInteractionSource() }

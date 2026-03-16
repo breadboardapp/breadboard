@@ -840,6 +840,13 @@ fun TitledModalBottomSheet(
 }
 
 
+/** A wrapper around HorizontalFloatingToolbar to keep things consistent.
+ *
+ *  Something to note is that the layout height of the two toolbars is different depending on
+ *  whether or not the FAB is present, even though they look like they should be the same.
+ *  The one with FAB has an extra 8dp padding at the default contentPadding.
+ *  This wrapper doesn't allow for contentPadding adjustment, so if you are adding padding,
+ *  you should probably set it to 8dp less than what you normally would. Weird. */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun HorizontalFloatingToolbarOptionalFab(
