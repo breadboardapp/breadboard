@@ -95,6 +95,7 @@ data object PrefNames {
     const val INTERNAL_IGNORE_LIST_TIMESTAMP = "internal_ignore_list_timestamp"
     const val INTERNAL_IGNORE_LIST = "internal_ignore_list"
     const val AUTOPLAY_VIDEOS = "autoplay_videos"
+    const val UNIFIED_INFO_SHEET = "unified_info_sheet"
 }
 
 
@@ -128,6 +129,7 @@ object PreferenceKeys {
     val INTERNAL_IGNORE_LIST_TIMESTAMP = longPreferencesKey(PrefNames.INTERNAL_IGNORE_LIST_TIMESTAMP)
     val INTERNAL_IGNORE_LIST = stringSetPreferencesKey(PrefNames.INTERNAL_IGNORE_LIST)
     val AUTOPLAY_VIDEOS = stringPreferencesKey(PrefNames.AUTOPLAY_VIDEOS)
+    val UNIFIED_INFO_SHEET = booleanPreferencesKey(PrefNames.UNIFIED_INFO_SHEET)
 }
 
 
@@ -224,7 +226,8 @@ data class Prefs(
     val recommendationsWeightedSelection: Boolean,
     val internalIgnoreListTimestamp: Long,
     val internalIgnoreList: Set<String>,
-    val autoplayVideos: AutoplayVideosMode
+    val autoplayVideos: AutoplayVideosMode,
+    val unifiedInfoSheet: Boolean
 ) {
     companion object {
         val DEFAULT = Prefs(
@@ -256,7 +259,8 @@ data class Prefs(
             recommendationsWeightedSelection = true,
             internalIgnoreListTimestamp = 0,
             internalIgnoreList = emptySet(),
-            autoplayVideos = AutoplayVideosMode.OFF
+            autoplayVideos = AutoplayVideosMode.OFF,
+            unifiedInfoSheet = false, // Unified is called 'Classic' in the UI
         )
     }
 
@@ -319,7 +323,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             PreferenceKeys.RECOMMENDATIONS_POOL_SIZE to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.RECOMMENDATIONS_WEIGHTED_SELECTION to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.INTERNAL_IGNORE_LIST_TIMESTAMP to PrefMeta(PrefCategory.SETTING, exportable = false),
-            PreferenceKeys.INTERNAL_IGNORE_LIST to PrefMeta(PrefCategory.SETTING, exportable = false)
+            PreferenceKeys.INTERNAL_IGNORE_LIST to PrefMeta(PrefCategory.SETTING, exportable = false),
+            PreferenceKeys.UNIFIED_INFO_SHEET to PrefMeta(PrefCategory.SETTING)
         )
     }
 
@@ -742,7 +747,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val favouritesFilter = (preferences[PreferenceKeys.FAVOURITES_FILTER]?.map { ImageSource.valueOf(it) } ?: Prefs.DEFAULT.favouritesFilter)
         val lastUsedVersionCode = preferences[PreferenceKeys.LAST_USED_VERSION_CODE] ?: Prefs.DEFAULT.lastUsedVersionCode
         val ratingsFilter = (preferences[PreferenceKeys.RATINGS_FILTER]?.map { ImageRating.valueOf(it) } ?: Prefs.DEFAULT.ratingsFilter)
-        val favouritesRatingFilter = (preferences[PreferenceKeys.FAVOURITES_RATING_FILTER]?.map { ImageRating.valueOf(it) } ?: Prefs.DEFAULT.favouritesRatingsFilter)
+        val favouritesRatingsFilter = (preferences[PreferenceKeys.FAVOURITES_RATING_FILTER]?.map { ImageRating.valueOf(it) } ?: Prefs.DEFAULT.favouritesRatingsFilter)
         val filterRatingsLocally = (preferences[PreferenceKeys.FILTER_RATINGS_LOCALLY] ?: Prefs.DEFAULT.filterRatingsLocally)
         val useStaggeredGrid = (preferences[PreferenceKeys.USE_STAGGERED_GRID] ?: Prefs.DEFAULT.useStaggeredGrid)
         val saveSearchHistory = (preferences[PreferenceKeys.SAVE_SEARCH_HISTORY] ?: Prefs.DEFAULT.saveSearchHistory)
@@ -791,6 +796,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val internalIgnoreListTimestamp = preferences[PreferenceKeys.INTERNAL_IGNORE_LIST_TIMESTAMP] ?: Prefs.DEFAULT.internalIgnoreListTimestamp
         val internalIgnoreList = preferences[PreferenceKeys.INTERNAL_IGNORE_LIST] ?: Prefs.DEFAULT.internalIgnoreList
         val autoplayVideos = preferences[PreferenceKeys.AUTOPLAY_VIDEOS]?.let { AutoplayVideosMode.valueOf(it) } ?: Prefs.DEFAULT.autoplayVideos
+        val unifiedInfoSheet = preferences[PreferenceKeys.UNIFIED_INFO_SHEET] ?: Prefs.DEFAULT.unifiedInfoSheet
 
         return Prefs(
             dataSaver,
@@ -801,7 +807,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             favouritesFilter,
             lastUsedVersionCode,
             ratingsFilter,
-            favouritesRatingFilter,
+            favouritesRatingsFilter,
             filterRatingsLocally,
             useStaggeredGrid,
             saveSearchHistory,
@@ -821,7 +827,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             recommendationsWeightedSelection,
             internalIgnoreListTimestamp,
             internalIgnoreList,
-            autoplayVideos
+            autoplayVideos,
+            unifiedInfoSheet
         )
     }
 }

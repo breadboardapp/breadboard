@@ -492,6 +492,21 @@ fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardVie
                         }
                     }
                     item {
+                        SwitchPref(
+                            checked = currentSettings.unifiedInfoSheet,
+                            title = "Classic info sheet",
+                            summary = "Display all art information in a single scrollable " +
+                                      "list rather than organising it into tabs."
+                        ) {
+                            scope.launch {
+                                preferencesRepository.updatePref(
+                                    PreferenceKeys.UNIFIED_INFO_SHEET,
+                                    it
+                                )
+                            }
+                        }
+                    }
+                    item {
                         ReorderablePref(
                             title = "Reorder image actions",
                             dialogTitle = "Image actions",

@@ -313,6 +313,7 @@ private fun ImagesPager(
 }
 
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun LargeImageToolbar(
     modifier: Modifier = Modifier,

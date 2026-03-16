@@ -53,6 +53,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.rememberScrollState
@@ -70,6 +71,8 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.FloatingToolbarColors
+import androidx.compose.material3.FloatingToolbarDefaults
 import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -116,6 +119,8 @@ import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.isTraversalGroup
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -161,7 +166,18 @@ enum class ListItemPosition(val topSize: Dp, val bottomSize: Dp) {
     TOP(LARGE_CORNER_DP.dp, SMALL_CORNER_DP.dp),
     MIDDLE(SMALL_CORNER_DP.dp, SMALL_CORNER_DP.dp),
     BOTTOM(SMALL_CORNER_DP.dp, LARGE_CORNER_DP.dp),
-    SINGLE_ELEMENT(LARGE_CORNER_DP.dp, LARGE_CORNER_DP.dp)
+    SINGLE_ELEMENT(LARGE_CORNER_DP.dp, LARGE_CORNER_DP.dp);
+
+    companion object {
+        fun fromIndex(collection: List<Any>, index: Int): ListItemPosition {
+            return when {
+                collection.size == 1 -> SINGLE_ELEMENT
+                index == 0 -> TOP
+                index == collection.lastIndex -> BOTTOM
+                else -> MIDDLE
+            }
+        }
+    }
 }
 
 
@@ -797,7 +813,7 @@ fun TitledModalBottomSheet(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
     sheetState: SheetState = rememberModalBottomSheetState(),
-    contentWindowInsets: @Composable () -> WindowInsets = { BottomSheetDefaults.windowInsets.only(WindowInsetsSides.Horizontal) },
+    contentWindowInsets: @Composable () -> WindowInsets = { BottomSheetDefaults.modalWindowInsets.only(WindowInsetsSides.Horizontal) },
     title: String,
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -816,8 +832,8 @@ fun TitledModalBottomSheet(
                 .padding(SMALL_LARGE_SPACER.dp)
         )
         VerticalSpacer()
+        // https://issuetracker.google.com/issues/483795433
         CompositionLocalProvider(LocalOverscrollFactory provides null) {
-            // https://issuetracker.google.com/issues/483795433
             content()
         }
     }
@@ -828,20 +844,28 @@ fun TitledModalBottomSheet(
 @Composable
 fun HorizontalFloatingToolbarOptionalFab(
     modifier: Modifier = Modifier,
+    colors: FloatingToolbarColors = FloatingToolbarDefaults.standardFloatingToolbarColors(
+        toolbarContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+    ),
     floatingActionButton: (@Composable () -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit
 ) {
+    val shadowElevation = 6.dp // This is what spec says but the M3 implementation does what it wants lol
     if (floatingActionButton != null) {
         HorizontalFloatingToolbar(
             modifier = modifier,
+            colors = colors,
             expanded = true,
+            expandedShadowElevation = shadowElevation,
             floatingActionButton = floatingActionButton,
             content = actions
         )
     } else {
         HorizontalFloatingToolbar(
             modifier = modifier,
+            colors = colors,
             expanded = true,
+            expandedShadowElevation = shadowElevation,
             content = actions
         )
     }
@@ -929,15 +953,23 @@ fun BasicExpressiveContainer(
     position: ListItemPosition,
     content: @Composable () -> Unit
 ) {
-    Surface(
-        modifier = modifier,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = RoundedCornerShape(
-            topStart = animateTopCornerSizeForPosition(position),
-            topEnd = animateTopCornerSizeForPosition(position),
-            bottomStart = animateBottomCornerSizeForPosition(position),
-            bottomEnd = animateBottomCornerSizeForPosition(position)
-        )
+    /* Ideally this would be a Surface, but for some reason when the content inside is really long,
+       it might just completely stop recognising all touch interactions after a certain point.
+       I don't know why. We'll just work around it like this. */
+    Box(
+        modifier = modifier
+            .background(
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                shape = RoundedCornerShape(
+                    topStart = animateTopCornerSizeForPosition(position),
+                    topEnd = animateTopCornerSizeForPosition(position),
+                    bottomStart = animateBottomCornerSizeForPosition(position),
+                    bottomEnd = animateBottomCornerSizeForPosition(position)
+                )
+            )
+            .semantics(mergeDescendants = false) {
+                isTraversalGroup = true
+            }
     ) {
         content()
     }
@@ -949,7 +981,7 @@ interface ExpressiveGroupScope {
 }
 
 
-private class PreferencesGroupScopeImpl : ExpressiveGroupScope {
+class ExpressiveGroupScopeImpl : ExpressiveGroupScope {
     val items = mutableListOf<@Composable () -> Unit>()
 
     override fun item(content: @Composable () -> Unit) {
@@ -963,7 +995,7 @@ fun ExpressiveGroup(
     title: String? = null,
     content: ExpressiveGroupScope.() -> Unit
 ) {
-    val scope = PreferencesGroupScopeImpl()
+    val scope = ExpressiveGroupScopeImpl()
     scope.content()
 
     title?.let {
@@ -991,15 +1023,16 @@ fun ExpressiveGroup(
 
 @Composable
 fun BasicExpressiveGroup(
+    modifier: Modifier = Modifier,
     title: String? = null,
     content: ExpressiveGroupScope.() -> Unit
 ) {
-    val scope = PreferencesGroupScopeImpl()
+    val scope = ExpressiveGroupScopeImpl()
     scope.content()
 
     title?.let {
         BaseHeading(
-            modifier = Modifier.padding(
+            modifier = modifier.padding(
                 start = SMALL_SPACER.dp,
                 end = SMALL_SPACER.dp,
                 bottom = SMALL_SPACER.dp
@@ -1007,7 +1040,10 @@ fun BasicExpressiveGroup(
             text = title
         )
     }
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
         scope.items.forEachIndexed { index, itemContent ->
             BasicExpressiveContainer(
                 position = when {
@@ -1016,6 +1052,61 @@ fun BasicExpressiveGroup(
                     index == scope.items.lastIndex -> ListItemPosition.BOTTOM
                     else -> ListItemPosition.MIDDLE
                 }
+            ) {
+                itemContent()
+            }
+        }
+    }
+}
+
+
+
+/** A reimplementation of [ExpressiveGroup] suitable for use in a [LazyColumn].
+ *
+ * This assumes the verticalArrangement in the [LazyColumn] is `Arrangement.spacedBy(0.dp)`.
+ *
+ * This does not add horizontal padding except for the title.
+ * You should handle the group's padding in the [LazyColumn]'s `contentPadding`.
+ *
+ * If you don't want to add space above this group, set [desiredTopPadding] to `null`.
+ * Otherwise, set it to the total spacing wanted between groups (usually [LARGE_SPACER] dp). */
+fun LazyListScope.LazyExpressiveGroup(
+    desiredTopPadding: Dp? = LARGE_SPACER.dp,
+    title: String? = null,
+    content: ExpressiveGroupScope.() -> Unit
+) {
+    val scope = ExpressiveGroupScopeImpl()
+    scope.content()
+
+    if (desiredTopPadding != null) {
+        item {
+            Spacer(Modifier.height(desiredTopPadding))
+        }
+    }
+
+    title?.let {
+        item {
+            BaseHeading(
+                modifier = Modifier.padding(
+                    start = SMALL_SPACER.dp,
+                    end = SMALL_SPACER.dp,
+                    bottom = SMALL_SPACER.dp
+                ),
+                text = title
+            )
+        }
+    }
+
+    scope.items.forEachIndexed { index, itemContent ->
+        // The small spacing between the containers
+        if (index != 0) {
+            item {
+                Spacer(Modifier.height(2.dp))
+            }
+        }
+        item {
+            BasicExpressiveContainer(
+                position = remember { ListItemPosition.fromIndex(scope.items, index) }
             ) {
                 itemContent()
             }

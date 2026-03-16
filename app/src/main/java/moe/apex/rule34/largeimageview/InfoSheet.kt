@@ -1,33 +1,55 @@
 package moe.apex.rule34.largeimageview
 
 
+import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ContextualFlowRow
+import androidx.compose.foundation.layout.ContextualFlowRowOverflow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.BasicAlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FloatingToolbarDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -35,12 +57,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
@@ -56,29 +81,40 @@ import moe.apex.rule34.prefs
 import moe.apex.rule34.tag.TagCategory
 import moe.apex.rule34.ui.theme.prefTitle
 import moe.apex.rule34.util.BasicExpressiveContainer
-import moe.apex.rule34.util.BasicExpressiveGroup
 import moe.apex.rule34.util.ButtonListItem
 import moe.apex.rule34.util.CHIP_SPACING
 import moe.apex.rule34.util.ChevronRight
 import moe.apex.rule34.util.CombinedClickableFilterChip
+import moe.apex.rule34.util.ExpressiveGroupScope
+import moe.apex.rule34.util.HorizontalFloatingToolbarOptionalFab
 import moe.apex.rule34.util.LARGE_SPACER
 import moe.apex.rule34.util.ListItemPosition
 import moe.apex.rule34.util.MEDIUM_LARGE_SPACER
 import moe.apex.rule34.util.MEDIUM_SPACER
+import moe.apex.rule34.util.LazyExpressiveGroup
 import moe.apex.rule34.util.SMALL_LARGE_SPACER
+import moe.apex.rule34.util.TINY_SPACER
 import moe.apex.rule34.util.TitleSummary
 import moe.apex.rule34.util.TitledModalBottomSheet
+import moe.apex.rule34.util.bouncyAnimationSpec
 import moe.apex.rule34.util.copyText
 import moe.apex.rule34.util.isWebLink
-import moe.apex.rule34.util.largerShape
+import moe.apex.rule34.util.largerShapeCornerSize
 import moe.apex.rule34.util.launchInWebBrowser
 import moe.apex.rule34.util.navBarHeight
-import moe.apex.rule34.util.openUrl
 import moe.apex.rule34.util.pluralise
 import moe.apex.rule34.util.showToast
 
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+private enum class InfoSheetPage {
+    SOURCES,
+    IMAGEBOARD
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class,
+    ExperimentalMaterial3ExpressiveApi::class
+)
 @Composable
 fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -> Unit) {
     /* I don't really like this whole info/options implementation.
@@ -94,9 +130,9 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
     val preferencesRepository = context.prefs
     val scope = rememberCoroutineScope()
 
-    // We want to open partially expanded by default, but when collapsing (swipe down or back)
-    // the sheet should animate straight to Hidden.
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    val unified = prefs.unifiedInfoSheet
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = !unified)
+    var sheetPage by remember { mutableStateOf(InfoSheetPage.SOURCES) }
 
     fun hideAndThen(block: () -> Unit = { }) {
         scope.launch {
@@ -107,9 +143,13 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
         }
     }
 
-    LaunchedEffect(sheetState.targetValue) {
-        if (sheetState.currentValue == SheetValue.Expanded && sheetState.targetValue == SheetValue.PartiallyExpanded) {
-            hideAndThen()
+    /* The unified sheet should always open in half-expanded state,
+       but should never go back to the half-expanded state when closing.  */
+    if (unified) {
+        LaunchedEffect(sheetState.targetValue) {
+            if (sheetState.currentValue == SheetValue.Expanded && sheetState.targetValue == SheetValue.PartiallyExpanded) {
+                hideAndThen()
+            }
         }
     }
 
@@ -127,6 +167,8 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
             }
         }
     }
+
+    val onCopyClick: (String) -> Unit = { scope.launch { copyText(context, clip, it) }}
 
     TitledModalBottomSheet(
         onDismissRequest = onDismissRequest,
@@ -149,7 +191,7 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                         start = LARGE_SPACER.dp,
                         end = LARGE_SPACER.dp,
                         top = LARGE_SPACER.dp,
-                        bottom = LARGE_SPACER.dp + MEDIUM_SPACER.dp // The chip has 8dp padding so we should really match them but I think looks more balanced.
+                        bottom = LARGE_SPACER.dp + MEDIUM_SPACER.dp // The chip has 8dp padding so we should really match them but I think this looks more balanced.
                     ),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(SMALL_LARGE_SPACER.dp)
@@ -211,181 +253,446 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
             }
         }
 
-        LazyColumn(
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
                 .padding(horizontal = MEDIUM_SPACER.dp)
-                .clip(largerShape),
-            verticalArrangement = Arrangement.spacedBy(LARGE_SPACER.dp),
-            contentPadding = PaddingValues(bottom = navBarHeight * 2)
+                .clip(RoundedCornerShape(topStart = largerShapeCornerSize, topEnd = largerShapeCornerSize))
         ) {
-            item {
-                Row {
-                    BasicExpressiveContainer(
-                        modifier = Modifier.weight(1f),
-                        position = ListItemPosition.SINGLE_ELEMENT
-                    ) {
-                        TitleSummary(
-                            title = image.metadata.rating.label,
-                            summary = "Rating"
+            // https://www.crunchyroll.com/series/GP5HJ8E81/
+            val onLinkClick = { url: String ->
+                launchInWebBrowser(context, url)
+            }
+            val onTagLongClick = { tag: String -> selectedTag = tag }
+            val onViewParentClick = { id: String ->
+                hideAndThen {
+                    navController.navigate(ImageView(image.imageSource, id))
+                }
+            }
+
+            if (unified) {
+                UnifiedInfoContent(
+                    image = image,
+                    onLinkClick = onLinkClick,
+                    onCopyClick = onCopyClick,
+                    onViewParentClick = onViewParentClick,
+                    onViewRelatedClick = { startTagSearch("parent:$it") },
+                    onTagClick = ::startTagSearch,
+                    onTagLongClick = onTagLongClick
+                )
+            } else {
+                AnimatedContent(
+                    targetState = sheetPage,
+                    contentAlignment = Alignment.Center,
+                    transitionSpec = { fadeIn() togetherWith fadeOut() },
+                ) { page ->
+                    when (page) {
+                        InfoSheetPage.SOURCES -> InfoTabContent(
+                            image = image,
+                            onLinkClick = onLinkClick,
+                            onCopyClick = onCopyClick,
+                            onViewParentClick = onViewParentClick,
+                            onViewRelatedClick = { startTagSearch("parent:$it") },
+                            onTagClick = ::startTagSearch,
+                            onTagLongClick = onTagLongClick
+                        )
+
+                        InfoSheetPage.IMAGEBOARD -> ImageboardDataTabContent(
+                            image = image,
+                            onLinkClick = onLinkClick,
+                            onCopyClick = onCopyClick,
+                            onTagClick = ::startTagSearch,
+                            onTagLongClick = onTagLongClick
                         )
                     }
-                    Spacer(Modifier.width(MEDIUM_LARGE_SPACER.dp))
-                    BasicExpressiveContainer(
-                        modifier = Modifier.weight(1f),
-                        position = ListItemPosition.SINGLE_ELEMENT
-                    ) {
-                        TitleSummary(
-                            title = image.imageSource.label,
-                            summary = "Imageboard"
+                }
+
+                SharedTransitionLayout(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .windowInsetsPadding(WindowInsets.navigationBars)
+                        .padding(bottom = SMALL_LARGE_SPACER.dp)
+                ) {
+                    val sharedElementModifier = @Composable { visible: Boolean ->
+                        Modifier.sharedElementWithCallerManagedVisibility(
+                            sharedContentState = rememberSharedContentState("toolbar"),
+                            visible = visible,
+                            boundsTransform = { _, _ -> bouncyAnimationSpec() }
+                        )
+                    }
+
+                    HorizontalFloatingToolbarOptionalFab {
+                        BottomToolbarButton(
+                            activeIndicatorModifier = sharedElementModifier(sheetPage == InfoSheetPage.SOURCES),
+                            textButtonModifier = Modifier.renderInSharedTransitionScopeOverlay(),
+                            label = "Sources",
+                            isActive = sheetPage == InfoSheetPage.SOURCES,
+                            onClick = {
+                                sheetPage = InfoSheetPage.SOURCES
+                            }
+                        )
+
+                        BottomToolbarButton(
+                            activeIndicatorModifier = sharedElementModifier(sheetPage == InfoSheetPage.IMAGEBOARD),
+                            textButtonModifier = Modifier.renderInSharedTransitionScopeOverlay(),
+                            label = "Imageboard",
+                            isActive = sheetPage == InfoSheetPage.IMAGEBOARD,
+                            onClick = {
+                                sheetPage = InfoSheetPage.IMAGEBOARD
+                            }
                         )
                     }
                 }
             }
+        }
+    }
+}
+
+
+@Composable
+private fun BottomToolbarButton(
+    @SuppressLint("ModifierParameter") activeIndicatorModifier: Modifier = Modifier,
+    textButtonModifier: Modifier = Modifier,
+    label: String,
+    isActive: Boolean,
+    onClick: () -> Unit
+) {
+    val contentColor by animateColorAsState(
+        targetValue = if (isActive) {
+            MaterialTheme.colorScheme.onPrimary
+        } else {
+            MaterialTheme.colorScheme.onSurface
+        }
+    )
+    Box {
+        Box(
+            modifier = activeIndicatorModifier
+                .matchParentSize()
+                .background(color = MaterialTheme.colorScheme.primary, shape = CircleShape)
+        )
+        TextButton(
+            modifier = textButtonModifier
+                .heightIn(min = LocalMinimumInteractiveComponentSize.current)
+                .semantics { this.selected = isActive }, // We're using this button basically as a tab, so we should provide a way to indicate to talkback that it's selected.
+            onClick = onClick,
+            colors = ButtonDefaults.textButtonColors(
+                contentColor = contentColor
+            )
+        ) {
+            Text(label, modifier = Modifier.padding(horizontal = MEDIUM_SPACER.dp))
+        }
+    }
+}
+
+
+@Composable
+private fun InfoTabContent(
+    image: Image,
+    onLinkClick: (String) -> Unit,
+    onCopyClick: (String) -> Unit,
+    onViewParentClick: (String) -> Unit,
+    onViewRelatedClick: (String) -> Unit,
+    onTagClick: (String) -> Unit,
+    onTagLongClick: (String) -> Unit,
+) {
+    SplitInfoSheetLazyColumn {
+        infoContentItems(
+            image = image,
+            onLinkClick = onLinkClick,
+            onCopyClick = onCopyClick,
+            onViewParentClick = onViewParentClick,
+            onViewRelatedClick = onViewRelatedClick,
+            onTagClick = onTagClick,
+            onTagLongClick = onTagLongClick
+        )
+    }
+}
+
+
+@Composable
+private fun ImageboardDataTabContent(
+    image: Image,
+    onLinkClick: (String) -> Unit,
+    onCopyClick: (String) -> Unit,
+    onTagClick: (String) -> Unit,
+    onTagLongClick: (String) -> Unit
+) {
+    SplitInfoSheetLazyColumn {
+        imageboardDataContentItems(
+            image = image,
+            onLinkClick = onLinkClick,
+            onCopyClick = onCopyClick,
+            onTagClick = onTagClick,
+            onTagLongClick = onTagLongClick
+        )
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun UnifiedInfoContent(
+    image: Image,
+    onLinkClick: (String) -> Unit,
+    onCopyClick: (String) -> Unit,
+    onViewParentClick: (String) -> Unit,
+    onViewRelatedClick: (String) -> Unit,
+    onTagClick: (String) -> Unit,
+    onTagLongClick: (String) -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(
+            bottom = navBarHeight + MEDIUM_SPACER.dp,
+        )
+    ) {
+        infoContentItems(
+            image = image,
+            onLinkClick = onLinkClick,
+            onCopyClick = onCopyClick,
+            onViewParentClick = onViewParentClick,
+            onViewRelatedClick = onViewRelatedClick,
+            onTagClick = onTagClick,
+            onTagLongClick = onTagLongClick,
+            unified = true
+        )
+        imageboardDataContentItems(
+            image = image,
+            onLinkClick = onLinkClick,
+            onCopyClick = onCopyClick,
+            onTagClick = onTagClick,
+            onTagLongClick = onTagLongClick,
+            unified = true
+        )
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun SplitInfoSheetLazyColumn(content: LazyListScope.() -> Unit) {
+    LazyColumn(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(
+            bottom = navBarHeight + FloatingToolbarDefaults.ContainerSize + 32.dp, // Height of the toolbar + 16dp vertical padding
+        )
+    ) {
+        content()
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+private fun LazyListScope.infoContentItems(
+    image: Image,
+    onLinkClick: (String) -> Unit,
+    onCopyClick: (String) -> Unit,
+    onViewParentClick: (String) -> Unit,
+    onViewRelatedClick: (String) -> Unit,
+    onTagClick: (String) -> Unit,
+    onTagLongClick: (String) -> Unit,
+    unified: Boolean = false
+) {
+    item {
+        Row {
+            BasicExpressiveContainer(
+                modifier = Modifier.weight(1f),
+                position = ListItemPosition.SINGLE_ELEMENT
+            ) {
+                TitleSummary(
+                    title = image.metadata!!.rating.label,
+                    summary = "Rating"
+                )
+            }
+            Spacer(Modifier.width(MEDIUM_LARGE_SPACER.dp))
+            BasicExpressiveContainer(
+                modifier = Modifier.weight(1f),
+                position = ListItemPosition.SINGLE_ELEMENT
+            ) {
+                TitleSummary(
+                    title = image.imageSource.label,
+                    summary = "Imageboard"
+                )
+            }
+        }
+    }
+
+    LazyExpressiveGroup {
+        image.metadata!!.source?.let {
+            val title = "Source"
             item {
-                BasicExpressiveGroup {
-                    image.metadata.source?.let {
-                        val title = "Source"
-                        item {
-                            TitleSummary(
-                                title = title,
-                                summary = it,
-                                onClick = if (it.isWebLink()) {
-                                    {
-                                        openUrl(context, it)
-                                    }
-                                } else null,
-                                trailingIcon = if (it.isWebLink()) {
-                                    {
-                                        CopyIcon(title) {
-                                            scope.launch { copyText(context, clip, it) }
-                                        }
-                                    }
-                                } else null
-                            )
+                TitleSummary(
+                    title = title,
+                    summary = it,
+                    onClick = if (it.isWebLink()) {
+                        {
+                            onLinkClick(it)
                         }
-                    }
-                    image.metadata.pixivUrl?.let {
-                        val title = "Pixiv URL"
-                        item {
-                            TitleSummary(
-                                title = title,
-                                summary = it,
-                                onClick = if (it.isWebLink()) {
-                                    {
-                                        openUrl(context, it)
-                                    }
-                                } else null,
-                                trailingIcon = if (it.isWebLink()) {
-                                    {
-                                        CopyIcon(title) {
-                                            scope.launch { copyText(context, clip, it) }
-                                        }
-                                    }
-                                } else null
-                            )
-                        }
-                    }
-                    image.highestQualityFormatUrl.let {
-                        val title = "File URL"
-                        item {
-                            TitleSummary(
-                                title = title,
-                                summary = it,
-                                onClick = {
-                                    launchInWebBrowser(
-                                        context,
-                                        it
-                                    )
-                                }, // Breadboard can handle yande.re direct image links. We'll forcibly use the browser here to prevent that here.
-                                trailingIcon = {
-                                    CopyIcon(title) {
-                                        scope.launch { copyText(context, clip, it) }
-                                    }
-                                }
-                            )
-                        }
-                    }
-                    image.metadata.parentId?.let {
-                        item {
-                            TitleSummary(
-                                title = "View parent image",
-                                onClick = {
-                                    hideAndThen {
-                                        navController.navigate(
-                                            ImageView(
-                                                image.imageSource,
-                                                it
-                                            )
-                                        )
-                                    }
-                                },
-                                trailingIcon = {
-                                    ChevronRight()
-                                }
-                            )
-                        }
-                    }
-                    if (image.metadata.hasChildren == true) {
-                        image.id?.let {
-                            item {
-                                TitleSummary(
-                                    title = "View related images",
-                                    onClick = {
-                                        hideAndThen {
-                                            if (context is DeepLinkActivity) {
-                                                val intent = createSearchIntent(
-                                                    context,
-                                                    image.imageSource,
-                                                    "parent:$it"
-                                                )
-                                                context.startActivity(intent)
-                                            } else {
-                                                navController.navigate(
-                                                    Results(
-                                                        image.imageSource,
-                                                        listOf("parent:$it")
-                                                    )
-                                                )
-                                            }
-                                        }
-                                    },
-                                    trailingIcon = {
-                                        ChevronRight()
-                                    }
-                                )
+                    } else null,
+                    trailingIcon = if (it.isWebLink()) {
+                        {
+                            CopyIcon(title) {
+                                onCopyClick(it)
                             }
                         }
+                    } else null
+                )
+            }
+        }
+
+        image.metadata.pixivUrl?.let {
+            if (!it.isWebLink()) return@let
+
+            val title = "Pixiv URL"
+            item {
+                TitleSummary(
+                    title = "Pixiv URL",
+                    summary = it,
+                    onClick = { onLinkClick(it) },
+                    trailingIcon = {
+                        CopyIcon(title) {
+                            onCopyClick(it)
+                        }
                     }
-                }
+                )
             }
-            image.metadata.artists.takeIf { it.isNotEmpty() }?.let {
+        }
+
+        /* In unified mode, display file URL with the other URLs.
+           In split mode, it's displayed on the other tab.  */
+        if (unified) {
+            image.highestQualityFormatUrl.let {
                 item {
-                    TagsContainer(
-                        category = TagCategory.ARTIST,
-                        tags = it,
-                        onChipClick = { startTagSearch(it) },
-                        onChipLongClick = {
-                            selectedTag = it
+                    val title = "File URL"
+                    TitleSummary(
+                        title = title,
+                        summary = it,
+                        onClick = { onLinkClick(it) },
+                        trailingIcon = {
+                            CopyIcon(title) {
+                                onCopyClick(it)
+                            }
                         }
                     )
                 }
             }
-            /* Artists are stored in their own field rather than in groupedTags.
-               If the artist tags are somehow also in groupedTags,
-               we don't want to show them again. */
-            image.metadata.groupedTags.filter { it.category != TagCategory.ARTIST }.map {
+        }
+
+        image.metadata.parentId?.let {
+            item {
+                TitleSummary(
+                    title = "View parent image",
+                    onClick = { onViewParentClick(it) },
+                    trailingIcon = {
+                        ChevronRight()
+                    }
+                )
+            }
+        }
+
+        if (image.metadata.hasChildren == true) {
+            image.id?.let {
                 item {
-                    TagsContainer(
-                        category = it.category,
-                        tags = it.tags,
-                        onChipClick = { startTagSearch(it) },
-                        onChipLongClick = {
-                            selectedTag = it
+                    TitleSummary(
+                        title = "View related images",
+                        onClick = { onViewRelatedClick(it) },
+                        trailingIcon = {
+                            ChevronRight()
                         }
                     )
                 }
             }
+        }
+    }
+
+    // In unified mode, these are displayed on the first page instead of this one.
+    if (!unified) {
+        LazyExpressiveGroup {
+            mainTagsItems(image, onTagClick, onTagLongClick)
+        }
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+private fun LazyListScope.imageboardDataContentItems(
+    image: Image,
+    onLinkClick: (String) -> Unit,
+    onCopyClick: (String) -> Unit,
+    onTagClick: (String) -> Unit,
+    onTagLongClick: (String) -> Unit,
+    unified: Boolean = false
+) {
+    if (!unified) {
+        LazyExpressiveGroup(desiredTopPadding = null) {
+            image.highestQualityFormatUrl.let {
+                item {
+                    val title = "File URL"
+                    TitleSummary(
+                        title = title,
+                        summary = it,
+                        onClick = { onLinkClick(it) },
+                        trailingIcon = {
+                            CopyIcon(title) {
+                                onCopyClick(it)
+                            }
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    LazyExpressiveGroup {
+        if (unified) {
+            mainTagsItems(image, onTagClick, onTagLongClick)
+        }
+
+        image.metadata!!.groupedTags.filter {
+            it.category !in setOf(
+                TagCategory.ARTIST,
+                TagCategory.CHARACTER,
+                TagCategory.COPYRIGHT
+            )
+        }.forEach { group ->
+            item {
+                TagsContainer(
+                    category = group.category,
+                    tags = group.tags,
+                    onChipClick = onTagClick,
+                    onChipLongClick = onTagLongClick
+                )
+            }
+        }
+    }
+}
+
+
+private fun ExpressiveGroupScope.mainTagsItems(
+    image: Image,
+    onTagClick: (String) -> Unit,
+    onTagLongClick: (String) -> Unit
+) {
+    image.metadata!!.artists.takeIf { it.isNotEmpty() }?.let {
+        item {
+            TagsContainer(
+                category = TagCategory.ARTIST,
+                tags = it,
+                onChipClick = onTagClick,
+                onChipLongClick = onTagLongClick
+            )
+        }
+    }
+
+    image.metadata.groupedTags.filter {
+        it.category in setOf(TagCategory.CHARACTER, TagCategory.COPYRIGHT)
+    }.forEach { group ->
+        item {
+            TagsContainer(
+                category = group.category,
+                tags = group.tags,
+                onChipClick = onTagClick,
+                onChipLongClick = onTagLongClick
+            )
         }
     }
 }
@@ -412,40 +719,79 @@ private fun TagsContainer(
     onChipClick: (String) -> Unit,
     onChipLongClick: (String) -> Unit
 ) {
+    val maxLines = 10
     val prefs = LocalPreferences.current
-    BasicExpressiveContainer(position = ListItemPosition.SINGLE_ELEMENT) {
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .padding(
-                    top = SMALL_LARGE_SPACER.dp,
-                    bottom = (SMALL_LARGE_SPACER - 8).dp, // Chips have 8dp vertical padding already
-                    start = SMALL_LARGE_SPACER.dp,
-                    end = SMALL_LARGE_SPACER.dp
-                )
-        ) {
-            Text(
-                text = category.label.pluralise(
-                    tags.size,
-                    category.pluralisedLabel
-                ),
-                style = MaterialTheme.typography.prefTitle,
+    var showAll by rememberSaveable { mutableStateOf(false) }
+
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(
+                top = SMALL_LARGE_SPACER.dp,
+                bottom = (SMALL_LARGE_SPACER - 8).dp, // Chips have 8dp vertical padding already
+                start = SMALL_LARGE_SPACER.dp,
+                end = SMALL_LARGE_SPACER.dp
             )
-            ContextualFlowRow(
-                itemCount = tags.size,
-                horizontalArrangement = Arrangement.spacedBy(
-                    space = CHIP_SPACING.dp,
-                    alignment = Alignment.Start
-                )
-            ) { index ->
-                val tag = tags[index]
-                CombinedClickableFilterChip(
-                    label = { Text(tag) },
-                    warning = tag in prefs.blockedTags,
-                    onClick = { onChipClick(tag) },
-                    onLongClick = { onChipLongClick(tag) }
-                )
-            }
+    ) {
+        Text(
+            text = category.label.pluralise(
+                tags.size,
+                category.pluralisedLabel
+            ),
+            style = MaterialTheme.typography.prefTitle,
+        )
+        ContextualFlowRow(
+            itemCount = tags.size,
+            horizontalArrangement = Arrangement.spacedBy(
+                space = CHIP_SPACING.dp,
+                alignment = Alignment.Start
+            ),
+            modifier = Modifier.animateContentSize(),
+            maxLines = if (!showAll) maxLines else Int.MAX_VALUE,
+            overflow = ContextualFlowRowOverflow.expandOrCollapseIndicator(
+                expandIndicator = {
+                    ExpandCollapseRow(
+                        label = "Show all (${tags.size})",
+                        onClick = { showAll = true }
+                    )
+                },
+                collapseIndicator = {
+                    ExpandCollapseRow(
+                        label = "Show less",
+                        onClick = { showAll = false }
+                    )
+                },
+                minRowsToShowCollapse = maxLines + 1
+            )
+        ) { index ->
+            val tag = tags[index]
+            CombinedClickableFilterChip(
+                label = { Text(text = tag, maxLines = 1) },
+                warning = tag in prefs.blockedTags,
+                onClick = { onChipClick(tag) },
+                onLongClick = { onChipLongClick(tag) }
+            )
+        }
+    }
+}
+
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ExpandCollapseRow(
+    label: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = TINY_SPACER.dp),
+        horizontalArrangement = Arrangement.Center
+    ) {
+        TextButton(
+            onClick = onClick
+        ) {
+            Text(label)
         }
     }
 }
@@ -461,11 +807,9 @@ private fun createSearchIntent(context: Context, imageSource: ImageSource, queri
     intent.putExtra("source", imageSource.name)
     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
     intent.putExtra("query", queries.toTypedArray())
-    intent.setComponent(
-        ComponentName(
-            context,
-            MainActivity::class.java
-        )
+    intent.component = ComponentName(
+        context,
+        MainActivity::class.java
     )
     return intent
 }
