@@ -4,12 +4,12 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -17,14 +17,19 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material3.ButtonGroup
+import androidx.compose.material3.ButtonGroupScope
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -42,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.Dispatchers
@@ -76,7 +82,7 @@ private const val INFO_SECTION = -2
 private const val PAGER_BUTTON_SIZE_DP = 64
 
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: BreadboardViewModel) {
     val context = LocalContext.current
@@ -239,49 +245,65 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
             item {
                 ExpressiveGroup("Frequent tags") {
                     item {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(
-                                    horizontal = SMALL_LARGE_SPACER.dp,
-                                    vertical = SMALL_SPACER.dp
-                                ),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                        ButtonGroup(
+                            modifier = Modifier.padding(
+                                horizontal = SMALL_LARGE_SPACER.dp,
+                                vertical = SMALL_SPACER.dp
+                            ),
+                            overflowIndicator = { },
+                            expandedRatio = 0.2f, // Default is 15% but I like this more
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            FilledIconButton(
-                                onClick = {
-                                    scope.launch {
-                                        pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                            customItem(
+                                buttonGroupContent = {
+                                    PageChangeButton(
+                                        onClick = {
+                                            scope.launch {
+                                                pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                                            }
+                                        },
+                                        enabled = pagerState.currentPage > 0,
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                                            contentDescription = "Previous page"
+                                        )
                                     }
                                 },
-                                enabled = pagerState.currentPage > 0,
-                                modifier = Modifier.width(PAGER_BUTTON_SIZE_DP.dp),
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                                    contentDescription = "Previous page"
-                                )
-                            }
-                            Text(
-                                text = topTags.keys.elementAt(pagerState.currentPage).label,
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.primary
+                                menuContent = { }
                             )
-                            FilledIconButton(
-                                onClick = {
-                                    scope.launch {
-                                        pagerState.animateScrollToPage(pagerState.currentPage + 1)
+
+                            customItem(
+                                buttonGroupContent = {
+                                    Text(
+                                        text = topTags.keys.elementAt(pagerState.currentPage).label,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                },
+                                menuContent = { }
+                            )
+
+                            customItem(
+                                buttonGroupContent = {
+                                    PageChangeButton(
+                                        onClick = {
+                                            scope.launch {
+                                                pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                                            }
+                                        },
+                                        enabled = pagerState.currentPage != pagerState.pageCount - 1
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+                                            contentDescription = "Next page"
+                                        )
                                     }
                                 },
-                                enabled = pagerState.currentPage != pagerState.pageCount - 1,
-                                modifier = Modifier.width(PAGER_BUTTON_SIZE_DP.dp),
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
-                                    contentDescription = "Next page"
-                                )
-                            }
+                                menuContent = { }
+                            )
                         }
                     }
 
@@ -295,7 +317,12 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
                             val tags = topTags[ImageSource.entries[page]] ?: throw IllegalStateException("Recommendations settings pager out of bounds.")
 
                             if (tags.isEmpty()) {
-                                TitleSummary(title = "No frequent tags" )
+                                Summary(
+                                    modifier = Modifier.padding(SMALL_LARGE_SPACER.dp),
+                                    text = "No frequent tags. Add some art from " +
+                                           "${ImageSource.entries[page].label} to your " +
+                                           "favourites to get personalised recommendations."
+                                )
                                 return@HorizontalPager
                             }
 
@@ -462,4 +489,29 @@ fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: B
             }
         }
     }
+}
+
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun ButtonGroupScope.PageChangeButton(
+    onClick: () -> Unit,
+    enabled: Boolean,
+    content: @Composable () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+
+    FilledIconButton(
+        onClick = onClick,
+        shapes = IconButtonShapes(
+            shape = CircleShape,
+            pressedShape = MaterialTheme.shapes.medium
+        ),
+        modifier = Modifier
+            .width(PAGER_BUTTON_SIZE_DP.dp)
+            .animateWidth(interactionSource),
+        enabled = enabled,
+        interactionSource = interactionSource,
+        content = content
+    )
 }

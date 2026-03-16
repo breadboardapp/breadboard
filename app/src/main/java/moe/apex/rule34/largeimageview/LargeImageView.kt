@@ -16,7 +16,6 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseIn
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -54,7 +53,6 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeOff
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
@@ -68,6 +66,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.IconToggleButtonShapes
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialShapes.Companion.Circle
@@ -953,7 +952,11 @@ fun LargeVideo(image: Image, isCurrentPage: Boolean) {
                                         exit = slideOutHorizontally { it * 2 }
                                     ),
                                     checked = !muted,
-                                    shape = RoundedCornerShape(animateIntAsState(if (!muted) 25 else 50).value),
+                                    shapes = IconToggleButtonShapes(
+                                        shape = CircleShape,
+                                        pressedShape = MaterialTheme.shapes.medium,
+                                        checkedShape = MaterialTheme.shapes.medium
+                                    ),
                                     onCheckedChange = {
                                         updateControlsLastTriggeredTime()
                                         muted = !it
