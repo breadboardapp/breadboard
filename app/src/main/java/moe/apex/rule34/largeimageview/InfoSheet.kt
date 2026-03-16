@@ -658,8 +658,8 @@ private fun LazyListScope.imageboardDataContentItems(
                 TagsContainer(
                     category = group.category,
                     tags = group.tags,
-                    onChipClick = onTagClick,
-                    onChipLongClick = onTagLongClick
+                    onTagClick = onTagClick,
+                    onTagLongClick = onTagLongClick
                 )
             }
         }
@@ -677,8 +677,8 @@ private fun ExpressiveGroupScope.mainTagsItems(
             TagsContainer(
                 category = TagCategory.ARTIST,
                 tags = it,
-                onChipClick = onTagClick,
-                onChipLongClick = onTagLongClick
+                onTagClick = onTagClick,
+                onTagLongClick = onTagLongClick
             )
         }
     }
@@ -690,8 +690,8 @@ private fun ExpressiveGroupScope.mainTagsItems(
             TagsContainer(
                 category = group.category,
                 tags = group.tags,
-                onChipClick = onTagClick,
-                onChipLongClick = onTagLongClick
+                onTagClick = onTagClick,
+                onTagLongClick = onTagLongClick
             )
         }
     }
@@ -716,8 +716,8 @@ private fun CopyIcon(itemType: String, onClick: () -> Unit) {
 private fun TagsContainer(
     category: TagCategory,
     tags: List<String>,
-    onChipClick: (String) -> Unit,
-    onChipLongClick: (String) -> Unit
+    onTagClick: (String) -> Unit,
+    onTagLongClick: (String) -> Unit
 ) {
     val maxLines = 10
     val prefs = LocalPreferences.current
@@ -768,8 +768,8 @@ private fun TagsContainer(
             CombinedClickableFilterChip(
                 label = { Text(text = tag, maxLines = 1) },
                 warning = tag in prefs.blockedTags,
-                onClick = { onChipClick(tag) },
-                onLongClick = { onChipLongClick(tag) }
+                onClick = { onTagClick(tag) },
+                onLongClick = { onTagLongClick(tag) }
             )
         }
     }
