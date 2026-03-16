@@ -960,9 +960,34 @@ fun BasicExpressiveContainer(
     position: ListItemPosition,
     content: @Composable () -> Unit
 ) {
-    /* Ideally this would be a Surface, but for some reason when the content inside is really long,
-       it might just completely stop recognising all touch interactions after a certain point.
-       I don't know why. We'll just work around it like this. */
+    Surface(
+        modifier = modifier,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = RoundedCornerShape(
+            topStart = animateTopCornerSizeForPosition(position),
+            topEnd = animateTopCornerSizeForPosition(position),
+            bottomStart = animateBottomCornerSizeForPosition(position),
+            bottomEnd = animateBottomCornerSizeForPosition(position)
+        )
+    ) {
+        content()
+    }
+}
+
+
+/** Okay so this shouldn't need to exist.
+ *  Ideally we would just use the normal [BasicExpressiveContainer],
+ *  but for some reason when the content inside is really long (like hundreds of tags),
+ *  it might just completely stop recognising all touch interactions after a certain point.
+ *  It seems like something to do with the clipping to shape but I don't know exactly what.
+ *
+ *  This exists as a workaround for that. Ripple clipping will be broken. */
+@Composable
+private fun BoxBasedBasicExpressiveContainer(
+    modifier: Modifier = Modifier,
+    position: ListItemPosition,
+    content: @Composable () -> Unit
+) {
     Box(
         modifier = modifier
             .background(
@@ -1076,10 +1101,16 @@ fun BasicExpressiveGroup(
  * You should handle the group's padding in the [LazyColumn]'s `contentPadding`.
  *
  * If you don't want to add space above this group, set [desiredTopPadding] to `null`.
- * Otherwise, set it to the total spacing wanted between groups (usually [LARGE_SPACER] dp). */
+ * Otherwise, set it to the total spacing wanted between groups (usually [LARGE_SPACER] dp).
+ *
+ * For some reason, the inner container may stop responding to taps after a certain point if the
+ * content inside is really long. It's something to do with clipping the shape but I don't know
+ * exactly what or why. Set [useBox] to `true` if this is likely to happen.
+ * Note this will prevent tap ripples from conforming to the shape of the container. */
 fun LazyListScope.LazyExpressiveGroup(
     desiredTopPadding: Dp? = LARGE_SPACER.dp,
     title: String? = null,
+    useBox: Boolean = false,
     content: ExpressiveGroupScope.() -> Unit
 ) {
     val scope = ExpressiveGroupScopeImpl()
@@ -1112,10 +1143,16 @@ fun LazyListScope.LazyExpressiveGroup(
             }
         }
         item {
-            BasicExpressiveContainer(
-                position = remember { ListItemPosition.fromIndex(scope.items, index) }
-            ) {
-                itemContent()
+            val position = remember { ListItemPosition.fromIndex(scope.items, index) }
+
+            if (useBox) {
+                BoxBasedBasicExpressiveContainer(position = position) {
+                    itemContent()
+                }
+            } else {
+                BasicExpressiveContainer(position = position) {
+                    itemContent()
+                }
             }
         }
     }

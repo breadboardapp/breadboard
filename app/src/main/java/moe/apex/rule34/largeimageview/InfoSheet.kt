@@ -603,7 +603,7 @@ private fun LazyListScope.infoContentItems(
 
     // In unified mode, these are displayed on the first page instead of this one.
     if (!unified) {
-        LazyExpressiveGroup {
+        LazyExpressiveGroup(useBox = true) {
             mainTagsItems(image, onTagClick, onTagLongClick)
         }
     }
@@ -639,7 +639,7 @@ private fun LazyListScope.imageboardDataContentItems(
         }
     }
 
-    LazyExpressiveGroup {
+    LazyExpressiveGroup(useBox = true) {
         if (unified) {
             mainTagsItems(image, onTagClick, onTagLongClick)
         }
