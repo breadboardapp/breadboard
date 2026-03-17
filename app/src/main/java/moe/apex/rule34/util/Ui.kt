@@ -1116,6 +1116,8 @@ fun LazyListScope.LazyExpressiveGroup(
     val scope = ExpressiveGroupScopeImpl()
     scope.content()
 
+    if (scope.items.isEmpty()) return
+
     if (desiredTopPadding != null) {
         item {
             Spacer(Modifier.height(desiredTopPadding))

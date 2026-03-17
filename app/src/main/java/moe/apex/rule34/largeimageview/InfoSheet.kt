@@ -515,62 +515,35 @@ private fun LazyListScope.infoContentItems(
 
     LazyExpressiveGroup {
         image.metadata!!.source?.let {
-            val title = "Source"
-            item {
-                TitleSummary(
-                    title = title,
-                    summary = it,
-                    onClick = if (it.isWebLink()) {
-                        {
-                            onLinkClick(it)
-                        }
-                    } else null,
-                    trailingIcon = if (it.isWebLink()) {
-                        {
-                            CopyIcon(title) {
-                                onCopyClick(it)
-                            }
-                        }
-                    } else null
-                )
-            }
+            UrlItem(
+                label = "Source",
+                url = it,
+                onLinkClick = if (it.isWebLink()) { { onLinkClick(it) } } else null,
+                onCopyClick = if (it.isWebLink()) { { onCopyClick(it) } } else null
+            )
         }
 
         image.metadata.pixivUrl?.let {
             if (!it.isWebLink()) return@let
 
-            val title = "Pixiv URL"
-            item {
-                TitleSummary(
-                    title = "Pixiv URL",
-                    summary = it,
-                    onClick = { onLinkClick(it) },
-                    trailingIcon = {
-                        CopyIcon(title) {
-                            onCopyClick(it)
-                        }
-                    }
-                )
-            }
+            UrlItem(
+                label = "Pixiv URL",
+                url = it,
+                onLinkClick = { onLinkClick(it) },
+                onCopyClick = { onCopyClick(it) }
+            )
         }
 
         /* In unified mode, display file URL with the other URLs.
            In split mode, it's displayed on the other tab.  */
         if (unified) {
             image.highestQualityFormatUrl.let {
-                item {
-                    val title = "File URL"
-                    TitleSummary(
-                        title = title,
-                        summary = it,
-                        onClick = { onLinkClick(it) },
-                        trailingIcon = {
-                            CopyIcon(title) {
-                                onCopyClick(it)
-                            }
-                        }
-                    )
-                }
+                UrlItem(
+                    label = "File URL",
+                    url = it,
+                    onLinkClick = onLinkClick,
+                    onCopyClick = onCopyClick
+                )
             }
         }
 
@@ -622,19 +595,12 @@ private fun LazyListScope.imageboardDataContentItems(
     if (!unified) {
         LazyExpressiveGroup(desiredTopPadding = null) {
             image.highestQualityFormatUrl.let {
-                item {
-                    val title = "File URL"
-                    TitleSummary(
-                        title = title,
-                        summary = it,
-                        onClick = { onLinkClick(it) },
-                        trailingIcon = {
-                            CopyIcon(title) {
-                                onCopyClick(it)
-                            }
-                        }
-                    )
-                }
+                UrlItem(
+                    label = "File URL",
+                    url = it,
+                    onLinkClick = onLinkClick,
+                    onCopyClick = onCopyClick
+                )
             }
         }
     }
@@ -660,6 +626,29 @@ private fun LazyListScope.imageboardDataContentItems(
                 )
             }
         }
+    }
+}
+
+
+private fun ExpressiveGroupScope.UrlItem(
+    label: String,
+    url: String,
+    onLinkClick: ((String) -> Unit)? = null,
+    onCopyClick: ((String) -> Unit)? = null
+) {
+    item {
+        TitleSummary(
+            title = label,
+            summary = url,
+            onClick = onLinkClick?.let { { onLinkClick(url) } },
+            trailingIcon = onCopyClick?.let {
+                {
+                    CopyIcon(label) {
+                        onCopyClick(url)
+                    }
+                }
+            }
+        )
     }
 }
 
