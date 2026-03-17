@@ -13,6 +13,13 @@ import org.json.JSONException
 import org.json.JSONObject
 
 
+val AI_TAG_NAMES = listOf(
+    "ai-generated",
+    "ai_generated",
+    "ai-assisted",
+)
+
+
 @Serializable
 data class ImageBoardAuth(
     val user: String,
@@ -36,7 +43,6 @@ interface ImageBoard {
         get() = "$imageSearchUrl&api_key=%s&user_id=%s"
     val apiKeyCreationUrl: String?
         get() = null
-    val aiTagName: String
     val firstPageIndex: Int
         get() = 0
     val apiKeyRequirement: ImageBoardRequirement
@@ -190,7 +196,6 @@ object Rule34 : GelbooruBasedImageBoard {
     override val autoCompleteSearchUrl = "${baseUrl}/autocomplete.php?q=%s"
     override val autoCompleteCategoryMapping = emptyMap<String, String>()
     override val imageSearchUrl = "${baseUrl}index.php?page=dapi&json=1&s=post&q=index&limit=100&tags=%s&pid=%d"
-    override val aiTagName = "ai_generated"
     override val apiKeyCreationUrl = "https://rule34.xxx/index.php?page=account&s=options"
     override val apiKeyRequirement = ImageBoardRequirement.NOT_NEEDED
 
@@ -213,7 +218,6 @@ object Safebooru : GelbooruBasedImageBoard {
     override val autoCompleteSearchUrl = "${baseUrl}autocomplete.php?q=%s"
     override val autoCompleteCategoryMapping = emptyMap<String, String>()
     override val imageSearchUrl = "${baseUrl}index.php?page=dapi&json=1&s=post&q=index&limit=100&tags=%s&pid=%d"
-    override val aiTagName = "ai-generated"
 
     override fun parseImage(e: JSONObject): Image? {
         return parseImage(e, ImageSource.SAFEBOORU)
@@ -235,7 +239,6 @@ object Gelbooru : GelbooruBasedImageBoard {
     override val autoCompleteCategoryMapping = mapOf("tag" to "general")
     override val imageSearchUrl = "${baseUrl}index.php?page=dapi&json=1&s=post&q=index&limit=100&tags=%s&pid=%d"
     override val apiKeyCreationUrl = "${baseUrl}index.php?page=account&s=options"
-    override val aiTagName = "ai-generated"
     override val apiKeyRequirement = ImageBoardRequirement.REQUIRED
 
     override fun parseImage(e: JSONObject): Image? {
@@ -263,7 +266,6 @@ object Danbooru : ImageBoard {
         "5" to "meta",
     )
     override val imageSearchUrl = "${baseUrl}posts.json?tags=%s&page=%d&limit=100"
-    override val aiTagName = "ai-generated"
     override val firstPageIndex = 1
     override val authenticatedImageSearchUrl = "$imageSearchUrl&api_key=%s&login=%s"
     override val apiKeyCreationUrl = "${baseUrl}/profile"
@@ -362,7 +364,6 @@ object Yandere : ImageBoard {
         "6" to "faults",
     )
     override val imageSearchUrl = "${baseUrl}post.json?tags=%s&page=%d&limit=100"
-    override val aiTagName = "ai-generated" // Yande.re does not allow AI-generated images but this tag appears in search
     override val firstPageIndex = 1
     override val localFilterType = ImageBoardRequirement.REQUIRED
 

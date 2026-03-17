@@ -36,6 +36,7 @@ import kotlinx.coroutines.launch
 import moe.apex.rule34.image.ImageBoardAuth
 import moe.apex.rule34.image.ImageBoardRequirement
 import moe.apex.rule34.image.ImageRating
+import moe.apex.rule34.image.AI_TAG_NAMES
 import moe.apex.rule34.navigation.Settings
 import moe.apex.rule34.preferences.Experiment
 import moe.apex.rule34.preferences.ImageSource
@@ -78,7 +79,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
 
     val preferencesRepository = LocalContext.current.prefs
     val filterLocally = prefs.filterRatingsLocally
-    val blockedTags by rememberUpdatedState(prefs.blockedTags)
+    val manuallyBlockedTags by rememberUpdatedState(prefs.manuallyBlockedTags)
     val blur = prefs.isExperimentEnabled(Experiment.IMMERSIVE_UI_EFFECTS)
 
     val actuallyBlockedTags = rememberSaveable { mutableStateSetOf<String>() }
@@ -98,11 +99,18 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
         }
     }
 
-    // Populate the internal list of blocked tags
+    /* Populate the internal list of blocked tags.
+       If the user explicitly searches for an AI tag,
+       we'll unblock all AI tag variations for this search. */
     fun updateBlockedTags() {
+        val blockList = if (AI_TAG_NAMES.any { it in tagList }) {
+            manuallyBlockedTags
+        } else {
+            manuallyBlockedTags + AI_TAG_NAMES
+        }
         Snapshot.withMutableSnapshot {
             actuallyBlockedTags.clear()
-            actuallyBlockedTags.addAll(blockedTags.filter { it !in tagList })
+            actuallyBlockedTags.addAll(blockList.filter { it !in tagList })
         }
     }
 

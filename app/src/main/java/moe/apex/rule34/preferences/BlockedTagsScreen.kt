@@ -40,6 +40,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.launch
+import moe.apex.rule34.image.AI_TAG_NAMES
 import moe.apex.rule34.prefs
 import moe.apex.rule34.util.BaseHeading
 import moe.apex.rule34.util.DISABLED_OPACITY
@@ -67,7 +68,6 @@ fun BlockedTagsScreen(navController: NavHostController, viewModel: BreadboardVie
     val prefs = LocalPreferences.current
     val blockedTags = prefs.manuallyBlockedTags.reversed()
     var showAddDialog by rememberSaveable { mutableStateOf(false) }
-    val aiTags = remember { ImageSource.entries.mapTo(mutableSetOf()) { it.imageBoard.aiTagName }.toList() }
 
     if (showAddDialog) {
         var content by remember { mutableStateOf("") }
@@ -95,7 +95,7 @@ fun BlockedTagsScreen(navController: NavHostController, viewModel: BreadboardVie
                             .trim()
                             .split(" ")
                             .filter { it.isNotBlank() }
-                            .filterNot { it in aiTags }
+                            .filterNot { it in AI_TAG_NAMES }
                         scope.launch {
                             for (tag in newBlocks) {
                                 userPreferencesRepository.addToSet(
@@ -180,17 +180,14 @@ fun BlockedTagsScreen(navController: NavHostController, viewModel: BreadboardVie
                     )
                 }
 
-                itemsIndexed(aiTags) { index, tag ->
+                itemsIndexed(AI_TAG_NAMES) { index, tag ->
                     ExpressiveTagEntryContainer(
                         modifier = Modifier.animateItem(),
                         label = tag,
-                        position = when (index) {
-                            0 -> ListItemPosition.TOP
-                            aiTags.size - 1 -> ListItemPosition.BOTTOM
-                            else -> ListItemPosition.MIDDLE // Not used at the time of writing but if more AI tags appear in the future when it would be useful
-                        }
+                        position = ListItemPosition.fromIndex(AI_TAG_NAMES, index)
                     )
                 }
+
                 if (prefs.manuallyBlockedTags.isNotEmpty()) {
                     item { MediumLargeVerticalSpacer() }
                     item {
@@ -204,16 +201,11 @@ fun BlockedTagsScreen(navController: NavHostController, viewModel: BreadboardVie
                 }
             }
 
-            itemsIndexed(blockedTags, key = { index, tag -> tag }) { index, tag ->
+            itemsIndexed(blockedTags, key = { _, tag -> tag }) { index, tag ->
                 ExpressiveTagEntryContainer(
                     modifier = Modifier.animateItem(),
                     label = tag,
-                    position = when {
-                        prefs.manuallyBlockedTags.size == 1 -> ListItemPosition.SINGLE_ELEMENT
-                        index == 0 -> ListItemPosition.TOP
-                        index == prefs.manuallyBlockedTags.size - 1 -> ListItemPosition.BOTTOM
-                        else -> ListItemPosition.MIDDLE
-                    },
+                    position = ListItemPosition.fromIndex(blockedTags, index),
                     trailingContent = {
                         IconButton(
                             onClick = {

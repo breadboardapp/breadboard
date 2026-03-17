@@ -43,6 +43,7 @@ import moe.apex.rule34.image.ImageRating
 import moe.apex.rule34.image.Rule34
 import moe.apex.rule34.image.Safebooru
 import moe.apex.rule34.image.Yandere
+import moe.apex.rule34.image.AI_TAG_NAMES
 import moe.apex.rule34.tag.TagCategory
 import moe.apex.rule34.util.AgeVerification
 import moe.apex.rule34.util.MigrationOnlyField
@@ -282,7 +283,7 @@ data class Prefs(
     /** The users manually blocked tags, plus the AI tags if `excludeAi` is enabled. */
     val blockedTags: Set<String>
         get() = manuallyBlockedTags.toMutableSet().apply {
-            if (excludeAi) addAll(ImageSource.entries.map { it.imageBoard.aiTagName })
+            if (excludeAi) addAll(AI_TAG_NAMES)
         }
 
 
