@@ -152,7 +152,9 @@ interface GelbooruBasedImageBoard : ImageBoard {
 
     suspend fun loadPage(tags: String, page: Int, postListKey: String?, imageSource: ImageSource, auth: ImageBoardAuth? = null): List<Image> {
         val url = buildImageSearchUrl(tags, page, auth)
-        val body = RequestUtil.get(url)
+        val body = RequestUtil.get(url) {
+            addHeader("Referer", baseUrl)
+        }
         if (body.isEmpty()) return emptyList()
 
         val posts: JSONArray

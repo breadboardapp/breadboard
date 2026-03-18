@@ -113,6 +113,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import coil3.compose.rememberAsyncImagePainter
+import coil3.network.NetworkHeaders
+import coil3.network.httpHeaders
 import coil3.request.ImageRequest
 import io.github.kdroidfilter.composemediaplayer.VideoPlayerSurface
 import io.github.kdroidfilter.composemediaplayer.rememberVideoPlayerState
@@ -662,15 +664,22 @@ fun LargeImage(image: Image) {
         }
     } else Modifier.aspectRatio(aspectRatio)
 
+    val headersBuilder = remember {
+        NetworkHeaders.Builder()
+            .set("Referer", image.imageSource.imageBoard.baseUrl)
+    }
+
     val model = remember(imageUrl) {
         ImageRequest.Builder(context)
             .data(imageUrl)
+            .httpHeaders(headersBuilder.build())
             .build()
     }
 
     val previewModel = remember(previewImageUrl) {
         ImageRequest.Builder(context)
             .data(previewImageUrl)
+            .httpHeaders(headersBuilder.build())
             .build()
     }
 
@@ -706,6 +715,8 @@ fun LargeVideo(image: Image, isCurrentPage: Boolean) {
 
     var wasPlaying by remember { mutableStateOf(false) }
     var muted by remember { mutableStateOf(false) }
+
+    // TODO: https://github.com/kdroidFilter/ComposeMediaPlayer/issues/107
     val player = rememberVideoPlayerState()
 
     var doneInitialLoad by remember { mutableStateOf(false) }
