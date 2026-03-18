@@ -162,6 +162,7 @@ import kotlin.math.roundToInt
 
 
 private const val VIDEO_PRIMARY_CONTROL_SIZE_DP = 60
+private const val MAX_ZOOM_FOR_PAGE_CHANGE = 0.05f
 
 
 private fun isUsingWiFi(context: Context): Boolean {
@@ -187,19 +188,26 @@ fun LargeImageView(
     navController: NavController,
     initialPage: Int,
     allImages: List<Image>,
-    onZoomChange: ((Float) -> Unit)? = null
+    onZoomedStatusChanged: ((Boolean) -> Unit)? = null
 ) {
     val pagerState = rememberPagerState(
         initialPage = initialPage,
         initialPageOffsetFraction = 0f
     ) { allImages.size }
     var canChangePage by remember { mutableStateOf(false) }
-    val zoomState = rememberZoomableState(ZoomSpec(maxZoomFactor = 3.5f))
+    var activeZoomState by remember { mutableStateOf<ZoomableState?>(null) }
     var toolbarState by remember { mutableStateOf(ToolbarState.DEFAULT) }
     val viewModel = viewModel<BreadboardViewModel>()
 
-    val isFullyZoomedOut by remember { derivedStateOf { zoomState.zoomFraction == 0f } }
-    val isMostlyZoomedOut by remember { derivedStateOf { zoomState.zoomFraction.let { it == null || it < 0.10 } } }
+    val isFullyZoomedOut by remember {
+        derivedStateOf { activeZoomState?.zoomFraction?.let { it == 0f } ?: true }
+    }
+    val isMostlyZoomedOut by remember {
+        derivedStateOf { activeZoomState?.zoomFraction.let { it == null || it < 0.10 } }
+    }
+    val zoomFractionAllowsPageChange by remember {
+        derivedStateOf { activeZoomState?.zoomFraction?.let { it < MAX_ZOOM_FOR_PAGE_CHANGE } ?: true }
+    }
 
     LaunchedEffect(allImages.size) {
         if (pagerState.currentPage >= allImages.size && allImages.isNotEmpty()) {
@@ -228,18 +236,22 @@ fun LargeImageView(
                 pagerState = pagerState,
                 allImages = allImages,
                 canChangePage = canChangePage,
-                zoomState = zoomState,
+                onZoomStateChanged = { activeZoomState = it },
                 onImageClick = ::toggleToolbar
             )
 
-            // Disable page changing while zoomed in and reset bottom bar state
-            LaunchedEffect(isFullyZoomedOut, pagerState.currentPage) {
-                canChangePage = isFullyZoomedOut
-                toolbarState = ToolbarState.DEFAULT
+            /* If the zoom fraction is below the threshold and the animation is running,
+               for example the user double tapped to zoom out and swiped to change page before the
+               animation is fully finished, allow page change anyway. */
+            LaunchedEffect(zoomFractionAllowsPageChange, isFullyZoomedOut) {
+                canChangePage = (zoomFractionAllowsPageChange && activeZoomState?.isAnimationRunning ?: false) || isFullyZoomedOut
+                if (isFullyZoomedOut) {
+                    toolbarState = ToolbarState.DEFAULT
+                }
             }
 
-            LaunchedEffect(zoomState.zoomFraction) {
-                onZoomChange?.invoke(zoomState.zoomFraction ?: 0f)
+            LaunchedEffect(isFullyZoomedOut) {
+                onZoomedStatusChanged?.invoke(!isFullyZoomedOut)
             }
 
             Box(Modifier.align(Alignment.BottomCenter)) {
@@ -261,7 +273,7 @@ private fun ImagesPager(
     pagerState: PagerState,
     allImages: List<Image>,
     canChangePage: Boolean,
-    zoomState: ZoomableState,
+    onZoomStateChanged: (ZoomableState) -> Unit,
     onImageClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -284,11 +296,29 @@ private fun ImagesPager(
             }
         }
 
-        val gestures =
-            if (imageAtIndex.fileFormat != "mp4") EnabledZoomGestures.ZoomAndPan else EnabledZoomGestures.None
+        val zoomState = rememberZoomableState(ZoomSpec(maxZoomFactor = 3.5f))
+        val isBarelyZoomedIn by remember {
+            derivedStateOf {
+                zoomState.zoomFraction?.let { it < MAX_ZOOM_FOR_PAGE_CHANGE } ?: true
+            }
+        }
 
-        /* TODO: Give each image its own zoom state.
-           Need to consider how it interacts with the LargeImageView toolbar and onZoomChange. */
+        LaunchedEffect(pagerState.currentPage) {
+            if (pagerState.currentPage == index) {
+                onZoomStateChanged(zoomState)
+            } else {
+                zoomState.resetZoom()
+            }
+        }
+
+        val gestures = if (imageAtIndex.fileFormat == "mp4") {
+            EnabledZoomGestures.None
+        } else if (isBarelyZoomedIn) {
+            EnabledZoomGestures.ZoomOnly
+        } else {
+            EnabledZoomGestures.ZoomAndPan
+        }
+
         Box(
             modifier = Modifier.zoomable(
                 state = zoomState,
@@ -1139,7 +1169,7 @@ fun OffsetBasedLargeImageView(
                     navController = navController,
                     initialPage = initialPage,
                     allImages = allImages,
-                    onZoomChange = { canDragDown = it == 0f }
+                    onZoomedStatusChanged = { canDragDown = !it }
                 )
             }
         }
