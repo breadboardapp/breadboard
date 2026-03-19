@@ -162,7 +162,7 @@ import kotlin.math.roundToInt
 
 
 private const val VIDEO_PRIMARY_CONTROL_SIZE_DP = 60
-private const val MAX_ZOOM_FOR_PAGE_CHANGE = 0.05f
+private const val MAX_ZOOM_FOR_PAGE_CHANGE = 0.075f // Allow page change if zoomed in less than 7.5%, allowing for some leniency when the user is trying to quickly zoom out and swipe to the next image before the animation is fully finished.
 
 
 private fun isUsingWiFi(context: Context): Boolean {
@@ -240,11 +240,8 @@ fun LargeImageView(
                 onImageClick = ::toggleToolbar
             )
 
-            /* If the zoom fraction is below the threshold and the animation is running,
-               for example the user double tapped to zoom out and swiped to change page before the
-               animation is fully finished, allow page change anyway. */
             LaunchedEffect(zoomFractionAllowsPageChange, isFullyZoomedOut) {
-                canChangePage = (zoomFractionAllowsPageChange && activeZoomState?.isAnimationRunning ?: false) || isFullyZoomedOut
+                canChangePage = (zoomFractionAllowsPageChange)
                 if (isFullyZoomedOut) {
                     toolbarState = ToolbarState.DEFAULT
                 }
@@ -307,14 +304,12 @@ private fun ImagesPager(
             if (pagerState.currentPage == index) {
                 onZoomStateChanged(zoomState)
             } else {
-                zoomState.resetZoom()
+                zoomState.resetZoom(bouncyAnimationSpec())
             }
         }
 
-        val gestures = if (imageAtIndex.fileFormat == "mp4") {
+        val gestures = if (imageAtIndex.fileFormat == "mp4" || (isBarelyZoomedIn && zoomState.isAnimationRunning)) {
             EnabledZoomGestures.None
-        } else if (isBarelyZoomedIn) {
-            EnabledZoomGestures.ZoomOnly
         } else {
             EnabledZoomGestures.ZoomAndPan
         }
