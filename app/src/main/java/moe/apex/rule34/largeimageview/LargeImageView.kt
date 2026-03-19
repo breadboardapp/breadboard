@@ -27,7 +27,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -97,6 +97,9 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -118,7 +121,9 @@ import coil3.network.httpHeaders
 import coil3.request.ImageRequest
 import io.github.kdroidfilter.composemediaplayer.VideoPlayerSurface
 import io.github.kdroidfilter.composemediaplayer.rememberVideoPlayerState
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import me.saket.telephoto.zoomable.EnabledZoomGestures
 import me.saket.telephoto.zoomable.ZoomSpec
@@ -331,7 +336,11 @@ private fun ImagesPager(
                 if (imageAtIndex.fileFormat != "mp4") {
                     LargeImage(imageAtIndex)
                 } else {
-                    LargeVideo(imageAtIndex, pagerState.currentPage == index)
+                    LargeVideo(
+                        image = imageAtIndex,
+                        isCurrentPage = pagerState.currentPage == index,
+                        onLongClick = onImageClick
+                    )
                 }
             }
         }
@@ -732,9 +741,88 @@ fun LargeImage(image: Image) {
 }
 
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun VideoMuteButton(
+    muted: Boolean,
+    onMutedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    FilledIconToggleButton(
+        modifier = modifier,
+        checked = !muted,
+        shapes = IconToggleButtonShapes(
+            shape = CircleShape,
+            pressedShape = MaterialTheme.shapes.medium,
+            checkedShape = MaterialTheme.shapes.medium
+        ),
+        onCheckedChange = {
+            onMutedChange(!it)
+        },
+    ) {
+        if (muted) {
+            Icon(
+                Icons.AutoMirrored.Rounded.VolumeOff,
+                contentDescription = "Volume muted. Tap to unmute.",
+            )
+        } else {
+            Icon(
+                Icons.AutoMirrored.Rounded.VolumeUp,
+                contentDescription = "Volume on. Tap to mute.",
+            )
+        }
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalSharedTransitionApi::class)
+@Composable
+private fun VideoPlayPauseButton(
+    isPlaying: Boolean,
+    onPlayPauseClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val morphProgress by animateFloatAsState(if (isPlaying) 1f else 0f)
+    IconButton(
+        colors = IconButtonDefaults.iconButtonColors(
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+        ),
+        modifier = modifier
+            .size(VIDEO_PRIMARY_CONTROL_SIZE_DP.dp)
+            .morphingBackground(
+                start = MorphableRoundedPolygon(Circle),
+                end = MorphableRoundedPolygon(Cookie7Sided, 1.1f),
+                progress = morphProgress,
+                color = MaterialTheme.colorScheme.primary
+            ),
+        onClick = onPlayPauseClick
+    ) {
+        AnimatedContent(
+            targetState = isPlaying,
+            transitionSpec = { fadeIn() + scaleIn() togetherWith fadeOut() + scaleOut() },
+            contentAlignment = Alignment.Center
+        ) {
+            if (it) {
+                Icon(
+                    imageVector = Icons.Rounded.Pause,
+                    contentDescription = "Pause",
+                    modifier = Modifier.size(32.dp)
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Rounded.PlayArrow,
+                    contentDescription = "Resume",
+                    modifier = Modifier.size(36.dp)
+                )
+            }
+        }
+    }
+}
+
+
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun LargeVideo(image: Image, isCurrentPage: Boolean) {
+fun LargeVideo(image: Image, isCurrentPage: Boolean, onLongClick: (() -> Unit)? = null) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -846,17 +934,26 @@ fun LargeVideo(image: Image, isCurrentPage: Boolean) {
     ) {
         Box(
             modifier = Modifier
-                .clickable(
+                .combinedClickable(
                     interactionSource = controlsInteractionSource,
-                    indication = null
+                    indication = null,
+                    onLongClick = onLongClick
                 ) {
                     updateControlsLastTriggeredTime()
-                    if (showControls) {
-                        showControls = false
-                    } else {
-                        showControls = true
-                    }
+                    showControls = !showControls
                 }
+                .then( // Allow secondary click/right click to do the long press action
+                    if (onLongClick == null) Modifier else Modifier.pointerInput(Unit) {
+                        while (currentCoroutineContext().isActive) {
+                            awaitPointerEventScope {
+                                val event = awaitPointerEvent(PointerEventPass.Initial)
+                                if (event.buttons.isSecondaryPressed) {
+                                    onLongClick()
+                                }
+                            }
+                        }
+                    }
+                )
         ) {
             if (doneInitialLoad) {
                 // The SurfaceView type performs much better but seems to have scaling issues?
@@ -881,21 +978,10 @@ fun LargeVideo(image: Image, isCurrentPage: Boolean) {
                                 .fillMaxSize()
                                 .background(Color.Black.copy(alpha = 0.4f)),
                     ) {
-                        val morphProgress by animateFloatAsState(if (player.isPlaying) 1f else 0f)
-                        IconButton(
-                            colors = IconButtonDefaults.iconButtonColors(
-                                contentColor = MaterialTheme.colorScheme.onPrimary,
-                            ),
-                            modifier = Modifier
-                                .size(VIDEO_PRIMARY_CONTROL_SIZE_DP.dp)
-                                .align(Alignment.Center)
-                                .morphingBackground(
-                                    start = MorphableRoundedPolygon(Circle),
-                                    end = MorphableRoundedPolygon(Cookie7Sided, 1.1f), // So it looks closer in size to the circle
-                                    progress = morphProgress,
-                                    color = MaterialTheme.colorScheme.primary
-                                ),
-                            onClick = {
+                        VideoPlayPauseButton(
+                            isPlaying = player.isPlaying,
+                            modifier = Modifier.align(Alignment.Center),
+                            onPlayPauseClick = {
                                 updateControlsLastTriggeredTime()
                                 if (!player.hasMedia) {
                                     player.openUri(image.fileUrl)
@@ -905,27 +991,7 @@ fun LargeVideo(image: Image, isCurrentPage: Boolean) {
                                     player.play()
                                 }
                             }
-                        ) {
-                            AnimatedContent(
-                                targetState = player.isPlaying,
-                                transitionSpec = { fadeIn() + scaleIn() togetherWith fadeOut() + scaleOut() },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (it) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Pause,
-                                        contentDescription = "Pause",
-                                        modifier = Modifier.size(32.dp) // It looks more balanced.
-                                    )
-                                } else {
-                                    Icon(
-                                        imageVector = Icons.Rounded.PlayArrow,
-                                        contentDescription = "Resume",
-                                        modifier = Modifier.size(36.dp)
-                                    )
-                                }
-                            }
-                        }
+                        )
                         AnimatedVisibility(
                             visible = player.isLoading,
                             enter = fadeIn(),
@@ -963,7 +1029,7 @@ fun LargeVideo(image: Image, isCurrentPage: Boolean) {
                                     valueRange = 0f..1000f,
                                     enabled = doneInitialLoad,
                                     onValueChange = { v ->
-                                        showControls = true // For mouse users because the hover gets stopped once they click
+                                        showControls = true
                                         updateControlsLastTriggeredTime()
                                         if (player.isPlaying) {
                                             player.pause()
@@ -982,34 +1048,17 @@ fun LargeVideo(image: Image, isCurrentPage: Boolean) {
                                     }
                                 )
 
-                                FilledIconToggleButton(
+                                VideoMuteButton(
+                                    muted = muted,
                                     modifier = Modifier.animateEnterExit(
                                         enter = slideInHorizontally { it * 2 },
                                         exit = slideOutHorizontally { it * 2 }
                                     ),
-                                    checked = !muted,
-                                    shapes = IconToggleButtonShapes(
-                                        shape = CircleShape,
-                                        pressedShape = MaterialTheme.shapes.medium,
-                                        checkedShape = MaterialTheme.shapes.medium
-                                    ),
-                                    onCheckedChange = {
+                                    onMutedChange = {
                                         updateControlsLastTriggeredTime()
-                                        muted = !it
-                                    },
-                                ) {
-                                    if (muted) {
-                                        Icon(
-                                            Icons.AutoMirrored.Rounded.VolumeOff,
-                                            contentDescription = "Volume muted. Tap to unmute.",
-                                        )
-                                    } else {
-                                        Icon(
-                                            Icons.AutoMirrored.Rounded.VolumeUp,
-                                            contentDescription = "Volume on. Tap to mute.",
-                                        )
+                                        muted = it
                                     }
-                                }
+                                )
                             }
                         } else {
                             LinearProgressIndicator(
