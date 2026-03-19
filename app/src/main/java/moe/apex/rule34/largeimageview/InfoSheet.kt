@@ -705,7 +705,7 @@ private fun TagsContainer(
     onTagClick: (String) -> Unit,
     onTagLongClick: (String) -> Unit
 ) {
-    val maxLines = 10
+    val maxLines = 11 // 10 but apparently the expand indicator is included in this figure so 11
     val prefs = LocalPreferences.current
     var showAll by rememberSaveable { mutableStateOf(false) }
 
