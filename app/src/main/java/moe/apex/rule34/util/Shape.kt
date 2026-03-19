@@ -50,6 +50,10 @@ private fun CacheDrawScope.transformShape(morphableRoundedPolygon: MorphableRoun
 
 /** Modifier for morphing the background of an item between two shapes.
  *
+ * @param start The starting shape of the morphing animation.
+ * @param end The ending shape of the morphing animation.
+ * @param progress The progress of the morphing animation, between 0 and 1.
+ * @param color The colour to draw the morphing shape with.
  */
 fun Modifier.morphingBackground(
     start: MorphableRoundedPolygon,
