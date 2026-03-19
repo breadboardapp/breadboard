@@ -245,8 +245,8 @@ fun LargeImageView(
                 onImageClick = ::toggleToolbar
             )
 
-            LaunchedEffect(zoomFractionAllowsPageChange, isFullyZoomedOut) {
-                canChangePage = (zoomFractionAllowsPageChange)
+            LaunchedEffect(zoomFractionAllowsPageChange, isFullyZoomedOut, pagerState.currentPage) {
+                canChangePage = zoomFractionAllowsPageChange
                 if (isFullyZoomedOut) {
                     toolbarState = ToolbarState.DEFAULT
                 }
