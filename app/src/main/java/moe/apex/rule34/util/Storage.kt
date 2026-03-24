@@ -99,7 +99,10 @@ private val client = OkHttpClient()
 
 private suspend fun downloadToStream(image: Image, outputStream: OutputStream): Result<Unit> {
     val url = image.highestQualityFormatUrl
-    val request = Request.Builder().url(url).build()
+    val request = Request.Builder()
+        .url(url)
+        .addHeader("Referer", image.imageSource.imageBoard.baseUrl)
+        .build()
 
     return withContext(Dispatchers.IO) {
         try {
