@@ -139,7 +139,6 @@ import moe.apex.rule34.viewmodel.GlobalViewModelOwner
 import moe.apex.rule34.viewmodel.getIndexByName
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 import androidx.compose.ui.platform.LocalLocale
 
 
