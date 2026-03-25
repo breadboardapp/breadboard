@@ -431,8 +431,13 @@ fun PreferencesScreen(navController: NavHostController) {
                     }
                     item {
                         EnumPref(
-                            title = "Autoplay videos",
+                            title = "Automatically play videos",
                             summary = currentSettings.autoplayVideos.label,
+                            infoText = "Control whether videos will automatically play when " +
+                                       "opening them.\n\n" +
+                                       "When this is enabled, videos will start muted until you " +
+                                       "manually unmute by tapping the icon or your device's " +
+                                       "volume up button.",
                             enumItems = AutoplayVideosMode.entries,
                             selectedItem = currentSettings.autoplayVideos,
                             onSelection = {
