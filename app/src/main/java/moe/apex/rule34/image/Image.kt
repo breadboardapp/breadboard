@@ -28,7 +28,7 @@ data class ImageMetadata(
     @SerialName("artist")
     @Deprecated(
         message = "Do not use this outside of migrations.",
-        replaceWith = ReplaceWith("artist")
+        replaceWith = ReplaceWith("artists",)
     )
     val artistsString: String? = null,
     val artists: List<String> = emptyList(),
@@ -41,12 +41,6 @@ data class ImageMetadata(
     val pixivUrl: String?
         get() = pixivId?.let { "https://www.pixiv.net/en/artworks/$it" }
 
-    @Deprecated(
-        message = "Deprecated in version 300. Use `artists` to retrieve artists as a list.",
-        replaceWith = ReplaceWith("artists")
-    )
-    val artist: String?
-        get() = artists.takeIf { it.isNotEmpty() }?.joinToString(" ")
 }
 
 
