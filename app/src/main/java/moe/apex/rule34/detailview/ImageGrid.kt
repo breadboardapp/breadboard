@@ -288,7 +288,7 @@ private fun LazyGridItemScope.ImagePreviewContainer(
         )
         if (image.fileFormat == "gif") {
             FormatBadge("GIF")
-        } else if (image.fileFormat == "mp4") {
+        } else if (image.isVideo) {
             FormatBadge("Video")
         }
     }
@@ -352,7 +352,7 @@ private fun LazyStaggeredGridItemScope.StaggeredImagePreviewContainer(
            requiredWidthIn/requiredHeightIn can. */
         if (image.fileFormat == "gif") {
             FormatBadge("GIF")
-        } else if (image.fileFormat == "mp4") {
+        } else if (image.isVideo) {
             FormatBadge("Video")
         }
     }

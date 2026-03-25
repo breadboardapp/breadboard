@@ -193,6 +193,7 @@ private fun getMimeType(fileFormat: String): String? {
         "gif"         -> "image/gif"
         "webp"        -> "image/webp"
         "mp4"         -> "video/mp4"
+        "webm"        -> "video/webm"
         else -> null
     }
 }

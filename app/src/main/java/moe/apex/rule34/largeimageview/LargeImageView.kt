@@ -321,7 +321,7 @@ private fun ImagesPager(
             }
         }
 
-        val gestures = if (imageAtIndex.fileFormat == "mp4" || (isBarelyZoomedIn && zoomState.isAnimationRunning)) {
+        val gestures = if (imageAtIndex.isVideo || (isBarelyZoomedIn && zoomState.isAnimationRunning)) {
             EnabledZoomGestures.None
         } else {
             EnabledZoomGestures.ZoomAndPan
@@ -341,14 +341,14 @@ private fun ImagesPager(
                     .systemBarsPadding(),
                 contentAlignment = Alignment.Center
             ) {
-                if (imageAtIndex.fileFormat != "mp4") {
-                    LargeImage(imageAtIndex)
-                } else {
+                if (imageAtIndex.isVideo) {
                     LargeVideo(
                         image = imageAtIndex,
                         isCurrentPage = pagerState.currentPage == index,
                         onLongClick = onImageClick
                     )
+                } else {
+                    LargeImage(imageAtIndex)
                 }
             }
         }

@@ -65,6 +65,7 @@ data class Image(
     val highestQualityFormatUrl = fileUrl.takeIf { it.isNotEmpty() } ?: sampleUrl
     var preferHd by mutableStateOf(false)
     var hdQualityOverride: Boolean? by mutableStateOf(null)
+    val isVideo = fileFormat == "mp4" || fileFormat == "webm"
 
     fun toggleHd(to: Boolean? = null) {
         preferHd = when (to) {
