@@ -28,6 +28,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -94,9 +95,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
@@ -846,6 +854,7 @@ fun LargeVideo(image: Image, isCurrentPage: Boolean, onLongClick: (() -> Unit)? 
     var controlsLastTriggeredAt by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val controlsInteractionSource = remember { MutableInteractionSource() }
     val isHovered by controlsInteractionSource.collectIsHoveredAsState()
+    val focusRequester = remember { FocusRequester() }
 
     val sliderInteractionSource = remember { MutableInteractionSource() }
     val isSliderDragging by sliderInteractionSource.collectIsDraggedAsState()
@@ -945,7 +954,6 @@ fun LargeVideo(image: Image, isCurrentPage: Boolean, onLongClick: (() -> Unit)? 
             if (activity != null) {
                 fun callback(): Boolean {
                     if (muted) {
-                        muted = false
                         viewModel.setUserMutePreference(false)
                         return true
                     }
@@ -954,6 +962,8 @@ fun LargeVideo(image: Image, isCurrentPage: Boolean, onLongClick: (() -> Unit)? 
                 activity.volumeUpPressedCallback = ::callback
                 Log.i("video", "Attached volume up listener to a new page.")
             }
+
+            focusRequester.requestFocus()
         }
     }
 
@@ -965,6 +975,15 @@ fun LargeVideo(image: Image, isCurrentPage: Boolean, onLongClick: (() -> Unit)? 
     ) {
         Box(
             modifier = Modifier
+                .focusRequester(focusRequester)
+                .focusable(isCurrentPage, controlsInteractionSource)
+                .onKeyEvent { event -> // Unmute with keyboard volume up key
+                    if (event.type == KeyEventType.KeyDown && event.key == Key.VolumeUp && muted) {
+                        viewModel.setUserMutePreference(false)
+                        return@onKeyEvent true
+                    }
+                    return@onKeyEvent false
+                }
                 .combinedClickable(
                     interactionSource = controlsInteractionSource,
                     indication = null,
