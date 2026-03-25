@@ -37,6 +37,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.launch
 import moe.apex.rule34.prefs
@@ -54,11 +55,13 @@ import moe.apex.rule34.util.TINY_SPACER
 import moe.apex.rule34.util.saveIgnoreListWithTimestamp
 import moe.apex.rule34.util.showToast
 import moe.apex.rule34.viewmodel.BreadboardViewModel
+import moe.apex.rule34.viewmodel.GlobalViewModelOwner
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun IgnoredTagsScreen(navController: NavHostController, viewModel: BreadboardViewModel) {
+fun IgnoredTagsScreen(navController: NavHostController) {
+    val viewModel: BreadboardViewModel = viewModel(GlobalViewModelOwner)
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
     val context = LocalContext.current

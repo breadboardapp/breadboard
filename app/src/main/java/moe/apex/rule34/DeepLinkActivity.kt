@@ -6,6 +6,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Browser
 import android.util.Log
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -14,7 +15,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.core.util.Consumer
 import androidx.datastore.preferences.preferencesDataStoreFile
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
 import coil3.ImageLoader
 import coil3.PlatformContext
@@ -26,7 +26,6 @@ import kotlinx.coroutines.runBlocking
 import moe.apex.rule34.navigation.ImageView
 import moe.apex.rule34.navigation.Navigation
 import moe.apex.rule34.preferences.LocalPreferences
-import moe.apex.rule34.viewmodel.BreadboardViewModel
 import moe.apex.rule34.util.FlagSecureHelper
 import moe.apex.rule34.util.createViewIntent
 import moe.apex.rule34.util.getDefaultPackageForIntent
@@ -34,7 +33,9 @@ import moe.apex.rule34.util.launchInWebBrowser
 import moe.apex.rule34.util.launchUriWithPackage
 
 
-class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity() {
+class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeButtonHandler {
+    override var volumeUpPressedCallback: (() -> Boolean)? = null
+
     override fun newImageLoader(context: PlatformContext): ImageLoader {
         return ImageLoader.Builder(context)
             .components {
@@ -47,6 +48,16 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity() {
             .build()
     }
 
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        return if (handleVolumeUpKey(keyCode, event)) {
+            true
+        } else {
+            super.onKeyDown(keyCode, event)
+        }
+    }
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
@@ -58,7 +69,6 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity() {
         setContent {
             val navController = rememberNavController()
             val prefs = prefs.getPreferences.collectAsState(initialPrefs).value
-            val viewModel = viewModel(BreadboardViewModel::class.java)
 
             CompositionLocalProvider(LocalPreferences provides prefs) {
                 FlagSecureHelper.register()
@@ -78,11 +88,7 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity() {
                 }
                 intent.data?.let {
                     ImageView.fromUri(it)?.let { iv ->
-                        Navigation(
-                            navController = navController,
-                            viewModel = viewModel,
-                            startDestination = iv
-                        )
+                        Navigation(navController = navController, startDestination = iv)
                     } ?: reopenInBrowser(intent)
                 } ?: finish()
             }

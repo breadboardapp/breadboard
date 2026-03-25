@@ -29,7 +29,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -52,16 +51,14 @@ import moe.apex.rule34.preferences.BlockedTagsScreen
 import moe.apex.rule34.preferences.ExperimentalScreen
 import moe.apex.rule34.preferences.IgnoredTagsScreen
 import moe.apex.rule34.preferences.LibrariesScreen
-import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.preferences.PreferencesScreen
 import moe.apex.rule34.preferences.RecommendationsSettingsScreen
 import moe.apex.rule34.ui.theme.BreadboardTheme
 import moe.apex.rule34.util.withoutVertical
-import moe.apex.rule34.viewmodel.BreadboardViewModel
 
 
 @Composable
-fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel, startDestination: Any = Search) {
+fun Navigation(navController: NavHostController, startDestination: Any = Search) {
     val density = LocalDensity.current
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
@@ -214,20 +211,20 @@ fun Navigation(navController: NavHostController, viewModel: BreadboardViewModel,
                         val args = it.toRoute<ImageView>()
                         LazyLargeImageView(navController, args.id, args.source)
                     }
-                    composable<Home> { HomeScreen(navController, viewModel, bottomBarVisibleState) }
-                    composable<Search> { SearchScreen(navController, focusRequester, viewModel) }
+                    composable<Home> { HomeScreen(navController, bottomBarVisibleState) }
+                    composable<Search> { SearchScreen(navController, focusRequester) }
                     composable<Results> {
                         val args = it.toRoute<Results>()
                         SearchResults(navController, args.source, args.tags)
                     }
                     composable<Favourites> { FavouritesPage(navController, bottomBarVisibleState) }
-                    composable<Settings> { PreferencesScreen(navController, viewModel) }
-                    composable<BlockedTagsSettings> { BlockedTagsScreen(navController, viewModel) }
+                    composable<Settings> { PreferencesScreen(navController) }
+                    composable<BlockedTagsSettings> { BlockedTagsScreen(navController) }
                     composable<LibrariesSettings> { LibrariesScreen(navController) }
                     composable<AboutSettings> { AboutScreen(navController) }
                     composable<ExperimentalSettings> { ExperimentalScreen(navController) }
-                    composable<RecommendationsSettings> { RecommendationsSettingsScreen(navController, viewModel) }
-                    composable<IgnoredTagsSettings> { IgnoredTagsScreen(navController, viewModel) }
+                    composable<RecommendationsSettings> { RecommendationsSettingsScreen(navController) }
+                    composable<IgnoredTagsSettings> { IgnoredTagsScreen(navController) }
                 }
             }
         }

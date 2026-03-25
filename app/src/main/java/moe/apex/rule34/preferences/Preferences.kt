@@ -49,6 +49,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -82,6 +83,7 @@ import moe.apex.rule34.util.preImportChecks
 import moe.apex.rule34.util.saveUriToPref
 import moe.apex.rule34.util.showToast
 import moe.apex.rule34.viewmodel.BreadboardViewModel
+import moe.apex.rule34.viewmodel.GlobalViewModelOwner
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.FileInputStream
@@ -89,9 +91,10 @@ import java.io.FileInputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PreferencesScreen(navController: NavHostController, viewModel: BreadboardViewModel) {
+fun PreferencesScreen(navController: NavHostController) {
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
+    val viewModel: BreadboardViewModel = viewModel(GlobalViewModelOwner)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 

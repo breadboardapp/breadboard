@@ -1,6 +1,8 @@
 package moe.apex.rule34.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -8,6 +10,11 @@ import kotlinx.coroutines.flow.update
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.tag.TagSuggestion
 import moe.apex.rule34.util.RecommendationsProvider
+
+
+object GlobalViewModelOwner : ViewModelStoreOwner {
+    override val viewModelStore: ViewModelStore = ViewModelStore()
+}
 
 
 class BreadboardViewModel : ViewModel() {
@@ -23,12 +30,19 @@ class BreadboardViewModel : ViewModel() {
     private val _incognito = MutableStateFlow(false)
     val incognito: StateFlow<Boolean> = _incognito.asStateFlow()
 
+    private val _userMutePreference = MutableStateFlow<Boolean?>(null)
+    val userMutePreference: StateFlow<Boolean?> = _userMutePreference.asStateFlow()
+
     fun setRecommendationsProvider(provider: RecommendationsProvider?) {
         _recommendationsProvider.value = provider
     }
 
     fun setIncognito(value: Boolean) {
         _incognito.value = value
+    }
+
+    fun setUserMutePreference(muted: Boolean) {
+        _userMutePreference.value = muted
     }
 
     fun addTagSuggestion(tag: TagSuggestion) {

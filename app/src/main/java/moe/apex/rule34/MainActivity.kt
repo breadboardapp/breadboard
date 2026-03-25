@@ -7,6 +7,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -39,6 +40,7 @@ import moe.apex.rule34.preferences.StartDestination
 import moe.apex.rule34.preferences.UserPreferencesRepository
 import moe.apex.rule34.util.FlagSecureHelper
 import moe.apex.rule34.viewmodel.BreadboardViewModel
+import moe.apex.rule34.viewmodel.GlobalViewModelOwner
 
 
 val Context.dataStore by preferencesDataStore("preferences")
@@ -46,7 +48,9 @@ val Context.prefs: UserPreferencesRepository
     get() = UserPreferencesRepository(dataStore)
 
 
-class MainActivity : SingletonImageLoader.Factory, ComponentActivity() {
+class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeButtonHandler {
+    override var volumeUpPressedCallback: (() -> Boolean)? = null
+
     override fun newImageLoader(context: PlatformContext): ImageLoader {
         return ImageLoader.Builder(context)
             .components {
@@ -57,6 +61,15 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity() {
                 }
             }
             .build()
+    }
+
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        return if (handleVolumeUpKey(keyCode, event)) {
+            true
+        } else {
+            super.onKeyDown(keyCode, event)
+        }
     }
 
 
@@ -86,7 +99,7 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity() {
         setContent {
             val navController = rememberNavController()
             val prefs by prefs.getPreferences.collectAsState(initialPrefs)
-            val viewModel = viewModel(BreadboardViewModel::class.java)
+            val viewModel: BreadboardViewModel = viewModel(GlobalViewModelOwner)
             val recommendationsProvider by viewModel.recommendationsProvider.collectAsState()
 
             LaunchedEffect(prefs.imageSource, prefs.filterRatingsLocally) {
@@ -111,7 +124,7 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity() {
                     onDispose { removeOnNewIntentListener(innerListener) }
                 }
                 FlagSecureHelper.register()
-                Navigation(navController, viewModel, maybePrepareResultsDestination(intent) ?: startDestination)
+                Navigation(navController, maybePrepareResultsDestination(intent) ?: startDestination)
             }
         }
     }

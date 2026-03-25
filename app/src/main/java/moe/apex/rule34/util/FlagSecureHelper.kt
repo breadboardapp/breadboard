@@ -11,6 +11,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import moe.apex.rule34.preferences.FlagSecureMode
 import moe.apex.rule34.preferences.LocalPreferences
 import moe.apex.rule34.viewmodel.BreadboardViewModel
+import moe.apex.rule34.viewmodel.GlobalViewModelOwner
 
 
 class FlagSecureHelper {
@@ -20,7 +21,7 @@ class FlagSecureHelper {
         /** Start listening for changes to prefs or incognito to determine
             whether or not [WindowManager.LayoutParams.FLAG_SECURE] should be enabled. */
         fun register() {
-            val viewModel: BreadboardViewModel = viewModel()
+            val viewModel: BreadboardViewModel = viewModel(GlobalViewModelOwner)
             val incognito by viewModel.incognito.collectAsState()
             val prefs = LocalPreferences.current
             val window = (LocalActivity.current)?.window

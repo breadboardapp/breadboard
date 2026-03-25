@@ -131,6 +131,7 @@ import me.saket.telephoto.zoomable.ZoomableState
 import me.saket.telephoto.zoomable.rememberZoomableState
 import me.saket.telephoto.zoomable.zoomable
 import moe.apex.rule34.R
+import moe.apex.rule34.VolumeButtonHandler
 import moe.apex.rule34.image.Image
 import moe.apex.rule34.preferences.AutoplayVideosMode
 import moe.apex.rule34.preferences.DataSaver
@@ -161,6 +162,7 @@ import moe.apex.rule34.util.rememberIsBlurEnabled
 import moe.apex.rule34.util.saveUriToPref
 import moe.apex.rule34.viewmodel.BreadboardViewModel
 import moe.apex.rule34.util.morphingBackground
+import moe.apex.rule34.viewmodel.GlobalViewModelOwner
 import java.net.SocketTimeoutException
 import java.util.concurrent.ExecutionException
 import kotlin.math.roundToInt
@@ -202,7 +204,6 @@ fun LargeImageView(
     var canChangePage by remember { mutableStateOf(false) }
     var activeZoomState by remember { mutableStateOf<ZoomableState?>(null) }
     var toolbarState by remember { mutableStateOf(ToolbarState.DEFAULT) }
-    val viewModel = viewModel<BreadboardViewModel>()
 
     val isFullyZoomedOut by remember {
         derivedStateOf { activeZoomState?.zoomFraction?.let { it == 0f } ?: true }
@@ -260,7 +261,6 @@ fun LargeImageView(
                 LargeImageToolbar(
                     toolbarState = toolbarState,
                     isMostlyZoomedOut = isMostlyZoomedOut,
-                    viewModel = viewModel,
                     navController = navController,
                     currentImage = currentImage
                 )
@@ -282,6 +282,14 @@ private fun ImagesPager(
     val prefs = LocalPreferences.current
     val isUsingWifi = remember { isUsingWiFi(context) }
     val dataSaver = prefs.dataSaver
+
+    DisposableEffect(Unit) {
+        onDispose {
+            val activity = context as? VolumeButtonHandler
+            activity?.volumeUpPressedCallback = null
+            Log.i("video", "Released volume up listener.")
+        }
+    }
 
     HorizontalPager(
         state = pagerState,
@@ -354,10 +362,10 @@ private fun LargeImageToolbar(
     modifier: Modifier = Modifier,
     toolbarState: ToolbarState,
     isMostlyZoomedOut: Boolean,
-    viewModel: BreadboardViewModel,
     navController: NavController,
     currentImage: Image
 ) {
+    val viewModel: BreadboardViewModel = viewModel(GlobalViewModelOwner)
     val context = LocalContext.current
     val prefs = LocalPreferences.current
     val clipboard = LocalClipboard.current
@@ -825,9 +833,9 @@ private fun VideoPlayPauseButton(
 fun LargeVideo(image: Image, isCurrentPage: Boolean, onLongClick: (() -> Unit)? = null) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val viewModel: BreadboardViewModel = viewModel(GlobalViewModelOwner)
 
     var wasPlaying by remember { mutableStateOf(false) }
-    var muted by remember { mutableStateOf(false) }
 
     // TODO: https://github.com/kdroidFilter/ComposeMediaPlayer/issues/107
     val player = rememberVideoPlayerState()
@@ -855,6 +863,11 @@ fun LargeVideo(image: Image, isCurrentPage: Boolean, onLongClick: (() -> Unit)? 
                     DataSaver.AUTO -> isUsingWiFi(context)
                 }
         }
+    }
+
+    val userMutePreference by viewModel.userMutePreference.collectAsState()
+    var muted by remember {
+        mutableStateOf(userMutePreference ?: shouldAutoplay)
     }
 
     val aspectRatio = image.aspectRatio
@@ -912,6 +925,10 @@ fun LargeVideo(image: Image, isCurrentPage: Boolean, onLongClick: (() -> Unit)? 
         player.volume = if (muted) 0f else 0.5f
     }
 
+    LaunchedEffect(userMutePreference) {
+        userMutePreference?.let { muted = it }
+    }
+
     LaunchedEffect(isCurrentPage) {
         if (!isCurrentPage) {
             player.pause()
@@ -922,6 +939,20 @@ fun LargeVideo(image: Image, isCurrentPage: Boolean, onLongClick: (() -> Unit)? 
                 } else {
                     player.openUri(image.fileUrl)
                 }
+            }
+
+            val activity = context as? VolumeButtonHandler
+            if (activity != null) {
+                fun callback(): Boolean {
+                    if (muted) {
+                        muted = false
+                        viewModel.setUserMutePreference(false)
+                        return true
+                    }
+                    return false
+                }
+                activity.volumeUpPressedCallback = ::callback
+                Log.i("video", "Attached volume up listener to a new page.")
             }
         }
     }
@@ -1057,6 +1088,7 @@ fun LargeVideo(image: Image, isCurrentPage: Boolean, onLongClick: (() -> Unit)? 
                                     onMutedChange = {
                                         updateControlsLastTriggeredTime()
                                         muted = it
+                                        viewModel.setUserMutePreference(it)
                                     }
                                 )
                             }

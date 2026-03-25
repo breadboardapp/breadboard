@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -51,19 +52,17 @@ import moe.apex.rule34.util.onScroll
 import moe.apex.rule34.util.rememberPullToRefreshController
 import moe.apex.rule34.util.saveIgnoreListWithTimestamp
 import moe.apex.rule34.viewmodel.BreadboardViewModel
+import moe.apex.rule34.viewmodel.GlobalViewModelOwner
 import kotlin.time.Duration.Companion.days
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(
-    navController: NavController,
-    viewModel: BreadboardViewModel,
-    bottomBarVisibleState: MutableState<Boolean>,
-) {
+fun HomeScreen(navController: NavController, bottomBarVisibleState: MutableState<Boolean>, ) {
     val scope = rememberCoroutineScope { Dispatchers.IO }
     val context = LocalContext.current
     val prefs = LocalPreferences.current
+    val viewModel: BreadboardViewModel = viewModel(GlobalViewModelOwner)
     val recommendationsProvider by viewModel.recommendationsProvider.collectAsState()
     val blockedTags by rememberUpdatedState(prefs.blockedTags)
     val unfollowedTags by rememberUpdatedState(prefs.unfollowedTags)

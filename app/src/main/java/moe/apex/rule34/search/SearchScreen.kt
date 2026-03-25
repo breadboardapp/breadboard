@@ -91,6 +91,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.times
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -134,6 +135,7 @@ import moe.apex.rule34.util.navBarHeight
 import moe.apex.rule34.util.pluralise
 import moe.apex.rule34.util.showToast
 import moe.apex.rule34.viewmodel.BreadboardViewModel
+import moe.apex.rule34.viewmodel.GlobalViewModelOwner
 import moe.apex.rule34.viewmodel.getIndexByName
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -146,10 +148,11 @@ const val ANIMATION_DURATION_MS = 300
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter", "ConfigurationScreenWidthHeight")
 @Composable
-fun SearchScreen(navController: NavController, focusRequester: FocusRequester, viewModel: BreadboardViewModel) {
+fun SearchScreen(navController: NavController, focusRequester: FocusRequester) {
     /* We use shouldShowSuggestions for determining autocomplete section visibility because if we
        used mostRecentSuggestions.isNotEmpty(), it would temporarily show the "No results" message
        while disappearing and that looks bad. */
+    val viewModel: BreadboardViewModel = viewModel(GlobalViewModelOwner)
     val tagChipList by viewModel.tagSuggestions.collectAsState()
     val incognito by viewModel.incognito.collectAsState()
     var shouldShowSuggestions by remember { mutableStateOf(false) }

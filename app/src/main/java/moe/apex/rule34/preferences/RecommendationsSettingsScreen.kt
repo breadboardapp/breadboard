@@ -49,6 +49,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.Dispatchers
 import moe.apex.rule34.navigation.IgnoredTagsSettings
@@ -73,6 +74,7 @@ import moe.apex.rule34.util.filterChipSolidColor
 import moe.apex.rule34.util.saveIgnoreListWithTimestamp
 import moe.apex.rule34.util.showToast
 import moe.apex.rule34.viewmodel.BreadboardViewModel
+import moe.apex.rule34.viewmodel.GlobalViewModelOwner
 import kotlin.math.roundToInt
 import kotlin.time.Duration.Companion.days
 
@@ -84,7 +86,8 @@ private const val PAGER_BUTTON_SIZE_DP = 64
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun RecommendationsSettingsScreen(navController: NavHostController, viewModel: BreadboardViewModel) {
+fun RecommendationsSettingsScreen(navController: NavHostController) {
+    val viewModel: BreadboardViewModel = viewModel(GlobalViewModelOwner)
     val context = LocalContext.current
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
