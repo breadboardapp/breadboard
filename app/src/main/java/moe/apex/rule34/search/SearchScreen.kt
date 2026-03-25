@@ -140,6 +140,7 @@ import moe.apex.rule34.viewmodel.getIndexByName
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.ui.platform.LocalLocale
 
 
 const val ANIMATION_DURATION_MS = 300
@@ -777,7 +778,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester) {
     }
 
     if (showSearchHistoryPopup) {
-        val navBarHeight = navBarHeight
+        val locale = LocalLocale.current.platformLocale
         TitledModalBottomSheet(
             onDismissRequest = { showSearchHistoryPopup = false },
             sheetState = historySheetState,
@@ -801,7 +802,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester) {
                     items(reversedSearchHistory, key = { it.timestamp }) { entry ->
                         val date = Date(entry.timestamp)
                         val formatter =
-                            SimpleDateFormat("dd MMM $timeFormat", Locale.getDefault())
+                            SimpleDateFormat("dd MMM $timeFormat", locale)
                         val formattedDate = formatter.format(date)
 
                         Column(
