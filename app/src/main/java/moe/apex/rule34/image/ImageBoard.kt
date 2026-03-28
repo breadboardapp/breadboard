@@ -5,6 +5,7 @@ import kotlinx.serialization.Serializable
 import moe.apex.rule34.RequestUtil
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.tag.TagCategory
+import moe.apex.rule34.tag.TagGroup
 import moe.apex.rule34.tag.TagSuggestion
 import moe.apex.rule34.util.decodeHtml
 import moe.apex.rule34.util.extractPixivId
@@ -128,14 +129,53 @@ interface GelbooruBasedImageBoard : ImageBoard {
 
         val metaParentId = e.getString("parent_id").takeIf { it != "0" }
         val metaSource = e.getString("source").takeIf { it.isNotEmpty() }
-        val metaGroupedTags = listOf(
-            TagCategory.GENERAL.group(e.getString("tags").decodeHtml().split(" ")),
-        )
+        val metaArtists: List<String>
+        val metaGroupedTags: List<TagGroup>
+
+        val tagInfoArray = e.optJSONArray("tag_info")
+
+        if (tagInfoArray != null) {
+            val artistTags = mutableListOf<String>()
+            val characterTags = mutableListOf<String>()
+            val copyrightTags = mutableListOf<String>()
+            val generalTags = mutableListOf<String>()
+            val metaTags = mutableListOf<String>()
+
+            for (i in 0 until tagInfoArray.length()) {
+                val tag = tagInfoArray.getJSONObject(i)
+                val tagType = tag.getString("type")
+                val tagName = tag.getString("tag").decodeHtml()
+
+                when (tagType) {
+                    "artist" -> artistTags.add(tagName)
+                    "character" -> characterTags.add(tagName)
+                    "copyright" -> copyrightTags.add(tagName)
+                    "metadata" -> metaTags.add(tagName)
+                    else -> generalTags.add(tagName)
+                }
+            }
+
+            metaArtists = artistTags
+            metaGroupedTags = listOf(
+                TagCategory.CHARACTER.group(characterTags),
+                TagCategory.COPYRIGHT.group(copyrightTags),
+                TagCategory.GENERAL.group(generalTags),
+                TagCategory.META.group(metaTags),
+            )
+                .filter { it.tags.isNotEmpty() }
+        } else {
+            metaArtists = emptyList()
+            metaGroupedTags = listOf(
+                TagCategory.GENERAL.group(e.getString("tags").decodeHtml().split(" ")),
+            )
+        }
+
         val metaRating = getRatingFromString(e.getString("rating"))
         val metaPixivId = extractPixivId(metaSource)
         val metadata = ImageMetadata(
             parentId = metaParentId,
             hasChildren = null, // Not available for Gelbooru-based image boards
+            artists = metaArtists,
             source = metaSource,
             groupedTags = metaGroupedTags,
             rating = metaRating,
@@ -197,7 +237,7 @@ object Rule34 : GelbooruBasedImageBoard {
     override val baseUrl = "https://api.rule34.xxx/"
     override val autoCompleteSearchUrl = "${baseUrl}/autocomplete.php?q=%s"
     override val autoCompleteCategoryMapping = emptyMap<String, String>()
-    override val imageSearchUrl = "${baseUrl}index.php?page=dapi&json=1&s=post&q=index&limit=100&tags=%s&pid=%d"
+    override val imageSearchUrl = "${baseUrl}index.php?page=dapi&json=1&s=post&q=index&limit=100&fields=tag_info&tags=%s&pid=%d"
     override val apiKeyCreationUrl = "https://rule34.xxx/index.php?page=account&s=options"
     override val apiKeyRequirement = ImageBoardRequirement.NOT_NEEDED
 
@@ -219,7 +259,7 @@ object Safebooru : GelbooruBasedImageBoard {
     override val baseUrl = "https://safebooru.org/"
     override val autoCompleteSearchUrl = "${baseUrl}autocomplete.php?q=%s"
     override val autoCompleteCategoryMapping = emptyMap<String, String>()
-    override val imageSearchUrl = "${baseUrl}index.php?page=dapi&json=1&s=post&q=index&limit=100&tags=%s&pid=%d"
+    override val imageSearchUrl = "${baseUrl}index.php?page=dapi&json=1&s=post&q=index&limit=100&fields=tag_info&tags=%s&pid=%d"
 
     override fun parseImage(e: JSONObject): Image? {
         return parseImage(e, ImageSource.SAFEBOORU)
