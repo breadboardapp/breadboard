@@ -57,15 +57,7 @@ data class Image(
     val metadata: ImageMetadata? = null
 ) {
     val highestQualityFormatUrl = fileUrl.takeIf { it.isNotEmpty() } ?: sampleUrl
-    var preferHd by mutableStateOf(false)
-    var hdQualityOverride: Boolean? by mutableStateOf(null)
     val isVideo = fileFormat == "mp4" || fileFormat == "webm"
-
-    fun toggleHd(to: Boolean? = null) {
-        preferHd = when (to) {
-            null -> !preferHd
-            else -> to
-        }
-        hdQualityOverride = preferHd
-    }
+    val key: String
+        get() = "${imageSource}_${id ?: fileName}"
 }

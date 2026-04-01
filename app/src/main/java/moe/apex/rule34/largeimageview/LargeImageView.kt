@@ -287,9 +287,6 @@ private fun ImagesPager(
     onImageClick: () -> Unit
 ) {
     val context = LocalContext.current
-    val prefs = LocalPreferences.current
-    val isUsingWifi = remember { isUsingWiFi(context) }
-    val dataSaver = prefs.dataSaver
 
     DisposableEffect(Unit) {
         onDispose {
@@ -305,14 +302,6 @@ private fun ImagesPager(
         beyondViewportPageCount = 1
     ) { index ->
         val imageAtIndex = allImages[index]
-
-        if (imageAtIndex.hdQualityOverride == null) {
-            when (dataSaver) {
-                DataSaver.ON -> imageAtIndex.preferHd = false
-                DataSaver.OFF -> imageAtIndex.preferHd = true
-                DataSaver.AUTO -> imageAtIndex.preferHd = isUsingWifi
-            }
-        }
 
         val zoomState = rememberZoomableState(ZoomSpec(maxZoomFactor = 3.5f))
         val isBarelyZoomedIn by remember {
@@ -379,6 +368,8 @@ private fun LargeImageToolbar(
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
 
+    val preferHd = viewModel.rememberImageHdQualityPreference(currentImage, prefs.dataSaver, isUsingWiFi(context))
+
     val storageLocation = prefs.storageLocation
     val favouriteImages = prefs.favouriteImages
     val actions = prefs.imageViewerActions.drop(1)
@@ -391,9 +382,9 @@ private fun LargeImageToolbar(
     val actionMapping = mapOf(
         ToolbarAction.TOGGLE_HD to {
             ImageAction(
-                onClick = { currentImage.toggleHd() }
+                onClick = { viewModel.setImageHdQualityOverride(currentImage, !preferHd) }
             ) {
-                val vectorIcon = if (currentImage.preferHd) {
+                val vectorIcon = if (preferHd) {
                     ToolbarAction.TOGGLE_HD.enabledIcon
                 } else {
                     ImageVector.vectorResource(R.drawable.ic_hd_disabled)
@@ -698,13 +689,18 @@ private data class ImageAction(
 
 @Composable
 fun LargeImage(image: Image) {
+    val context = LocalContext.current
+    val viewModel: BreadboardViewModel = viewModel(GlobalViewModelOwner)
+
+    val prefs = LocalPreferences.current
+    val preferHd = viewModel.rememberImageHdQualityPreference(image, prefs.dataSaver, isUsingWiFi(context))
+
     /* Poor method of the preliminary work to get rounded corners for favourites saved before
        we started saving the aspect ratio. */
     val aspectRatio = image.aspectRatio
-    val imageUrl = if (image.preferHd) image.highestQualityFormatUrl else image.sampleUrl
+    val imageUrl = if (preferHd) image.highestQualityFormatUrl else image.sampleUrl
     val previewImageUrl = image.previewUrl
     var isLoading by remember { mutableStateOf(false) }
-    val context = LocalContext.current
 
     val modifier = if (aspectRatio == null) {
         if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT) {
