@@ -6,7 +6,6 @@ import android.util.Log
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.EaseOutBack
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -22,9 +21,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -82,15 +84,16 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.times
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import kotlinx.coroutines.CancellationException
@@ -778,52 +781,82 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester) {
 
     if (showSearchHistoryPopup) {
         val locale = LocalLocale.current.platformLocale
+        val density = LocalDensity.current
+        val reversedSearchHistory = remember(prefs.searchHistory) { prefs.searchHistory.reversed() }
+        var contentHeight by remember { mutableStateOf(Float.MAX_VALUE.dp) }
+        val containerHeight by animateDpAsState(contentHeight)
+        val navBarHeight = navBarHeight // We need to calculate this ahead of time
+
+        /* I'd like to use animateContentSize on the LazyColumn but doing so can cause some
+           strange animation bugs when opening the sheet.
+           The workaround using a container controlled by onSizeChanged isn't great
+           but it's close enough to what we want.
+
+           We start with a large initial height and then calculate the correct (smaller)
+           value because reducing the height doesn't cause the strange opening behaviour
+           whereas increasing the height apparently does.
+
+           ModalBottomSheet forcibly adds IME padding that causes the LazyColumn to
+           report a smaller height than desired if the IME is visible when the sheet opens.
+           This could be useful if we had a text field in the sheet but we don't so the IME
+           just gets dismissed and the padding becomes an annoyance.
+           To work around this we'll add the IME height to the LazyColumn's calculated height.
+           This allows it to animate to the proper height once the IME is finished dismissing.
+
+           ModalBottomSheets are just kind of bad in general.
+           They're janky to use and the API surface is annoying. */
+
         TitledModalBottomSheet(
             onDismissRequest = { showSearchHistoryPopup = false },
             sheetState = historySheetState,
             title = "Search history"
         ) {
-            val reversedSearchHistory = prefs.searchHistory.reversed()
-            LazyColumn(
-                modifier = Modifier
-                    .padding(horizontal = MEDIUM_SPACER.dp)
-                    .clip(largerShape)
-                    .animateContentSize(),
-                verticalArrangement = Arrangement.spacedBy(LARGE_SPACER.dp, Alignment.Top),
-                contentPadding = PaddingValues(bottom = 2 * navBarHeight)
-            ) {
-                if (prefs.searchHistory.isEmpty()) {
-                    SearchHistoryStandaloneTextItem("No search history yet. Start searching!")
-                } else {
-                    if (incognito) {
-                        SearchHistoryStandaloneTextItem("Incognito mode is enabled. Search history will not be saved.")
-                    }
-                    items(reversedSearchHistory, key = { it.timestamp }) { entry ->
-                        val date = Date(entry.timestamp)
-                        val formatter =
-                            SimpleDateFormat("dd MMM $timeFormat", locale)
-                        val formattedDate = formatter.format(date)
+            val imeSize = WindowInsets.ime.asPaddingValues().calculateBottomPadding() // We don't want to calculate this ahead of time
 
-                        Column(
-                            modifier = Modifier.animateItem(placementSpec = bouncyAnimationSpec()),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            BaseHeading(
-                                modifier = Modifier.padding(start = SMALL_SPACER.dp),
-                                text = "$formattedDate  \u2022  ${entry.source.label}"
-                            )
-                            SearchHistoryListItem(entry) {
-                                viewModel.setTagSuggestions(entry.tags.toList())
-                                searchString = ""
-                                shouldShowSuggestions = false
-                                scope.launch {
-                                    context.prefs.updatePref(
-                                        PreferenceKeys.IMAGE_SOURCE,
-                                        entry.source
-                                    )
-                                    context.prefs.replaceImageRatings(entry.ratings)
-                                    historySheetState.hide()
-                                    showSearchHistoryPopup = false
+            Box(modifier = Modifier.height(containerHeight)) {
+                LazyColumn(
+                    modifier = Modifier
+                        .padding(horizontal = MEDIUM_SPACER.dp)
+                        .clip(largerShape)
+                        .onSizeChanged {
+                            contentHeight = with (density) { it.height.toDp() } + imeSize
+                        },
+                    verticalArrangement = Arrangement.spacedBy(LARGE_SPACER.dp, Alignment.Top),
+                    contentPadding = PaddingValues(bottom = navBarHeight + MEDIUM_SPACER.dp)
+                ) {
+                    if (prefs.searchHistory.isEmpty()) {
+                        SearchHistoryStandaloneTextItem("No search history yet. Start searching!")
+                    } else {
+                        if (incognito) {
+                            SearchHistoryStandaloneTextItem("Incognito mode is enabled. Search history will not be saved.")
+                        }
+                        items(reversedSearchHistory, key = { it.timestamp }) { entry ->
+                            val date = Date(entry.timestamp)
+                            val formatter =
+                                SimpleDateFormat("dd MMM $timeFormat", locale)
+                            val formattedDate = formatter.format(date)
+
+                            Column(
+                                modifier = Modifier.animateItem(placementSpec = bouncyAnimationSpec()),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                BaseHeading(
+                                    modifier = Modifier.padding(start = SMALL_SPACER.dp),
+                                    text = "$formattedDate  \u2022  ${entry.source.label}"
+                                )
+                                SearchHistoryListItem(entry) {
+                                    viewModel.setTagSuggestions(entry.tags.toList())
+                                    searchString = ""
+                                    shouldShowSuggestions = false
+                                    scope.launch {
+                                        context.prefs.updatePref(
+                                            PreferenceKeys.IMAGE_SOURCE,
+                                            entry.source
+                                        )
+                                        context.prefs.replaceImageRatings(entry.ratings)
+                                        historySheetState.hide()
+                                        showSearchHistoryPopup = false
+                                    }
                                 }
                             }
                         }
