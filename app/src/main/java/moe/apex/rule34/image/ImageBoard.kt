@@ -95,7 +95,7 @@ interface ImageBoard {
 
     suspend fun loadPage(tags: String, page: Int, auth: ImageBoardAuth? = null): List<Image>
 
-    suspend fun loadImageGroupedTags(image: Image, isFavourited: Boolean, auth: ImageBoardAuth? = null): ImageMetadata?
+    suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth? = null): ImageMetadata?
 
     fun formatTagString(tags: List<TagSuggestion>): String {
         return tags.joinToString(" ") { it.formattedLabel }
@@ -275,8 +275,8 @@ object Rule34 : GelbooruBasedImageBoard {
         return loadPage(tags, page, null, ImageSource.R34, auth)
     }
 
-    override suspend fun loadImageGroupedTags(image: Image, isFavourited: Boolean, auth: ImageBoardAuth?): ImageMetadata? {
-        return if (image.hasGroupedTags(isFavourited)) return null
+    override suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth?): ImageMetadata? {
+        return if (image.hasGroupedTags) return null
         else image.id?.let { loadImage(it, auth)?.metadata }
     }
 }
@@ -300,8 +300,8 @@ object Safebooru : GelbooruBasedImageBoard {
         return loadPage(tags, page, null, ImageSource.SAFEBOORU, auth)
     }
 
-    override suspend fun loadImageGroupedTags(image: Image, isFavourited: Boolean, auth: ImageBoardAuth?): ImageMetadata? {
-        return if (image.hasGroupedTags(isFavourited)) return null
+    override suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth?): ImageMetadata? {
+        return if (image.hasGroupedTags) return null
         else image.id?.let { loadImage(it, auth)?.metadata }
     }
 }
@@ -328,8 +328,8 @@ object Gelbooru : GelbooruBasedImageBoard {
         return loadPage(tags, page, "post", ImageSource.GELBOORU, auth)
     }
 
-    override suspend fun loadImageGroupedTags(image: Image, isFavourited: Boolean, auth: ImageBoardAuth?): ImageMetadata? {
-        if (image.hasGroupedTags(isFavourited)) return null
+    override suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth?): ImageMetadata? {
+        if (image.hasGroupedTags) return null
 
         val artistTags = mutableListOf<String>()
         val characterTags = mutableListOf<String>()
@@ -472,8 +472,8 @@ object Danbooru : ImageBoard {
         return subjects.toList()
     }
 
-    override suspend fun loadImageGroupedTags(image: Image, isFavourited: Boolean, auth: ImageBoardAuth?): ImageMetadata? {
-        return if (image.hasGroupedTags(isFavourited)) return null
+    override suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth?): ImageMetadata? {
+        return if (image.hasGroupedTags) return null
         else image.id?.let { loadImage(it, auth)?.metadata }
     }
 
@@ -560,7 +560,7 @@ object Yandere : ImageBoard {
         return subjects.toList()
     }
 
-    override suspend fun loadImageGroupedTags(image: Image, isFavourited: Boolean, auth: ImageBoardAuth?): ImageMetadata? {
+    override suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth?): ImageMetadata? {
         return null // TODO
     }
 

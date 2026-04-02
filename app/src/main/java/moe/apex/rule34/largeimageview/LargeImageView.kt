@@ -242,7 +242,6 @@ fun LargeImageView(
 
         val metadata = currentImage.imageSource.imageBoard.loadImageGroupedTags(
             currentImage,
-            favouritedImage != null,
             prefs.authFor(currentImage.imageSource, context)
         )
 
@@ -258,7 +257,7 @@ fun LargeImageView(
                 emptyList()
         }
 
-        if (favouritedImage?.hasGroupedTags(true) == false && currentImage.hasGroupedTags(true)) {
+        if (favouritedImage?.hasGroupedTags == false && currentImage.hasGroupedTags) {
             scope.launch {
                 context.prefs.updateFavouriteImage(
                     currentImage,
