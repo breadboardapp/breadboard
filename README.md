@@ -1,4 +1,4 @@
-<img src=".github/assets/breadboard.png" align="right" height="150" width="150">
+<img src=".github/assets/feature.png" width="100%" alt="Breadboard banner">
 
 # Welcome to Breadboard 🥖
 
@@ -41,6 +41,19 @@ Powered by multiple image boards and boorus, Breadboard makes finding your favou
 
 
 - **Latest Android features:** Breadboard supports dynamic color, a themed icon, and smooth predictive back animations.
+
+## Screenshots
+
+<p align="center">
+  <img src=".github/assets/play1.png" width="30%" alt="Search screen with caption: Search with tags...">
+  <img src=".github/assets/play2.png" width="30%" alt="Results screen with caption: And browse art.">
+  <img src=".github/assets/play3.png" width="30%" alt="The blocked tags screen with caption: Block tags and AI.">
+  <img src=".github/assets/play4.png" width="30%" alt="The image carousel with caption: Admire artwork...">
+  <img src=".github/assets/play5.png" width="30%" alt="The favourites screen with caption: And save your favourites.">
+  <img src=".github/assets/play6.png" width="30%" alt="The recommendations settings screen with caption: Tune your feed.">
+  <img src=".github/assets/play7.png" width="30%" alt="The image info sheet with caption: Get artwork insights.">
+  <img src=".github/assets/play8.png" width="30%" alt="The settings screen in dark theme with caption: Go dark.">
+</p>
 
 ## Download
 
