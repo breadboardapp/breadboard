@@ -56,16 +56,8 @@ data class Image(
     val aspectRatio: Float? = null, // Nullable for backwards compatibility with old favourites
     val metadata: ImageMetadata? = null
 ) {
+    val key: String
+        get() = "${imageSource}_${id ?: fileName}"
     val highestQualityFormatUrl = fileUrl.takeIf { it.isNotEmpty() } ?: sampleUrl
-    var preferHd by mutableStateOf(false)
-    var hdQualityOverride: Boolean? by mutableStateOf(null)
     val isVideo = fileFormat == "mp4" || fileFormat == "webm"
-
-    fun toggleHd(to: Boolean? = null) {
-        preferHd = when (to) {
-            null -> !preferHd
-            else -> to
-        }
-        hdQualityOverride = preferHd
-    }
 }

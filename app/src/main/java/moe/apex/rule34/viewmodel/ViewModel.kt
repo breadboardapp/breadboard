@@ -1,5 +1,7 @@
 package moe.apex.rule34.viewmodel
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
@@ -8,8 +10,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import moe.apex.rule34.image.Image
+import moe.apex.rule34.preferences.DataSaver
 import moe.apex.rule34.tag.TagSuggestion
 import moe.apex.rule34.util.RecommendationsProvider
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 
 
 object GlobalViewModelOwner : ViewModelStoreOwner {
@@ -33,6 +38,9 @@ class BreadboardViewModel : ViewModel() {
     private val _userMutePreference = MutableStateFlow<Boolean?>(null)
     val userMutePreference: StateFlow<Boolean?> = _userMutePreference.asStateFlow()
 
+    private val _imageHdQualityOverrides = MutableStateFlow<Map<String, Boolean>>(emptyMap())
+    val imageHdQualityOverrides: StateFlow<Map<String, Boolean>> = _imageHdQualityOverrides.asStateFlow()
+
     fun setRecommendationsProvider(provider: RecommendationsProvider?) {
         _recommendationsProvider.value = provider
     }
@@ -43,6 +51,28 @@ class BreadboardViewModel : ViewModel() {
 
     fun setUserMutePreference(muted: Boolean) {
         _userMutePreference.value = muted
+    }
+
+    @Composable
+    fun rememberImageHdQualityPreference(image: Image, dataSaver: DataSaver, defaultValue: Boolean): Boolean {
+        val overrides by imageHdQualityOverrides.collectAsState()
+
+        return remember(overrides, image, dataSaver) {
+            val preferHd = when (dataSaver) {
+                DataSaver.ON -> false
+                DataSaver.OFF -> true
+                DataSaver.AUTO -> defaultValue
+            }
+            overrides[image.key] ?: preferHd
+        }
+    }
+
+    fun setImageHdQualityOverride(image: Image, preferHd: Boolean) {
+        _imageHdQualityOverrides.update { current ->
+            current.toMutableMap().apply {
+                put(image.key, preferHd)
+            }
+        }
     }
 
     fun addTagSuggestion(tag: TagSuggestion) {
