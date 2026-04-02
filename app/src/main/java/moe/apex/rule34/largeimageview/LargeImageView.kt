@@ -237,12 +237,12 @@ fun LargeImageView(
     val currentImage = allImages[pagerState.currentPage.coerceIn(0, allImages.size - 1)]
 
     LaunchedEffect(currentImage) {
-        val isFavourited =
-            favouriteImages.any { it.fileName == currentImage.fileName && it.imageSource == currentImage.imageSource }
+        val favouritedImage =
+            favouriteImages.find { it.fileName == currentImage.fileName && it.imageSource == currentImage.imageSource }
 
         val metadata = currentImage.imageSource.imageBoard.loadImageGroupedTags(
             currentImage,
-            isFavourited,
+            favouritedImage != null,
             prefs.authFor(currentImage.imageSource, context)
         )
 
@@ -258,7 +258,7 @@ fun LargeImageView(
                 emptyList()
         }
 
-        if (isFavourited && metadata != null) {
+        if (favouritedImage?.hasGroupedTags(true) == false && currentImage.hasGroupedTags(true)) {
             scope.launch {
                 context.prefs.updateFavouriteImage(
                     currentImage,
