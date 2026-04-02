@@ -333,11 +333,11 @@ object Gelbooru : GelbooruBasedImageBoard {
         val chunkedTags = image.metadata?.tags?.chunked(100) ?: emptyList()
 
         for (i in 0 until chunkedTags.size) {
-            val url = buildTagSearchUrl(chunkedTags[i], auth) ?: break
+            val url = buildTagSearchUrl(chunkedTags[i], auth) ?: return null
             val body = RequestUtil.get(url) {
                 addHeader("Referer", baseUrl)
             }
-            if (body.isEmpty()) break
+            if (body.isEmpty()) return null
 
             val json: JSONObject
 
@@ -347,7 +347,7 @@ object Gelbooru : GelbooruBasedImageBoard {
                 break
             }
 
-            val tagInfoArray = json.optJSONArray("tag") ?: break
+            val tagInfoArray = json.optJSONArray("tag") ?: return null
 
             for (i in 0 until tagInfoArray.length()) {
                 val tag = tagInfoArray.getJSONObject(i)
