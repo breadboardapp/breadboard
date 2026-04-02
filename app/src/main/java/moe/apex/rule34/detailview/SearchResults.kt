@@ -269,6 +269,15 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
         )
     }
 
-    OffsetBasedLargeImageView(navController, isImageCarouselVisible, initialPage, imagesToDisplay)
+    OffsetBasedLargeImageView(
+        navController,
+        isImageCarouselVisible,
+        initialPage,
+        imagesToDisplay,
+        { oldImage, newImage ->
+            val index = viewModel.images.indexOf(oldImage)
+            if (index != -1) viewModel.images[index] = newImage
+        }
+    )
 }
 

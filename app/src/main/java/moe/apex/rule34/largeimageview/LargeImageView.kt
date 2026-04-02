@@ -203,6 +203,7 @@ fun LargeImageView(
     navController: NavController,
     initialPage: Int,
     allImages: List<Image>,
+    onImageUpdate: suspend (Image, Image) -> Unit,
     onZoomedStatusChanged: ((Boolean) -> Unit)? = null
 ) {
     val pagerState = rememberPagerState(
@@ -237,32 +238,16 @@ fun LargeImageView(
     val currentImage = allImages[pagerState.currentPage.coerceIn(0, allImages.size - 1)]
 
     LaunchedEffect(currentImage) {
-        val favouritedImage =
-            favouriteImages.find { it.fileName == currentImage.fileName && it.imageSource == currentImage.imageSource }
-
         val metadata = currentImage.imageSource.imageBoard.loadImageGroupedTags(
             currentImage,
             prefs.authFor(currentImage.imageSource, context)
         )
 
-        if (currentImage.metadataArtistsOverride == null) {
-            currentImage.metadataArtistsOverride = metadata?.artists ?:
-                currentImage.metadata?.artists ?:
-                emptyList()
-        }
+        if (metadata != null) {
+            val newImage = currentImage.copy(metadata = metadata)
 
-        if (currentImage.metadataGroupedTagsOverride == null) {
-            currentImage.metadataGroupedTagsOverride = metadata?.groupedTags ?:
-                currentImage.metadata?.groupedTags ?:
-                emptyList()
-        }
-
-        if (favouritedImage?.hasGroupedTags == false && currentImage.hasGroupedTags) {
             scope.launch {
-                context.prefs.updateFavouriteImage(
-                    currentImage,
-                    currentImage.copyWithMergedMetadataOverrides()
-                )
+                onImageUpdate(currentImage, newImage)
             }
         }
     }
@@ -442,7 +427,7 @@ private fun LargeImageToolbar(
                             context.prefs.removeFavouriteImage(currentImage)
                             showToast(context, "Removed from your favourites")
                         } else {
-                            context.prefs.addFavouriteImage(currentImage.copyWithMergedMetadataOverrides())
+                            context.prefs.addFavouriteImage(currentImage)
                             showToast(context, "Added to your favourites")
                         }
                     }
@@ -675,7 +660,12 @@ fun LazyLargeImageView(
     else if (image == null)
         ImageNotFound()
     else
-        LargeImageView(navController, 0, listOf(image!!))
+        LargeImageView(
+            navController,
+            0,
+            listOf(image!!),
+            onImageUpdate = { _, newImage -> image = newImage }
+        )
 }
 
 
@@ -1169,6 +1159,7 @@ fun OffsetBasedLargeImageView(
     visibilityState: MutableState<Boolean>,
     initialPage: Int,
     allImages: List<Image>,
+    onImageUpdate: suspend (Image, Image) -> Unit,
     bottomBarVisibleState: MutableState<Boolean>? = null,
 ) {
     val scope = rememberCoroutineScope()
@@ -1296,6 +1287,7 @@ fun OffsetBasedLargeImageView(
                     navController = navController,
                     initialPage = initialPage,
                     allImages = allImages,
+                    onImageUpdate = onImageUpdate,
                     onZoomedStatusChanged = { canDragDown = !it }
                 )
             }

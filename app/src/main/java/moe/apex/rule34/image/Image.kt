@@ -61,17 +61,10 @@ data class Image(
         get() = "${imageSource}_${id ?: fileName}"
     val highestQualityFormatUrl = fileUrl.takeIf { it.isNotEmpty() } ?: sampleUrl
     val isVideo = fileFormat == "mp4" || fileFormat == "webm"
-    var metadataArtistsOverride by mutableStateOf<List<String>?>(null)
-    var metadataGroupedTagsOverride by mutableStateOf<List<TagGroup>?>(null)
 
     val hasGroupedTags: Boolean
         get() {
-            if (
-                id == null ||
-                metadata == null ||
-                metadataArtistsOverride != null ||
-                metadataGroupedTagsOverride != null
-            ) return true
+            if (id == null || metadata == null) return true
 
             /* Usually, we can tell that the existing grouped tags are grouped properly if they have more than one group.
 
@@ -88,12 +81,4 @@ data class Image(
 
             return false
         }
-
-    fun copyWithMergedMetadataOverrides(): Image {
-        val newMetadata = metadata?.copy(
-            artists = metadataArtistsOverride ?: metadata.artists,
-            groupedTags = metadataGroupedTagsOverride ?: metadata.groupedTags
-        )
-        return this.copy(metadata = newMetadata)
-    }
 }
