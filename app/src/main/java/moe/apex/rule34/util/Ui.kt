@@ -832,10 +832,7 @@ fun TitledModalBottomSheet(
                 .padding(SMALL_LARGE_SPACER.dp)
         )
         VerticalSpacer()
-        // https://issuetracker.google.com/issues/483795433
-        CompositionLocalProvider(LocalOverscrollFactory provides null) {
-            content()
-        }
+        content()
     }
 }
 
