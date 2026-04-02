@@ -223,6 +223,11 @@ fun LargeImageView(
         derivedStateOf { activeZoomState?.zoomFraction?.let { it < MAX_ZOOM_FOR_PAGE_CHANGE } ?: true }
     }
 
+    val context = LocalContext.current
+    val prefs = LocalPreferences.current
+    val favouriteImages = prefs.favouriteImages
+    val scope = rememberCoroutineScope()
+
     LaunchedEffect(allImages.size) {
         if (pagerState.currentPage >= allImages.size && allImages.isNotEmpty()) {
             pagerState.scrollToPage(allImages.size - 1)
@@ -230,6 +235,38 @@ fun LargeImageView(
     }
 
     val currentImage = allImages[pagerState.currentPage.coerceIn(0, allImages.size - 1)]
+
+    LaunchedEffect(currentImage) {
+        val isFavourited =
+            favouriteImages.any { it.fileName == currentImage.fileName && it.imageSource == currentImage.imageSource }
+
+        val metadata = currentImage.imageSource.imageBoard.loadImageGroupedTags(
+            currentImage,
+            isFavourited,
+            prefs.authFor(currentImage.imageSource, context)
+        )
+
+        if (currentImage.metadataArtistsOverride == null) {
+            currentImage.metadataArtistsOverride = metadata?.artists ?:
+                currentImage.metadata?.artists ?:
+                emptyList()
+        }
+
+        if (currentImage.metadataGroupedTagsOverride == null) {
+            currentImage.metadataGroupedTagsOverride = metadata?.groupedTags ?:
+                currentImage.metadata?.groupedTags ?:
+                emptyList()
+        }
+
+        if (isFavourited && metadata != null) {
+            scope.launch {
+                context.prefs.updateFavouriteImage(
+                    currentImage,
+                    currentImage.copyWithMergedMetadataOverrides()
+                )
+            }
+        }
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -406,7 +443,7 @@ private fun LargeImageToolbar(
                             context.prefs.removeFavouriteImage(currentImage)
                             showToast(context, "Removed from your favourites")
                         } else {
-                            context.prefs.addFavouriteImage(currentImage)
+                            context.prefs.addFavouriteImage(currentImage.copyWithMergedMetadataOverrides())
                             showToast(context, "Added to your favourites")
                         }
                     }
