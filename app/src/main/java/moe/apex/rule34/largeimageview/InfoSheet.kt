@@ -100,6 +100,7 @@ import moe.apex.rule34.util.isWebLink
 import moe.apex.rule34.util.largerShapeCornerSize
 import moe.apex.rule34.util.launchInWebBrowser
 import moe.apex.rule34.util.navBarHeight
+import moe.apex.rule34.util.openUrl
 import moe.apex.rule34.util.pluralise
 import moe.apex.rule34.util.showToast
 
@@ -258,6 +259,9 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
         ) {
             // https://www.crunchyroll.com/series/GP5HJ8E81/
             val onLinkClick = { url: String ->
+                openUrl(context, url)
+            }
+            val onBrowserLinkClick = { url: String -> // Bypass Breadboard's handling of file URLs like for Yande.re
                 launchInWebBrowser(context, url)
             }
             val onTagLongClick = { tag: String -> selectedTag = tag }
@@ -271,6 +275,7 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                 UnifiedInfoContent(
                     image = image,
                     onLinkClick = onLinkClick,
+                    onBrowserLinkClick = onBrowserLinkClick,
                     onCopyClick = onCopyClick,
                     onViewParentClick = onViewParentClick,
                     onViewRelatedClick = { startTagSearch("parent:$it") },
@@ -287,6 +292,7 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                         InfoSheetPage.SOURCES -> InfoTabContent(
                             image = image,
                             onLinkClick = onLinkClick,
+                            onBrowserLinkClick = onBrowserLinkClick,
                             onCopyClick = onCopyClick,
                             onViewParentClick = onViewParentClick,
                             onViewRelatedClick = { startTagSearch("parent:$it") },
@@ -297,6 +303,7 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                         InfoSheetPage.IMAGEBOARD -> ImageboardDataTabContent(
                             image = image,
                             onLinkClick = onLinkClick,
+                            onBrowserLinkClick = onBrowserLinkClick,
                             onCopyClick = onCopyClick,
                             onTagClick = ::startTagSearch,
                             onTagLongClick = onTagLongClick
@@ -385,16 +392,18 @@ private fun BottomToolbarButton(
 private fun InfoTabContent(
     image: Image,
     onLinkClick: (String) -> Unit,
+    onBrowserLinkClick: (String) -> Unit,
     onCopyClick: (String) -> Unit,
     onViewParentClick: (String) -> Unit,
     onViewRelatedClick: (String) -> Unit,
     onTagClick: (String) -> Unit,
-    onTagLongClick: (String) -> Unit,
+    onTagLongClick: (String) -> Unit
 ) {
     SplitInfoSheetLazyColumn {
         infoContentItems(
             image = image,
             onLinkClick = onLinkClick,
+            onBrowserLinkClick = onBrowserLinkClick,
             onCopyClick = onCopyClick,
             onViewParentClick = onViewParentClick,
             onViewRelatedClick = onViewRelatedClick,
@@ -409,6 +418,7 @@ private fun InfoTabContent(
 private fun ImageboardDataTabContent(
     image: Image,
     onLinkClick: (String) -> Unit,
+    onBrowserLinkClick: (String) -> Unit,
     onCopyClick: (String) -> Unit,
     onTagClick: (String) -> Unit,
     onTagLongClick: (String) -> Unit
@@ -417,6 +427,7 @@ private fun ImageboardDataTabContent(
         imageboardDataContentItems(
             image = image,
             onLinkClick = onLinkClick,
+            onBrowserLinkClick = onBrowserLinkClick,
             onCopyClick = onCopyClick,
             onTagClick = onTagClick,
             onTagLongClick = onTagLongClick
@@ -430,6 +441,7 @@ private fun ImageboardDataTabContent(
 private fun UnifiedInfoContent(
     image: Image,
     onLinkClick: (String) -> Unit,
+    onBrowserLinkClick: (String) -> Unit,
     onCopyClick: (String) -> Unit,
     onViewParentClick: (String) -> Unit,
     onViewRelatedClick: (String) -> Unit,
@@ -445,6 +457,7 @@ private fun UnifiedInfoContent(
         infoContentItems(
             image = image,
             onLinkClick = onLinkClick,
+            onBrowserLinkClick = onBrowserLinkClick,
             onCopyClick = onCopyClick,
             onViewParentClick = onViewParentClick,
             onViewRelatedClick = onViewRelatedClick,
@@ -455,6 +468,7 @@ private fun UnifiedInfoContent(
         imageboardDataContentItems(
             image = image,
             onLinkClick = onLinkClick,
+            onBrowserLinkClick = onBrowserLinkClick,
             onCopyClick = onCopyClick,
             onTagClick = onTagClick,
             onTagLongClick = onTagLongClick,
@@ -482,6 +496,7 @@ private fun SplitInfoSheetLazyColumn(content: LazyListScope.() -> Unit) {
 private fun LazyListScope.infoContentItems(
     image: Image,
     onLinkClick: (String) -> Unit,
+    onBrowserLinkClick: (String) -> Unit,
     onCopyClick: (String) -> Unit,
     onViewParentClick: (String) -> Unit,
     onViewRelatedClick: (String) -> Unit,
@@ -541,7 +556,7 @@ private fun LazyListScope.infoContentItems(
                 UrlItem(
                     label = "File URL",
                     url = it,
-                    onLinkClick = onLinkClick,
+                    onLinkClick = onBrowserLinkClick,
                     onCopyClick = onCopyClick
                 )
             }
@@ -583,10 +598,12 @@ private fun LazyListScope.infoContentItems(
 }
 
 
+@Suppress("unused")
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 private fun LazyListScope.imageboardDataContentItems(
     image: Image,
-    onLinkClick: (String) -> Unit,
+    onLinkClick: (String) -> Unit, // Not currently used but keeping for consistency and possible future use
+    onBrowserLinkClick: (String) -> Unit,
     onCopyClick: (String) -> Unit,
     onTagClick: (String) -> Unit,
     onTagLongClick: (String) -> Unit,
@@ -598,7 +615,7 @@ private fun LazyListScope.imageboardDataContentItems(
                 UrlItem(
                     label = "File URL",
                     url = it,
-                    onLinkClick = onLinkClick,
+                    onLinkClick = onBrowserLinkClick,
                     onCopyClick = onCopyClick
                 )
             }
