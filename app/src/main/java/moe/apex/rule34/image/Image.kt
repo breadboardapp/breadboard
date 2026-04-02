@@ -56,8 +56,8 @@ data class Image(
     val aspectRatio: Float? = null, // Nullable for backwards compatibility with old favourites
     val metadata: ImageMetadata? = null
 ) {
-    val highestQualityFormatUrl = fileUrl.takeIf { it.isNotEmpty() } ?: sampleUrl
-    val isVideo = fileFormat == "mp4" || fileFormat == "webm"
     val key: String
         get() = "${imageSource}_${id ?: fileName}"
+    val highestQualityFormatUrl = fileUrl.takeIf { it.isNotEmpty() } ?: sampleUrl
+    val isVideo = fileFormat == "mp4" || fileFormat == "webm"
 }
