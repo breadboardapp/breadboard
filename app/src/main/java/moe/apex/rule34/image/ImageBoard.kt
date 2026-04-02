@@ -13,6 +13,8 @@ import moe.apex.rule34.util.extractPixivId
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
+import java.net.URLEncoder
+import kotlin.collections.joinToString
 
 
 val AI_TAG_NAMES = listOf(
@@ -60,7 +62,8 @@ interface ImageBoard {
         val suggestions = mutableListOf<TagSuggestion>()
         val isExcluded = searchString.startsWith("-")
         val tags = searchString.replace("^-".toRegex(), "")
-        val body = RequestUtil.get(autoCompleteSearchUrl.format(tags)) {
+        val encodedTags = URLEncoder.encode(tags, "utf-8")
+        val body = RequestUtil.get(autoCompleteSearchUrl.format(encodedTags)) {
             addHeader("Referrer", baseUrl)
         }
         val results = JSONArray(body)
@@ -95,28 +98,32 @@ interface ImageBoard {
     suspend fun loadImageGroupedTags(image: Image, isFavourited: Boolean, auth: ImageBoardAuth? = null): ImageMetadata?
 
     fun formatTagString(tags: List<TagSuggestion>): String {
-        return tags.joinToString("+") { it.formattedLabel }
+        return tags.joinToString(" ") { it.formattedLabel }
     }
 
     fun formatTagNameString(tags: List<String>): String {
-        return tags.joinToString("+")
+        return tags.joinToString(" ")
     }
 
     fun getRatingFromString(rating: String): ImageRating
 
     fun buildImageSearchUrl(tags: String, page: Int, auth: ImageBoardAuth?): String {
+        val encodedTags = URLEncoder.encode(tags, "utf-8")
+
         return if (auth != null) {
-            authenticatedImageSearchUrl.format(tags, page, auth.apiKey, auth.user)
+            authenticatedImageSearchUrl.format(encodedTags, page, auth.apiKey, auth.user)
         } else {
-            imageSearchUrl.format(tags, page)
+            imageSearchUrl.format(encodedTags, page)
         }
     }
 
-    fun buildTagSearchUrl(tags: List<String>, auth: ImageBoardAuth?): String? {
+    fun buildTagSearchUrl(tags: String, auth: ImageBoardAuth?): String? {
+        val encodedTags = URLEncoder.encode(tags, "utf-8")
+
         return if (auth != null) {
-            authenticatedTagSearchUrl?.format(tags.joinToString("+"), auth.apiKey, auth.user)
+            authenticatedTagSearchUrl?.format(encodedTags, auth.apiKey, auth.user)
         } else {
-            tagSearchUrl?.format(tags.joinToString("+"))
+            tagSearchUrl?.format(encodedTags)
         }
     }
 
@@ -333,7 +340,7 @@ object Gelbooru : GelbooruBasedImageBoard {
         val chunkedTags = image.metadata?.tags?.chunked(100) ?: emptyList()
 
         for (i in 0 until chunkedTags.size) {
-            val url = buildTagSearchUrl(chunkedTags[i], auth) ?: return null
+            val url = buildTagSearchUrl(chunkedTags[i].joinToString(" "), auth) ?: return null
             val body = RequestUtil.get(url) {
                 addHeader("Referer", baseUrl)
             }
