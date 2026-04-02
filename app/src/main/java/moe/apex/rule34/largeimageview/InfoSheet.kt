@@ -627,7 +627,9 @@ private fun LazyListScope.imageboardDataContentItems(
             mainTagsItems(image, onTagClick, onTagLongClick)
         }
 
-        image.metadata!!.groupedTags.filter {
+        val groupedTags = image.metadataGroupedTagsOverride ?: image.metadata?.groupedTags
+
+        groupedTags!!.filter {
             it.category !in setOf(
                 TagCategory.ARTIST,
                 TagCategory.CHARACTER,
@@ -675,7 +677,10 @@ private fun ExpressiveGroupScope.mainTagsItems(
     onTagClick: (String) -> Unit,
     onTagLongClick: (String) -> Unit
 ) {
-    image.metadata!!.artists.takeIf { it.isNotEmpty() }?.let {
+    val artists = image.metadataArtistsOverride ?: image.metadata?.artists
+    val groupedTags = image.metadataGroupedTagsOverride ?: image.metadata?.groupedTags
+
+    artists!!.takeIf { it.isNotEmpty() }?.let {
         item {
             TagsContainer(
                 category = TagCategory.ARTIST,
@@ -686,7 +691,7 @@ private fun ExpressiveGroupScope.mainTagsItems(
         }
     }
 
-    image.metadata.groupedTags.filter {
+    groupedTags!!.filter {
         it.category in setOf(TagCategory.CHARACTER, TagCategory.COPYRIGHT)
     }.forEach { group ->
         item {
