@@ -54,14 +54,14 @@ class BreadboardViewModel : ViewModel() {
     }
 
     @Composable
-    fun rememberImageHdQualityPreference(image: Image, dataSaver: DataSaver, isUsingWifi: Boolean): Boolean {
+    fun rememberImageHdQualityPreference(image: Image, dataSaver: DataSaver, defaultValue: Boolean): Boolean {
         val overrides by imageHdQualityOverrides.collectAsState()
 
         return remember(overrides, image, dataSaver) {
             val preferHd = when (dataSaver) {
                 DataSaver.ON -> false
                 DataSaver.OFF -> true
-                DataSaver.AUTO -> isUsingWifi
+                DataSaver.AUTO -> defaultValue
             }
             overrides[image.key] ?: preferHd
         }
