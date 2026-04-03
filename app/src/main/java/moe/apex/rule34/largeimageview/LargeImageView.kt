@@ -203,7 +203,7 @@ fun LargeImageView(
     navController: NavController,
     initialPage: Int,
     allImages: List<Image>,
-    onImageUpdate: suspend (Image, Image) -> Unit,
+    onImageUpdate: (suspend (Image, Image) -> Unit)? = null,
     onZoomedStatusChanged: ((Boolean) -> Unit)? = null
 ) {
     val pagerState = rememberPagerState(
@@ -236,18 +236,20 @@ fun LargeImageView(
 
     val currentImage = allImages[pagerState.currentPage.coerceIn(0, allImages.size - 1)]
 
-    LaunchedEffect(currentImage) {
-        if (!currentImage.hasGroupedTags) {
-            val metadata = currentImage.imageSource.imageBoard.loadImageGroupedTags(
-                currentImage,
-                prefs.authFor(currentImage.imageSource, context)
-            )
+    if (onImageUpdate != null) {
+        LaunchedEffect(currentImage) {
+            if (!currentImage.hasGroupedTags) {
+                val metadata = currentImage.imageSource.imageBoard.loadImageGroupedTags(
+                    currentImage,
+                    prefs.authFor(currentImage.imageSource, context)
+                )
 
-            if (metadata != null) {
-                val newImage = currentImage.copy(metadata = metadata)
+                if (metadata != null) {
+                    val newImage = currentImage.copy(metadata = metadata)
 
-                scope.launch {
-                    onImageUpdate(currentImage, newImage)
+                    scope.launch {
+                        onImageUpdate(currentImage, newImage)
+                    }
                 }
             }
         }
@@ -1161,7 +1163,7 @@ fun OffsetBasedLargeImageView(
     initialPage: Int,
     allImages: List<Image>,
     bottomBarVisibleState: MutableState<Boolean>? = null,
-    onImageUpdate: suspend (Image, Image) -> Unit,
+    onImageUpdate: (suspend (Image, Image) -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
