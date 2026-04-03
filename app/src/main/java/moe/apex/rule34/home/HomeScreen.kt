@@ -201,11 +201,18 @@ fun HomeScreen(navController: NavController, bottomBarVisibleState: MutableState
         }
     }
 
+    val recommendedImages = recommendationsProvider?.recommendedImages
+
     OffsetBasedLargeImageView(
         navController,
         shouldShowLargeImage,
         initialPage,
-        recommendationsProvider?.recommendedImages ?: emptyList(),
+        recommendedImages ?: emptyList(),
         bottomBarVisibleState
-    )
+    ) { oldImage, newImage ->
+        if (recommendedImages != null) {
+            val index = recommendedImages.indexOf(oldImage)
+            if (index != -1) recommendedImages[index] = newImage
+        }
+    }
 }

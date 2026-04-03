@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import moe.apex.rule34.preferences.ImageSource
+import moe.apex.rule34.tag.TagCategory
 import moe.apex.rule34.tag.TagGroup
 import moe.apex.rule34.util.MigrationOnlyField
 
@@ -60,4 +61,26 @@ data class Image(
         get() = "${imageSource}_${id ?: fileName}"
     val highestQualityFormatUrl = fileUrl.takeIf { it.isNotEmpty() } ?: sampleUrl
     val isVideo = fileFormat == "mp4" || fileFormat == "webm"
+
+    val hasGroupedTags: Boolean
+        get() {
+            /* If the image does not have ID or metadata, we would have no way of fetching additional info.
+               Therefore, the image should just be treated as already having grouped tags. */
+            if (id == null || metadata == null) return true
+
+            /* Usually, we can tell that the existing grouped tags are grouped properly if they have more than one group.
+
+               Otherwise, the least we could do is make sure that the only existing group is a non-general one.
+               This does not usually happen, but we would at least know that it is already grouped in this case.
+
+               The images that pass would usually have ungrouped tags, but it could also catch actual images that
+               literally only have general tags. They're usually due to bad tagging and should be re-fetched anyway. */
+            if (
+                metadata.groupedTags.size > 1 ||
+                (metadata.groupedTags.size == 1 && metadata.groupedTags[0].category != TagCategory.GENERAL)
+            )
+                return true
+
+            return false
+        }
 }

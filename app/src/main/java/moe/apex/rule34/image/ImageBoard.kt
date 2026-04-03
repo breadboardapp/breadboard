@@ -1,6 +1,7 @@
 package moe.apex.rule34.image
 
 import android.util.Log
+import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import moe.apex.rule34.RequestUtil
 import moe.apex.rule34.preferences.ImageSource
@@ -12,6 +13,8 @@ import moe.apex.rule34.util.extractPixivId
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
+import java.net.URLEncoder
+import kotlin.collections.joinToString
 
 
 val AI_TAG_NAMES = listOf(
@@ -42,6 +45,10 @@ interface ImageBoard {
     val imageSearchUrl: String
     val authenticatedImageSearchUrl: String
         get() = "$imageSearchUrl&api_key=%s&user_id=%s"
+    val tagSearchUrl: String?
+        get() = null
+    val authenticatedTagSearchUrl: String?
+        get() = tagSearchUrl?.let { "$it&api_key=%s&user_id=%s" }
     val apiKeyCreationUrl: String?
         get() = null
     val firstPageIndex: Int
@@ -55,7 +62,8 @@ interface ImageBoard {
         val suggestions = mutableListOf<TagSuggestion>()
         val isExcluded = searchString.startsWith("-")
         val tags = searchString.replace("^-".toRegex(), "")
-        val body = RequestUtil.get(autoCompleteSearchUrl.format(tags)) {
+        val encodedTags = URLEncoder.encode(tags, "utf-8")
+        val body = RequestUtil.get(autoCompleteSearchUrl.format(encodedTags)) {
             addHeader("Referrer", baseUrl)
         }
         val results = JSONArray(body)
@@ -87,21 +95,35 @@ interface ImageBoard {
 
     suspend fun loadPage(tags: String, page: Int, auth: ImageBoardAuth? = null): List<Image>
 
+    suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth? = null): ImageMetadata?
+
     fun formatTagString(tags: List<TagSuggestion>): String {
-        return tags.joinToString("+") { it.formattedLabel }
+        return tags.joinToString(" ") { it.formattedLabel }
     }
 
     fun formatTagNameString(tags: List<String>): String {
-        return tags.joinToString("+")
+        return tags.joinToString(" ")
     }
 
     fun getRatingFromString(rating: String): ImageRating
 
     fun buildImageSearchUrl(tags: String, page: Int, auth: ImageBoardAuth?): String {
+        val encodedTags = URLEncoder.encode(tags, "utf-8")
+
         return if (auth != null) {
-            authenticatedImageSearchUrl.format(tags, page, auth.apiKey, auth.user)
+            authenticatedImageSearchUrl.format(encodedTags, page, auth.apiKey, auth.user)
         } else {
-            imageSearchUrl.format(tags, page)
+            imageSearchUrl.format(encodedTags, page)
+        }
+    }
+
+    fun buildTagSearchUrl(tags: String, auth: ImageBoardAuth?): String? {
+        val encodedTags = URLEncoder.encode(tags, "utf-8")
+
+        return if (auth != null) {
+            authenticatedTagSearchUrl?.format(encodedTags, auth.apiKey, auth.user)
+        } else {
+            tagSearchUrl?.format(encodedTags)
         }
     }
 
@@ -252,6 +274,10 @@ object Rule34 : GelbooruBasedImageBoard {
     override suspend fun loadPage(tags: String, page: Int, auth: ImageBoardAuth?): List<Image> {
         return loadPage(tags, page, null, ImageSource.R34, auth)
     }
+
+    override suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth?): ImageMetadata? {
+        return image.id?.let { loadImage(it, auth)?.metadata }
+    }
 }
 
 
@@ -272,6 +298,10 @@ object Safebooru : GelbooruBasedImageBoard {
     override suspend fun loadPage(tags: String, page: Int, auth: ImageBoardAuth?): List<Image> {
         return loadPage(tags, page, null, ImageSource.SAFEBOORU, auth)
     }
+
+    override suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth?): ImageMetadata? {
+        return image.id?.let { loadImage(it, auth)?.metadata }
+    }
 }
 
 
@@ -280,6 +310,7 @@ object Gelbooru : GelbooruBasedImageBoard {
     override val autoCompleteSearchUrl = "${baseUrl}index.php?page=autocomplete2&term=%s&type=tag_query&limit=10"
     override val autoCompleteCategoryMapping = mapOf("tag" to "general")
     override val imageSearchUrl = "${baseUrl}index.php?page=dapi&json=1&s=post&q=index&limit=100&tags=%s&pid=%d"
+    override val tagSearchUrl = "${baseUrl}index.php?page=dapi&json=1&s=tag&q=index&names=%s"
     override val apiKeyCreationUrl = "${baseUrl}index.php?page=account&s=options"
     override val apiKeyRequirement = ImageBoardRequirement.REQUIRED
 
@@ -293,6 +324,61 @@ object Gelbooru : GelbooruBasedImageBoard {
 
     override suspend fun loadPage(tags: String, page: Int, auth: ImageBoardAuth?): List<Image> {
         return loadPage(tags, page, "post", ImageSource.GELBOORU, auth)
+    }
+
+    override suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth?): ImageMetadata? {
+        val artistTags = mutableListOf<String>()
+        val characterTags = mutableListOf<String>()
+        val copyrightTags = mutableListOf<String>()
+        val generalTags = mutableListOf<String>()
+        val metaTags = mutableListOf<String>()
+
+        val chunkedTags = image.metadata?.tags?.chunked(100) ?: emptyList()
+
+        for (i in 0 until chunkedTags.size) {
+            val url = buildTagSearchUrl(chunkedTags[i].joinToString(" "), auth) ?: return null
+            val body = RequestUtil.get(url) {
+                addHeader("Referer", baseUrl)
+            }
+            if (body.isEmpty()) return null
+
+            val json: JSONObject
+
+            try {
+                json = JSONObject(body)
+            } catch (e: JSONException) {
+                return null
+            }
+
+            val tagInfoArray = json.optJSONArray("tag") ?: return null
+
+            for (i in 0 until tagInfoArray.length()) {
+                val tag = tagInfoArray.getJSONObject(i)
+                val tagType = tag.getString("type")
+                val tagName = tag.getString("name").decodeHtml()
+
+                // Gelbooru's tag types when represented as ints seem to follow Danbooru's autocomplete category mappings
+                when (Danbooru.autoCompleteCategoryMapping[tagType]) {
+                    "artist" -> artistTags.add(tagName)
+                    "copyright" -> copyrightTags.add(tagName)
+                    "character" -> characterTags.add(tagName)
+                    "meta" -> metaTags.add(tagName)
+                    else -> generalTags.add(tagName)
+                }
+            }
+
+            if (i != chunkedTags.size - 1) delay(200)
+        }
+
+        val groupedTags = listOf(
+            TagCategory.CHARACTER.group(characterTags),
+            TagCategory.COPYRIGHT.group(copyrightTags),
+            TagCategory.GENERAL.group(generalTags),
+            TagCategory.META.group(metaTags),
+        )
+            .filter { it.tags.isNotEmpty() }
+
+        return image.metadata?.copy(artists = artistTags, groupedTags = groupedTags)
     }
 }
 
@@ -382,6 +468,10 @@ object Danbooru : ImageBoard {
         return subjects.toList()
     }
 
+    override suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth?): ImageMetadata? {
+        return image.id?.let { loadImage(it, auth)?.metadata }
+    }
+
     override fun getRatingFromString(rating: String): ImageRating {
         return when (rating) {
             "g" -> ImageRating.SAFE
@@ -463,6 +553,10 @@ object Yandere : ImageBoard {
         }
 
         return subjects.toList()
+    }
+
+    override suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth?): ImageMetadata? {
+        return null // TODO
     }
 
     override fun getRatingFromString(rating: String): ImageRating {

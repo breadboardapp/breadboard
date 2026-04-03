@@ -129,6 +129,7 @@ import coil3.network.httpHeaders
 import coil3.request.ImageRequest
 import io.github.kdroidfilter.composemediaplayer.VideoPlayerSurface
 import io.github.kdroidfilter.composemediaplayer.rememberVideoPlayerState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -203,6 +204,7 @@ fun LargeImageView(
     navController: NavController,
     initialPage: Int,
     allImages: List<Image>,
+    onImageUpdate: (suspend (Image, Image) -> Unit)? = null,
     onZoomedStatusChanged: ((Boolean) -> Unit)? = null
 ) {
     val pagerState = rememberPagerState(
@@ -223,6 +225,10 @@ fun LargeImageView(
         derivedStateOf { activeZoomState?.zoomFraction?.let { it < MAX_ZOOM_FOR_PAGE_CHANGE } ?: true }
     }
 
+    val context = LocalContext.current
+    val prefs = LocalPreferences.current
+    val scope = rememberCoroutineScope()
+
     LaunchedEffect(allImages.size) {
         if (pagerState.currentPage >= allImages.size && allImages.isNotEmpty()) {
             pagerState.scrollToPage(allImages.size - 1)
@@ -230,6 +236,30 @@ fun LargeImageView(
     }
 
     val currentImage = allImages[pagerState.currentPage.coerceIn(0, allImages.size - 1)]
+    val hasGroupedTags = remember(currentImage) { currentImage.hasGroupedTags }
+
+    if (!hasGroupedTags && onImageUpdate != null) {
+        LaunchedEffect(currentImage) {
+            try {
+                val metadata = currentImage.imageSource.imageBoard.loadImageGroupedTags(
+                    currentImage,
+                    prefs.authFor(currentImage.imageSource, context)
+                )
+
+                if (metadata != null) {
+                    val newImage = currentImage.copy(metadata = metadata)
+
+                    scope.launch {
+                        onImageUpdate(currentImage, newImage)
+                    }
+                }
+            } catch (e: CancellationException) {
+                // Ignore the CancellationException error above because we want it to be cancelled
+            } catch (e: Exception) {
+                Log.e("LargeImageView", "Error fetching image grouped tags", e)
+            }
+        }
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -639,7 +669,12 @@ fun LazyLargeImageView(
     else if (image == null)
         ImageNotFound()
     else
-        LargeImageView(navController, 0, listOf(image!!))
+        LargeImageView(
+            navController,
+            0,
+            listOf(image!!),
+            onImageUpdate = { _, newImage -> image = newImage }
+        )
 }
 
 
@@ -1134,6 +1169,7 @@ fun OffsetBasedLargeImageView(
     initialPage: Int,
     allImages: List<Image>,
     bottomBarVisibleState: MutableState<Boolean>? = null,
+    onImageUpdate: (suspend (Image, Image) -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
@@ -1260,6 +1296,7 @@ fun OffsetBasedLargeImageView(
                     navController = navController,
                     initialPage = initialPage,
                     allImages = allImages,
+                    onImageUpdate = onImageUpdate,
                     onZoomedStatusChanged = { canDragDown = !it }
                 )
             }

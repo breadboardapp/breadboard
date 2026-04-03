@@ -660,6 +660,16 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
     }
 
 
+    suspend fun updateFavouriteImage(image: Image, newImage: Image) {
+        val images = getPreferences.first().favouriteImages.toMutableList()
+        val index = images.indexOf(image)
+        if (index != -1) {
+            images[index] = newImage
+            updateFavouriteImages(images)
+        }
+    }
+
+
     private fun findDuplicate(incoming: SearchHistoryEntry, history: List<SearchHistoryEntry>): SearchHistoryEntry? {
         /* Since not all ratings are available for all sources, we should only check the
            ones that are available when determining whether a search history entry is a duplicate.

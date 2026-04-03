@@ -45,7 +45,7 @@ enum class ImageRating(override val label: String) : PrefEnum<ImageRating> {
 
         fun buildSearchStringFor(vararg ratings: ImageRating): String {
             val currentFilter = buildQueryListFor(*ratings)
-            return currentFilter.joinToString("+") { it.joinToString("+") }
+            return currentFilter.joinToString(" ") { it.joinToString(" ") }
         }
 
         fun buildSearchStringFor(ratings: Collection<ImageRating>): String {

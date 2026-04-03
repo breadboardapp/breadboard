@@ -137,5 +137,13 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
         )
     }
 
-    OffsetBasedLargeImageView(navController, isImageCarouselVisible, initialPage, images, bottomBarVisibleState)
+    OffsetBasedLargeImageView(
+        navController,
+        isImageCarouselVisible,
+        initialPage,
+        images,
+        bottomBarVisibleState
+    ) { oldImage, newImage ->
+        preferencesRepository.updateFavouriteImage(oldImage, newImage)
+    }
 }
