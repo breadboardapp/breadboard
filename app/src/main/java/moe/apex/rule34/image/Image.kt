@@ -73,8 +73,8 @@ data class Image(
                Otherwise, the least we could do is make sure that the only existing group is a non-general one.
                This does not usually happen, but we would at least know that it is already grouped in this case.
 
-               The images that pass would usually have ungrouped tags, but it could also catch actual
-               images that literally only have general tags. I'm not sure how to work around this. */
+               The images that pass would usually have ungrouped tags, but it could also catch actual images that
+               literally only have general tags. They're usually due to bad tagging and should be re-fetched anyway. */
             if (
                 metadata.groupedTags.size > 1 ||
                 (metadata.groupedTags.size == 1 && metadata.groupedTags[0].category != TagCategory.GENERAL)
