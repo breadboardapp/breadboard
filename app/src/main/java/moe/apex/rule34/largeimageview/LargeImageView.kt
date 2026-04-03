@@ -226,7 +226,6 @@ fun LargeImageView(
 
     val context = LocalContext.current
     val prefs = LocalPreferences.current
-    val favouriteImages = prefs.favouriteImages
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(allImages.size) {
