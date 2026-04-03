@@ -236,9 +236,9 @@ fun LargeImageView(
 
     val currentImage = allImages[pagerState.currentPage.coerceIn(0, allImages.size - 1)]
 
-    if (onImageUpdate != null) {
+    if (!currentImage.hasGroupedTags && onImageUpdate != null) {
         LaunchedEffect(currentImage) {
-            if (!currentImage.hasGroupedTags) {
+            try {
                 val metadata = currentImage.imageSource.imageBoard.loadImageGroupedTags(
                     currentImage,
                     prefs.authFor(currentImage.imageSource, context)
@@ -251,6 +251,8 @@ fun LargeImageView(
                         onImageUpdate(currentImage, newImage)
                     }
                 }
+            } catch (e: Exception) {
+                Log.e("LargeImageView", "Error fetching image grouped tags", e)
             }
         }
     }
