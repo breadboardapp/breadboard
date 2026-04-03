@@ -129,6 +129,7 @@ import coil3.network.httpHeaders
 import coil3.request.ImageRequest
 import io.github.kdroidfilter.composemediaplayer.VideoPlayerSurface
 import io.github.kdroidfilter.composemediaplayer.rememberVideoPlayerState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -252,6 +253,8 @@ fun LargeImageView(
                         onImageUpdate(currentImage, newImage)
                     }
                 }
+            } catch (e: CancellationException) {
+                // Ignore the CancellationException error above because we want it to be cancelled
             } catch (e: Exception) {
                 Log.e("LargeImageView", "Error fetching image grouped tags", e)
             }
