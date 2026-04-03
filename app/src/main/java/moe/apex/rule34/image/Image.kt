@@ -64,6 +64,8 @@ data class Image(
 
     val hasGroupedTags: Boolean
         get() {
+            /* If the image does not have ID or metadata, we would have no way of fetching additional info.
+               Therefore, the image should just be treated as already having grouped tags. */
             if (id == null || metadata == null) return true
 
             /* Usually, we can tell that the existing grouped tags are grouped properly if they have more than one group.
