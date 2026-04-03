@@ -276,8 +276,7 @@ object Rule34 : GelbooruBasedImageBoard {
     }
 
     override suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth?): ImageMetadata? {
-        return if (image.hasGroupedTags) return null
-        else image.id?.let { loadImage(it, auth)?.metadata }
+        return image.id?.let { loadImage(it, auth)?.metadata }
     }
 }
 
@@ -301,8 +300,7 @@ object Safebooru : GelbooruBasedImageBoard {
     }
 
     override suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth?): ImageMetadata? {
-        return if (image.hasGroupedTags) return null
-        else image.id?.let { loadImage(it, auth)?.metadata }
+        return image.id?.let { loadImage(it, auth)?.metadata }
     }
 }
 
@@ -329,8 +327,6 @@ object Gelbooru : GelbooruBasedImageBoard {
     }
 
     override suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth?): ImageMetadata? {
-        if (image.hasGroupedTags) return null
-
         val artistTags = mutableListOf<String>()
         val characterTags = mutableListOf<String>()
         val copyrightTags = mutableListOf<String>()
@@ -473,8 +469,7 @@ object Danbooru : ImageBoard {
     }
 
     override suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth?): ImageMetadata? {
-        return if (image.hasGroupedTags) return null
-        else image.id?.let { loadImage(it, auth)?.metadata }
+        return image.id?.let { loadImage(it, auth)?.metadata }
     }
 
     override fun getRatingFromString(rating: String): ImageRating {
