@@ -347,7 +347,7 @@ object Gelbooru : GelbooruBasedImageBoard {
             try {
                 json = JSONObject(body)
             } catch (e: JSONException) {
-                break
+                return null
             }
 
             val tagInfoArray = json.optJSONArray("tag") ?: return null
