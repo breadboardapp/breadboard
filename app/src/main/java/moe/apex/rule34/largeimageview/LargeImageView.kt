@@ -1158,8 +1158,8 @@ fun OffsetBasedLargeImageView(
     visibilityState: MutableState<Boolean>,
     initialPage: Int,
     allImages: List<Image>,
-    onImageUpdate: suspend (Image, Image) -> Unit,
     bottomBarVisibleState: MutableState<Boolean>? = null,
+    onImageUpdate: suspend (Image, Image) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
