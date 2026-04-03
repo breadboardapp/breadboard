@@ -208,12 +208,11 @@ fun HomeScreen(navController: NavController, bottomBarVisibleState: MutableState
         shouldShowLargeImage,
         initialPage,
         recommendedImages ?: emptyList(),
-        bottomBarVisibleState,
-        { oldImage, newImage ->
-            if (recommendedImages != null) {
-                val index = recommendedImages.indexOf(oldImage)
-                if (index != -1) recommendedImages[index] = newImage
-            }
+        bottomBarVisibleState
+    ) { oldImage, newImage ->
+        if (recommendedImages != null) {
+            val index = recommendedImages.indexOf(oldImage)
+            if (index != -1) recommendedImages[index] = newImage
         }
-    )
+    }
 }

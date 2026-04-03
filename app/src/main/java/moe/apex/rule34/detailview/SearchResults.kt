@@ -273,11 +273,10 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
         navController,
         isImageCarouselVisible,
         initialPage,
-        imagesToDisplay,
-        onImageUpdate = { oldImage, newImage ->
-            val index = viewModel.images.indexOf(oldImage)
-            if (index != -1) viewModel.images[index] = newImage
-        }
-    )
+        imagesToDisplay
+    ) { oldImage, newImage ->
+        val index = viewModel.images.indexOf(oldImage)
+        if (index != -1) viewModel.images[index] = newImage
+    }
 }
 

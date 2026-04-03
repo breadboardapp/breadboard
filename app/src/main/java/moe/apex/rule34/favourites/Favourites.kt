@@ -142,7 +142,8 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
         isImageCarouselVisible,
         initialPage,
         images,
-        bottomBarVisibleState,
-        { oldImage, newImage -> preferencesRepository.updateFavouriteImage(oldImage, newImage) }
-    )
+        bottomBarVisibleState
+    ) { oldImage, newImage ->
+        preferencesRepository.updateFavouriteImage(oldImage, newImage)
+    }
 }
