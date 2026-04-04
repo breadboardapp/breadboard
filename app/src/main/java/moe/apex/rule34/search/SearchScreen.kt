@@ -522,7 +522,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester) {
                             IconButton(
                                 onClick = {
                                     val text = clipboard.nativeClipboard.primaryClip
-                                        .takeIf { it?.description?.getMimeType(0) == "text/plain" }
+                                        .takeIf { it?.description?.getMimeType(0)?.startsWith("text/") == true }
                                         ?.getItemAt(0)
                                         ?.text
                                         ?.toString()
