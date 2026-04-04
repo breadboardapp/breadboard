@@ -9,7 +9,7 @@ private val PIXIV_CURRENT_RX =
 // 2012-2016 pixiv direct image URLs
 private val PIXIV_2012_TO_2016_RX = listOf(
     // https://i1.pixiv.net/img-original/img/2016/10/02/16/47/39/59270556_p0.jpg (Safebooru #1843535)
-    // No source, but I'd assume an `image-master` version exists too on this old domain
+    // No source, but I'd assume an `img-master` version exists too on this old subdomain
     """https?://i\d+\.pixiv\.net/img-(?:original|master)/img/\d+/\d+/\d+/\d+/\d+/\d+/(\d+)_p\d+(_master1200)?\.(png|jpg|jpeg|gif)""".toRegex(),
 
     // https://i1.pixiv.net/img47/img/l3lc201/34464791.png (Safebooru #1000441)
