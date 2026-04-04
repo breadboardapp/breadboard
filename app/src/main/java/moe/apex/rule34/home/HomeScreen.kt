@@ -69,7 +69,7 @@ fun HomeScreen(navController: NavController, bottomBarVisibleState: MutableState
     val builtInIgnoredTags by rememberUpdatedState(prefs.internalIgnoreList)
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(topAppBarState)
-    val shouldShowLargeImage = remember { mutableStateOf(false) }
+    var shouldShowLargeImage by remember { mutableStateOf(false) }
     var initialPage by remember { mutableIntStateOf(0) }
 
     val blur = prefs.isExperimentEnabled(Experiment.IMMERSIVE_UI_EFFECTS)
@@ -92,7 +92,7 @@ fun HomeScreen(navController: NavController, bottomBarVisibleState: MutableState
         largeTopBar = false,
         scrollBehavior = scrollBehavior,
         addBottomPadding = false,
-        blur = shouldShowLargeImage.value && blur,
+        blur = shouldShowLargeImage && blur,
         additionalActions = {
             recommendationsProvider?.let {
                 ScrollToTopArrow(
@@ -185,7 +185,7 @@ fun HomeScreen(navController: NavController, bottomBarVisibleState: MutableState
                 onImageClick = { index, _ ->
                     Snapshot.withMutableSnapshot {
                         initialPage = index
-                        shouldShowLargeImage.value = true
+                        shouldShowLargeImage = true
                     }
                 },
                 contentPadding = PaddingValues(
@@ -204,11 +204,14 @@ fun HomeScreen(navController: NavController, bottomBarVisibleState: MutableState
     val recommendedImages = recommendationsProvider?.recommendedImages
 
     OffsetBasedLargeImageView(
-        navController,
-        shouldShowLargeImage,
-        initialPage,
-        recommendedImages ?: emptyList(),
-        bottomBarVisibleState
+        navController = navController,
+        isActive = shouldShowLargeImage,
+        initialPage = initialPage,
+        allImages = recommendedImages ?: emptyList(),
+        onActiveStateChanged = {
+            shouldShowLargeImage = it
+            bottomBarVisibleState.value = !it
+        }
     ) { oldImage, newImage ->
         if (recommendedImages != null) {
             val index = recommendedImages.indexOf(oldImage)

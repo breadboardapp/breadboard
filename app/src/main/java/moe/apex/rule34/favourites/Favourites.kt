@@ -49,7 +49,7 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
     val preferencesRepository = LocalContext.current.prefs
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
-    val isImageCarouselVisible = remember { mutableStateOf(false) }
+    var isImageCarouselVisible by remember { mutableStateOf(false) }
     var initialPage by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
 
@@ -102,7 +102,7 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
         title = "Favourite images",
         scrollBehavior = scrollBehavior,
         addBottomPadding = false,
-        blur = isImageCarouselVisible.value && blur,
+        blur = isImageCarouselVisible && blur,
         additionalActions = {
             ScrollToTopArrow(
                 staggeredGridState = viewModel.staggeredGridState,
@@ -123,7 +123,7 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
             onImageClick = { index, _ ->
                 Snapshot.withMutableSnapshot {
                     initialPage = index
-                    isImageCarouselVisible.value = true
+                    isImageCarouselVisible = true
                 }
             },
             contentPadding = PaddingValues(top = SMALL_LARGE_SPACER.dp, start = SMALL_LARGE_SPACER.dp, end = SMALL_LARGE_SPACER.dp, bottom = bottomAppBarAndNavBarHeight),
@@ -138,11 +138,14 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
     }
 
     OffsetBasedLargeImageView(
-        navController,
-        isImageCarouselVisible,
-        initialPage,
-        images,
-        bottomBarVisibleState
+        navController = navController,
+        isActive = isImageCarouselVisible,
+        initialPage = initialPage,
+        allImages = images,
+        onActiveStateChanged = {
+            isImageCarouselVisible = it
+            bottomBarVisibleState.value = !it
+        }
     ) { oldImage, newImage ->
         preferencesRepository.updateFavouriteImage(oldImage, newImage)
     }

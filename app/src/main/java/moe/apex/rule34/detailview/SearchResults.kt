@@ -73,7 +73,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
 
-    val isImageCarouselVisible = remember { mutableStateOf(false) }
+    var isImageCarouselVisible by remember { mutableStateOf(false) }
     var initialPage by remember { mutableIntStateOf(0) }
     var showAgeVerificationDialog by remember { mutableStateOf(false) }
 
@@ -202,7 +202,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
             )
         },
         addBottomPadding = false,
-        blur = isImageCarouselVisible.value && blur,
+        blur = isImageCarouselVisible && blur,
     ) { padding ->
         if (!viewModel.isReady) {
             return@MainScreenScaffold
@@ -251,7 +251,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
             onImageClick = { index, _ ->
                 Snapshot.withMutableSnapshot {
                     initialPage = index
-                    isImageCarouselVisible.value = true
+                    isImageCarouselVisible = true
                 }
             },
             contentPadding = PaddingValues(top = SMALL_LARGE_SPACER.dp, start = SMALL_LARGE_SPACER.dp, end = SMALL_LARGE_SPACER.dp),
@@ -270,10 +270,11 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
     }
 
     OffsetBasedLargeImageView(
-        navController,
-        isImageCarouselVisible,
-        initialPage,
-        imagesToDisplay
+        navController = navController,
+        isActive = isImageCarouselVisible,
+        initialPage = initialPage,
+        allImages = imagesToDisplay,
+        onActiveStateChanged = { isImageCarouselVisible = it }
     ) { oldImage, newImage ->
         val index = viewModel.images.indexOf(oldImage)
         if (index != -1) viewModel.images[index] = newImage

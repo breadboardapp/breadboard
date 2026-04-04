@@ -80,7 +80,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -1165,10 +1164,10 @@ fun LargeVideo(image: Image, isCurrentPage: Boolean, onLongClick: (() -> Unit)? 
 @Composable
 fun OffsetBasedLargeImageView(
     navController: NavController,
-    visibilityState: MutableState<Boolean>,
+    isActive: Boolean,
     initialPage: Int,
     allImages: List<Image>,
-    bottomBarVisibleState: MutableState<Boolean>? = null,
+    onActiveStateChanged: (Boolean) -> Unit = { },
     onImageUpdate: (suspend (Image, Image) -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
@@ -1220,7 +1219,7 @@ fun OffsetBasedLargeImageView(
                 snapTo(windowHeightPx)
             }
         }
-        visibilityState.value = false
+        onActiveStateChanged(false)
     }
 
     if (allImages.isEmpty()) {
@@ -1228,33 +1227,31 @@ fun OffsetBasedLargeImageView(
         return
     }
 
-    PredictiveBackHandler(enabled = visibilityState.value) { progress ->
+    PredictiveBackHandler(enabled = isActive) { progress ->
         try {
             progress.collect { backEvent ->
                 val offsetPx = with(density) { (backEvent.progress * 300f).dp.toPx() }
                 snapTo(offsetPx)
             }
             hide()
-        } catch (_: Exception) {
-        }
+        } catch (_: Exception) { }
     }
 
-    LaunchedEffect(visibilityState.value) {
-        bottomBarVisibleState?.value = !visibilityState.value
-        if (visibilityState.value) {
+    if (isActive) {
+        LaunchedEffect(Unit) {
             /* Theoretically breakable if someone spoofs the system clock to never update,
                that's rather unlikely. */
+            onActiveStateChanged(true)
             viewerSessionId = System.currentTimeMillis()
             show()
         }
-        // No hide() call here because it's managed by the back handler and draggable modifier.
     }
 
     /* We should treat this as the proper source of truth as to whether or not the content is
        currently visible.
        I know this whole composable is messy now but hopefully this helps somewhat. */
     val shouldMainContentBeVisible by remember {
-        derivedStateOf { visibilityState.value || animatableOffset.value < windowHeightPx }
+        derivedStateOf { isActive || animatableOffset.value < windowHeightPx }
     }
 
     if (shouldMainContentBeVisible) {
@@ -1277,7 +1274,7 @@ fun OffsetBasedLargeImageView(
             modifier = Modifier
                 .offset { IntOffset(0, animatableOffset.value.roundToInt()) }
                 .draggable(
-                    enabled = canDragDown && visibilityState.value,
+                    enabled = canDragDown && isActive,
                     orientation = Orientation.Vertical,
                     state = draggableState,
                     onDragStopped = { velocity ->
