@@ -536,7 +536,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester) {
                                         navController.navigate(imageView)
                                         return@IconButton
                                     }
-                                    val tags = text.split(" ").filter { tag -> tag.trim().isNotEmpty() }
+                                    val tags = text.split("\\s+".toRegex())
                                     if (tags.isEmpty()) {
                                         showToast(context, "No tags to paste")
                                         return@IconButton
