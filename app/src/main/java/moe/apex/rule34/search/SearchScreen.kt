@@ -667,7 +667,14 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester) {
                         }
                     }
 
-                Column(Modifier.padding(horizontal = SMALL_LARGE_SPACER.dp)) {
+                Box(
+                    modifier = Modifier
+                        .padding(
+                            start = SMALL_LARGE_SPACER.dp,
+                            end = SMALL_LARGE_SPACER.dp,
+                            bottom = SMALL_SPACER.dp
+                        )
+                ) {
                     HorizontallyScrollingChipsWithLabels(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -676,7 +683,6 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester) {
                         labels = listOf("Source", "Ratings"),
                         content = listOf(sourceRows, ratingRows)
                     )
-                    SmallVerticalSpacer()
                 }
             }
 
@@ -685,60 +691,60 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester) {
                 enter = if (useExpansionAnimation) enterTransitionWithSuggestions else enterTransitionNoSuggestions,
                 exit = if (useExpansionAnimation) exitTransitionWithSuggestions else exitTransitionNoSuggestions
             ) {
-                Column {
-                    LazyRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        contentPadding = PaddingValues(horizontal = SMALL_LARGE_SPACER.dp)
-                    ) {
-                        items(tagChipList, key = { it.value }) { tag ->
-                            FilterChip(
-                                modifier = Modifier.animateItem(),
-                                label = { Text(tag.value) },
-                                selected = !tag.isExcluded,
-                                colors = filterChipSolidColor,
-                                border = null,
-                                onClick = { viewModel.removeTagSuggestion(tag) }
-                            )
-                        }
-                        if (tagChipList.isNotEmpty()) {
-                            item(key = "") {
-                                FilledIconButton (
-                                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.secondary),
-                                    modifier = Modifier
-                                        .height(FilterChipDefaults.Height)
-                                        .width(56.dp) // Match the search FAB
-                                        .animateItem(),
-                                    onClick = {
-                                        val tags = tagChipList.joinToString(" ") { it.formattedLabel }
-                                        scope.launch {
-                                            copyText(
-                                                context = context,
-                                                clipboard = clipboard,
-                                                text = tags,
-                                                message = "Copied ${tagChipList.size} ${
-                                                    "tag".pluralise(
-                                                        tagChipList.size,
-                                                        "tags"
-                                                    )
-                                                }"
-                                            )
-                                        }
+                LazyRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = SMALL_SPACER.dp),
+                    horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    contentPadding = PaddingValues(horizontal = SMALL_LARGE_SPACER.dp)
+                ) {
+                    items(tagChipList, key = { it.value }) { tag ->
+                        FilterChip(
+                            modifier = Modifier.animateItem(),
+                            label = { Text(tag.value) },
+                            selected = !tag.isExcluded,
+                            colors = filterChipSolidColor,
+                            border = null,
+                            onClick = { viewModel.removeTagSuggestion(tag) }
+                        )
+                    }
+                    if (tagChipList.isNotEmpty()) {
+                        item(key = "") {
+                            FilledIconButton (
+                                colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                                modifier = Modifier
+                                    .height(FilterChipDefaults.Height)
+                                    .width(56.dp) // Match the search FAB
+                                    .animateItem(),
+                                onClick = {
+                                    val tags = tagChipList.joinToString(" ") { it.formattedLabel }
+                                    scope.launch {
+                                        copyText(
+                                            context = context,
+                                            clipboard = clipboard,
+                                            text = tags,
+                                            message = "Copied ${tagChipList.size} ${
+                                                "tag".pluralise(
+                                                    tagChipList.size,
+                                                    "tags"
+                                                )
+                                            }"
+                                        )
                                     }
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.ContentCopy,
-                                        contentDescription = "Copy all",
-                                        modifier = Modifier.size(FilterChipDefaults.IconSize)
-                                    )
                                 }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.ContentCopy,
+                                    contentDescription = "Copy all",
+                                    modifier = Modifier.size(FilterChipDefaults.IconSize)
+                                )
                             }
                         }
                     }
-                    SmallVerticalSpacer()
                 }
             }
+
             AnimatedVisibility(
                 visible = shouldShowSuggestions,
                 enter = fadeIn(tween(durationMillis = 300)),
