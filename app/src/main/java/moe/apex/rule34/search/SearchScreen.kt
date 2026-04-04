@@ -524,7 +524,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester) {
                                     val text = clipboard.nativeClipboard.primaryClip
                                         .takeIf {
                                             val mimeType = it?.description?.getMimeType(0)
-                                            mimeType != null && mimeType in setOf("text/plain", "text/x-moz-url")
+                                            mimeType != null && mimeType in setOf("text/plain", "text/html", "text/x-moz-url")
                                         }
                                         ?.getItemAt(0)
                                         ?.text
