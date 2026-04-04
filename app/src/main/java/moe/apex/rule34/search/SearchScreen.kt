@@ -94,6 +94,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import kotlinx.coroutines.CancellationException
@@ -104,6 +105,7 @@ import moe.apex.rule34.R
 import moe.apex.rule34.history.SearchHistoryEntry
 import moe.apex.rule34.image.ImageBoardRequirement
 import moe.apex.rule34.image.ImageRating
+import moe.apex.rule34.navigation.ImageView
 import moe.apex.rule34.navigation.Results
 import moe.apex.rule34.preferences.ImageSource
 import moe.apex.rule34.preferences.LocalPreferences
@@ -519,14 +521,26 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester) {
                         Row(Modifier.padding(end = TINY_SPACER.dp)) {
                             IconButton(
                                 onClick = {
-                                    val tags = clipboard.nativeClipboard.primaryClip
-                                        .takeIf { it?.description?.getMimeType(0) == "text/plain" }
-                                        ?.getItemAt(0)
-                                        ?.let {
-                                            it.text.split(" ")
-                                                .filter { tag -> tag.trim().isNotEmpty() }
+                                    val text = clipboard.nativeClipboard.primaryClip
+                                        .takeIf {
+                                            val mimeType = it?.description?.getMimeType(0)
+                                            mimeType != null && mimeType in setOf("text/plain", "text/html", "text/x-moz-url")
                                         }
-                                    if (tags.isNullOrEmpty()) {
+                                        ?.getItemAt(0)
+                                        ?.text
+                                        ?.toString()
+                                        ?.trim()
+                                    if (text.isNullOrEmpty()) {
+                                        showToast(context, "Nothing to paste")
+                                        return@IconButton
+                                    }
+                                    val imageView = ImageView.fromUri(text.toUri())
+                                    if (imageView != null) {
+                                        navController.navigate(imageView)
+                                        return@IconButton
+                                    }
+                                    val tags = text.split("\\s+".toRegex()).toSet()
+                                    if (tags.isEmpty()) {
                                         showToast(context, "No tags to paste")
                                         return@IconButton
                                     }
