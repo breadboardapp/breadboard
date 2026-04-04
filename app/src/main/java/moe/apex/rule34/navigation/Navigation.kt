@@ -26,6 +26,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
@@ -62,7 +63,7 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
     val density = LocalDensity.current
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
-    val bottomBarVisibleState = remember { mutableStateOf(true) }
+    var isNavigationBarVisible by remember { mutableStateOf(true) }
     val currentBSE by navController.currentBackStackEntryAsState()
     val currentRoute = currentBSE?.destination
     val focusRequester = remember { FocusRequester() }
@@ -88,7 +89,7 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
        when navigating to a different screen. */
     LaunchedEffect(currentRoute) {
         if (currentRoute.routeIs(topLevelScreens)) {
-            bottomBarVisibleState.value = true
+            isNavigationBarVisible = true
         }
     }
 
@@ -97,8 +98,7 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
             Scaffold(
                 bottomBar = {
                     AnimatedVisibility(
-                        visible = currentRoute.routeIs(topLevelScreens)
-                                && bottomBarVisibleState.value,
+                        visible = currentRoute.routeIs(topLevelScreens) && isNavigationBarVisible,
                         enter = slideInVertically { it /3} + fadeIn(),
                         exit = slideOutVertically { it/3 } + fadeOut()
                     ) {
@@ -211,13 +211,13 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
                         val args = it.toRoute<ImageView>()
                         LazyLargeImageView(navController, args.id, args.source)
                     }
-                    composable<Home> { HomeScreen(navController, bottomBarVisibleState) }
+                    composable<Home> { HomeScreen(navController) { isNavigationBarVisible = it } }
                     composable<Search> { SearchScreen(navController, focusRequester) }
                     composable<Results> {
                         val args = it.toRoute<Results>()
                         SearchResults(navController, args.source, args.tags)
                     }
-                    composable<Favourites> { FavouritesPage(navController, bottomBarVisibleState) }
+                    composable<Favourites> { FavouritesPage(navController) { isNavigationBarVisible = it } }
                     composable<Settings> { PreferencesScreen(navController) }
                     composable<BlockedTagsSettings> { BlockedTagsScreen(navController) }
                     composable<LibrariesSettings> { LibrariesScreen(navController) }

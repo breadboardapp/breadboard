@@ -17,7 +17,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -58,7 +57,10 @@ import kotlin.time.Duration.Companion.days
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(navController: NavController, bottomBarVisibleState: MutableState<Boolean>, ) {
+fun HomeScreen(
+    navController: NavController,
+    navBarVisibilityCallback: (Boolean) -> Unit = { }
+) {
     val scope = rememberCoroutineScope { Dispatchers.IO }
     val context = LocalContext.current
     val prefs = LocalPreferences.current
@@ -154,10 +156,10 @@ fun HomeScreen(navController: NavController, bottomBarVisibleState: MutableState
                     .padding(padding)
                     .nestedScroll(scrollBehavior.nestedScrollConnection)
                     .onScroll(provider.staggeredGridState) {
-                        bottomBarVisibleState.value = !it.lastScrolledForward
+                        navBarVisibilityCallback(!it.lastScrolledForward)
                     }
                     .onScroll(provider.uniformGridState) {
-                        bottomBarVisibleState.value = !it.lastScrolledForward
+                        navBarVisibilityCallback(!it.lastScrolledForward)
                     },
                 staggeredGridState = provider.staggeredGridState,
                 uniformGridState = provider.uniformGridState,
@@ -210,7 +212,7 @@ fun HomeScreen(navController: NavController, bottomBarVisibleState: MutableState
         allImages = recommendedImages ?: emptyList(),
         onActiveStateChanged = {
             shouldShowLargeImage = it
-            bottomBarVisibleState.value = !it
+            navBarVisibilityCallback(!it)
         }
     ) { oldImage, newImage ->
         if (recommendedImages != null) {

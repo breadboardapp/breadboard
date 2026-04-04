@@ -8,7 +8,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -44,7 +43,11 @@ import moe.apex.rule34.viewmodel.FavouritesViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableState<Boolean>, viewModel: FavouritesViewModel = viewModel()) {
+fun FavouritesPage(
+    navController: NavController,
+    viewModel: FavouritesViewModel = viewModel(),
+    navBarVisibilityCallback: (Boolean) -> Unit = { }
+) {
     val prefs = LocalPreferences.current
     val preferencesRepository = LocalContext.current.prefs
     val topAppBarState = rememberTopAppBarState()
@@ -108,15 +111,21 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
                 staggeredGridState = viewModel.staggeredGridState,
                 uniformGridState = viewModel.uniformGridState,
                 animate = Experiment.ALWAYS_ANIMATE_SCROLL.isEnabled()
-            ) { bottomBarVisibleState.value = true }
+            ) {
+                navBarVisibilityCallback(true)
+            }
         }
     ) { padding ->
         ImageGrid(
             modifier = Modifier
                 .padding(padding)
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
-                .onScroll(viewModel.staggeredGridState) { bottomBarVisibleState.value = !it.lastScrolledForward }
-                .onScroll(viewModel.uniformGridState) { bottomBarVisibleState.value = !it.lastScrolledForward },
+                .onScroll(viewModel.staggeredGridState) {
+                    navBarVisibilityCallback(!it.lastScrolledForward)
+                }
+                .onScroll(viewModel.uniformGridState) {
+                    navBarVisibilityCallback(!it.lastScrolledForward)
+                  },
             staggeredGridState = viewModel.staggeredGridState,
             uniformGridState = viewModel.uniformGridState,
             images = images,
@@ -144,7 +153,7 @@ fun FavouritesPage(navController: NavController, bottomBarVisibleState: MutableS
         allImages = images,
         onActiveStateChanged = {
             isImageCarouselVisible = it
-            bottomBarVisibleState.value = !it
+            navBarVisibilityCallback(!it)
         }
     ) { oldImage, newImage ->
         preferencesRepository.updateFavouriteImage(oldImage, newImage)
