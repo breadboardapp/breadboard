@@ -267,7 +267,7 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
             val onTagLongClick = { tag: String -> selectedTag = tag }
             val onViewParentClick = { id: String ->
                 hideAndThen {
-                    navController.navigate(ImageView(image.imageSource, id))
+                    navController.navigate(ImageView(image.imageSource, id, false))
                 }
             }
 

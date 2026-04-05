@@ -91,7 +91,7 @@ interface ImageBoard {
 
     fun parseImage(e: JSONObject): Image?
 
-    suspend fun loadImage(id: String, auth: ImageBoardAuth? = null): Image?
+    suspend fun loadImage(id: String, isMd5: Boolean, auth: ImageBoardAuth? = null): Image?
 
     suspend fun loadPage(tags: String, page: Int, auth: ImageBoardAuth? = null): List<Image>
 
@@ -137,7 +137,7 @@ interface ImageBoard {
 
 
 interface GelbooruBasedImageBoard : ImageBoard {
-    fun parseImage(e: JSONObject, imageSource: ImageSource): Image? {
+    fun parseImage(imageSource: ImageSource, e: JSONObject): Image? {
         val id = e.getString("id")
         val (fileName, fileFormat) = e.getString("image").split('.', limit = 2)
         val fileUrl = e.getString("file_url")
@@ -207,12 +207,13 @@ interface GelbooruBasedImageBoard : ImageBoard {
         return Image(id, fileName, fileFormat, previewUrl, fileUrl, sampleUrl, imageSource, aspectRatio, metadata)
     }
 
-    suspend fun loadImage(id: String, postListKey: String?, imageSource: ImageSource, auth: ImageBoardAuth? = null): Image? {
+    suspend fun loadImage(imageSource: ImageSource, id: String, isMd5: Boolean, postListKey: String?, auth: ImageBoardAuth? = null): Image? {
+        if (isMd5) return loadPage(imageSource, "md5:$id", 0, postListKey, auth).getOrNull(0)
         val parsedId = id.toIntOrNull() ?: return null
-        return loadPage("id:$parsedId", 0, postListKey, imageSource, auth).getOrNull(0)
+        return loadPage(imageSource, "id:$parsedId", 0, postListKey, auth).getOrNull(0)
     }
 
-    suspend fun loadPage(tags: String, page: Int, postListKey: String?, imageSource: ImageSource, auth: ImageBoardAuth? = null): List<Image> {
+    suspend fun loadPage(imageSource: ImageSource, tags: String, page: Int, postListKey: String?, auth: ImageBoardAuth? = null): List<Image> {
         val url = buildImageSearchUrl(tags, page, auth)
         val body = RequestUtil.get(url) {
             addHeader("Referer", baseUrl)
@@ -264,19 +265,19 @@ object Rule34 : GelbooruBasedImageBoard {
     override val apiKeyRequirement = ImageBoardRequirement.NOT_NEEDED
 
     override fun parseImage(e: JSONObject): Image? {
-        return parseImage(e, ImageSource.R34)
+        return parseImage(ImageSource.R34, e)
     }
 
-    override suspend fun loadImage(id: String, auth: ImageBoardAuth?): Image? {
-        return loadImage(id, null, ImageSource.R34, auth)
+    override suspend fun loadImage(id: String, isMd5: Boolean, auth: ImageBoardAuth?): Image? {
+        return loadImage(ImageSource.R34, id, isMd5, null, auth)
     }
 
     override suspend fun loadPage(tags: String, page: Int, auth: ImageBoardAuth?): List<Image> {
-        return loadPage(tags, page, null, ImageSource.R34, auth)
+        return loadPage(ImageSource.R34, tags, page, null, auth)
     }
 
     override suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth?): ImageMetadata? {
-        return image.id?.let { loadImage(it, auth)?.metadata }
+        return image.id?.let { loadImage(it, false, auth)?.metadata }
     }
 }
 
@@ -288,19 +289,19 @@ object Safebooru : GelbooruBasedImageBoard {
     override val imageSearchUrl = "${baseUrl}index.php?page=dapi&json=1&s=post&q=index&limit=100&fields=tag_info&tags=%s&pid=%d"
 
     override fun parseImage(e: JSONObject): Image? {
-        return parseImage(e, ImageSource.SAFEBOORU)
+        return parseImage(ImageSource.SAFEBOORU, e)
     }
 
-    override suspend fun loadImage(id: String, auth: ImageBoardAuth?): Image? {
-        return loadImage(id, null, ImageSource.SAFEBOORU, auth)
+    override suspend fun loadImage(id: String, isMd5: Boolean, auth: ImageBoardAuth?): Image? {
+        return loadImage(ImageSource.SAFEBOORU, id, isMd5, null, auth)
     }
 
     override suspend fun loadPage(tags: String, page: Int, auth: ImageBoardAuth?): List<Image> {
-        return loadPage(tags, page, null, ImageSource.SAFEBOORU, auth)
+        return loadPage(ImageSource.SAFEBOORU, tags, page, null, auth)
     }
 
     override suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth?): ImageMetadata? {
-        return image.id?.let { loadImage(it, auth)?.metadata }
+        return image.id?.let { loadImage(it, false, auth)?.metadata }
     }
 }
 
@@ -315,15 +316,15 @@ object Gelbooru : GelbooruBasedImageBoard {
     override val apiKeyRequirement = ImageBoardRequirement.REQUIRED
 
     override fun parseImage(e: JSONObject): Image? {
-        return parseImage(e, ImageSource.GELBOORU)
+        return parseImage(ImageSource.GELBOORU, e)
     }
 
-    override suspend fun loadImage(id: String, auth: ImageBoardAuth?): Image? {
-        return loadImage(id, "post", ImageSource.GELBOORU, auth)
+    override suspend fun loadImage(id: String, isMd5: Boolean, auth: ImageBoardAuth?): Image? {
+        return loadImage(ImageSource.GELBOORU, id, isMd5, "post", auth)
     }
 
     override suspend fun loadPage(tags: String, page: Int, auth: ImageBoardAuth?): List<Image> {
-        return loadPage(tags, page, "post", ImageSource.GELBOORU, auth)
+        return loadPage(ImageSource.GELBOORU, tags, page, "post", auth)
     }
 
     override suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth?): ImageMetadata? {
@@ -447,7 +448,8 @@ object Danbooru : ImageBoard {
         return Image(id, fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.DANBOORU, aspectRatio, metadata)
     }
 
-    override suspend fun loadImage(id: String, auth: ImageBoardAuth?): Image? {
+    override suspend fun loadImage(id: String, isMd5: Boolean, auth: ImageBoardAuth?): Image? {
+        if (isMd5) return loadPage("md5:$id", 0, auth).getOrNull(0)
         val parsedId = id.toIntOrNull() ?: return null
         return loadPage("id:$parsedId", 0, auth).getOrNull(0)
     }
@@ -469,7 +471,7 @@ object Danbooru : ImageBoard {
     }
 
     override suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth?): ImageMetadata? {
-        return image.id?.let { loadImage(it, auth)?.metadata }
+        return image.id?.let { loadImage(it, false, auth)?.metadata }
     }
 
     override fun getRatingFromString(rating: String): ImageRating {
@@ -534,7 +536,8 @@ object Yandere : ImageBoard {
         return Image(id, fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.YANDERE, aspectRatio, metadata)
     }
 
-    override suspend fun loadImage(id: String, auth: ImageBoardAuth?): Image? {
+    override suspend fun loadImage(id: String, isMd5: Boolean, auth: ImageBoardAuth?): Image? {
+        if (isMd5) return loadPage("md5:$id", 0).getOrNull(0)
         val parsedId = id.toIntOrNull() ?: return null
         return loadPage("id:$parsedId", 0).getOrNull(0)
     }

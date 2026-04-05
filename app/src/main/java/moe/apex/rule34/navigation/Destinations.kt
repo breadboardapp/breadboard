@@ -16,7 +16,8 @@ import kotlin.reflect.KClass
 @Serializable
 data class ImageView(
     val source: ImageSource,
-    val id: String
+    val id: String,
+    val isMd5: Boolean
 ) {
     companion object {
         fun fromUri(uri: Uri): ImageView? {
@@ -40,7 +41,7 @@ data class ImageView(
                 }
             } ?: return null
 
-            return ImageView(imageSource, postId)
+            return ImageView(imageSource, postId, false)
         }
     }
 }
