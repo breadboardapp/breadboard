@@ -208,9 +208,8 @@ interface GelbooruBasedImageBoard : ImageBoard {
     }
 
     suspend fun loadImage(imageSource: ImageSource, id: String, isMd5: Boolean, postListKey: String?, auth: ImageBoardAuth? = null): Image? {
-        if (isMd5) return loadPage(imageSource, "md5:$id", 0, postListKey, auth).getOrNull(0)
-        val parsedId = id.toIntOrNull() ?: return null
-        return loadPage(imageSource, "id:$parsedId", 0, postListKey, auth).getOrNull(0)
+        val tag = if (isMd5) { "md5:$id" } else { id.toIntOrNull()?.let { "id:$id" } ?: return null }
+        return loadPage(imageSource, tag, 0, postListKey, auth).getOrNull(0)
     }
 
     suspend fun loadPage(imageSource: ImageSource, tags: String, page: Int, postListKey: String?, auth: ImageBoardAuth? = null): List<Image> {
@@ -449,9 +448,8 @@ object Danbooru : ImageBoard {
     }
 
     override suspend fun loadImage(id: String, isMd5: Boolean, auth: ImageBoardAuth?): Image? {
-        if (isMd5) return loadPage("md5:$id", 0, auth).getOrNull(0)
-        val parsedId = id.toIntOrNull() ?: return null
-        return loadPage("id:$parsedId", 0, auth).getOrNull(0)
+        val tag = if (isMd5) { "md5:$id" } else { id.toIntOrNull()?.let { "id:$id" } ?: return null }
+        return loadPage(tag, 0, auth).getOrNull(0)
     }
 
     override suspend fun loadPage(tags: String, page: Int, auth: ImageBoardAuth?): List<Image> {
@@ -537,9 +535,8 @@ object Yandere : ImageBoard {
     }
 
     override suspend fun loadImage(id: String, isMd5: Boolean, auth: ImageBoardAuth?): Image? {
-        if (isMd5) return loadPage("md5:$id", 0).getOrNull(0)
-        val parsedId = id.toIntOrNull() ?: return null
-        return loadPage("id:$parsedId", 0).getOrNull(0)
+        val tag = if (isMd5) { "md5:$id" } else { id.toIntOrNull()?.let { "id:$id" } ?: return null }
+        return loadPage(tag, 0).getOrNull(0)
     }
 
     override suspend fun loadPage(tags: String, page: Int, auth: ImageBoardAuth?): List<Image> {
