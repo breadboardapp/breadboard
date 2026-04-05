@@ -16,7 +16,7 @@
         <activity
             android:name=".MainActivity"
             android:launchMode="singleTop"
-            android:taskAffinity="moe.apex.rule34.MainActivity"
+            android:taskAffinity="moe.apex.breadboard.MainActivity"
             android:exported="true"
             android:theme="@style/Theme.Breadboard">
             <intent-filter>
@@ -26,7 +26,7 @@
         </activity>
         <activity
             android:name=".DeepLinkActivity"
-            android:taskAffinity="moe.apex.rule34.DeepLinkActivity"
+            android:taskAffinity="moe.apex.breadboard.DeepLinkActivity"
             android:launchMode="singleTop"
             android:exported="true"
             android:theme="@style/Theme.Breadboard">
@@ -79,6 +79,14 @@
                 <data android:pathPattern="/image/.*" />
             </intent-filter>
         </activity>
+        <activity-alias
+            android:name="moe.apex.rule34.MainActivity"
+            android:targetActivity=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+        </activity-alias>
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
