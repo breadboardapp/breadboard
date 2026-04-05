@@ -644,8 +644,9 @@ private fun LargeImageToolbar(
 @Composable
 fun LazyLargeImageView(
     navController: NavController,
-    id: String,
     imageSource: ImageSource,
+    id: String,
+    isMd5: Boolean
 ) {
     val context = LocalContext.current
     val prefs = LocalPreferences.current
@@ -654,7 +655,9 @@ fun LazyLargeImageView(
 
     LaunchedEffect(Unit) {
         try {
-            image = imageSource.imageBoard.loadImage(id, prefs.authFor(imageSource, context))
+            val auth = prefs.authFor(imageSource, context)
+            image = if (isMd5) imageSource.imageBoard.loadImageMd5(id, auth)
+                    else imageSource.imageBoard.loadImage(id, auth)
         } catch (e: ExecutionException) {
             if (e.cause is SocketTimeoutException) {
                 showToast(context, "Connection timed out")

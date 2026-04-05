@@ -209,7 +209,7 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
                 ) {
                     composable<ImageView> {
                         val args = it.toRoute<ImageView>()
-                        LazyLargeImageView(navController, args.id, args.source)
+                        LazyLargeImageView(navController, args.source, args.id, args.isMd5)
                     }
                     composable<Home> { HomeScreen(navController) { isNavigationBarVisible = it } }
                     composable<Search> { SearchScreen(navController, focusRequester) }

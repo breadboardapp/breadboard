@@ -16,31 +16,66 @@ import kotlin.reflect.KClass
 @Serializable
 data class ImageView(
     val source: ImageSource,
-    val id: String
+    val id: String,
+    val isMd5: Boolean
 ) {
     companion object {
         fun fromUri(uri: Uri): ImageView? {
             val imageSource = when (uri.host) {
                 "safebooru.org" -> SAFEBOORU
-                "danbooru.donmai.us" -> DANBOORU
-                "gelbooru.com" -> GELBOORU
+                "danbooru.donmai.us", "cdn.donmai.us" -> DANBOORU
                 "yande.re", "files.yande.re" -> YANDERE
-                "rule34.xxx" -> R34
-                else -> return null
+                else -> {
+                    // Gelbooru and R34 have dynamic CDN subdomains. We'll just handle them here.
+                    if (uri.host == "gelbooru.com" || uri.host?.endsWith(".gelbooru.com") == true) GELBOORU
+                    else if (uri.host == "rule34.xxx" || uri.host?.endsWith(".rule34.xxx") == true) R34
+                    else return null
+                }
             }
 
-            val postId = when (imageSource) {
-                SAFEBOORU,
-                GELBOORU,
-                R34 -> uri.getQueryParameter("id")
-                DANBOORU -> uri.path?.split('/')?.getOrNull(2)
+            var isMd5 = false
+
+            val id = when (imageSource) {
+                SAFEBOORU -> {
+                    /* Safebooru does not have actual image MD5 hashes inside their direct file URLs,
+                       so we cannot load images from them. */
+                    uri.getQueryParameter("id")
+                }
+                DANBOORU -> {
+                    if (uri.host == "danbooru.donmai.us") {
+                        uri.path?.split('/')?.getOrNull(2)
+                    } else {
+                        isMd5 = true
+                        uri.path?.split('/', '_', '-')?.lastOrNull()?.split(".")?.firstOrNull()
+                    }
+                }
+                GELBOORU -> {
+                    if (uri.host == "gelbooru.com") {
+                        uri.getQueryParameter("id")
+                    } else {
+                        isMd5 = true
+                        uri.path?.split('/', '_')?.lastOrNull()?.split(".")?.firstOrNull()
+                    }
+                }
                 YANDERE -> {
-                    val postId = uri.path?.split('/')?.getOrNull(3)
-                    if (uri.host == "files.yande.re") postId?.split(" ")?.getOrNull(1) else postId
+                    if (uri.host == "yande.re") {
+                        uri.path?.split('/')?.getOrNull(3)
+                    } else {
+                        isMd5 = true
+                        uri.path?.split('/')?.getOrNull(2)
+                    }
+                }
+                R34 -> {
+                    if (uri.host == "rule34.xxx") {
+                        uri.getQueryParameter("id")
+                    } else {
+                        isMd5 = true
+                        uri.path?.split('/', '_')?.lastOrNull()?.split(".")?.firstOrNull()
+                    }
                 }
             } ?: return null
 
-            return ImageView(imageSource, postId)
+            return ImageView(imageSource, id, isMd5)
         }
     }
 }
