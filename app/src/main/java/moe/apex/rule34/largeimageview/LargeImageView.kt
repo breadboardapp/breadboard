@@ -655,7 +655,9 @@ fun LazyLargeImageView(
 
     LaunchedEffect(Unit) {
         try {
-            image = imageSource.imageBoard.loadImage(id, isMd5, prefs.authFor(imageSource, context))
+            val auth = prefs.authFor(imageSource, context)
+            image = if (isMd5) imageSource.imageBoard.loadImageMd5(id, auth)
+                    else imageSource.imageBoard.loadImage(id, auth)
         } catch (e: ExecutionException) {
             if (e.cause is SocketTimeoutException) {
                 showToast(context, "Connection timed out")
