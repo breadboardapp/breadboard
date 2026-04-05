@@ -83,7 +83,8 @@
 
                 <data android:pathPattern="/original/.*" />
                 <data android:pathPattern="/sample/.*" />
-
+                <data android:pathPattern="/360x360/.*" />
+                <data android:pathPattern="/180x180/.*" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
