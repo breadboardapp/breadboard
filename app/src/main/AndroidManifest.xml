@@ -16,7 +16,7 @@
         <activity
             android:name=".MainActivity"
             android:launchMode="singleTop"
-            android:taskAffinity="moe.apex.rule34.MainActivity"
+            android:taskAffinity="moe.apex.breadboard.MainActivity"
             android:exported="true"
             android:theme="@style/Theme.Breadboard">
             <intent-filter>
@@ -26,7 +26,7 @@
         </activity>
         <activity
             android:name=".DeepLinkActivity"
-            android:taskAffinity="moe.apex.rule34.DeepLinkActivity"
+            android:taskAffinity="moe.apex.breadboard.DeepLinkActivity"
             android:launchMode="singleTop"
             android:exported="true"
             android:theme="@style/Theme.Breadboard">
@@ -42,6 +42,16 @@
 
                 <data android:path="/index.php" />
                 <data android:queryAdvancedPattern="id=[0-9]+" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="https" />
+                <data android:host="cdn.donmai.us" />
+                <data android:host="*.gelbooru.com" />
+                <data android:host="*.rule34.xxx" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -66,10 +76,17 @@
                 <data android:pathPattern="/post/show/.*" />
                 <data android:pathAdvancedPattern="/post/show/[0-9]+" />
 
-                <data android:pathPattern="/image/.*/yande.re .*" />
-                <data android:pathAdvancedPattern="/image/[a-z0-9]+/yande.re [0-9]+ .*" />
+                <data android:pathPattern="/image/.*" />
             </intent-filter>
         </activity>
+        <activity-alias
+            android:name="moe.apex.rule34.MainActivity"
+            android:targetActivity=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+        </activity-alias>
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

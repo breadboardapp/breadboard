@@ -13,15 +13,15 @@ if (rootProject.file("local.properties").exists()) {
 }
 
 android {
-    namespace 'moe.apex.rule34'
+    namespace 'moe.apex.breadboard'
     compileSdk 36
 
     defaultConfig {
         applicationId "moe.apex.breadboard"
         minSdk 26
         targetSdk 36
-        versionCode 313
-        versionName "3.1.3"
+        versionCode 320
+        versionName "3.2.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -89,6 +89,7 @@ dependencies {
     implementation libs.aboutlibraries.core
     implementation libs.aboutlibraries.compose.m3
     implementation libs.androidx.graphics.shapes
+    implementation libs.composemediaplayer
     testImplementation libs.junit
     androidTestImplementation libs.androidx.test.ext.junit
     androidTestImplementation libs.androidx.test.espresso.core
