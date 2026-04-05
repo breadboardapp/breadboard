@@ -17,7 +17,6 @@ import moe.apex.breadboard.prefs
 
 enum class ReleasePlatform(val displayName: String) {
     DEBUG("Debug"),
-    LEGACY("Legacy"),
     PLAY_STORE("Play Store"),
     UNKNOWN("Unknown");
 }
@@ -27,14 +26,13 @@ enum class ReleasePlatform(val displayName: String) {
 val releasePlatform = when (BuildConfig.APPLICATION_ID) {
     "moe.apex.breadboard" -> ReleasePlatform.PLAY_STORE
     "moe.apex.breadboard.debug" -> ReleasePlatform.DEBUG
-    "moe.apex.breadboard" -> ReleasePlatform.LEGACY
     else -> ReleasePlatform.UNKNOWN
 }
 
 
 object AgeVerification {
     fun hasVerifiedAge(prefs: Prefs): Boolean {
-        return releasePlatform == ReleasePlatform.LEGACY || prefs.getInternalAgeVerificationStatus()
+        return prefs.getInternalAgeVerificationStatus()
     }
 
 
