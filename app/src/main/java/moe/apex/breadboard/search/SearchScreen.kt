@@ -625,7 +625,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester) {
                             border = null,
                             onClick = {
                                 if (it == currentSource) return@FilterChip
-                                if (it == ImageSource.R34 && !AgeVerification.hasVerifiedAge(prefs)) {
+                                if (it != ImageSource.SAFEBOORU && !AgeVerification.hasVerifiedAge(prefs)) {
                                     showAgeVerificationDialog = true
                                     return@FilterChip
                                 }
