@@ -215,7 +215,7 @@ interface GelbooruBasedImageBoard : ImageBoard {
     }
 
     suspend fun loadImageMd5(imageSource: ImageSource, md5: String, postListKey: String?, auth: ImageBoardAuth? = null): Image? {
-        return loadPage(imageSource, "md5:$md5", 0, postListKey, auth).getOrNull(0)
+        return loadPage(imageSource, "md5:$md5", 0, postListKey, auth).find { it.fileName == md5 }
     }
 
     suspend fun loadPage(imageSource: ImageSource, tags: String, page: Int, postListKey: String?, auth: ImageBoardAuth? = null): List<Image> {
@@ -471,7 +471,7 @@ object Danbooru : ImageBoard {
     }
 
     override suspend fun loadImageMd5(md5: String, auth: ImageBoardAuth?): Image? {
-        return loadPage("md5:$md5", 0, auth).getOrNull(0)
+        return loadPage("md5:$md5", 0, auth).find { it.fileName == md5 }
     }
 
     override suspend fun loadPage(tags: String, page: Int, auth: ImageBoardAuth?): List<Image> {
@@ -562,7 +562,7 @@ object Yandere : ImageBoard {
     }
 
     override suspend fun loadImageMd5(md5: String, auth: ImageBoardAuth?): Image? {
-        return loadPage("md5:$md5", 0).getOrNull(0)
+        return loadPage("md5:$md5", 0).find { it.fileName == md5 }
     }
 
     override suspend fun loadPage(tags: String, page: Int, auth: ImageBoardAuth?): List<Image> {

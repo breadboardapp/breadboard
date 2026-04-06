@@ -21,14 +21,17 @@ data class ImageView(
 ) {
     companion object {
         fun fromUri(uri: Uri): ImageView? {
-            val imageSource = when (uri.host) {
+            val host = uri.host ?: return null
+            val path = uri.path ?: return null
+
+            val imageSource = when (host) {
                 "safebooru.org" -> SAFEBOORU
                 "danbooru.donmai.us", "cdn.donmai.us" -> DANBOORU
-                "yande.re", "files.yande.re" -> YANDERE
+                "yande.re", "files.yande.re", "assets.yande.re" -> YANDERE
                 else -> {
                     // Gelbooru and R34 have dynamic CDN subdomains. We'll just handle them here.
-                    if (uri.host == "gelbooru.com" || uri.host?.endsWith(".gelbooru.com") == true) GELBOORU
-                    else if (uri.host == "rule34.xxx" || uri.host?.endsWith(".rule34.xxx") == true) R34
+                    if (host == "gelbooru.com" || host.endsWith(".gelbooru.com")) GELBOORU
+                    else if (host == "rule34.xxx" || host.endsWith(".rule34.xxx")) R34
                     else return null
                 }
             }
@@ -41,36 +44,31 @@ data class ImageView(
                        so we cannot load images from them. */
                     uri.getQueryParameter("id")
                 }
-                DANBOORU -> {
-                    if (uri.host == "danbooru.donmai.us") {
-                        uri.path?.split('/')?.getOrNull(2)
-                    } else {
-                        isMd5 = true
-                        uri.path?.split('/', '_', '-')?.lastOrNull()?.split(".")?.firstOrNull()
-                    }
-                }
-                GELBOORU -> {
-                    if (uri.host == "gelbooru.com") {
+                GELBOORU, R34 -> {
+                    if (path.startsWith("/index.php")) {
                         uri.getQueryParameter("id")
                     } else {
                         isMd5 = true
-                        uri.path?.split('/', '_')?.lastOrNull()?.split(".")?.firstOrNull()
+                        path.split('/', '_').lastOrNull()?.split('.')?.firstOrNull()
+                    }
+                }
+                DANBOORU -> {
+                    if (path.startsWith("/posts/")) {
+                        path.split('/').getOrNull(2)
+                    } else {
+                        isMd5 = true
+                        path.split('/', '_', '-').lastOrNull()?.split('.')?.firstOrNull()
                     }
                 }
                 YANDERE -> {
-                    if (uri.host == "yande.re") {
-                        uri.path?.split('/')?.getOrNull(3)
+                    if (path.startsWith("/post/show/")) {
+                        path.split('/').getOrNull(3)
                     } else {
                         isMd5 = true
-                        uri.path?.split('/')?.getOrNull(2)
-                    }
-                }
-                R34 -> {
-                    if (uri.host == "rule34.xxx") {
-                        uri.getQueryParameter("id")
-                    } else {
-                        isMd5 = true
-                        uri.path?.split('/', '_')?.lastOrNull()?.split(".")?.firstOrNull()
+                        if (path.startsWith("/data/preview/"))
+                            path.split('/').getOrNull(5)?.split('.')?.firstOrNull()
+                        else
+                            path.split('/').getOrNull(2)
                     }
                 }
             } ?: return null
