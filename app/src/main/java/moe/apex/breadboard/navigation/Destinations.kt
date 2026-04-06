@@ -61,7 +61,7 @@ data class ImageView(
                     }
                 }
                 YANDERE -> {
-                    if (path.startsWith("/post/show")) {
+                    if (path.startsWith("/post/show/")) {
                         path.split('/').getOrNull(3)
                     } else {
                         isMd5 = true
