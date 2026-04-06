@@ -65,7 +65,7 @@ data class ImageView(
                         path.split('/').getOrNull(3)
                     } else {
                         isMd5 = true
-                        if (path.startsWith("/data/preview"))
+                        if (path.startsWith("/data/preview/"))
                             path.split('/').getOrNull(5)?.split('.')?.firstOrNull()
                         else
                             path.split('/').getOrNull(2)
