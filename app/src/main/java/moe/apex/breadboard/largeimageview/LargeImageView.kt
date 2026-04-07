@@ -1006,12 +1006,32 @@ fun LargeVideo(image: Image, isCurrentPage: Boolean, onLongClick: (() -> Unit)? 
     ) {
         Box(
             modifier = Modifier
+                /* This seems to be needed in order to recognise keyboard presses,
+                   but it means the user needs to press back twice to dismiss it.
+                   This isn't good but the user can also just drag the viewer down to dismiss it
+                   so it's not the end of the world.*/
                 .focusRequester(focusRequester)
                 .focusable(isCurrentPage, controlsInteractionSource)
                 .onKeyEvent { event -> // Unmute with keyboard volume up key
-                    if (event.type == KeyEventType.KeyDown && event.key == Key.VolumeUp && muted) {
-                        viewModel.setUserMutePreference(false)
-                        return@onKeyEvent true
+                    if (event.type == KeyEventType.KeyDown) {
+                        when (event.key) {
+                            Key.VolumeUp if muted -> {
+                                viewModel.setUserMutePreference(false)
+                                return@onKeyEvent true
+                            }
+                            Key.M -> {
+                                viewModel.setUserMutePreference(!muted)
+                                return@onKeyEvent true
+                            }
+                            Key.Spacebar -> {
+                                if (player.isPlaying) {
+                                    player.pause()
+                                } else {
+                                    player.play()
+                                }
+                                return@onKeyEvent true
+                            }
+                        }
                     }
                     return@onKeyEvent false
                 }
