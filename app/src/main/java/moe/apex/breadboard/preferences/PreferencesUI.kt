@@ -112,7 +112,7 @@ fun InfoButton(
             title = title
         ) {
             ExpressiveContainer(
-                modifier = Modifier.padding(bottom = navBarHeight * 2),
+                modifier = Modifier.padding(bottom = navBarHeight + MEDIUM_SPACER.dp),
                 position = ListItemPosition.SINGLE_ELEMENT) {
                 Summary(Modifier.padding(SMALL_LARGE_SPACER.dp), text)
             }
