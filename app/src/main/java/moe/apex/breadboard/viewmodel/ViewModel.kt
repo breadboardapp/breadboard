@@ -111,9 +111,3 @@ class BreadboardViewModel : ViewModel() {
         _downloadingImages.update { it - image }
     }
 }
-
-
-fun List<TagSuggestion>.getIndexByName(name: String): Int? {
-    val index = indexOfFirst { it.value == name }
-    return if (index == -1) null else index
-}

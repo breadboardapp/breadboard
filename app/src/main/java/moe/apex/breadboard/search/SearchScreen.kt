@@ -141,7 +141,6 @@ import moe.apex.breadboard.util.pluralise
 import moe.apex.breadboard.util.showToast
 import moe.apex.breadboard.viewmodel.BreadboardViewModel
 import moe.apex.breadboard.viewmodel.GlobalViewModelOwner
-import moe.apex.breadboard.viewmodel.getIndexByName
 import java.text.SimpleDateFormat
 import java.util.Date
 import androidx.compose.ui.platform.LocalLocale
@@ -214,9 +213,10 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester) {
 
 
     fun addToFilter(tag: TagSuggestion) {
-        val index = tagChipList.getIndexByName(tag.value)
+        val index = tagChipList.indexOfFirst { it.value == tag.value }
 
-        if (index == null) {
+        // -1 is the returned value if it wasn't found
+        if (index == -1) {
             viewModel.addTagSuggestion(tag)
         } else {
             viewModel.replaceTagSuggestion(index, tag)
