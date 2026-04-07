@@ -49,7 +49,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -82,8 +81,7 @@ import moe.apex.breadboard.util.launchInWebBrowser
 import moe.apex.breadboard.util.preImportChecks
 import moe.apex.breadboard.util.saveUriToPref
 import moe.apex.breadboard.util.showToast
-import moe.apex.breadboard.viewmodel.BreadboardViewModel
-import moe.apex.breadboard.viewmodel.GlobalViewModelOwner
+import moe.apex.breadboard.viewmodel.getGlobalViewModel
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.FileInputStream
@@ -94,7 +92,7 @@ import java.io.FileInputStream
 fun PreferencesScreen(navController: NavHostController) {
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
-    val viewModel: BreadboardViewModel = viewModel(GlobalViewModelOwner)
+    val viewModel = getGlobalViewModel()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 

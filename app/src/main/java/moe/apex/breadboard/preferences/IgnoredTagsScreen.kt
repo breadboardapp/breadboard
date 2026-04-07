@@ -37,7 +37,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.launch
 import moe.apex.breadboard.prefs
@@ -54,14 +53,13 @@ import moe.apex.breadboard.util.Summary
 import moe.apex.breadboard.util.TINY_SPACER
 import moe.apex.breadboard.util.saveIgnoreListWithTimestamp
 import moe.apex.breadboard.util.showToast
-import moe.apex.breadboard.viewmodel.BreadboardViewModel
-import moe.apex.breadboard.viewmodel.GlobalViewModelOwner
+import moe.apex.breadboard.viewmodel.getGlobalViewModel
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IgnoredTagsScreen(navController: NavHostController) {
-    val viewModel: BreadboardViewModel = viewModel(GlobalViewModelOwner)
+    val viewModel = getGlobalViewModel()
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
     val context = LocalContext.current

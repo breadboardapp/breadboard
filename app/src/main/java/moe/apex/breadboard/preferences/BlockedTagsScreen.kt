@@ -38,7 +38,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.launch
 import moe.apex.breadboard.image.AI_TAG_NAMES
@@ -56,14 +55,13 @@ import moe.apex.breadboard.util.MEDIUM_SPACER
 import moe.apex.breadboard.util.SMALL_LARGE_SPACER
 import moe.apex.breadboard.util.Summary
 import moe.apex.breadboard.util.TINY_SPACER
-import moe.apex.breadboard.viewmodel.BreadboardViewModel
-import moe.apex.breadboard.viewmodel.GlobalViewModelOwner
+import moe.apex.breadboard.viewmodel.getGlobalViewModel
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BlockedTagsScreen(navController: NavHostController) {
-    val viewModel: BreadboardViewModel = viewModel(GlobalViewModelOwner)
+    val viewModel = getGlobalViewModel()
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
     val scope = rememberCoroutineScope()

@@ -22,7 +22,6 @@ import androidx.compose.runtime.getValue
 import androidx.core.util.Consumer
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.datastore.preferences.preferencesDataStoreFile
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
 import coil3.ImageLoader
 import coil3.PlatformContext
@@ -41,8 +40,7 @@ import moe.apex.breadboard.preferences.LocalPreferences
 import moe.apex.breadboard.preferences.StartDestination
 import moe.apex.breadboard.preferences.UserPreferencesRepository
 import moe.apex.breadboard.util.FlagSecureHelper
-import moe.apex.breadboard.viewmodel.BreadboardViewModel
-import moe.apex.breadboard.viewmodel.GlobalViewModelOwner
+import moe.apex.breadboard.viewmodel.getGlobalViewModel
 
 
 val Context.dataStore by preferencesDataStore("preferences")
@@ -104,7 +102,7 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
         setContent {
             val navController = rememberNavController()
             val prefs by prefs.getPreferences.collectAsState(initialPrefs)
-            val viewModel: BreadboardViewModel = viewModel(GlobalViewModelOwner)
+            val viewModel = getGlobalViewModel()
             val recommendationsProvider by viewModel.recommendationsProvider.collectAsState()
 
             LaunchedEffect(prefs.imageSource, prefs.filterRatingsLocally) {

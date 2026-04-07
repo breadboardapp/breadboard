@@ -31,7 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -50,8 +49,7 @@ import moe.apex.breadboard.util.differenceOlderThan
 import moe.apex.breadboard.util.onScroll
 import moe.apex.breadboard.util.rememberPullToRefreshController
 import moe.apex.breadboard.util.saveIgnoreListWithTimestamp
-import moe.apex.breadboard.viewmodel.BreadboardViewModel
-import moe.apex.breadboard.viewmodel.GlobalViewModelOwner
+import moe.apex.breadboard.viewmodel.getGlobalViewModel
 import kotlin.time.Duration.Companion.days
 
 
@@ -64,7 +62,7 @@ fun HomeScreen(
     val scope = rememberCoroutineScope { Dispatchers.IO }
     val context = LocalContext.current
     val prefs = LocalPreferences.current
-    val viewModel: BreadboardViewModel = viewModel(GlobalViewModelOwner)
+    val viewModel = getGlobalViewModel()
     val recommendationsProvider by viewModel.recommendationsProvider.collectAsState()
     val blockedTags by rememberUpdatedState(prefs.blockedTags)
     val unfollowedTags by rememberUpdatedState(prefs.unfollowedTags)

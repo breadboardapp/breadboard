@@ -15,6 +15,7 @@ import moe.apex.breadboard.tag.TagSuggestion
 import moe.apex.breadboard.util.RecommendationsProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 
 object GlobalViewModelOwner : ViewModelStoreOwner {
@@ -111,3 +112,7 @@ class BreadboardViewModel : ViewModel() {
         _downloadingImages.update { it - image }
     }
 }
+
+
+@Composable
+fun getGlobalViewModel(): BreadboardViewModel = viewModel(GlobalViewModelOwner)

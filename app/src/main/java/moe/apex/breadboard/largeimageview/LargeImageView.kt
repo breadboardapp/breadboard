@@ -119,7 +119,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import coil3.compose.rememberAsyncImagePainter
@@ -168,9 +167,8 @@ import moe.apex.breadboard.util.fixLink
 import moe.apex.breadboard.util.isWebLink
 import moe.apex.breadboard.util.rememberIsBlurEnabled
 import moe.apex.breadboard.util.saveUriToPref
-import moe.apex.breadboard.viewmodel.BreadboardViewModel
 import moe.apex.breadboard.util.morphingBackground
-import moe.apex.breadboard.viewmodel.GlobalViewModelOwner
+import moe.apex.breadboard.viewmodel.getGlobalViewModel
 import java.net.SocketTimeoutException
 import java.util.concurrent.ExecutionException
 import kotlin.math.roundToInt
@@ -391,7 +389,7 @@ private fun LargeImageToolbar(
     navController: NavController,
     currentImage: Image
 ) {
-    val viewModel: BreadboardViewModel = viewModel(GlobalViewModelOwner)
+    val viewModel = getGlobalViewModel()
     val context = LocalContext.current
     val prefs = LocalPreferences.current
     val clipboard = LocalClipboard.current
@@ -727,7 +725,7 @@ private data class ImageAction(
 @Composable
 fun LargeImage(image: Image) {
     val context = LocalContext.current
-    val viewModel: BreadboardViewModel = viewModel(GlobalViewModelOwner)
+    val viewModel = getGlobalViewModel()
 
     val prefs = LocalPreferences.current
     val preferHd = viewModel.rememberImageHdQualityPreference(image, prefs.dataSaver, isUsingWiFi(context))
@@ -874,7 +872,7 @@ private fun VideoPlayPauseButton(
 fun LargeVideo(image: Image, isCurrentPage: Boolean, onLongClick: (() -> Unit)? = null) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val viewModel: BreadboardViewModel = viewModel(GlobalViewModelOwner)
+    val viewModel = getGlobalViewModel()
 
     var wasPlaying by remember { mutableStateOf(false) }
 
