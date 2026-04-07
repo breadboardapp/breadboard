@@ -204,7 +204,7 @@ data class Prefs(
     val favouriteImages: List<Image>,
     val excludeAi: Boolean,
     val imageSource: ImageSource,
-    val favouritesFilter: List<ImageSource>,
+    val favouritesFilter: Set<ImageSource>,
     val lastUsedVersionCode: Int,
     val ratingsFilter: Set<ImageRating>,
     val favouritesRatingsFilter: Set<ImageRating>,
@@ -237,7 +237,7 @@ data class Prefs(
             favouriteImages = emptyList(),
             excludeAi = false,
             imageSource = ImageSource.SAFEBOORU,
-            favouritesFilter = ImageSource.entries,
+            favouritesFilter = ImageSource.entries.toSet(),
             lastUsedVersionCode = 0, // We'll update this later
             ratingsFilter = setOf(ImageRating.SAFE),
             favouritesRatingsFilter = setOf(ImageRating.SAFE),
@@ -613,8 +613,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
     }
 
 
-    suspend fun removeFromSet(key: Preferences.Key<Set<String>>, item: String) {
-        val set = dataStore.data.first()[key]?.toMutableSet() ?: mutableSetOf()
+    suspend fun removeFromSet(key: Preferences.Key<Set<String>>, item: String, default: Set<String> = emptySet()) {
+        val set = (dataStore.data.first()[key] ?: default).toMutableSet()
         set.remove(item)
         updateSet(key, set)
     }
@@ -625,8 +625,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
     }
 
 
-    suspend fun removeFromSet(key: Preferences.Key<Set<String>>, item: PrefEnum<*>) {
-        removeFromSet(key, (item as Enum<*>).name)
+    suspend fun removeFromSet(key: Preferences.Key<Set<String>>, item: PrefEnum<*>, default: Set<PrefEnum<*>> = emptySet()) {
+        removeFromSet(key, (item as Enum<*>).name, default.map { (it as Enum<*>).name }.toSet())
     }
 
 
@@ -755,7 +755,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
 
         val excludeAi = preferences[PreferenceKeys.EXCLUDE_AI] ?: Prefs.DEFAULT.excludeAi
         val imageSource = preferences[PreferenceKeys.IMAGE_SOURCE]?.let { ImageSource.valueOf(it) } ?: Prefs.DEFAULT.imageSource
-        val favouritesFilter = (preferences[PreferenceKeys.FAVOURITES_FILTER]?.map { ImageSource.valueOf(it) } ?: Prefs.DEFAULT.favouritesFilter)
+        val favouritesFilter = (preferences[PreferenceKeys.FAVOURITES_FILTER]?.map { ImageSource.valueOf(it) }?.toSet() ?: Prefs.DEFAULT.favouritesFilter)
         val lastUsedVersionCode = preferences[PreferenceKeys.LAST_USED_VERSION_CODE] ?: Prefs.DEFAULT.lastUsedVersionCode
         val ratingsFilter = (preferences[PreferenceKeys.RATINGS_FILTER]?.map { ImageRating.valueOf(it) }?.toSet() ?: Prefs.DEFAULT.ratingsFilter)
         val favouritesRatingsFilter = (preferences[PreferenceKeys.FAVOURITES_RATING_FILTER]?.map { ImageRating.valueOf(it) }?.toSet() ?: Prefs.DEFAULT.favouritesRatingsFilter)

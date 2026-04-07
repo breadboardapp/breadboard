@@ -75,9 +75,17 @@ fun FavouritesPage(
             onClick = {
                 scope.launch {
                     if (it in prefs.favouritesFilter) {
-                        preferencesRepository.removeFromSet(PreferenceKeys.FAVOURITES_FILTER, it)
+                        preferencesRepository.removeFromSet(
+                            key = PreferenceKeys.FAVOURITES_FILTER,
+                            item = it,
+                            default = prefs.favouritesFilter
+                        )
                     } else {
-                        preferencesRepository.addToSet(PreferenceKeys.FAVOURITES_FILTER, it)
+                        preferencesRepository.addToSet(
+                            key = PreferenceKeys.FAVOURITES_FILTER,
+                            item = it,
+                            default = prefs.favouritesFilter
+                        )
                     }
                 }
             }
@@ -92,7 +100,11 @@ fun FavouritesPage(
             onClick = {
                 scope.launch {
                     if (it in prefs.favouritesRatingsFilter) {
-                        preferencesRepository.removeFromSet(PreferenceKeys.FAVOURITES_RATING_FILTER, it)
+                        preferencesRepository.removeFromSet(
+                            key = PreferenceKeys.FAVOURITES_RATING_FILTER,
+                            item = it,
+                            default = prefs.favouritesRatingsFilter
+                        )
                     } else {
                         preferencesRepository.addToSet(
                             key = PreferenceKeys.FAVOURITES_RATING_FILTER,
