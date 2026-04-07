@@ -39,6 +39,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import kotlinx.coroutines.launch
 import moe.apex.breadboard.image.Image
 import moe.apex.breadboard.preferences.LocalPreferences
 import moe.apex.breadboard.util.NavBarHeightVerticalSpacer
@@ -164,6 +166,8 @@ private fun StaggeredImageGrid(
     onImageClick: (Int, Image) -> Unit,
     onEndReached: (suspend () -> Unit)? = null
 ) {
+    val scope = rememberCoroutineScope()
+
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Adaptive(MIN_CELL_WIDTH.dp),
         state = gridState,
@@ -185,7 +189,9 @@ private fun StaggeredImageGrid(
         onEndReached?.let {
             item(key = "end-reached") {
                 LaunchedEffect(Unit) {
-                    it()
+                    scope.launch {
+                        it()
+                    }
                 }
             }
         }
@@ -214,6 +220,8 @@ private fun UniformImageGrid(
     onImageClick: (Int, Image) -> Unit,
     onEndReached: (suspend () -> Unit)? = null
 ) {
+    val scope = rememberCoroutineScope()
+
     LazyVerticalGrid(
         columns = GridCells.Adaptive(MIN_CELL_WIDTH.dp),
         state = gridState,
@@ -235,7 +243,9 @@ private fun UniformImageGrid(
         onEndReached?.let {
             item(key = "end-reached") {
                 LaunchedEffect(Unit) {
-                    it()
+                    scope.launch {
+                        it()
+                    }
                 }
             }
         }
