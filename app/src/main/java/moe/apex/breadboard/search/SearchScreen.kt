@@ -369,7 +369,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester) {
 
         if (
             prefs.ratingsFilter.isEmpty() ||
-            (prefs.ratingsFilter.size == 1 && prefs.ratingsFilter[0] == ImageRating.SENSITIVE && prefs.imageSource == ImageSource.YANDERE)
+            prefs.ratingsFilter.none { it in availableRatingsForSource(prefs.imageSource) }
         )
             return showToast(context, "Please select some ratings")
 
@@ -670,9 +670,11 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester) {
                                                 showAgeVerificationDialog = true
                                                 return@launch
                                             }
+                                            Log.i("Breadboard", "current ratings filter: ${prefs.ratingsFilter}")
                                             context.prefs.addToSet(
-                                                PreferenceKeys.RATINGS_FILTER,
-                                                it
+                                                key = PreferenceKeys.RATINGS_FILTER,
+                                                item = it,
+                                                default = prefs.ratingsFilter
                                             )
                                         }
                                     }
@@ -689,6 +691,10 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester) {
                             bottom = SMALL_SPACER.dp
                         )
                 ) {
+                    LaunchedEffect(prefs.ratingsFilter) {
+                        Log.i("Breadboard", "new ratings filter: ${prefs.ratingsFilter}")
+                    }
+
                     HorizontallyScrollingChipsWithLabels(
                         modifier = Modifier
                             .fillMaxWidth()

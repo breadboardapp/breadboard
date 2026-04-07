@@ -206,8 +206,8 @@ data class Prefs(
     val imageSource: ImageSource,
     val favouritesFilter: List<ImageSource>,
     val lastUsedVersionCode: Int,
-    val ratingsFilter: List<ImageRating>,
-    val favouritesRatingsFilter: List<ImageRating>,
+    val ratingsFilter: Set<ImageRating>,
+    val favouritesRatingsFilter: Set<ImageRating>,
     val filterRatingsLocally: Boolean,
     val useStaggeredGrid: Boolean,
     val saveSearchHistory: Boolean,
@@ -239,8 +239,8 @@ data class Prefs(
             imageSource = ImageSource.SAFEBOORU,
             favouritesFilter = ImageSource.entries,
             lastUsedVersionCode = 0, // We'll update this later
-            ratingsFilter = listOf(ImageRating.SAFE),
-            favouritesRatingsFilter = listOf(ImageRating.SAFE),
+            ratingsFilter = setOf(ImageRating.SAFE),
+            favouritesRatingsFilter = setOf(ImageRating.SAFE),
             filterRatingsLocally = true,
             useStaggeredGrid = true,
             saveSearchHistory = true,
@@ -606,8 +606,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
     }
 
 
-    suspend fun addToSet(key: Preferences.Key<Set<String>>, item: String) {
-        val set = dataStore.data.first()[key]?.toMutableSet() ?: mutableSetOf()
+    suspend fun addToSet(key: Preferences.Key<Set<String>>, item: String, default: Set<String> = emptySet()) {
+        val set = (dataStore.data.first()[key] ?: default).toMutableSet()
         set.add(item)
         updateSet(key, set)
     }
@@ -620,8 +620,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
     }
 
 
-    suspend fun addToSet(key: Preferences.Key<Set<String>>, item: PrefEnum<*>) {
-        addToSet(key, (item as Enum<*>).name)
+    suspend fun addToSet(key: Preferences.Key<Set<String>>, item: PrefEnum<*>, default: Set<PrefEnum<*>> = emptySet()) {
+        addToSet(key, (item as Enum<*>).name, default.map { (it as Enum<*>).name }.toSet())
     }
 
 
@@ -757,8 +757,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val imageSource = preferences[PreferenceKeys.IMAGE_SOURCE]?.let { ImageSource.valueOf(it) } ?: Prefs.DEFAULT.imageSource
         val favouritesFilter = (preferences[PreferenceKeys.FAVOURITES_FILTER]?.map { ImageSource.valueOf(it) } ?: Prefs.DEFAULT.favouritesFilter)
         val lastUsedVersionCode = preferences[PreferenceKeys.LAST_USED_VERSION_CODE] ?: Prefs.DEFAULT.lastUsedVersionCode
-        val ratingsFilter = (preferences[PreferenceKeys.RATINGS_FILTER]?.map { ImageRating.valueOf(it) } ?: Prefs.DEFAULT.ratingsFilter)
-        val favouritesRatingsFilter = (preferences[PreferenceKeys.FAVOURITES_RATING_FILTER]?.map { ImageRating.valueOf(it) } ?: Prefs.DEFAULT.favouritesRatingsFilter)
+        val ratingsFilter = (preferences[PreferenceKeys.RATINGS_FILTER]?.map { ImageRating.valueOf(it) }?.toSet() ?: Prefs.DEFAULT.ratingsFilter)
+        val favouritesRatingsFilter = (preferences[PreferenceKeys.FAVOURITES_RATING_FILTER]?.map { ImageRating.valueOf(it) }?.toSet() ?: Prefs.DEFAULT.favouritesRatingsFilter)
         val filterRatingsLocally = (preferences[PreferenceKeys.FILTER_RATINGS_LOCALLY] ?: Prefs.DEFAULT.filterRatingsLocally)
         val useStaggeredGrid = (preferences[PreferenceKeys.USE_STAGGERED_GRID] ?: Prefs.DEFAULT.useStaggeredGrid)
         val saveSearchHistory = (preferences[PreferenceKeys.SAVE_SEARCH_HISTORY] ?: Prefs.DEFAULT.saveSearchHistory)

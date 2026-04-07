@@ -94,7 +94,11 @@ fun FavouritesPage(
                     if (it in prefs.favouritesRatingsFilter) {
                         preferencesRepository.removeFromSet(PreferenceKeys.FAVOURITES_RATING_FILTER, it)
                     } else {
-                        preferencesRepository.addToSet(PreferenceKeys.FAVOURITES_RATING_FILTER, it)
+                        preferencesRepository.addToSet(
+                            key = PreferenceKeys.FAVOURITES_RATING_FILTER,
+                            item = it,
+                            default = prefs.favouritesRatingsFilter
+                        )
                     }
                 }
             }
