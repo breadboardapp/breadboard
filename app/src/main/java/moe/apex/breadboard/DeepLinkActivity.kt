@@ -90,7 +90,7 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity(), Volu
                     ImageView.fromUri(it)?.let { iv ->
                         Navigation(navController = navController, startDestination = iv)
                     } ?: reopenInBrowser(intent)
-                } ?: finish()
+                } ?: finishAndRemoveTask()
             }
         }
     }
@@ -104,7 +104,8 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity(), Volu
 
         if (possibleBrowserPackage != null) {
             try {
-                return launchUriWithPackage(this, uri, possibleBrowserPackage)
+                launchUriWithPackage(this, uri, possibleBrowserPackage)
+                finishAndRemoveTask()
             } catch (_: ActivityNotFoundException) {
                 /* Android System Intelligence (com.google.android.as) powers the "Open" action
                    for supported apps when long-pressing an Imageboard URL and sets the browser
