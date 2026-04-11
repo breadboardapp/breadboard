@@ -16,7 +16,7 @@
         <activity
             android:name=".MainActivity"
             android:launchMode="singleTop"
-            android:taskAffinity="moe.apex.rule34.MainActivity"
+            android:taskAffinity="moe.apex.breadboard.MainActivity"
             android:exported="true"
             android:theme="@style/Theme.Breadboard">
             <intent-filter>
@@ -26,7 +26,7 @@
         </activity>
         <activity
             android:name=".DeepLinkActivity"
-            android:taskAffinity="moe.apex.rule34.DeepLinkActivity"
+            android:taskAffinity="moe.apex.breadboard.DeepLinkActivity"
             android:launchMode="singleTop"
             android:exported="true"
             android:theme="@style/Theme.Breadboard">
@@ -49,6 +49,25 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data android:scheme="https" />
+                <data android:host="*.gelbooru.com" />
+                <data android:host="*.rule34.xxx" />
+
+                <data android:pathPattern="/images/.*" />
+                <data android:pathPattern="/samples/.*" />
+                <data android:pathPattern="/thumbnails/.*" />
+
+                <!-- Gelbooru-based image boards love having an additional slash
+                     at the start of the path for some reason. -->
+                <data android:pathPattern="//images/.*" />
+                <data android:pathPattern="//samples/.*" />
+                <data android:pathPattern="//thumbnails/.*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="https" />
                 <data android:host="danbooru.donmai.us" />
 
                 <data android:pathPattern="/posts/.*" />
@@ -60,16 +79,54 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data android:scheme="https" />
+                <data android:host="cdn.donmai.us" />
+
+                <data android:pathPattern="/original/.*" />
+                <data android:pathPattern="/sample/.*" />
+                <data android:pathPattern="/360x360/.*" />
+                <data android:pathPattern="/180x180/.*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="https" />
                 <data android:host="yande.re" />
-                <data android:host="files.yande.re" />
 
                 <data android:pathPattern="/post/show/.*" />
                 <data android:pathAdvancedPattern="/post/show/[0-9]+" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
 
-                <data android:pathPattern="/image/.*/yande.re .*" />
-                <data android:pathAdvancedPattern="/image/[a-z0-9]+/yande.re [0-9]+ .*" />
+                <data android:scheme="https" />
+                <data android:host="files.yande.re" />
+
+                <data android:pathPattern="/image/.*" />
+                <data android:pathPattern="/sample/.*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="https" />
+                <data android:host="assets.yande.re" />
+
+                <data android:pathPattern="/data/preview/.*" />
             </intent-filter>
         </activity>
+        <activity-alias
+            android:name="moe.apex.rule34.MainActivity"
+            android:targetActivity=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+        </activity-alias>
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
