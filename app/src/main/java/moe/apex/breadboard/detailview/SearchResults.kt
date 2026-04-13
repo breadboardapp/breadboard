@@ -30,13 +30,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import moe.apex.breadboard.image.ImageBoardAuth
 import moe.apex.breadboard.image.ImageBoardRequirement
 import moe.apex.breadboard.image.ImageRating
-import moe.apex.breadboard.image.AI_TAG_NAMES
 import moe.apex.breadboard.navigation.Settings
 import moe.apex.breadboard.preferences.Experiment
 import moe.apex.breadboard.preferences.ImageSource
@@ -82,7 +82,12 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
     val manuallyBlockedTags by rememberUpdatedState(prefs.manuallyBlockedTags)
     val blur = prefs.isExperimentEnabled(Experiment.IMMERSIVE_UI_EFFECTS)
 
-    val actuallyBlockedTags = rememberSaveable { mutableStateSetOf<String>() }
+    val isReady by viewModel.isReady.collectAsStateWithLifecycle()
+    val viewModelAuth by viewModel.auth.collectAsStateWithLifecycle()
+    val doneInitialLoad by viewModel.doneInitialLoad.collectAsStateWithLifecycle()
+    val viewModelImages by viewModel.images.collectAsStateWithLifecycle()
+    val blockedTags by viewModel.blockedTags.collectAsStateWithLifecycle()
+
     val actuallySelectedRatings = rememberSaveable {
         mutableStateSetOf<ImageRating>().apply {
             addAll(prefs.ratingsFilter)
@@ -90,39 +95,24 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
     }
 
     fun setUpViewModel(auth: ImageBoardAuth? = null) {
-        if (!viewModel.isReady) {
-            viewModel.setup(
-                imageSource = source,
-                auth = auth ?: prefs.authFor(source, context),
-                tags = tagList
-            )
-        }
+        viewModel.setup(
+            imageSource = source,
+            auth = auth ?: prefs.authFor(source, context),
+            tags = tagList
+        )
     }
 
-    /* Populate the internal list of blocked tags.
-       If the user explicitly searches for an AI tag,
-       we'll unblock all AI tag variations for this search. */
-    fun updateBlockedTags() {
-        val blockList = if (AI_TAG_NAMES.any { it in tagList }) {
-            manuallyBlockedTags
-        } else {
-            manuallyBlockedTags + AI_TAG_NAMES
-        }
-        Snapshot.withMutableSnapshot {
-            actuallyBlockedTags.clear()
-            actuallyBlockedTags.addAll(blockList.filter { it !in tagList })
-        }
-    }
+    fun updateBlockedTags() = viewModel.updateBlockedTags(manuallyBlockedTags, prefs.excludeAi)
 
     LaunchedEffect(Unit) {
         val auth = prefs.authFor(source, context)
-        if (auth != viewModel.auth) {
-            viewModel.prepareReset()
+        if (auth != viewModelAuth) {
+            viewModel.updateAuth(auth)
         }
-        setUpViewModel(auth)
-        // Don't automatically update on config change like screen rotation if the list is already populated
-        if (actuallyBlockedTags.isEmpty()) {
-            updateBlockedTags()
+
+        if (!isReady) {
+            updateBlockedTags() // Subsequent calls are done in the pull to refresh callback.
+            setUpViewModel(auth)
         }
     }
 
@@ -132,7 +122,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .then(
-                        if (prefs.filterRatingsLocally) {
+                        if (filterLocally) {
                             Modifier.offset(y = 80.dp) // Height of the ratings box
                         } else Modifier
                     ),
@@ -140,9 +130,8 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
             )
         }
     ) {
-        updateBlockedTags()
-        viewModel.prepareReset()
         setUpViewModel()
+        updateBlockedTags()
         viewModel.loadMore()
     }
 
@@ -172,9 +161,8 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
         )
     } }
 
-    val imagesToDisplay = viewModel.images.filter {
-        it.metadata!!.tags.none { tag -> actuallyBlockedTags.contains(tag.lowercase()) } &&
-        if (prefs.filterRatingsLocally) it.metadata.rating in prefs.ratingsFilter else true
+    val imagesToDisplay = remember(viewModelImages, blockedTags, actuallySelectedRatings.size) {
+        viewModel.filterImages(if (filterLocally) actuallySelectedRatings else null)
     }
 
     if (showAgeVerificationDialog) {
@@ -191,7 +179,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
                 scrollBehavior = scrollBehavior,
                 navController = navController,
                 additionalActions = {
-                    if (viewModel.isReady) {
+                    if (doneInitialLoad) {
                         ScrollToTopArrow(
                             staggeredGridState = viewModel.staggeredGridState,
                             uniformGridState = viewModel.uniformGridState,
@@ -204,41 +192,25 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
         addBottomPadding = false,
         blur = isImageCarouselVisible && blur,
     ) { padding ->
-        if (!viewModel.isReady) {
-            return@MainScreenScaffold
-        }
-
         val needsAuth = remember {
             source.imageBoard.apiKeyRequirement == ImageBoardRequirement.REQUIRED &&
             prefs.authFor(source, context) == null
         }
 
         if (needsAuth) {
-            return@MainScreenScaffold Column(
+            return@MainScreenScaffold ApiKeyRequiredColumn(
                 modifier = Modifier
                     .padding(padding)
                     .padding(top = SMALL_LARGE_SPACER.dp)
                     .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(MEDIUM_SPACER.dp)
+                source = source
             ) {
-                ExpressiveContainer(position = ListItemPosition.SINGLE_ELEMENT) {
-                    TitleSummary(
-                        title = "API Key required",
-                        summary = "${source.label} requires an API key to search.\n" +
-                                  "Add an API key in Settings.\n" +
-                                  "Alternatively, use a different image source.",
-                    )
-                }
-                Button(
-                    onClick = {
-                        navController.navigate(Settings)
-                    },
-                    colors = ButtonDefaults.buttonColors()
-                ) {
-                    Text("Go to Settings")
-                }
+                navController.navigate(Settings)
             }
+        }
+
+        if (!isReady) {
+            return@MainScreenScaffold
         }
 
         ImageGrid(
@@ -263,9 +235,9 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
                 )
             } } else null,
             pullToRefreshController = pullToRefreshController,
-            doneInitialLoad = viewModel.doneInitialLoad,
+            doneInitialLoad = doneInitialLoad,
             onEndReached = viewModel::loadMore,
-            noImagesContent = { if (viewModel.doneInitialLoad) { NoImages() } }
+            noImagesContent = { if (doneInitialLoad) { NoImages() } }
         )
     }
 
@@ -276,8 +248,36 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
         allImages = imagesToDisplay,
         onActiveStateChanged = { isImageCarouselVisible = it }
     ) { oldImage, newImage ->
-        val index = viewModel.images.indexOf(oldImage)
-        if (index != -1) viewModel.images[index] = newImage
+        viewModel.updateImage(oldImage, newImage)
     }
 }
 
+
+
+@Composable
+fun ApiKeyRequiredColumn(
+    modifier: Modifier = Modifier,
+    source: ImageSource,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(MEDIUM_SPACER.dp)
+    ) {
+        ExpressiveContainer(position = ListItemPosition.SINGLE_ELEMENT) {
+            TitleSummary(
+                title = "API Key required",
+                summary = "${source.label} requires an API key to search.\n" +
+                        "Add an API key in Settings.\n" +
+                        "Alternatively, use a different image source.",
+            )
+        }
+        Button(
+            onClick = onClick,
+            colors = ButtonDefaults.buttonColors()
+        ) {
+            Text("Go to Settings")
+        }
+    }
+}
