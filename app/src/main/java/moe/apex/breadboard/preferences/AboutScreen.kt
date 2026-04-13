@@ -14,8 +14,6 @@ import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialShapes.Companion.Cookie9Sided
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -69,7 +67,6 @@ private val apex2504 = GitHubUser("apex2504", "apex2504")
 private val devoxin = GitHubUser("devoxin", "devoxin")
 
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AboutScreen(navController: NavHostController) {
     val context = LocalContext.current

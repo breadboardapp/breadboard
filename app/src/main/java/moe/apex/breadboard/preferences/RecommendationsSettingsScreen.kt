@@ -23,7 +23,6 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material3.ButtonGroup
 import androidx.compose.material3.ButtonGroupScope
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilterChip
@@ -82,7 +81,7 @@ private const val INFO_SECTION = -2
 private const val PAGER_BUTTON_SIZE_DP = 64
 
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun RecommendationsSettingsScreen(navController: NavHostController) {
     val viewModel = getGlobalViewModel()

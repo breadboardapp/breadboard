@@ -31,7 +31,6 @@ import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -66,7 +65,6 @@ private const val MIN_CELL_WIDTH   = 120
 private const val MAX_CELL_WIDTH   = 144
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ImageGrid(
     modifier: Modifier = Modifier,
@@ -154,7 +152,6 @@ fun ImageGrid(
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun StaggeredImageGrid(
     modifier: Modifier = Modifier,

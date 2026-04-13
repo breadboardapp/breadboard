@@ -221,7 +221,6 @@ private fun NavigationIcon(navController: NavController? = null) {
 
 
 @Composable
-@OptIn(ExperimentalMaterial3Api::class)
 fun LargeTitleBar(
     title: String,
     scrollBehavior: TopAppBarScrollBehavior?,
@@ -240,7 +239,6 @@ fun LargeTitleBar(
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SmallTitleBar(
     title: String,
@@ -260,7 +258,6 @@ fun SmallTitleBar(
 }
 
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun FullscreenLoadingSpinner() {
     Row(
@@ -286,7 +283,6 @@ fun PaddingValues.withoutVertical(top: Boolean = true, bottom: Boolean = true) :
 
 
 /** A higher level MainScreenScaffold that provides two preset types of top bars. */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreenScaffold(
     title: String,
@@ -322,7 +318,6 @@ fun MainScreenScaffold(
     fine grained control over its behaviour and appearance.
 
     [blur] is not supported on Android 11 or below.*/
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreenScaffold(
     topAppBar: @Composable () -> Unit,
@@ -1182,7 +1177,6 @@ fun CombinedClickableAction(
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 data class PullToRefreshController(
     val state: PullToRefreshState,
     val indicator: @Composable BoxScope.(PullToRefreshController) -> Unit,
@@ -1222,7 +1216,6 @@ data class PullToRefreshController(
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun rememberPullToRefreshController(
     state: PullToRefreshState = rememberPullToRefreshState(),
@@ -1245,7 +1238,6 @@ fun rememberPullToRefreshController(
 
 
 object PullToRefreshControllerDefaults {
-    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun Indicator(
         modifier: Modifier = Modifier,
@@ -1268,7 +1260,6 @@ object PullToRefreshControllerDefaults {
     to work around what I can only assume is a Compose bug whereby the scrolling animation is jumpy
     when there is a full width item in the grid (like the filter). */
 @SuppressLint("FrequentlyChangingValue")
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScrollToTopArrow(
     staggeredGridState: LazyStaggeredGridState,

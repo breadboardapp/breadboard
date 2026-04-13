@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -63,7 +62,6 @@ import moe.apex.breadboard.util.withoutVertical
 import moe.apex.breadboard.viewmodel.SearchResultsViewModel
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchResults(navController: NavController, source: ImageSource, tagList: List<String>, viewModel: SearchResultsViewModel = viewModel()) {
     val context = LocalContext.current

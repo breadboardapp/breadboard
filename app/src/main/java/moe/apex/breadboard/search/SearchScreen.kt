@@ -1,6 +1,5 @@
 package moe.apex.breadboard.search
 
-import android.annotation.SuppressLint
 import android.text.format.DateFormat
 import android.util.Log
 import androidx.activity.compose.PredictiveBackHandler
@@ -148,7 +147,6 @@ const val ANIMATION_DURATION_MS = 300
 
 
 @OptIn(ExperimentalMaterial3Api::class)
-@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter", "ConfigurationScreenWidthHeight")
 @Composable
 fun SearchScreen(navController: NavController, focusRequester: FocusRequester) {
     /* We use shouldShowSuggestions for determining autocomplete section visibility because if we

@@ -788,7 +788,6 @@ fun LargeImage(image: Image) {
 }
 
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun VideoMuteButton(
     muted: Boolean,
@@ -822,7 +821,7 @@ private fun VideoMuteButton(
 }
 
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun VideoPlayPauseButton(
     isPlaying: Boolean,
@@ -867,7 +866,7 @@ private fun VideoPlayPauseButton(
 }
 
 
-@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun LargeVideo(image: Image, isCurrentPage: Boolean, onLongClick: (() -> Unit)? = null) {
     val context = LocalContext.current

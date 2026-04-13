@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -38,7 +37,6 @@ import moe.apex.breadboard.util.MEDIUM_SPACER
 import moe.apex.breadboard.util.TitleSummary
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibrariesScreen(navController: NavHostController) {
     val topAppBarState = rememberTopAppBarState()

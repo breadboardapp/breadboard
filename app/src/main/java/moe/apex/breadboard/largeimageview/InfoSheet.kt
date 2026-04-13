@@ -111,9 +111,7 @@ private enum class InfoSheetPage {
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class,
-    ExperimentalMaterial3ExpressiveApi::class
-)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -> Unit) {
     /* I don't really like this whole info/options implementation.
@@ -436,7 +434,6 @@ private fun ImageboardDataTabContent(
 }
 
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun UnifiedInfoContent(
     image: Image,
@@ -492,7 +489,6 @@ private fun SplitInfoSheetLazyColumn(content: LazyListScope.() -> Unit) {
 }
 
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 private fun LazyListScope.infoContentItems(
     image: Image,
     onLinkClick: (String) -> Unit,
@@ -599,7 +595,6 @@ private fun LazyListScope.infoContentItems(
 
 
 @Suppress("unused")
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 private fun LazyListScope.imageboardDataContentItems(
     image: Image,
     onLinkClick: (String) -> Unit, // Not currently used but keeping for consistency and possible future use
@@ -779,7 +774,6 @@ private fun TagsContainer(
 }
 
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ExpandCollapseRow(
     label: String,
