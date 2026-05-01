@@ -39,10 +39,9 @@ data class ImageMetadata(
 
     val pixivUrl: String?
         get() {
-            val extractedPixivId = PixivId.fromUrl(source) ?: (
-                if (pixivId != null) PixivId(pixivId, 0)
-                else return null
-            )
+            val extractedPixivId = PixivId.fromUrl(source)
+                ?: pixivId?.let { PixivId(pixivId, 0) }
+                ?: return null
 
             val id = if (extractedPixivId.index == 0) extractedPixivId.id.toString()
                      else "${extractedPixivId.id}#${extractedPixivId.index}"
