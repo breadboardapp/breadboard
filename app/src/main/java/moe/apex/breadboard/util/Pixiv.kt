@@ -31,10 +31,7 @@ data class PixivId(val id: Int, val index: Int) {
 
             for (regex in PIXIV_RX) {
                 val match = regex.find(url) ?: continue
-
-                val id = match.groups["id"]?.value?.toIntOrNull().takeIf { it != 0 }
-                if (id == null) continue
-
+                val id = match.groups["id"]?.value?.toIntOrNull().takeIf { it != 0 } ?: continue
                 val index = match.groups["index"]?.value?.toIntOrNull() ?: 0
                 return PixivId(id, index)
             }
