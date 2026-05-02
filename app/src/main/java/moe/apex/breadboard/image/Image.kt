@@ -6,6 +6,7 @@ import moe.apex.breadboard.preferences.ImageSource
 import moe.apex.breadboard.tag.TagCategory
 import moe.apex.breadboard.tag.TagGroup
 import moe.apex.breadboard.util.MigrationOnlyField
+import moe.apex.breadboard.util.PixivId
 
 
 @Serializable
@@ -37,7 +38,16 @@ data class ImageMetadata(
         get() = groupedTags.fold(emptyList()) { acc, tagGroup -> acc + tagGroup.tags }
 
     val pixivUrl: String?
-        get() = pixivId?.let { "https://www.pixiv.net/en/artworks/$it" }
+        get() {
+            val extractedPixivId = PixivId.fromUrl(source)
+                ?: pixivId?.let { PixivId(it, 0) }
+                ?: return null
+
+            val id = if (extractedPixivId.index == 0) extractedPixivId.id.toString()
+                     else "${extractedPixivId.id}#${extractedPixivId.index}"
+
+            return "https://www.pixiv.net/en/artworks/$id"
+        }
 
 }
 
