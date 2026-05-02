@@ -30,7 +30,7 @@ fun fixLink(link: String): String {
 
         /* The phixiv fixer does not take the official pixiv image index syntax into account, so we have to use its
            own path syntax for indexed images. */
-        if (fixedHost == "phixiv.net") {
+        if (fixedHost == "phixiv.net" && "/artworks/\\d+$".toRegex().containsMatchIn(uri.path ?: "")) {
             val index = uri.fragment?.toIntOrNull().takeIf { it != 0 }
             if (index != null) {
                 newPath = "${uri.path}/${index + 1}"
