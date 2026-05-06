@@ -48,7 +48,7 @@ data class ImageMetadata(
         get() = pixivArtwork?.let {
                     val id = if (it.index == 0) it.id.toString()
                              else "${it.id}#${it.index}"
-                    "https://www.pixiv.net/en/artworks/$id"
+                    "https://www.pixiv.net/artworks/$id"
                 }
 
 }
