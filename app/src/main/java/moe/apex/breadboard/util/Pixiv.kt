@@ -24,16 +24,16 @@ private val PIXIV_PRE_2012_RX =
 
 private val PIXIV_RX = listOf(PIXIV_CURRENT_RX) + PIXIV_2012_TO_2016_RX + PIXIV_PRE_2012_RX
 
-data class PixivId(val id: Int, val index: Int) {
+data class PixivArtwork(val id: Int, val index: Int) {
     companion object {
-        fun fromUrl(url: String?): PixivId? {
+        fun fromUrl(url: String?): PixivArtwork? {
             if (url == null) return null
 
             for (regex in PIXIV_RX) {
                 val match = regex.find(url) ?: continue
                 val id = match.groups["id"]?.value?.toIntOrNull().takeIf { it != 0 } ?: continue
                 val index = match.groups["index"]?.value?.toIntOrNull() ?: 0
-                return PixivId(id, index)
+                return PixivArtwork(id, index)
             }
 
             return null

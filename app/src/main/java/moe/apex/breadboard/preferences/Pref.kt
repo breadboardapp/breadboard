@@ -47,7 +47,7 @@ import moe.apex.breadboard.image.AI_TAG_NAMES
 import moe.apex.breadboard.tag.TagCategory
 import moe.apex.breadboard.util.AgeVerification
 import moe.apex.breadboard.util.MigrationOnlyField
-import moe.apex.breadboard.util.PixivId
+import moe.apex.breadboard.util.PixivArtwork
 import moe.apex.breadboard.util.SecretsManager
 import moe.apex.breadboard.util.availableRatingsForSource
 import moe.apex.breadboard.util.decodeHtml
@@ -404,7 +404,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
                             uncategorisedTags = null,
                             groupedTags = if (!image.metadata.uncategorisedTags.isNullOrEmpty()) listOf(TagCategory.GENERAL.group(image.metadata.tags))
                                           else emptyList(),
-                            pixivId = image.metadata.pixivId ?: PixivId.fromUrl(image.metadata.source)?.id
+                            pixivArtworkId = image.metadata.pixivId ?: PixivArtwork.fromUrl(image.metadata.source)?.id
                         )
                     )
                 )

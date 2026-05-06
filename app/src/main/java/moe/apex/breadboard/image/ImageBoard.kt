@@ -8,7 +8,6 @@ import moe.apex.breadboard.preferences.ImageSource
 import moe.apex.breadboard.tag.TagCategory
 import moe.apex.breadboard.tag.TagGroup
 import moe.apex.breadboard.tag.TagSuggestion
-import moe.apex.breadboard.util.PixivId
 import moe.apex.breadboard.util.decodeHtml
 import org.json.JSONArray
 import org.json.JSONException
@@ -457,7 +456,7 @@ object Danbooru : ImageBoard {
             source = metaSource,
             groupedTags = metaGroupedTags,
             rating = metaRating,
-            pixivId = metaPixivId,
+            pixivArtworkId = metaPixivId,
         )
 
         return Image(id, fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.DANBOORU, aspectRatio, metadata)

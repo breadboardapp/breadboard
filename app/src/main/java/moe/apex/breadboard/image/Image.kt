@@ -6,7 +6,7 @@ import moe.apex.breadboard.preferences.ImageSource
 import moe.apex.breadboard.tag.TagCategory
 import moe.apex.breadboard.tag.TagGroup
 import moe.apex.breadboard.util.MigrationOnlyField
-import moe.apex.breadboard.util.PixivId
+import moe.apex.breadboard.util.PixivArtwork
 
 
 @Serializable
@@ -22,7 +22,8 @@ data class ImageMetadata(
     val uncategorisedTags: List<String>? = null,
     val groupedTags: List<TagGroup> = emptyList(),
     val rating: ImageRating,
-    val pixivId: Int? = null,
+    @SerialName("pixivId")
+    private val pixivArtworkId: Int? = null,
     @MigrationOnlyField
     @SerialName("artist")
     @Deprecated(
@@ -37,17 +38,18 @@ data class ImageMetadata(
     val tags: List<String>
         get() = groupedTags.fold(emptyList()) { acc, tagGroup -> acc + tagGroup.tags }
 
+    val pixivId: Int?
+        get() = pixivArtworkId ?: pixivArtwork?.id
+
+    val pixivArtwork: PixivArtwork?
+        get() = PixivArtwork.fromUrl(source) ?: pixivArtworkId?.let { PixivArtwork(it, 0) }
+
     val pixivUrl: String?
-        get() {
-            val extractedPixivId = PixivId.fromUrl(source)
-                ?: pixivId?.let { PixivId(it, 0) }
-                ?: return null
-
-            val id = if (extractedPixivId.index == 0) extractedPixivId.id.toString()
-                     else "${extractedPixivId.id}#${extractedPixivId.index}"
-
-            return "https://www.pixiv.net/en/artworks/$id"
-        }
+        get() = pixivArtwork?.let {
+                    val id = if (it.index == 0) it.id.toString()
+                             else "${it.id}#${it.index}"
+                    "https://www.pixiv.net/en/artworks/$id"
+                }
 
 }
 
