@@ -330,7 +330,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             PreferenceKeys.INTERNAL_IGNORE_LIST_TIMESTAMP to PrefMeta(PrefCategory.SETTING, exportable = false),
             PreferenceKeys.INTERNAL_IGNORE_LIST to PrefMeta(PrefCategory.SETTING, exportable = false),
             PreferenceKeys.UNIFIED_INFO_SHEET to PrefMeta(PrefCategory.SETTING),
-            PreferenceKeys.THEME to PrefMeta(PrefCategory.SETTINGS)
+            PreferenceKeys.THEME to PrefMeta(PrefCategory.SETTING)
         )
     }
 
