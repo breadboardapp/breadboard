@@ -15,8 +15,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import moe.apex.breadboard.preferences.LocalPreferences
-import moe.apex.breadboard.preferences.Theme
-import moe.apex.breadboard.prefs
+import moe.apex.breadboard.preferences.DarkTheme
 
 
 private val DarkColorScheme = darkColorScheme(
@@ -56,12 +55,12 @@ val LocalBreadboardColors = staticCompositionLocalOf {
     )
 }
 
-@Composable()
+@Composable
 fun shouldUseDarkTheme(): Boolean {
     val preferences = LocalPreferences.current
 
-    val userSelectedDarkMode = preferences.theme == Theme.DARK
-    val followSystemDarkMode = preferences.theme == Theme.AUTO && isSystemInDarkTheme()
+    val userSelectedDarkMode = preferences.darkTheme == DarkTheme.ON
+    val followSystemDarkMode = preferences.darkTheme == DarkTheme.AUTO && isSystemInDarkTheme()
 
     return userSelectedDarkMode || followSystemDarkMode
 }
