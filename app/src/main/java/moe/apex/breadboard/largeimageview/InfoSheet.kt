@@ -32,6 +32,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.material.icons.rounded.ContentCopy
@@ -69,6 +70,7 @@ import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import moe.apex.breadboard.DeepLinkActivity
 import moe.apex.breadboard.MainActivity
+import moe.apex.breadboard.image.AI_TAG_NAMES
 import moe.apex.breadboard.image.Image
 import moe.apex.breadboard.navigation.ImageView
 import moe.apex.breadboard.navigation.Results
@@ -500,6 +502,12 @@ private fun LazyListScope.infoContentItems(
     onTagLongClick: (String) -> Unit,
     unified: Boolean = false
 ) {
+    if (image.isAiGenerated) {
+        item {
+            InfoSheetAiWarning()
+        }
+    }
+
     item {
         Row {
             BasicExpressiveContainer(
@@ -809,4 +817,31 @@ private fun createSearchIntent(context: Context, imageSource: ImageSource, queri
         MainActivity::class.java
     )
     return intent
+}
+
+
+private val Image.isAiGenerated: Boolean
+    get() = AI_TAG_NAMES.any { it in this.metadata?.tags.orEmpty() }
+
+
+@Composable
+private fun InfoSheetAiWarning() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = LARGE_SPACER.dp),
+        horizontalArrangement = Arrangement.spacedBy(MEDIUM_SPACER.dp, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            imageVector = Icons.Outlined.Info,
+            contentDescription = null
+        )
+        Text(
+            text = "This post is AI-generated.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
 }
