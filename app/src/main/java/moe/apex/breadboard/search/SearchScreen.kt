@@ -118,7 +118,6 @@ import moe.apex.breadboard.util.ListItemPosition
 import moe.apex.breadboard.util.MainScreenScaffold
 import moe.apex.breadboard.util.BOTTOM_APP_BAR_HEIGHT
 import moe.apex.breadboard.util.BaseHeading
-import moe.apex.breadboard.util.DISABLED_OPACITY
 import moe.apex.breadboard.util.SearchHistoryListItem
 import moe.apex.breadboard.util.ExpressiveTagEntryContainer
 import moe.apex.breadboard.util.LARGE_SPACER
@@ -172,9 +171,6 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester) {
     val currentSource = prefs.imageSource
 
     var showSearchHistoryPopup by rememberSaveable { mutableStateOf(false) }
-    val historySheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val is24h = DateFormat.is24HourFormat(context)
-    val timeFormat = if (is24h) "HH:mm" else "h:mm a"
 
     var searchJob: Job? = null
     val scope = rememberCoroutineScope()
@@ -263,100 +259,6 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester) {
             onDismissRequest = { showAgeVerificationDialog = false },
             onAgeVerified = { showAgeVerificationDialog = false }
         )
-    }
-
-
-    @Composable
-    fun TagListEntry(
-        modifier: Modifier = Modifier,
-        tag: TagSuggestion,
-        index: Int
-    ) {
-        ExpressiveTagEntryContainer(
-            modifier = modifier,
-            label = tag.label,
-            supportingLabel = tag.category,
-            trailingContent = {
-                // Show hint that the user can press enter to add the first tag in the list
-                AnimatedVisibility(
-                    visible = index == 0,
-                    enter = fadeIn(),
-                    exit = fadeOut(tween(durationMillis = 150)) // Long enough to feel smooth, short enough to not linger if it goes from first to non-first when the list updates
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.KeyboardReturn,
-                        contentDescription = "Press enter to add",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(end = SMALL_SPACER.dp)
-                    )
-                }
-            },
-            position = when (index) {
-                0 -> if (mostRecentSuggestions.size == 1) ListItemPosition.SINGLE_ELEMENT else ListItemPosition.TOP
-                mostRecentSuggestions.lastIndex -> ListItemPosition.BOTTOM
-                else -> ListItemPosition.MIDDLE
-            }
-        ) {
-            searchString = ""
-            cleanedSearchString = ""
-            shouldShowSuggestions = false
-            addToFilter(tag)
-        }
-    }
-
-
-    @Composable
-    fun AutoCompleteTagResults() {
-        Column(
-            modifier = Modifier
-                .consumeWindowInsets(PaddingValues(0.dp, 0.dp, 0.dp, (BOTTOM_APP_BAR_HEIGHT + 16).dp))
-                .imePadding()
-        ) {
-            Box(
-                modifier = Modifier
-                    .padding(
-                        start = SMALL_LARGE_SPACER.dp,
-                        end = SMALL_LARGE_SPACER.dp,
-                        bottom = SMALL_LARGE_SPACER.dp
-                    )
-                    .clip(largerShape)
-            ) {
-                val resultsState = rememberLazyListState()
-                LaunchedEffect(mostRecentSuggestions) {
-                    scope.launch {
-                        resultsState.animateScrollToItem(0)
-                    }
-                }
-                LazyColumn(
-                    state = resultsState,
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    if (mostRecentSuggestions.isEmpty()) {
-                        item {
-                            Text(
-                                fontSize = 16.sp,
-                                text = "No results :(",
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier
-                                    .padding(SMALL_LARGE_SPACER.dp)
-                                    .fillMaxWidth(),
-                            )
-                        }
-                    } else {
-                        mostRecentSuggestions.forEachIndexed { index, t ->
-                            item(key = t.label) {
-                                TagListEntry(
-                                    modifier = Modifier.animateItem(),
-                                    tag = t,
-                                    index = index
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 
     fun performSearch() {
@@ -766,7 +668,12 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester) {
                 enter = fadeIn(tween(durationMillis = 300)),
                 exit = fadeOut(tween(durationMillis = 300))
             ) {
-                AutoCompleteTagResults()
+                AutoCompleteTagResults(mostRecentSuggestions) {
+                    searchString = ""
+                    cleanedSearchString = ""
+                    shouldShowSuggestions = false
+                    addToFilter(it)
+                }
             }
         }
     }
@@ -802,83 +709,210 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester) {
     }
 
     if (showSearchHistoryPopup) {
-        val locale = LocalLocale.current.platformLocale
-        val density = LocalDensity.current
-        val reversedSearchHistory = remember(prefs.searchHistory) { prefs.searchHistory.reversed() }
-        var contentHeight by remember { mutableStateOf(Float.MAX_VALUE.dp) }
-        val containerHeight by animateDpAsState(contentHeight)
-        val navBarHeight = navBarHeight // We need to calculate this ahead of time
-
-        /* I'd like to use animateContentSize on the LazyColumn but doing so can cause some
-           strange animation bugs when opening the sheet.
-           The workaround using a container controlled by onSizeChanged isn't great
-           but it's close enough to what we want.
-
-           We start with a large initial height and then calculate the correct (smaller)
-           value because reducing the height doesn't cause the strange opening behaviour
-           whereas increasing the height apparently does.
-
-           ModalBottomSheet forcibly adds IME padding that causes the LazyColumn to
-           report a smaller height than desired if the IME is visible when the sheet opens.
-           This could be useful if we had a text field in the sheet but we don't so the IME
-           just gets dismissed and the padding becomes an annoyance.
-           To work around this we'll add the IME height to the LazyColumn's calculated height.
-           This allows it to animate to the proper height once the IME is finished dismissing.
-
-           ModalBottomSheets are just kind of bad in general.
-           They're janky to use and the API surface is annoying. */
-
-        TitledModalBottomSheet(
+        SearchHistorySheet(
+            isIncognito = incognito,
             onDismissRequest = { showSearchHistoryPopup = false },
-            sheetState = historySheetState,
-            title = "Search history"
         ) {
-            val imeSize = WindowInsets.ime.asPaddingValues().calculateBottomPadding() // We don't want to calculate this ahead of time
+            viewModel.setTagSuggestions(it.tags.toList())
+            searchString = ""
+            shouldShowSuggestions = false
+            scope.launch {
+                context.prefs.updatePref(
+                    PreferenceKeys.IMAGE_SOURCE,
+                    it.source
+                )
+                context.prefs.replaceImageRatings(it.ratings)
+            }
+        }
+    }
+}
 
-            Box(modifier = Modifier.height(containerHeight)) {
-                LazyColumn(
-                    modifier = Modifier
-                        .padding(horizontal = MEDIUM_SPACER.dp)
-                        .clip(largerShape)
-                        .onSizeChanged {
-                            contentHeight = with (density) { it.height.toDp() } + imeSize
-                        },
-                    verticalArrangement = Arrangement.spacedBy(LARGE_SPACER.dp, Alignment.Top),
-                    contentPadding = PaddingValues(bottom = navBarHeight + MEDIUM_SPACER.dp)
-                ) {
-                    if (prefs.searchHistory.isEmpty()) {
-                        SearchHistoryStandaloneTextItem("No search history yet. Start searching!")
-                    } else {
-                        if (incognito) {
-                            SearchHistoryStandaloneTextItem("Incognito mode is enabled. Search history will not be saved.")
+
+@Composable
+fun AutoCompleteTagResults(
+    mostRecentSuggestions: List<TagSuggestion>,
+    onTagClick: (TagSuggestion) -> Unit
+) {
+    val scope = rememberCoroutineScope()
+
+    Column(
+        modifier = Modifier
+            .consumeWindowInsets(PaddingValues(0.dp, 0.dp, 0.dp, (BOTTOM_APP_BAR_HEIGHT + 16).dp))
+            .imePadding()
+    ) {
+        Box(
+            modifier = Modifier
+                .padding(
+                    start = SMALL_LARGE_SPACER.dp,
+                    end = SMALL_LARGE_SPACER.dp,
+                    bottom = SMALL_LARGE_SPACER.dp
+                )
+                .clip(largerShape)
+        ) {
+            val resultsState = rememberLazyListState()
+
+            LaunchedEffect(mostRecentSuggestions) {
+                scope.launch {
+                    resultsState.animateScrollToItem(0)
+                }
+            }
+
+            LazyColumn(
+                state = resultsState,
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                if (mostRecentSuggestions.isEmpty()) {
+                    item {
+                        Text(
+                            fontSize = 16.sp,
+                            text = "No results :(",
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .padding(SMALL_LARGE_SPACER.dp)
+                                .fillMaxWidth(),
+                        )
+                    }
+                } else {
+                    mostRecentSuggestions.forEachIndexed { index, t ->
+                        item(key = t.label) {
+                            TagListEntry(
+                                modifier = Modifier.animateItem(),
+                                tag = t,
+                                mostRecentSuggestions = mostRecentSuggestions,
+                                index = index,
+                                onClick = onTagClick
+                            )
                         }
-                        items(reversedSearchHistory, key = { it.timestamp }) { entry ->
-                            val date = Date(entry.timestamp)
-                            val formatter =
-                                SimpleDateFormat("dd MMM $timeFormat", locale)
-                            val formattedDate = formatter.format(date)
+                    }
+                }
+            }
+        }
+    }
+}
 
-                            Column(
-                                modifier = Modifier.animateItem(placementSpec = bouncyAnimationSpec()),
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                BaseHeading(
-                                    modifier = Modifier.padding(start = SMALL_SPACER.dp),
-                                    text = "$formattedDate  \u2022  ${entry.source.label}"
-                                )
-                                SearchHistoryListItem(entry) {
-                                    viewModel.setTagSuggestions(entry.tags.toList())
-                                    searchString = ""
-                                    shouldShowSuggestions = false
-                                    scope.launch {
-                                        context.prefs.updatePref(
-                                            PreferenceKeys.IMAGE_SOURCE,
-                                            entry.source
-                                        )
-                                        context.prefs.replaceImageRatings(entry.ratings)
-                                        historySheetState.hide()
-                                        showSearchHistoryPopup = false
-                                    }
+
+@Composable
+fun TagListEntry(
+    modifier: Modifier = Modifier,
+    tag: TagSuggestion,
+    mostRecentSuggestions: List<TagSuggestion>,
+    index: Int,
+    onClick: (TagSuggestion) -> Unit
+) {
+    ExpressiveTagEntryContainer(
+        modifier = modifier,
+        label = tag.label,
+        supportingLabel = tag.category,
+        trailingContent = {
+            // Show hint that the user can press enter to add the first tag in the list
+            AnimatedVisibility(
+                visible = index == 0,
+                enter = fadeIn(),
+                exit = fadeOut(tween(durationMillis = 150)) // Long enough to feel smooth, short enough to not linger if it goes from first to non-first when the list updates
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.KeyboardReturn,
+                    contentDescription = "Press enter to add",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(end = SMALL_SPACER.dp)
+                )
+            }
+        },
+        position = when (index) {
+            0 -> if (mostRecentSuggestions.size == 1) ListItemPosition.SINGLE_ELEMENT else ListItemPosition.TOP
+            mostRecentSuggestions.lastIndex -> ListItemPosition.BOTTOM
+            else -> ListItemPosition.MIDDLE
+        },
+        onClick = { onClick(tag) }
+    )
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SearchHistorySheet(
+    isIncognito: Boolean,
+    onDismissRequest: () -> Unit,
+    onSearchHistoryEntryClick: (SearchHistoryEntry) -> Unit
+) {
+    val locale = LocalLocale.current.platformLocale
+    val context = LocalContext.current
+    val density = LocalDensity.current
+    val prefs = LocalPreferences.current
+    val scope = rememberCoroutineScope()
+
+    val reversedSearchHistory = remember(prefs.searchHistory) { prefs.searchHistory.reversed() }
+    var contentHeight by remember { mutableStateOf(Float.MAX_VALUE.dp) }
+    val containerHeight by animateDpAsState(contentHeight)
+    val navBarHeight = navBarHeight // We need to calculate this ahead of time
+
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val is24h = DateFormat.is24HourFormat(context)
+    val timeFormat = if (is24h) "HH:mm" else "h:mm a"
+
+    /* I'd like to use animateContentSize on the LazyColumn but doing so can cause some
+       strange animation bugs when opening the sheet.
+       The workaround using a container controlled by onSizeChanged isn't great
+       but it's close enough to what we want.
+
+       We start with a large initial height and then calculate the correct (smaller)
+       value because reducing the height doesn't cause the strange opening behaviour
+       whereas increasing the height apparently does.
+
+       ModalBottomSheet forcibly adds IME padding that causes the LazyColumn to
+       report a smaller height than desired if the IME is visible when the sheet opens.
+       This could be useful if we had a text field in the sheet but we don't so the IME
+       just gets dismissed and the padding becomes an annoyance.
+       To work around this we'll add the IME height to the LazyColumn's calculated height.
+       This allows it to animate to the proper height once the IME is finished dismissing.
+
+       ModalBottomSheets are just kind of bad in general.
+       They're janky to use and the API surface is annoying. */
+
+    TitledModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        sheetState = sheetState,
+        title = "Search history"
+    ) {
+        val imeSize = WindowInsets.ime.asPaddingValues().calculateBottomPadding() // We don't want to calculate this ahead of time
+
+        Box(modifier = Modifier.height(containerHeight)) {
+            LazyColumn(
+                modifier = Modifier
+                    .padding(horizontal = MEDIUM_SPACER.dp)
+                    .clip(largerShape)
+                    .onSizeChanged {
+                        contentHeight = with (density) { it.height.toDp() } + imeSize
+                    },
+                verticalArrangement = Arrangement.spacedBy(LARGE_SPACER.dp, Alignment.Top),
+                contentPadding = PaddingValues(bottom = navBarHeight + MEDIUM_SPACER.dp)
+            ) {
+                if (prefs.searchHistory.isEmpty()) {
+                    SearchHistoryStandaloneTextItem("No search history yet. Start searching!")
+                } else {
+                    if (isIncognito) {
+                        SearchHistoryStandaloneTextItem("Incognito mode is enabled. Search history will not be saved.")
+                    }
+
+                    items(reversedSearchHistory, key = { it.timestamp }) { entry ->
+                        val date = Date(entry.timestamp)
+                        val formatter =
+                            SimpleDateFormat("dd MMM $timeFormat", locale)
+                        val formattedDate = formatter.format(date)
+
+                        Column(
+                            modifier = Modifier.animateItem(placementSpec = bouncyAnimationSpec()),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            BaseHeading(
+                                modifier = Modifier.padding(start = SMALL_SPACER.dp),
+                                text = "$formattedDate  \u2022  ${entry.source.label}"
+                            )
+                            SearchHistoryListItem(entry) {
+                                onSearchHistoryEntryClick(entry)
+                                scope.launch { sheetState.hide() }.invokeOnCompletion {
+                                    onDismissRequest()
                                 }
                             }
                         }
@@ -896,11 +930,11 @@ private fun LazyListScope.SearchHistoryStandaloneTextItem(text: String) {
         Text(
             text = text,
             style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(SMALL_LARGE_SPACER.dp)
-                .alpha(DISABLED_OPACITY)
         )
     }
 }
