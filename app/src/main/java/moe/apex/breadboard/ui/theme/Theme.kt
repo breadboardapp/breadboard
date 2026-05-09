@@ -54,7 +54,7 @@ val LocalBreadboardColors = staticCompositionLocalOf {
     )
 }
 
-fun shouldUseDarkMode(): Boolean {
+fun shouldUseDarkTheme(): Boolean {
     val preferences = LocalPreferences.current
 
     val userSelectedDarkMode = preferences.theme == Theme.DARK
@@ -66,7 +66,7 @@ fun shouldUseDarkMode(): Boolean {
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun BreadboardTheme(
-        darkTheme: Boolean = shouldUseDarkMode(),
+        darkTheme: Boolean = shouldUseDarkTheme(),
         // Dynamic color is available on Android 12+
         dynamicColor: Boolean = true,
         content: @Composable () -> Unit
