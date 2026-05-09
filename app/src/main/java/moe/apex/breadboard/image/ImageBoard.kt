@@ -9,7 +9,6 @@ import moe.apex.breadboard.tag.TagCategory
 import moe.apex.breadboard.tag.TagGroup
 import moe.apex.breadboard.tag.TagSuggestion
 import moe.apex.breadboard.util.decodeHtml
-import moe.apex.breadboard.util.extractPixivId
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -195,7 +194,6 @@ interface GelbooruBasedImageBoard : ImageBoard {
         }
 
         val metaRating = getRatingFromString(e.getString("rating"))
-        val metaPixivId = extractPixivId(metaSource)
         val metadata = ImageMetadata(
             parentId = metaParentId,
             hasChildren = null, // Not available for Gelbooru-based image boards
@@ -203,7 +201,6 @@ interface GelbooruBasedImageBoard : ImageBoard {
             source = metaSource,
             groupedTags = metaGroupedTags,
             rating = metaRating,
-            pixivId = metaPixivId,
         )
 
         return Image(id, fileName, fileFormat, previewUrl, fileUrl, sampleUrl, imageSource, aspectRatio, metadata)
@@ -459,7 +456,7 @@ object Danbooru : ImageBoard {
             source = metaSource,
             groupedTags = metaGroupedTags,
             rating = metaRating,
-            pixivId = metaPixivId,
+            pixivArtworkId = metaPixivId,
         )
 
         return Image(id, fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.DANBOORU, aspectRatio, metadata)
@@ -543,14 +540,12 @@ object Yandere : ImageBoard {
             TagCategory.GENERAL.group(e.getString("tags").decodeHtml().split(" ")),
         )
         val metaRating = getRatingFromString(e.getString("rating"))
-        val metaPixivId = extractPixivId(metaSource)
         val metadata = ImageMetadata(
             parentId = metaParentId,
             hasChildren = metaHasChildren,
             source = metaSource,
             groupedTags = metaGroupedTags,
             rating = metaRating,
-            pixivId = metaPixivId,
         )
 
         return Image(id, fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.YANDERE, aspectRatio, metadata)
