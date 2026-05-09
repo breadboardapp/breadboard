@@ -813,6 +813,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val autoplayVideos = preferences[PreferenceKeys.AUTOPLAY_VIDEOS]?.let { AutoplayVideosMode.valueOf(it) } ?: Prefs.DEFAULT.autoplayVideos
         val unifiedInfoSheet = preferences[PreferenceKeys.UNIFIED_INFO_SHEET] ?: Prefs.DEFAULT.unifiedInfoSheet
 
+        val theme = preferences[PreferenceKeys.THEME]?.let { Theme.valueOf(it) } ?: Prefs.DEFAULT.theme
+
         return Prefs(
             dataSaver,
             storageLocation,
@@ -843,7 +845,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             internalIgnoreListTimestamp,
             internalIgnoreList,
             autoplayVideos,
-            unifiedInfoSheet
+            unifiedInfoSheet,
+            theme
         )
     }
 }
