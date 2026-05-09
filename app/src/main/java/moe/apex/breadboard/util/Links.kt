@@ -28,8 +28,8 @@ fun fixLink(link: String): String {
         var newPath: String? = null
         var newFragment: String? = null
 
-        /* The phixiv fixer does not take the official pixiv image index syntax into account, so we have to use its
-           own path syntax for indexed images. */
+        /* The phixiv fixer cannot take the official pixiv image index syntax into account since
+           URI fragments are client-sided, so we have to use its own path syntax for indexed images. */
         if (fixedHost == "phixiv.net" && "/artworks/\\d+$".toRegex().containsMatchIn(uri.path ?: "")) {
             val index = uri.fragment?.toIntOrNull().takeIf { it != 0 }
             if (index != null) {
