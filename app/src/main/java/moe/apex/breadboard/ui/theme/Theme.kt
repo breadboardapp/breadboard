@@ -14,6 +14,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import moe.apex.breadboard.prefs
 
 
 private val DarkColorScheme = darkColorScheme(
@@ -53,11 +54,19 @@ val LocalBreadboardColors = staticCompositionLocalOf {
     )
 }
 
+fun shouldUseDarkMode(): Boolean {
+    val preferences = LocalPreferences.current
+
+    val userSelectedDarkMode = preferences.theme == Theme.DARK
+    val followSystemDarkMode = preferences.theme == Theme.AUTO && isSystemInDarkTheme()
+
+    return userSelectedDarkMode || followSystemDarkMode
+}
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun BreadboardTheme(
-        darkTheme: Boolean = isSystemInDarkTheme(),
+        darkTheme: Boolean = shouldUseDarkMode(),
         // Dynamic color is available on Android 12+
         dynamicColor: Boolean = true,
         content: @Composable () -> Unit
