@@ -365,6 +365,28 @@ fun PreferencesScreen(navController: NavHostController) {
                     }
                 }
             }
+    
+            item { 
+                ExpressiveGroup(title = "Appearance") {
+                    item {
+                        EnumPref(
+                            title = "Theme",
+                            summary = currentSettings.theme.label,
+                            enumItems = Theme.entries,
+                            infoText = "Select Light or Dark to always use that theme, or Auto to follow the system theme.",
+                            selectedItem = currentSettings.theme,
+                            onSelection = {
+                                scope.launch {
+                                    preferencesRepository.updatePref(
+                                        PreferenceKeys.THEME,
+                                        it
+                                    )
+                                }
+                            }
+                        )
+                    }
+                }
+            }
 
             item {
                 ExpressiveGroup(title = "Content") {
