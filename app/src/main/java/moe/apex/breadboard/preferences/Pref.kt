@@ -97,6 +97,7 @@ data object PrefNames {
     const val INTERNAL_IGNORE_LIST = "internal_ignore_list"
     const val AUTOPLAY_VIDEOS = "autoplay_videos"
     const val UNIFIED_INFO_SHEET = "unified_info_sheet"
+    const val DARK_THEME = "dark_theme"
 }
 
 
@@ -131,6 +132,7 @@ object PreferenceKeys {
     val INTERNAL_IGNORE_LIST = stringSetPreferencesKey(PrefNames.INTERNAL_IGNORE_LIST)
     val AUTOPLAY_VIDEOS = stringPreferencesKey(PrefNames.AUTOPLAY_VIDEOS)
     val UNIFIED_INFO_SHEET = booleanPreferencesKey(PrefNames.UNIFIED_INFO_SHEET)
+    var DARK_THEME = stringPreferencesKey(PrefNames.DARK_THEME)
 }
 
 
@@ -228,7 +230,8 @@ data class Prefs(
     val internalIgnoreListTimestamp: Long,
     val internalIgnoreList: Set<String>,
     val autoplayVideos: AutoplayVideosMode,
-    val unifiedInfoSheet: Boolean
+    val unifiedInfoSheet: Boolean,
+    val darkTheme: DarkTheme,
 ) {
     companion object {
         val DEFAULT = Prefs(
@@ -262,6 +265,7 @@ data class Prefs(
             internalIgnoreList = emptySet(),
             autoplayVideos = AutoplayVideosMode.OFF,
             unifiedInfoSheet = false, // Unified is called 'Classic' in the UI
+            darkTheme = DarkTheme.AUTO
         )
     }
 
@@ -325,7 +329,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             PreferenceKeys.RECOMMENDATIONS_WEIGHTED_SELECTION to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.INTERNAL_IGNORE_LIST_TIMESTAMP to PrefMeta(PrefCategory.SETTING, exportable = false),
             PreferenceKeys.INTERNAL_IGNORE_LIST to PrefMeta(PrefCategory.SETTING, exportable = false),
-            PreferenceKeys.UNIFIED_INFO_SHEET to PrefMeta(PrefCategory.SETTING)
+            PreferenceKeys.UNIFIED_INFO_SHEET to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.DARK_THEME to PrefMeta(PrefCategory.SETTING)
         )
     }
 
@@ -809,6 +814,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val autoplayVideos = preferences[PreferenceKeys.AUTOPLAY_VIDEOS]?.let { AutoplayVideosMode.valueOf(it) } ?: Prefs.DEFAULT.autoplayVideos
         val unifiedInfoSheet = preferences[PreferenceKeys.UNIFIED_INFO_SHEET] ?: Prefs.DEFAULT.unifiedInfoSheet
 
+        val darkTheme = preferences[PreferenceKeys.DARK_THEME]?.let { DarkTheme.valueOf(it) } ?: Prefs.DEFAULT.darkTheme
+
         return Prefs(
             dataSaver,
             storageLocation,
@@ -839,7 +846,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             internalIgnoreListTimestamp,
             internalIgnoreList,
             autoplayVideos,
-            unifiedInfoSheet
+            unifiedInfoSheet,
+            darkTheme,
         )
     }
 }
@@ -853,4 +861,10 @@ enum class ImageSource(override val label: String, val imageBoard: ImageBoard) :
     GELBOORU("Gelbooru", Gelbooru),
     YANDERE("Yande.re", Yandere),
     R34("Rule34", Rule34)
+}
+
+enum class DarkTheme(override val label: String) : PrefEnum<DarkTheme> {
+    ON("Always"),
+    OFF("Never"),
+    AUTO("Follow system")
 }

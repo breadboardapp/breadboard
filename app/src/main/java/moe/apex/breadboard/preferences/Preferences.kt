@@ -363,6 +363,27 @@ fun PreferencesScreen(navController: NavHostController) {
                     }
                 }
             }
+    
+            item { 
+                ExpressiveGroup(title = "Appearance") {
+                    item {
+                        EnumPref(
+                            title = "Dark theme",
+                            summary = currentSettings.darkTheme.label,
+                            enumItems = DarkTheme.entries,
+                            selectedItem = currentSettings.darkTheme,
+                            onSelection = {
+                                scope.launch {
+                                    preferencesRepository.updatePref(
+                                        PreferenceKeys.DARK_THEME,
+                                        it
+                                    )
+                                }
+                            }
+                        )
+                    }
+                }
+            }
 
             item {
                 ExpressiveGroup(title = "Content") {
