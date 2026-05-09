@@ -230,7 +230,8 @@ data class Prefs(
     val internalIgnoreListTimestamp: Long,
     val internalIgnoreList: Set<String>,
     val autoplayVideos: AutoplayVideosMode,
-    val unifiedInfoSheet: Boolean
+    val unifiedInfoSheet: Boolean,
+    val theme: Theme,
 ) {
     companion object {
         val DEFAULT = Prefs(
@@ -264,7 +265,7 @@ data class Prefs(
             internalIgnoreList = emptySet(),
             autoplayVideos = AutoplayVideosMode.OFF,
             unifiedInfoSheet = false, // Unified is called 'Classic' in the UI
-            theme = Theme.AUTO,
+            theme = Theme.AUTO
         )
     }
 
