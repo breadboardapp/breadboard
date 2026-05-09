@@ -97,6 +97,7 @@ data object PrefNames {
     const val INTERNAL_IGNORE_LIST = "internal_ignore_list"
     const val AUTOPLAY_VIDEOS = "autoplay_videos"
     const val UNIFIED_INFO_SHEET = "unified_info_sheet"
+    const val THEME = "theme"
 }
 
 
@@ -131,6 +132,7 @@ object PreferenceKeys {
     val INTERNAL_IGNORE_LIST = stringSetPreferencesKey(PrefNames.INTERNAL_IGNORE_LIST)
     val AUTOPLAY_VIDEOS = stringPreferencesKey(PrefNames.AUTOPLAY_VIDEOS)
     val UNIFIED_INFO_SHEET = booleanPreferencesKey(PrefNames.UNIFIED_INFO_SHEET)
+    var THEME = stringPreferencesKey(PrefNames.THEME)
 }
 
 
@@ -262,6 +264,7 @@ data class Prefs(
             internalIgnoreList = emptySet(),
             autoplayVideos = AutoplayVideosMode.OFF,
             unifiedInfoSheet = false, // Unified is called 'Classic' in the UI
+            theme = Theme.AUTO,
         )
     }
 
@@ -325,7 +328,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             PreferenceKeys.RECOMMENDATIONS_WEIGHTED_SELECTION to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.INTERNAL_IGNORE_LIST_TIMESTAMP to PrefMeta(PrefCategory.SETTING, exportable = false),
             PreferenceKeys.INTERNAL_IGNORE_LIST to PrefMeta(PrefCategory.SETTING, exportable = false),
-            PreferenceKeys.UNIFIED_INFO_SHEET to PrefMeta(PrefCategory.SETTING)
+            PreferenceKeys.UNIFIED_INFO_SHEET to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.THEME to PrefMeta(PrefCategory.SETTINGS)
         )
     }
 
@@ -853,4 +857,10 @@ enum class ImageSource(override val label: String, val imageBoard: ImageBoard) :
     GELBOORU("Gelbooru", Gelbooru),
     YANDERE("Yande.re", Yandere),
     R34("Rule34", Rule34)
+}
+
+enum class Theme(override val label: String) : PrefEnum<Theme> {
+    DARK("Always use dark mode"),
+    LIGHT("Always use light mode"),
+    AUTO("Use system default")
 }
