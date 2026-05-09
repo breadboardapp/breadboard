@@ -14,6 +14,8 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import moe.apex.breadboard.preferences.LocalPreferences
+import moe.apex.breadboard.preferences.Theme
 import moe.apex.breadboard.prefs
 
 
@@ -54,6 +56,7 @@ val LocalBreadboardColors = staticCompositionLocalOf {
     )
 }
 
+@Composable()
 fun shouldUseDarkTheme(): Boolean {
     val preferences = LocalPreferences.current
 
