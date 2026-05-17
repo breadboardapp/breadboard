@@ -138,7 +138,7 @@ class RecommendationsProvider(
             )
             imageSource.imageBoard.formatTagNameString(recommendedTags)
         } else {
-            "${imageSource.imageBoard.formatTagNameString(recommendedTags)}+${
+            "${imageSource.imageBoard.formatTagNameString(recommendedTags)} ${
                 ImageRating.buildSearchStringFor(
                     if (showAllRatings) {
                         ImageRating.entries.filter { it != ImageRating.UNKNOWN }
