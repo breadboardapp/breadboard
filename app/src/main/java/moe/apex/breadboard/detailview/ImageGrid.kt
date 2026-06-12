@@ -48,6 +48,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import coil3.network.NetworkHeaders
+import coil3.network.httpHeaders
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import kotlinx.coroutines.launch
@@ -310,8 +312,14 @@ private fun ImagePreview(
     onImageClick: (Int, Image) -> Unit
 ) {
     val context = LocalContext.current
+
+    val headersBuilder = remember {
+        NetworkHeaders.Builder()
+            .set("Referer", image.imageSource.imageBoard.baseUrl)
+    }
     val model = remember { ImageRequest.Builder(context)
         .data(image.previewUrl)
+        .httpHeaders(headersBuilder.build())
         .crossfade(true)
         .build()
     }
