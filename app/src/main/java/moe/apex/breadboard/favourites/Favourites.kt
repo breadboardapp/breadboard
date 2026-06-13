@@ -2,6 +2,7 @@ package moe.apex.breadboard.favourites
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -40,6 +41,7 @@ import moe.apex.breadboard.util.onScroll
 import moe.apex.breadboard.viewmodel.FavouritesViewModel
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FavouritesPage(
     navController: NavController,

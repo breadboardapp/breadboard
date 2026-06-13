@@ -220,6 +220,7 @@ private fun NavigationIcon(navController: NavController? = null) {
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LargeTitleBar(
     title: String,
@@ -239,6 +240,7 @@ fun LargeTitleBar(
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SmallTitleBar(
     title: String,
@@ -258,6 +260,7 @@ fun SmallTitleBar(
 }
 
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun FullscreenLoadingSpinner() {
     Row(
@@ -283,6 +286,7 @@ fun PaddingValues.withoutVertical(top: Boolean = true, bottom: Boolean = true) :
 
 
 /** A higher level MainScreenScaffold that provides two preset types of top bars. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreenScaffold(
     title: String,

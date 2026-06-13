@@ -15,6 +15,7 @@ import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -57,6 +58,7 @@ import moe.apex.breadboard.util.TINY_SPACER
 import moe.apex.breadboard.viewmodel.getGlobalViewModel
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BlockedTagsScreen(navController: NavHostController) {
     val viewModel = getGlobalViewModel()

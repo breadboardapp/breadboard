@@ -14,7 +14,7 @@ if (rootProject.file("local.properties").exists()) {
 
 android {
     namespace 'moe.apex.breadboard'
-    compileSdk 36
+    compileSdk 37
 
     defaultConfig {
         applicationId "moe.apex.breadboard"

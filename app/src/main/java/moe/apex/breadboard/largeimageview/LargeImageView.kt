@@ -821,7 +821,7 @@ private fun VideoMuteButton(
 }
 
 
-@OptIn(ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun VideoPlayPauseButton(
     isPlaying: Boolean,
