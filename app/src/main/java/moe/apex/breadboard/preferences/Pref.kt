@@ -92,7 +92,6 @@ data object PrefNames {
     const val UNFOLLOWED_TAGS = "unfollowed_tags"
     const val RECOMMENDATIONS_TAG_COUNT = "recommendations_tag_count"
     const val RECOMMENDATIONS_POOL_SIZE = "recommendations_pool_size"
-    const val RECOMMENDATIONS_WEIGHTED_SELECTION = "recommendations_weighted_selection"
     const val INTERNAL_IGNORE_LIST_TIMESTAMP = "internal_ignore_list_timestamp"
     const val INTERNAL_IGNORE_LIST = "internal_ignore_list"
     const val AUTOPLAY_VIDEOS = "autoplay_videos"
@@ -126,7 +125,6 @@ object PreferenceKeys {
     val UNFOLLOWED_TAGS = stringSetPreferencesKey(PrefNames.UNFOLLOWED_TAGS)
     val RECOMMENDATIONS_TAG_COUNT = intPreferencesKey(PrefNames.RECOMMENDATIONS_TAG_COUNT)
     val RECOMMENDATIONS_POOL_SIZE = intPreferencesKey(PrefNames.RECOMMENDATIONS_POOL_SIZE)
-    val RECOMMENDATIONS_WEIGHTED_SELECTION = booleanPreferencesKey(PrefNames.RECOMMENDATIONS_WEIGHTED_SELECTION)
     val INTERNAL_IGNORE_LIST_TIMESTAMP = longPreferencesKey(PrefNames.INTERNAL_IGNORE_LIST_TIMESTAMP)
     val INTERNAL_IGNORE_LIST = stringSetPreferencesKey(PrefNames.INTERNAL_IGNORE_LIST)
     val AUTOPLAY_VIDEOS = stringPreferencesKey(PrefNames.AUTOPLAY_VIDEOS)
@@ -224,7 +222,6 @@ data class Prefs(
     val unfollowedTags: Set<String>,
     val recommendationsTagCount: Int,
     val recommendationsPoolSize: Int,
-    val recommendationsWeightedSelection: Boolean,
     val internalIgnoreListTimestamp: Long,
     val internalIgnoreList: Set<String>,
     val autoplayVideos: AutoplayVideosMode,
@@ -257,7 +254,6 @@ data class Prefs(
             unfollowedTags = emptySet(),
             recommendationsTagCount = 3,
             recommendationsPoolSize = 7,
-            recommendationsWeightedSelection = true,
             internalIgnoreListTimestamp = 0,
             internalIgnoreList = emptySet(),
             autoplayVideos = AutoplayVideosMode.OFF,
@@ -322,7 +318,6 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             PreferenceKeys.UNFOLLOWED_TAGS to PrefMeta(PrefCategory.SETTING, mergeable = true),
             PreferenceKeys.RECOMMENDATIONS_TAG_COUNT to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.RECOMMENDATIONS_POOL_SIZE to PrefMeta(PrefCategory.SETTING),
-            PreferenceKeys.RECOMMENDATIONS_WEIGHTED_SELECTION to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.INTERNAL_IGNORE_LIST_TIMESTAMP to PrefMeta(PrefCategory.SETTING, exportable = false),
             PreferenceKeys.INTERNAL_IGNORE_LIST to PrefMeta(PrefCategory.SETTING, exportable = false),
             PreferenceKeys.UNIFIED_INFO_SHEET to PrefMeta(PrefCategory.SETTING)
@@ -545,6 +540,17 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
                     } else image
                 }
                 updateFavouriteImages(migrated)
+            }
+        }
+
+        /* Version 3.2.2 removes the weighted tags pref in favour of a new recommendation system. */
+        if (lastUsedVersionCode < 322) {
+            val data = dataStore.data.first()
+            val key = booleanPreferencesKey("recommendations_weighted_selection")
+            if (data.contains(key)) {
+                dataStore.edit { prefs ->
+                    prefs.remove(key)
+                }
             }
         }
 
@@ -803,7 +809,6 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val unfollowedTags = preferences[PreferenceKeys.UNFOLLOWED_TAGS] ?: Prefs.DEFAULT.unfollowedTags
         val recommendationsTagCount = preferences[PreferenceKeys.RECOMMENDATIONS_TAG_COUNT] ?: Prefs.DEFAULT.recommendationsTagCount
         val recommendationsPoolSize = preferences[PreferenceKeys.RECOMMENDATIONS_POOL_SIZE] ?: Prefs.DEFAULT.recommendationsPoolSize
-        val recommendationsWeightedSelection = preferences[PreferenceKeys.RECOMMENDATIONS_WEIGHTED_SELECTION] ?: Prefs.DEFAULT.recommendationsWeightedSelection
         val internalIgnoreListTimestamp = preferences[PreferenceKeys.INTERNAL_IGNORE_LIST_TIMESTAMP] ?: Prefs.DEFAULT.internalIgnoreListTimestamp
         val internalIgnoreList = preferences[PreferenceKeys.INTERNAL_IGNORE_LIST] ?: Prefs.DEFAULT.internalIgnoreList
         val autoplayVideos = preferences[PreferenceKeys.AUTOPLAY_VIDEOS]?.let { AutoplayVideosMode.valueOf(it) } ?: Prefs.DEFAULT.autoplayVideos
@@ -835,7 +840,6 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             unfollowedTags,
             recommendationsTagCount,
             recommendationsPoolSize,
-            recommendationsWeightedSelection,
             internalIgnoreListTimestamp,
             internalIgnoreList,
             autoplayVideos,

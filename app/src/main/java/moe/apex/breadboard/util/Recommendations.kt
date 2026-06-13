@@ -15,7 +15,6 @@ import moe.apex.breadboard.image.ImageRating
 import moe.apex.breadboard.preferences.ImageSource
 import moe.apex.breadboard.viewmodel.GridStateHolderDelegate
 import moe.apex.breadboard.viewmodel.GridStateHolder
-import kotlin.random.Random
 
 
 class RecommendationsProvider(
@@ -28,7 +27,6 @@ class RecommendationsProvider(
     private val initialUnfollowedTags: Set<String>,
     private val selectionSize: Int,
     private val poolSize: Int,
-    private val useWeightedSelection: Boolean,
 ) : GridStateHolder by GridStateHolderDelegate() {
     companion object {
         private const val SELECTION_SIZE_DANBOORU = 2
@@ -68,52 +66,23 @@ class RecommendationsProvider(
         shouldKeepSearching = true
         pageNumber = imageSource.imageBoard.firstPageIndex
 
-        val tagsFromFavourites = RecommendationsHelper.getAllTags(
-            images = seedImages.filter { it.imageSource == imageSource },
-            allowAllRatings = showAllRatings,
-            excludedTags = blockedTags
-        )
+        val filteredSeedImages = seedImages.filter { it.imageSource == imageSource }
+            .filter { showAllRatings || it.metadata?.rating == ImageRating.SAFE }
 
-        if (tagsFromFavourites.isEmpty()) {
+        if (filteredSeedImages.isEmpty()) {
             return
         }
 
-        val topTags = RecommendationsHelper.getMostCommonTags(
-            allTags = tagsFromFavourites,
-            followedTagsLimit = poolSize,
+        val finalSelectionSize = if (imageSource == ImageSource.DANBOORU && auth == null) SELECTION_SIZE_DANBOORU else selectionSize
+
+        val selected = RecommendationsHelper.getRecommendedTags(
+            images = filteredSeedImages,
+            selectionSize = finalSelectionSize,
+            poolSize = poolSize,
+            hiddenTags = blockedTags,
             unfollowedTags = unfollowedTags
         )
 
-        val finalSelectionSize = if (imageSource == ImageSource.DANBOORU && auth == null) SELECTION_SIZE_DANBOORU else selectionSize
-        val selected = if (topTags.size <= finalSelectionSize) {
-            topTags.map { it.first }
-        } else if (useWeightedSelection) {
-            val weightedTags = topTags.toMutableList()
-            var totalWeight = weightedTags.sumOf { it.second }
-            val result = mutableSetOf<String>()
-
-            while (result.size < finalSelectionSize && weightedTags.isNotEmpty() && totalWeight > 0) {
-                var randomNumber = Random.nextInt(totalWeight)
-
-                var chosenTag: Pair<String, Int>? = null
-                for (tag in weightedTags) {
-                    if (randomNumber < tag.second) {
-                        chosenTag = tag
-                        break
-                    }
-                    randomNumber -= tag.second
-                }
-
-                chosenTag?.let {
-                    result.add(it.first)
-                    totalWeight -= it.second
-                    weightedTags.remove(it)
-                }
-            }
-            result.toList()
-        } else {
-            topTags.map { it.first }.shuffled().take(finalSelectionSize)
-        }
         recommendedTags.addAll(selected)
     }
 
