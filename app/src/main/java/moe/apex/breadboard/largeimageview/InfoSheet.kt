@@ -175,7 +175,7 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
     TitledModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
-        title = "About this image",
+        title = "About this art",
     ) {
         if (selectedTag != null) {
             /* We need to have this dialog inside the sheet otherwise it'll just automatically
