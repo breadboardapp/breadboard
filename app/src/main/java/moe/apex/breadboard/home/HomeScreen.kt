@@ -70,7 +70,7 @@ fun HomeScreen(
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(topAppBarState)
     var shouldShowLargeImage by remember { mutableStateOf(false) }
-    var initialPage by remember { mutableIntStateOf(0) }
+    var selectedImageIndex by remember { mutableIntStateOf(0) }
 
     val blur = prefs.isExperimentEnabled(Experiment.IMMERSIVE_UI_EFFECTS)
 
@@ -183,7 +183,7 @@ fun HomeScreen(
                 },
                 onImageClick = { index, _ ->
                     Snapshot.withMutableSnapshot {
-                        initialPage = index
+                        selectedImageIndex = index
                         shouldShowLargeImage = true
                     }
                 },
@@ -205,7 +205,7 @@ fun HomeScreen(
     OffsetBasedLargeImageView(
         navController = navController,
         isActive = shouldShowLargeImage,
-        initialPage = initialPage,
+        initialSelectedImageIndex = selectedImageIndex,
         allImages = recommendedImages ?: emptyList(),
         onActiveStateChanged = {
             shouldShowLargeImage = it

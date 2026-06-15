@@ -72,7 +72,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
 
     var isImageCarouselVisible by remember { mutableStateOf(false) }
-    var initialPage by remember { mutableIntStateOf(0) }
+    var selectedImageIndex by remember { mutableIntStateOf(0) }
     var showAgeVerificationDialog by remember { mutableStateOf(false) }
 
     val preferencesRepository = LocalContext.current.prefs
@@ -216,7 +216,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
             images = imagesToDisplay,
             onImageClick = { index, _ ->
                 Snapshot.withMutableSnapshot {
-                    initialPage = index
+                    selectedImageIndex = index
                     isImageCarouselVisible = true
                 }
             },
@@ -238,7 +238,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
     OffsetBasedLargeImageView(
         navController = navController,
         isActive = isImageCarouselVisible,
-        initialPage = initialPage,
+        initialSelectedImageIndex = selectedImageIndex,
         allImages = imagesToDisplay,
         onActiveStateChanged = { isImageCarouselVisible = it }
     ) { oldImage, newImage ->

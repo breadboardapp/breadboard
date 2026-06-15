@@ -197,15 +197,15 @@ private enum class ToolbarState {
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun LargeImageView(
+private fun LargeImageView(
     navController: NavController,
-    initialPage: Int,
+    initialSelectedImageIndex: Int,
     allImages: List<Image>,
     onImageUpdate: (suspend (Image, Image) -> Unit)? = null,
     onZoomedStatusChanged: ((Boolean) -> Unit)? = null
 ) {
     val pagerState = rememberPagerState(
-        initialPage = initialPage,
+        initialPage = initialSelectedImageIndex,
         initialPageOffsetFraction = 0f
     ) { allImages.size }
     var canChangePage by remember { mutableStateOf(false) }
@@ -1185,7 +1185,7 @@ fun LargeVideo(image: Image, isCurrentPage: Boolean, onLongClick: (() -> Unit)? 
 fun OffsetBasedLargeImageView(
     navController: NavController,
     isActive: Boolean,
-    initialPage: Int,
+    initialSelectedImageIndex: Int,
     allImages: List<Image>,
     onActiveStateChanged: (Boolean) -> Unit = { },
     onImageUpdate: (suspend (Image, Image) -> Unit)? = null,
@@ -1311,7 +1311,7 @@ fun OffsetBasedLargeImageView(
             key(viewerSessionId) {
                 LargeImageView(
                     navController = navController,
-                    initialPage = initialPage,
+                    initialSelectedImageIndex = initialSelectedImageIndex,
                     allImages = allImages,
                     onImageUpdate = onImageUpdate,
                     onZoomedStatusChanged = { canDragDown = !it }
