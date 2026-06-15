@@ -31,6 +31,9 @@ class SearchResultsViewModel : ViewModel(), GridStateHolder by GridStateHolderDe
     private val _blockedTags = MutableStateFlow<Set<String>>(emptySet())
     val blockedTags = _blockedTags.asStateFlow()
 
+    private val _selectedRatings = MutableStateFlow<Set<ImageRating>>(emptySet())
+    val selectedRatings = _selectedRatings.asStateFlow()
+
     private lateinit var imageSource: ImageSource
     private lateinit var query: String
     private var tagList: List<String> = emptyList()
@@ -114,6 +117,21 @@ class SearchResultsViewModel : ViewModel(), GridStateHolder by GridStateHolderDe
             val updatedImages = _images.value.toMutableList().apply { this[index] = newImage }
             _images.value = updatedImages
         }
+    }
+
+
+    fun addRating(rating: ImageRating) {
+        _selectedRatings.value += rating
+    }
+
+
+    fun removeRating(rating: ImageRating) {
+        _selectedRatings.value -= rating
+    }
+
+
+    fun updateSelectedRatings(ratings: Set<ImageRating>) {
+        _selectedRatings.value = ratings
     }
 
 

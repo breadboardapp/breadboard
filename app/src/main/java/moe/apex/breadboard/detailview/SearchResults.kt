@@ -18,11 +18,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
@@ -87,12 +85,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
     val doneInitialLoad by viewModel.doneInitialLoad.collectAsStateWithLifecycle()
     val viewModelImages by viewModel.images.collectAsStateWithLifecycle()
     val blockedTags by viewModel.blockedTags.collectAsStateWithLifecycle()
-
-    val actuallySelectedRatings = rememberSaveable {
-        mutableStateSetOf<ImageRating>().apply {
-            addAll(prefs.ratingsFilter)
-        }
-    }
+    val selectedRatings by viewModel.selectedRatings.collectAsStateWithLifecycle()
 
     fun setUpViewModel(auth: ImageBoardAuth? = null) {
         viewModel.setup(
@@ -112,6 +105,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
 
         if (!isReady) {
             updateBlockedTags() // Subsequent calls are done in the pull to refresh callback.
+            viewModel.updateSelectedRatings(prefs.ratingsFilter)
             setUpViewModel(auth)
         }
     }
@@ -135,34 +129,34 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
         viewModel.loadMore()
     }
 
-    val ratingRows: List<@Composable () -> Unit> = availableRatingsForCurrentSource.map { {
+    val ratingRows: List<@Composable () -> Unit> = availableRatingsForCurrentSource.map { rating -> {
         FilterChip(
-            selected = it in actuallySelectedRatings,
-            label = { Text(it.label) },
+            selected = rating in selectedRatings,
+            label = { Text(rating.label) },
             colors = filterChipSolidColor,
             border = null,
             onClick = {
-                if (it in actuallySelectedRatings) {
-                    actuallySelectedRatings.remove(it)
+                if (rating in selectedRatings) {
+                    viewModel.removeRating(rating)
                 } else {
-                    if (it != ImageRating.SAFE && !AgeVerification.hasVerifiedAge(prefs)) {
+                    if (rating != ImageRating.SAFE && !AgeVerification.hasVerifiedAge(prefs)) {
                         showAgeVerificationDialog = true
                         return@FilterChip
                     } else {
-                        actuallySelectedRatings.add(it)
+                        viewModel.addRating(rating)
                     }
                 }
                 scope.launch {
                     preferencesRepository.updateSet(
                         PreferenceKeys.RATINGS_FILTER,
-                        actuallySelectedRatings.map { it.name })
+                        viewModel.selectedRatings.value.map { it.name })
                 }
             }
         )
     } }
 
-    val imagesToDisplay = remember(viewModelImages, blockedTags, actuallySelectedRatings.size) {
-        viewModel.filterImages(if (filterLocally) actuallySelectedRatings else null)
+    val imagesToDisplay = remember(viewModelImages, blockedTags, selectedRatings) {
+        viewModel.filterImages(if (filterLocally) selectedRatings else null)
     }
 
     if (showAgeVerificationDialog) {
