@@ -49,7 +49,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -130,7 +130,10 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
     val scope = rememberCoroutineScope()
 
     val unified = prefs.unifiedInfoSheet
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = !unified)
+    val sheetState = rememberBottomSheetState(
+        initialValue = SheetValue.Hidden,
+        enabledValues = if (unified) SheetValue.entries.toSet() else setOf(SheetValue.Expanded, SheetValue.Hidden),
+    )
     var sheetPage by remember { mutableStateOf(InfoSheetPage.SOURCES) }
 
     fun hideAndThen(block: () -> Unit = { }) {

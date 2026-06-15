@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.EaseOutBack
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -58,12 +59,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -838,82 +840,57 @@ private fun SearchHistorySheet(
 ) {
     val locale = LocalLocale.current.platformLocale
     val context = LocalContext.current
-    val density = LocalDensity.current
     val prefs = LocalPreferences.current
     val scope = rememberCoroutineScope()
 
     val reversedSearchHistory = remember(prefs.searchHistory) { prefs.searchHistory.reversed() }
-    var contentHeight by remember { mutableStateOf(Float.MAX_VALUE.dp) }
-    val containerHeight by animateDpAsState(contentHeight)
     val navBarHeight = navBarHeight // We need to calculate this ahead of time
 
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberBottomSheetState(
+        initialValue = SheetValue.Hidden,
+        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded)
+    )
     val is24h = DateFormat.is24HourFormat(context)
     val timeFormat = if (is24h) "HH:mm" else "h:mm a"
-
-    /* I'd like to use animateContentSize on the LazyColumn but doing so can cause some
-       strange animation bugs when opening the sheet.
-       The workaround using a container controlled by onSizeChanged isn't great
-       but it's close enough to what we want.
-
-       We start with a large initial height and then calculate the correct (smaller)
-       value because reducing the height doesn't cause the strange opening behaviour
-       whereas increasing the height apparently does.
-
-       ModalBottomSheet forcibly adds IME padding that causes the LazyColumn to
-       report a smaller height than desired if the IME is visible when the sheet opens.
-       This could be useful if we had a text field in the sheet but we don't so the IME
-       just gets dismissed and the padding becomes an annoyance.
-       To work around this we'll add the IME height to the LazyColumn's calculated height.
-       This allows it to animate to the proper height once the IME is finished dismissing.
-
-       ModalBottomSheets are just kind of bad in general.
-       They're janky to use and the API surface is annoying. */
 
     TitledModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
         title = "Search history"
     ) {
-        val imeSize = WindowInsets.ime.asPaddingValues().calculateBottomPadding() // We don't want to calculate this ahead of time
+        LazyColumn(
+            modifier = Modifier
+                .padding(horizontal = MEDIUM_SPACER.dp)
+                .clip(largerShape)
+                .animateContentSize(),
+            verticalArrangement = Arrangement.spacedBy(LARGE_SPACER.dp, Alignment.Top),
+            contentPadding = PaddingValues(bottom = navBarHeight + MEDIUM_SPACER.dp)
+        ) {
+            if (prefs.searchHistory.isEmpty()) {
+                SearchHistoryStandaloneTextItem("No search history yet. Start searching!")
+            } else {
+                if (isIncognito) {
+                    SearchHistoryStandaloneTextItem("Incognito mode is enabled. Search history will not be saved.")
+                }
 
-        Box(modifier = Modifier.height(containerHeight)) {
-            LazyColumn(
-                modifier = Modifier
-                    .padding(horizontal = MEDIUM_SPACER.dp)
-                    .clip(largerShape)
-                    .onSizeChanged {
-                        contentHeight = with (density) { it.height.toDp() } + imeSize
-                    },
-                verticalArrangement = Arrangement.spacedBy(LARGE_SPACER.dp, Alignment.Top),
-                contentPadding = PaddingValues(bottom = navBarHeight + MEDIUM_SPACER.dp)
-            ) {
-                if (prefs.searchHistory.isEmpty()) {
-                    SearchHistoryStandaloneTextItem("No search history yet. Start searching!")
-                } else {
-                    if (isIncognito) {
-                        SearchHistoryStandaloneTextItem("Incognito mode is enabled. Search history will not be saved.")
-                    }
+                items(reversedSearchHistory, key = { it.timestamp }) { entry ->
+                    val date = Date(entry.timestamp)
+                    val formatter =
+                        SimpleDateFormat("dd MMM $timeFormat", locale)
+                    val formattedDate = formatter.format(date)
 
-                    items(reversedSearchHistory, key = { it.timestamp }) { entry ->
-                        val date = Date(entry.timestamp)
-                        val formatter =
-                            SimpleDateFormat("dd MMM $timeFormat", locale)
-                        val formattedDate = formatter.format(date)
-
-                        Column(
-                            modifier = Modifier.animateItem(placementSpec = bouncyAnimationSpec()),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            BaseHeading(
-                                modifier = Modifier.padding(start = SMALL_SPACER.dp),
-                                text = "$formattedDate  \u2022  ${entry.source.label}"
-                            )
-                            SearchHistoryListItem(entry) {
-                                onSearchHistoryEntryClick(entry)
-                                scope.launch { sheetState.hide() }.invokeOnCompletion {
-                                    onDismissRequest()
-                                }
+                    Column(
+                        modifier = Modifier.animateItem(placementSpec = bouncyAnimationSpec()),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        BaseHeading(
+                            modifier = Modifier.padding(start = SMALL_SPACER.dp),
+                            text = "$formattedDate  \u2022  ${entry.source.label}"
+                        )
+                        SearchHistoryListItem(entry) {
+                            onSearchHistoryEntryClick(entry)
+                            scope.launch { sheetState.hide() }.invokeOnCompletion {
+                                onDismissRequest()
                             }
                         }
                     }
