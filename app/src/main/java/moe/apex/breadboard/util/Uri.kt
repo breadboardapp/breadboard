@@ -33,3 +33,12 @@ fun launchInWebBrowser(context: Context, uri: Uri) {
 
     launchUriWithPackage(context, uri, defaultPackage)
 }
+
+
+fun replaceGelbooruSubdomain(url: String): String {
+    val uri = url.toUri()
+    return uri.buildUpon()
+        .authority("img4.gelbooru.com")
+        .build()
+        .toString()
+}

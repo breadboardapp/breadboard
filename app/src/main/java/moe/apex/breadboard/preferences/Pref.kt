@@ -51,6 +51,7 @@ import moe.apex.breadboard.util.PixivArtwork
 import moe.apex.breadboard.util.SecretsManager
 import moe.apex.breadboard.util.availableRatingsForSource
 import moe.apex.breadboard.util.decodeHtml
+import moe.apex.breadboard.util.replaceGelbooruSubdomain
 import java.io.IOException
 
 
@@ -419,31 +420,6 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
                 updatePref(PreferenceKeys.FILTER_RATINGS_LOCALLY, false)
         }
 
-        /* Version code 270 enabled the staggered grid by default. Don't change it for people who
-           hadn't enabled it previously.
-           Additionally, fix Gelbooru favourite image links since their subdomain changed from img3
-           to img4. */
-        if (lastUsedVersionCode < 270) {
-            val data = dataStore.data.first()
-            val brokenFavouritesByteArray = data[PreferenceKeys.FAVOURITE_IMAGES]
-
-            if (brokenFavouritesByteArray != null) {
-                val brokenFavourites: List<Image> = Cbor.decodeFromByteArray(brokenFavouritesByteArray)
-                val tempFavourites = brokenFavourites.toMutableList()
-                brokenFavourites.forEachIndexed { index, img ->
-                    if (img.imageSource == ImageSource.GELBOORU) {
-                        val fixedImage = img.copy(
-                            previewUrl = img.previewUrl.replace("img3.gelbooru", "img4.gelbooru"),
-                            fileUrl = img.fileUrl.replace("img3.gelbooru", "img4.gelbooru"),
-                            sampleUrl = img.sampleUrl.replace("img3.gelbooru", "img4.gelbooru")
-                        )
-                        tempFavourites[index] = fixedImage
-                    }
-                }
-                updateFavouriteImages(tempFavourites)
-            }
-        }
-
         // v3 (code 300) migrations start here
 
         /* Versions 270 and 271 had a bug where staggered might still be disabled by default for new
@@ -551,6 +527,24 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
                 dataStore.edit { prefs ->
                     prefs.remove(key)
                 }
+            }
+
+            val favouritesByteArray = data[PreferenceKeys.FAVOURITE_IMAGES]
+
+            if (favouritesByteArray != null) {
+                val favouriteImages: List<Image> = Cbor.decodeFromByteArray(favouritesByteArray)
+                val tempFavourites = favouriteImages.toMutableList()
+                tempFavourites.forEachIndexed { index, img ->
+                    if (img.imageSource == ImageSource.GELBOORU) {
+                        val fixedImage = img.copy(
+                            previewUrl = replaceGelbooruSubdomain(img.previewUrl),
+                            fileUrl = replaceGelbooruSubdomain(img.fileUrl),
+                            sampleUrl = replaceGelbooruSubdomain(img.sampleUrl)
+                        )
+                        tempFavourites[index] = fixedImage
+                    }
+                }
+                updateFavouriteImages(tempFavourites)
             }
         }
 
