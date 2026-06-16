@@ -283,7 +283,8 @@ object Rule34 : GelbooruBasedImageBoard {
     }
 
     override suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth?): ImageMetadata? {
-        return image.id?.let { loadImage(it, auth)?.metadata }
+        val img = image.id?.let { loadImage(it, auth) } ?: loadImageMd5(image.fileName, auth)
+        return img?.metadata
     }
 }
 
@@ -311,6 +312,9 @@ object Safebooru : GelbooruBasedImageBoard {
     }
 
     override suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth?): ImageMetadata? {
+        /* We can't use MD5 as a fallback here because on Safebooru,
+           the fileName (which Breadboard stores) is different from the MD5 hash,
+           and I haven't found a way to search using the filename. */
         return image.id?.let { loadImage(it, auth)?.metadata }
     }
 }
@@ -488,8 +492,10 @@ object Danbooru : ImageBoard {
     }
 
     override suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth?): ImageMetadata? {
-        return image.id?.let { loadImage(it, auth)?.metadata }
+        val img = image.id?.let { loadImage(it, auth) } ?: loadImageMd5(image.fileName, auth)
+        return img?.metadata
     }
+
 
     override fun getRatingFromString(rating: String): ImageRating {
         return when (rating) {

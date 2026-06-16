@@ -73,9 +73,11 @@ data class Image(
 
     val hasGroupedTags: Boolean
         get() {
-            /* If the image does not have ID or metadata, we would have no way of fetching additional info.
-               Therefore, the image should just be treated as already having grouped tags. */
-            if (id == null || metadata == null) return true
+            /* We use this to determine whether we should fetch updated (grouped) tags for a post.
+               On Gelbooru this required the tags themselves, which won't exist if metadata is null.
+               That adds a bit of complexity that we need to handle elsewhere,
+               but it keeps this property 'truthful' so to speak. */
+            if (metadata == null) return false
 
             /* Usually, we can tell that the existing grouped tags are grouped properly if they have more than one group.
 
