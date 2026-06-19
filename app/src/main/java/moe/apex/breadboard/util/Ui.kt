@@ -82,6 +82,7 @@ import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.SelectableChipColors
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.SheetValue
@@ -237,7 +238,8 @@ fun LargeTitleBar(
         navigationIcon = { NavigationIcon(navController) },
         colors = TopAppBarDefaults.topAppBarColors().copy(
             scrolledContainerColor = BreadboardTheme.colors.titleBar
-        )
+        ),
+       windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Vertical)
     )
 }
 
@@ -257,7 +259,8 @@ fun SmallTitleBar(
         colors = TopAppBarDefaults.topAppBarColors(
             scrolledContainerColor = BreadboardTheme.colors.titleBar
         ),
-        navigationIcon = { NavigationIcon(navController) }
+        navigationIcon = { NavigationIcon(navController) },
+        windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Vertical)
     )
 }
 
@@ -357,7 +360,8 @@ fun MainScreenScaffold(
                     it()
                 }
             }
-        }
+        },
+        contentWindowInsets = ScaffoldDefaults.contentWindowInsets.only(WindowInsetsSides.Vertical)
     ) {
         val lld = LocalLayoutDirection.current
         val newPadding = PaddingValues(
