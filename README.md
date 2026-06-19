@@ -67,11 +67,6 @@ Powered by multiple image boards and boorus, Breadboard makes finding your favou
 
 Alternatively, download [the latest GitHub release](https://github.com/breadboardapp/breadboard/releases/latest), allow unknown sources in your device settings, and then install manually. This method will not provide automatic/notifications for updates.
 
-> [!WARNING]
-> Legacy builds (with the `-legacy` suffix) are deprecated we will cease publishing them in the near future.
->
-> Make sure you download a standard release (with no suffix).
-
 ## Contributing
 
 Feedback and code contributions are welcome!
