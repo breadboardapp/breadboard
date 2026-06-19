@@ -104,9 +104,9 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
         }
 
         if (!isReady) {
-            updateBlockedTags() // Subsequent calls are done in the pull to refresh callback.
             viewModel.updateSelectedRatings(prefs.ratingsFilter)
             setUpViewModel(auth)
+            updateBlockedTags() // Subsequent calls are done in the pull to refresh callback.
         }
     }
 
