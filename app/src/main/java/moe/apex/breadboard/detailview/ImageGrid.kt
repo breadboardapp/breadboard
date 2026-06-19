@@ -31,7 +31,6 @@ import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -58,6 +57,7 @@ import moe.apex.breadboard.preferences.LocalPreferences
 import moe.apex.breadboard.util.NavBarHeightVerticalSpacer
 import moe.apex.breadboard.util.PullToRefreshController
 import moe.apex.breadboard.util.SMALL_SPACER
+import moe.apex.breadboard.util.WideLinearWavyProgressIndicator
 import moe.apex.breadboard.util.largerShape
 
 
@@ -138,10 +138,7 @@ fun ImageGrid(
                 .padding(contentPadding)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            LinearProgressIndicator(
-                modifier = modifier
-                    .fillMaxWidth()
-            )
+            WideLinearWavyProgressIndicator(modifier = modifier.fillMaxWidth())
         }
 
         LaunchedEffect(doneInitialLoad) {

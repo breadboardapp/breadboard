@@ -77,6 +77,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -1250,17 +1251,16 @@ fun rememberPullToRefreshController(
 
 
 object PullToRefreshControllerDefaults {
+    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     @Composable
     fun Indicator(
         modifier: Modifier = Modifier,
         controller: PullToRefreshController,
     ) {
-        PullToRefreshDefaults.Indicator(
+        PullToRefreshDefaults.LoadingIndicator(
             state = controller.state,
             isRefreshing = controller.isRefreshing,
-            modifier = modifier,
-            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-            color = MaterialTheme.colorScheme.onTertiaryContainer
+            modifier = modifier
         )
     }
 }
@@ -1442,6 +1442,16 @@ fun rememberIsBlurEnabled(): Boolean {
             && prefs.isExperimentEnabled(Experiment.IMMERSIVE_UI_EFFECTS)
             && !powerManager.isPowerSaveMode
     }
+}
+
+
+@Composable
+fun WideLinearWavyProgressIndicator(modifier: Modifier = Modifier) {
+    LinearWavyProgressIndicator(
+        modifier = modifier,
+        amplitude = 0.6f,
+        wavelength = 40.dp,
+    )
 }
 
 

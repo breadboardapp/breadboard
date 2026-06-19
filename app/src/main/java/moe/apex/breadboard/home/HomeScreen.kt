@@ -10,7 +10,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -44,6 +43,7 @@ import moe.apex.breadboard.util.RecommendationsProvider
 import moe.apex.breadboard.util.SMALL_LARGE_SPACER
 import moe.apex.breadboard.util.SMALL_SPACER
 import moe.apex.breadboard.util.ScrollToTopArrow
+import moe.apex.breadboard.util.WideLinearWavyProgressIndicator
 import moe.apex.breadboard.util.bottomAppBarAndNavBarHeight
 import moe.apex.breadboard.util.differenceOlderThan
 import moe.apex.breadboard.util.onScroll
@@ -121,7 +121,7 @@ fun HomeScreen(
         }
 
         if (builtInIgnoredTags.isEmpty()) {
-            LinearProgressIndicator(
+            WideLinearWavyProgressIndicator(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(padding)
