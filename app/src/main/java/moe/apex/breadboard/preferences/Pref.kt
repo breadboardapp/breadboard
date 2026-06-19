@@ -548,6 +548,18 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             }
         }
 
+        /* Version 3.2.3 removes AI tags from the manual section in favour of handling them all
+           with the EXCLUDE_AI pref. */
+        if (lastUsedVersionCode < 323) {
+            val data = dataStore.data.first()
+            val blockedTags = data[PreferenceKeys.MANUALLY_BLOCKED_TAGS] ?: emptySet()
+            val blockedTagsWithoutAi = blockedTags.filterNot { it in AI_TAG_NAMES }
+            if (blockedTags.size != blockedTagsWithoutAi.size) {
+                updateSet(PreferenceKeys.MANUALLY_BLOCKED_TAGS, blockedTagsWithoutAi)
+                updatePref(PreferenceKeys.EXCLUDE_AI, true)
+            }
+        }
+
         /* Always clear the internal ignored list on updates. */
         if (BuildConfig.VERSION_CODE != lastUsedVersionCode) {
             dataStore.edit { prefs ->

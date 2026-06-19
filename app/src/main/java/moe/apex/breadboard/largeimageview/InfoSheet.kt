@@ -234,18 +234,32 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                         ) {
                             if (blocked) {
                                 scope.launch {
-                                    preferencesRepository.removeFromSet(
-                                        PreferenceKeys.MANUALLY_BLOCKED_TAGS,
-                                        selectedTag!!
-                                    )
+                                    if (selectedTag!! in AI_TAG_NAMES) {
+                                        preferencesRepository.updatePref(
+                                            PreferenceKeys.EXCLUDE_AI,
+                                            false
+                                        )
+                                    } else {
+                                        preferencesRepository.removeFromSet(
+                                            PreferenceKeys.MANUALLY_BLOCKED_TAGS,
+                                            selectedTag!!
+                                        )
+                                    }
                                 }
                                 showToast(context, "Unblocked tag ${selectedTag!!}")
                             } else {
                                 scope.launch {
-                                    preferencesRepository.addToSet(
-                                        PreferenceKeys.MANUALLY_BLOCKED_TAGS,
-                                        selectedTag!!
-                                    )
+                                    if (selectedTag in AI_TAG_NAMES) {
+                                        preferencesRepository.updatePref(
+                                            PreferenceKeys.EXCLUDE_AI,
+                                            true
+                                        )
+                                    } else {
+                                        preferencesRepository.addToSet(
+                                            PreferenceKeys.MANUALLY_BLOCKED_TAGS,
+                                            selectedTag!!
+                                        )
+                                    }
                                 }
                                 showToast(context, "Blocked tag ${selectedTag!!}")
                             }
