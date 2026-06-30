@@ -38,8 +38,8 @@ val Typography = Typography(
                 fontSize = 15.sp,
         ),
         headlineMedium = Typography().headlineMedium.copy(
-                fontFamily = FontFamily(Font(R.font.kumbh)),
-                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily(Font(R.font.special_gothic_one_expanded)),
+                fontWeight = FontWeight.Normal,
                 fontSize = 30.sp
         ),
         headlineSmall = Typography().headlineSmall.copy(
@@ -47,8 +47,8 @@ val Typography = Typography(
                 fontWeight = FontWeight.Bold
         ),
         titleLarge = Typography().titleLarge.copy(
-                fontFamily = FontFamily(Font(R.font.kumbh)),
-                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily(Font(R.font.special_gothic_one_expanded)),
+                fontWeight = FontWeight.Normal,
         )
 )
 
