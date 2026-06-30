@@ -30,6 +30,15 @@
             android:launchMode="singleTop"
             android:exported="true"
             android:theme="@style/Theme.Breadboard">
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="breadboard" />
+            </intent-filter>
+
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -117,6 +126,15 @@
                 <data android:host="assets.yande.re" />
 
                 <data android:pathPattern="/data/preview/.*" />
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="https" />
+                <data android:host="breadboard.moe" />
+                <data android:pathPrefix="/artist/" />
             </intent-filter>
         </activity>
         <activity-alias

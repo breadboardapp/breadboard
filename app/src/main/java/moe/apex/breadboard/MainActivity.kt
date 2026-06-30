@@ -29,6 +29,7 @@ import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import moe.apex.breadboard.navigation.ArtistProfile
 import moe.apex.breadboard.navigation.Favourites
 import moe.apex.breadboard.navigation.Home
 import moe.apex.breadboard.navigation.Navigation
@@ -79,6 +80,22 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
     }
 
 
+    private fun maybePrepareArtistDestination(intent: Intent): ArtistProfile? {
+        return intent.getStringExtra("artist")?.let {
+            return ArtistProfile(it)
+        }
+    }
+
+
+    private fun determineDestination(intent: Intent): Any? {
+        return when (intent.getStringExtra("destination")) {
+            "artist" -> maybePrepareArtistDestination(intent)
+            "search" -> maybePrepareResultsDestination(intent)
+            else -> null
+        }
+    }
+
+
     @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -120,7 +137,7 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
                    to be done inside of this activity rather than the DeepLinkActivity. */
                 DisposableEffect(Unit) {
                     val innerListener = Consumer<Intent> { intent ->
-                        maybePrepareResultsDestination(intent)?.let {
+                        determineDestination(intent)?.let {
                             navController.navigate(it)
                         }
                     }
@@ -128,7 +145,7 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
                     onDispose { removeOnNewIntentListener(innerListener) }
                 }
                 FlagSecureHelper.register()
-                Navigation(navController, maybePrepareResultsDestination(intent) ?: startDestination)
+                Navigation(navController, determineDestination(intent) ?: startDestination)
             }
         }
     }

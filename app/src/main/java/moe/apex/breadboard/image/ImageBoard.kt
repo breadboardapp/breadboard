@@ -4,6 +4,9 @@ import android.util.Log
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import moe.apex.breadboard.RequestUtil
+import moe.apex.breadboard.artist.Artist
+import moe.apex.breadboard.artist.ArtistSocial
+import moe.apex.breadboard.artist.ArtistTag
 import moe.apex.breadboard.preferences.ImageSource
 import moe.apex.breadboard.tag.TagCategory
 import moe.apex.breadboard.tag.TagGroup
@@ -419,6 +422,9 @@ object Danbooru : ImageBoard {
     override val apiKeyRequirement = ImageBoardRequirement.RECOMMENDED
     override val localFilterType = ImageBoardRequirement.RECOMMENDED
 
+    private val artistSearchUrl = "${baseUrl}artists.json?only=name,urls,other_names,tag&search[any_name_matches]=%s"
+    private val sfwUrl = "https://safebooru.donmai.us/posts.json?tags=%s&limit=20"
+
     override fun parseImage(e: JSONObject): Image? {
         if (e.isNull("md5")) return null
 
@@ -494,6 +500,57 @@ object Danbooru : ImageBoard {
     override suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth?): ImageMetadata? {
         val img = image.id?.let { loadImage(it, auth) } ?: loadImageMd5(image.fileName, auth)
         return img?.metadata
+    }
+
+    suspend fun getArtist(artistTag: String): Artist? {
+        val url = artistSearchUrl.format(artistTag)
+        val body = RequestUtil.get(url)
+        val json = JSONArray(body)
+
+        if (json.length() == 0){
+            return null
+        }
+
+        val primaryArtist = json.getJSONObject(0)
+        return Artist(
+            name = primaryArtist.getString("name"),
+            otherNames = primaryArtist.optJSONArray("other_names")?.let { otherNamesArray ->
+                (0 until otherNamesArray.length()).mapNotNull { index ->
+                    otherNamesArray.optString(index).takeIf { it.isNotBlank() }
+                }
+            } ?: emptyList(),
+            socialUrls = primaryArtist.optJSONArray("urls")?.let { urlArray ->
+                (0 until urlArray.length()).mapNotNull { index ->
+                    val urlEntry = urlArray.optJSONObject(index)
+                    ArtistSocial(
+                        url = urlEntry.optString("url").takeUnless { it.isBlank() } ?: return@mapNotNull null,
+                        isActive = urlEntry.optBoolean("is_active", false)
+                    )
+                }
+            } ?: emptyList(),
+            tag = primaryArtist.getJSONObject("tag").let { tagObj ->
+                ArtistTag(
+                    name = tagObj.getString("name"),
+                    postCount = tagObj.getInt("post_count")
+                )
+            }
+        )
+    }
+
+    suspend fun getMostPopularSfwPosts(artistTag: String): List<Image> {
+        val url = sfwUrl.format("$artistTag order:favcount")
+        val body = RequestUtil.get(url)
+        if (body.isEmpty()) return emptyList()
+
+        val json = JSONArray(body)
+        val subjects = mutableListOf<Image>()
+
+        for (i in 0 until json.length()) {
+            val e = json.getJSONObject(i)
+            parseImage(e)?.let { subjects.add(it) }
+        }
+
+        return subjects.toList()
     }
 
 

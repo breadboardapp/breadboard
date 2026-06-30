@@ -5,6 +5,7 @@ import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -67,66 +68,50 @@ private const val MIN_CELL_WIDTH   = 120
 private const val MAX_CELL_WIDTH   = 144
 
 
+interface ImageGridHeaderScope {
+    fun item(content: @Composable () -> Unit)
+}
+
+
+class ImageGridHeaderScopeImpl : ImageGridHeaderScope {
+    val items = mutableListOf<@Composable () -> Unit>()
+
+    override fun item(content: @Composable () -> Unit) {
+        items.add(content)
+    }
+}
+
+
 @Composable
-fun ImageGrid(
+private fun ImageGridPullToRefreshContainer(
     modifier: Modifier = Modifier,
-    staggeredGridState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
-    uniformGridState: LazyGridState = rememberLazyGridState(),
-    images: List<Image>,
-    onImageClick: (Int, Image) -> Unit,
-    noImagesContent: @Composable () -> Unit = { NoImages() },
-    contentPadding: PaddingValues = PaddingValues(0.dp),
-    filterComposable: (@Composable () -> Unit)? = null,
-    pullToRefreshController: PullToRefreshController? = null,
-    doneInitialLoad: Boolean = true,
-    onEndReached: (suspend () -> Unit)? = null
+    pullToRefreshController: PullToRefreshController?,
+    content: @Composable () -> Unit
 ) {
-    val prefs = LocalPreferences.current
-
-    @Composable
-    fun Container(content: @Composable () -> Unit) {
-        if (pullToRefreshController != null) {
-            PullToRefreshBox(
-                modifier = modifier,
-                isRefreshing = pullToRefreshController.isRefreshing,
-                state = pullToRefreshController.state,
-                onRefresh = pullToRefreshController::refresh,
-                indicator = {
-                    pullToRefreshController.indicator(this, pullToRefreshController)
-                },
-                content = { content() }
-            )
-        } else {
-            content()
-        }
+    if (pullToRefreshController != null) {
+        PullToRefreshBox(
+            modifier = modifier,
+            isRefreshing = pullToRefreshController.isRefreshing,
+            state = pullToRefreshController.state,
+            onRefresh = pullToRefreshController::refresh,
+            indicator = {
+                pullToRefreshController.indicator(this, pullToRefreshController)
+            },
+            content = { content() }
+        )
+    } else {
+        content()
     }
+}
 
-    Container {
-        if (prefs.useStaggeredGrid) {
-            StaggeredImageGrid(
-                modifier = if (pullToRefreshController == null) modifier else Modifier,
-                gridState = staggeredGridState,
-                contentPadding = contentPadding,
-                filterComposable = filterComposable,
-                images = images,
-                noImagesContent = noImagesContent,
-                onImageClick = onImageClick,
-                onEndReached = onEndReached
-            )
-        } else {
-            UniformImageGrid(
-                modifier = if (pullToRefreshController == null) modifier else Modifier,
-                gridState = uniformGridState,
-                contentPadding = contentPadding,
-                filterComposable = filterComposable,
-                images = images,
-                noImagesContent = noImagesContent,
-                onImageClick = onImageClick,
-                onEndReached = onEndReached
-            )
-        }
-    }
 
+@Composable
+private fun InitialLoadingIndicator(
+    modifier: Modifier = Modifier,
+    doneInitialLoad: Boolean,
+    contentPadding: PaddingValues,
+    onInitialLoadCompleted: suspend () -> Unit
+) {
     AnimatedVisibility (
         visible = !doneInitialLoad,
         enter = EnterTransition.None,
@@ -143,11 +128,153 @@ fun ImageGrid(
 
         LaunchedEffect(doneInitialLoad) {
             if (doneInitialLoad) {
-                staggeredGridState.requestScrollToItem(0)
-                uniformGridState.requestScrollToItem(0)
+                onInitialLoadCompleted()
             }
         }
     }
+}
+
+
+@Composable
+fun FlexibleImageGrid(
+    staggered: Boolean,
+    modifier: Modifier = Modifier,
+    images: List<Image>,
+    onImageClick: (Int, Image) -> Unit,
+    noImagesContent: @Composable () -> Unit = { NoImages() },
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+    headerItems: (ImageGridHeaderScope.() -> Unit)? = null,
+    pullToRefreshController: PullToRefreshController? = null,
+    doneInitialLoad: Boolean = true,
+    onEndReached: (suspend () -> Unit)? = null
+) {
+    FlexibleImageGrid(
+        gridState = if (staggered) rememberLazyStaggeredGridState() else rememberLazyGridState(),
+        modifier = modifier,
+        images = images,
+        onImageClick = onImageClick,
+        noImagesContent = noImagesContent,
+        contentPadding = contentPadding,
+        headerItems = headerItems,
+        pullToRefreshController = pullToRefreshController,
+        doneInitialLoad = doneInitialLoad,
+        onEndReached = onEndReached
+    )
+}
+
+
+@Composable
+fun FlexibleImageGrid(
+    gridState: ScrollableState,
+    modifier: Modifier = Modifier,
+    images: List<Image>,
+    onImageClick: (Int, Image) -> Unit,
+    noImagesContent: @Composable () -> Unit = { NoImages() },
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+    headerItems: (ImageGridHeaderScope.() -> Unit)? = null,
+    pullToRefreshController: PullToRefreshController? = null,
+    doneInitialLoad: Boolean = true,
+    onEndReached: (suspend () -> Unit)? = null
+) {
+    val scope = ImageGridHeaderScopeImpl()
+    if (headerItems != null) {
+        scope.headerItems()
+    }
+
+    when (gridState) {
+        is LazyStaggeredGridState -> {
+            ImageGridPullToRefreshContainer(
+                modifier = modifier,
+                pullToRefreshController = pullToRefreshController
+            ) {
+                StaggeredImageGrid(
+                    modifier = if (pullToRefreshController == null) modifier else Modifier,
+                    gridState = gridState,
+                    contentPadding = contentPadding,
+                    headerItems = scope.items,
+                    images = images,
+                    noImagesContent = noImagesContent,
+                    onImageClick = onImageClick,
+                    onEndReached = onEndReached
+                )
+            }
+
+            InitialLoadingIndicator(
+                modifier = modifier,
+                doneInitialLoad = doneInitialLoad,
+                contentPadding = contentPadding,
+                onInitialLoadCompleted = {
+                    gridState.requestScrollToItem(0)
+                }
+            )
+        }
+
+        is LazyGridState -> {
+            ImageGridPullToRefreshContainer(
+                modifier = modifier,
+                pullToRefreshController = pullToRefreshController
+            ) {
+                UniformImageGrid(
+                    modifier = if (pullToRefreshController == null) modifier else Modifier,
+                    gridState = gridState,
+                    contentPadding = contentPadding,
+                    headerItems = scope.items,
+                    images = images,
+                    noImagesContent = noImagesContent,
+                    onImageClick = onImageClick,
+                    onEndReached = onEndReached
+                )
+            }
+
+            InitialLoadingIndicator(
+                modifier = modifier,
+                doneInitialLoad = doneInitialLoad,
+                contentPadding = contentPadding,
+                onInitialLoadCompleted = {
+                    gridState.scrollToItem(0)
+                }
+            )
+        }
+
+        else -> {
+            throw IllegalArgumentException("gridState must be either LazyStaggeredGridState or LazyGridState")
+        }
+    }
+}
+
+
+@Deprecated(
+    message = "Use FlexibleImageGrid, which allows for passing in multiple header items, instead.",
+    replaceWith = ReplaceWith("FlexibleImageGrid")
+)
+@Composable
+fun ImageGrid(
+    modifier: Modifier = Modifier,
+    staggeredGridState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
+    uniformGridState: LazyGridState = rememberLazyGridState(),
+    images: List<Image>,
+    onImageClick: (Int, Image) -> Unit,
+    noImagesContent: @Composable () -> Unit = { NoImages() },
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+    filterComposable: (@Composable () -> Unit)? = null,
+    pullToRefreshController: PullToRefreshController? = null,
+    doneInitialLoad: Boolean = true,
+    onEndReached: (suspend () -> Unit)? = null
+) {
+    val prefs = LocalPreferences.current
+
+    FlexibleImageGrid(
+        gridState = if (prefs.useStaggeredGrid) staggeredGridState else uniformGridState,
+        modifier = modifier,
+        images = images,
+        onImageClick = onImageClick,
+        noImagesContent = noImagesContent,
+        contentPadding = contentPadding,
+        headerItems = filterComposable?.let { { item { it() }} },
+        pullToRefreshController = pullToRefreshController,
+        doneInitialLoad = doneInitialLoad,
+        onEndReached = onEndReached
+    )
 }
 
 
@@ -156,7 +283,7 @@ private fun StaggeredImageGrid(
     modifier: Modifier = Modifier,
     gridState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
     contentPadding: PaddingValues,
-    filterComposable: (@Composable () -> Unit)? = null,
+    headerItems: (List<@Composable () -> Unit>)? = null,
     images: List<Image>,
     noImagesContent: @Composable () -> Unit,
     onImageClick: (Int, Image) -> Unit,
@@ -172,9 +299,9 @@ private fun StaggeredImageGrid(
         horizontalArrangement = Arrangement.spacedBy(SMALL_SPACER.dp),
         verticalItemSpacing = SMALL_SPACER.dp
     ) {
-        filterComposable?.let {
-            item(key = "ratings-filter", span = StaggeredGridItemSpan.FullLine ) {
-                it()
+        headerItems?.forEachIndexed { index, element ->
+            item(key = "header-$index", span = StaggeredGridItemSpan.FullLine) {
+                element()
             }
         }
 
@@ -210,7 +337,7 @@ private fun UniformImageGrid(
     modifier: Modifier = Modifier,
     gridState: LazyGridState = rememberLazyGridState(),
     contentPadding: PaddingValues,
-    filterComposable: (@Composable () -> Unit)? = null,
+    headerItems: List<@Composable () -> Unit>? = null,
     images: List<Image>,
     noImagesContent: @Composable () -> Unit,
     onImageClick: (Int, Image) -> Unit,
@@ -226,9 +353,9 @@ private fun UniformImageGrid(
         horizontalArrangement = Arrangement.spacedBy(SMALL_SPACER.dp),
         verticalArrangement = Arrangement.spacedBy(SMALL_SPACER.dp)
     ) {
-        filterComposable?.let {
-            item(key = "ratings-filter", span = { GridItemSpan(maxLineSpan) }) {
-                it()
+        headerItems?.forEachIndexed { index, element ->
+            item(key = "header-$index", span = { GridItemSpan(maxLineSpan) }) {
+                element()
             }
         }
 
@@ -302,7 +429,7 @@ private fun LazyGridItemScope.ImagePreviewContainer(
 
 
 @Composable
-private fun ImagePreview(
+fun ImagePreview(
     modifier: Modifier = Modifier,
     image: Image,
     index: Int,

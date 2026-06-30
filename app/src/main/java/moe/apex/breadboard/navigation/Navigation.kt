@@ -43,6 +43,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.toRoute
 import moe.apex.breadboard.search.SearchScreen
 import moe.apex.breadboard.R
+import moe.apex.breadboard.artist.ArtistProfileScreen
 import moe.apex.breadboard.detailview.SearchResults
 import moe.apex.breadboard.favourites.FavouritesPage
 import moe.apex.breadboard.home.HomeScreen
@@ -80,10 +81,10 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
     val popExitTransition = slideOutHorizontally(tween(easing = easing)) { slideDistance } + fadeOut( tween(easing = easing))
     val popEnterTransition = slideInHorizontally(tween(easing = easing)) { -slideDistance } + fadeIn(tween(easing = easing))
 
-    val searchScreens = listOf(Search::class, Results::class)
+    val searchScreens = listOf(Search::class, Results::class, ArtistProfile::class)
     val settingsScreens = listOf(Settings::class, BlockedTagsSettings::class, AboutSettings::class, LibrariesSettings::class, ExperimentalSettings::class, RecommendationsSettings::class, IgnoredTagsSettings::class)
     val topLevelScreens = listOf(Home::class, Search::class, Favourites::class) + settingsScreens
-    val slideTransitionScreens = listOf(Results::class, ImageView::class, *settingsScreens.filter { it != Settings::class }.toTypedArray())
+    val slideTransitionScreens = listOf(Results::class, ImageView::class, ArtistProfile::class, *settingsScreens.filter { it != Settings::class }.toTypedArray())
 
     /* Some screens have the ability to hide the bottom bar, so we need to ensure it appears again
        when navigating to a different screen. */
@@ -225,6 +226,10 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
                     composable<ExperimentalSettings> { ExperimentalScreen(navController) }
                     composable<RecommendationsSettings> { RecommendationsSettingsScreen(navController) }
                     composable<IgnoredTagsSettings> { IgnoredTagsScreen(navController) }
+                    composable<ArtistProfile> {
+                        val args = it.toRoute<ArtistProfile>()
+                        ArtistProfileScreen(args.artistTag, navController = navController)
+                    }
                 }
             }
         }

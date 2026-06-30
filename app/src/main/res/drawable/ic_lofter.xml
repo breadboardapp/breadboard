@@ -1,0 +1,20 @@
+<!--
+  ~ Copyright (C) 2026 The Android Open Source Project
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~      http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:height="24dp" android:viewportHeight="24" android:viewportWidth="24" android:width="24dp">
+      
+    <path android:fillColor="#fff" android:pathData="M7.88,1.9a0.58,0.58 0,0 0,-0.58 0.58h-0.02v10.74c0,0.94 0.12,1.5 0.36,2 0.26,0.52 0.68,0.94 1.2,1.2 0.32,0.16 0.66,0.24 1.1,0.3 0.24,0.02 0.5,0.04 0.82,0.04h4.64c1.24,0.02 2.08,0.2 2.88,0.62 0.42,0.24 0.82,0.52 1.14,0.88 0.26,0.26 0.48,0.58 0.66,0.92 0.24,0.44 0.3,0.6 0.4,1.12q0.014,0.064 0.02,0.14 0.007,0.068 0.02,0.14c0.16,1.18 -0.82,2.34 -2.34,2.34h-3c-0.58,0 -1.06,-0.04 -1.48,-0.12 -0.56,-0.1 -1.02,-0.26 -1.48,-0.5 -0.42,-0.22 -0.78,-0.5 -1.1,-0.82 -0.28,-0.28 -0.6,-0.74 -0.72,-0.98 -0.14,-0.24 0.06,-0.56 0.36,-0.6s1.06,-0.14 1.66,0.3q0.122,0.09 0.234,0.184c0.128,0.104 0.255,0.208 0.406,0.296 0.28,0.16 0.56,0.26 0.92,0.32 0.3,0.04 0.66,0.08 1.1,0.08L18,21.08c0.32,0 0.58,-0.26 0.58,-0.58 0,-0.04 0,-0.1 -0.02,-0.14q-0.013,-0.027 -0.018,-0.05c-0.006,-0.021 -0.01,-0.039 -0.022,-0.05q-0.029,-0.046 -0.05,-0.1t-0.05,-0.1c-0.1,-0.2 -0.24,-0.38 -0.38,-0.54 -0.18,-0.22 -0.4,-0.38 -0.66,-0.52 -0.52,-0.28 -1.08,-0.4 -2.08,-0.4h-4.46c-0.42,0 -0.78,-0.02 -1.1,-0.06 -0.74,-0.08 -1.32,-0.26 -1.9,-0.58 -0.72,-0.4 -1.32,-1 -1.72,-1.72 -0.44,-0.8 -0.64,-1.66 -0.64,-2.94L5.48,2.22c0,-1.02 0.74,-2.08 1.84,-2.14 0.84,-0.06 1.44,0.12 1.88,0.36 0.34,0.18 0.64,0.4 0.92,0.66 0.36,0.32 0.64,0.7 0.88,1.14 0.42,0.8 0.62,1.64 0.62,2.88v9.38c0,0.24 -0.22,0.42 -0.44,0.36 -0.8,-0.2 -1.4,-0.92 -1.4,-1.78v-7.9c0,-1 -0.12,-1.56 -0.4,-2.08 -0.14,-0.24 -0.32,-0.48 -0.52,-0.66a2.6,2.6 0,0 0,-0.64 -0.43q-0.054,-0.021 -0.1,-0.05l-0.029,-0.016c-0.023,-0.013 -0.042,-0.024 -0.071,-0.024 -0.04,-0.02 -0.1,-0.02 -0.14,-0.02"/>
+    
+</vector>

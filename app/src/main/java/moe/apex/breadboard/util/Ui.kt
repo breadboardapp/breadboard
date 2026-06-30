@@ -196,12 +196,30 @@ fun animateBottomCornerSizeForPosition(position: ListItemPosition): Dp {
 }
 
 
+/** Default drop-in navigation icon to be used in top bars.
+
+    Includes padding by default to fit Breadboard style. For more control, use the overload with
+    a `modifier` parameter. **/
 @Composable
-private fun NavigationIcon(navController: NavController? = null) {
+fun NavigationIcon(navController: NavController?) {
+    NavigationIcon(
+        modifier = Modifier.padding(horizontal = SMALL_SPACER.dp),
+        navController = navController
+    )
+}
+
+
+/** A lower level navigation icon that accepts a [modifier] to allow for more flexible behaviour and
+    appearance. */
+@Composable
+fun NavigationIcon(
+    modifier: Modifier,
+    navController: NavController? = null
+) {
     val context = LocalContext.current
     if (navController != null) {
         FilledIconButton(
-            modifier = Modifier.padding(horizontal = SMALL_SPACER.dp),
+            modifier = modifier,
             colors = IconButtonDefaults.filledIconButtonColors(
                 containerColor = IconButtonDefaults.filledIconButtonColors().disabledContainerColor.copy(alpha = 0.065f),
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant

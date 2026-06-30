@@ -114,6 +114,27 @@ object RecommendationsSettings
 @Serializable
 object IgnoredTagsSettings
 
+@Serializable
+data class ArtistProfile(
+    val artistTag: String
+) {
+    companion object {
+        fun fromUri(uri: Uri): ArtistProfile? {
+            val host = uri.host ?: return null
+            val path = uri.pathSegments ?: return null
+
+            if (host == "breadboard.moe" && path.firstOrNull() == "artist") {
+                val tag = path.getOrNull(1)?.takeIf { it.isNotEmpty() }
+                if (tag != null) {
+                    return ArtistProfile(tag)
+                }
+            }
+            return null
+        }
+    }
+}
+
+
 fun NavDestination?.routeIs(routes: Collection<KClass<*>>): Boolean {
     return routeIs(*routes.toTypedArray())
 }
