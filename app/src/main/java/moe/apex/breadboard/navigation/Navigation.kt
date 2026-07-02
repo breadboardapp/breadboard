@@ -95,141 +95,139 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
     }
 
     BreadboardTheme {
-        Surface {
-            Scaffold(
-                bottomBar = {
-                    AnimatedVisibility(
-                        visible = currentRoute.routeIs(topLevelScreens) && isNavigationBarVisible,
-                        enter = slideInVertically { it /3} + fadeIn(),
-                        exit = slideOutVertically { it/3 } + fadeOut()
-                    ) {
-                        NavigationBar(containerColor = BreadboardTheme.colors.titleBar) {
-                            NavigationBarItem(
-                                label = { Text("Browse") },
-                                selected = currentRoute.routeIs(Home::class),
-                                icon = {
-                                    Icon(
-                                        painter = painterResource(if (currentRoute.routeIs(Home::class)) R.drawable.ic_home_filled else R.drawable.ic_home_hollow),
-                                        contentDescription = "Browse"
-                                    )
-                                },
-                                onClick = {
-                                    if (!currentRoute.routeIs(Home::class)) {
-                                        navController.navigate(Home) {
-                                            popUpTo(Home) { inclusive = true }
-                                        }
+        Scaffold(
+            bottomBar = {
+                AnimatedVisibility(
+                    visible = currentRoute.routeIs(topLevelScreens) && isNavigationBarVisible,
+                    enter = slideInVertically { it /3} + fadeIn(),
+                    exit = slideOutVertically { it/3 } + fadeOut()
+                ) {
+                    NavigationBar(containerColor = BreadboardTheme.colors.titleBar) {
+                        NavigationBarItem(
+                            label = { Text("Browse") },
+                            selected = currentRoute.routeIs(Home::class),
+                            icon = {
+                                Icon(
+                                    painter = painterResource(if (currentRoute.routeIs(Home::class)) R.drawable.ic_home_filled else R.drawable.ic_home_hollow),
+                                    contentDescription = "Browse"
+                                )
+                            },
+                            onClick = {
+                                if (!currentRoute.routeIs(Home::class)) {
+                                    navController.navigate(Home) {
+                                        popUpTo(Home) { inclusive = true }
                                     }
                                 }
-                            )
-                            NavigationBarItem(
-                                label = { Text("Search") },
-                                selected = currentRoute.routeIs(searchScreens),
-                                icon = {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Search,
-                                        contentDescription = "Search"
-                                    )
-                                },
-                                onClick = {
-                                    if (!currentRoute.routeIs(Search::class)) {
-                                        navController.navigate(Search) {
-                                            popUpTo(Search) { inclusive = true }
-                                        }
-                                    } else {
-                                        focusRequester.requestFocus()
-                                        keyboard?.show() /* Not technically necessary but allows the keyboard to appear
-                                                            again if the user taps away while the search bar is still
-                                                            focused */
+                            }
+                        )
+                        NavigationBarItem(
+                            label = { Text("Search") },
+                            selected = currentRoute.routeIs(searchScreens),
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Rounded.Search,
+                                    contentDescription = "Search"
+                                )
+                            },
+                            onClick = {
+                                if (!currentRoute.routeIs(Search::class)) {
+                                    navController.navigate(Search) {
+                                        popUpTo(Search) { inclusive = true }
+                                    }
+                                } else {
+                                    focusRequester.requestFocus()
+                                    keyboard?.show() /* Not technically necessary but allows the keyboard to appear
+                                                        again if the user taps away while the search bar is still
+                                                        focused */
+                                }
+                            }
+                        )
+                        NavigationBarItem(
+                            label = { Text("Favourites") },
+                            selected = currentRoute.routeIs(Favourites::class),
+                            icon = {
+                                Icon(
+                                    imageVector = if (currentRoute.routeIs(Favourites::class)) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                                    contentDescription = "Favourite images"
+                                )
+                            },
+                            onClick = {
+                                if (!currentRoute.routeIs(Favourites::class)) {
+                                    navController.navigate(Favourites) {
+                                        popUpTo(Favourites) { inclusive = true }
                                     }
                                 }
-                            )
-                            NavigationBarItem(
-                                label = { Text("Favourites") },
-                                selected = currentRoute.routeIs(Favourites::class),
-                                icon = {
-                                    Icon(
-                                        imageVector = if (currentRoute.routeIs(Favourites::class)) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                                        contentDescription = "Favourite images"
-                                    )
-                                },
-                                onClick = {
-                                    if (!currentRoute.routeIs(Favourites::class)) {
-                                        navController.navigate(Favourites) {
-                                            popUpTo(Favourites) { inclusive = true }
-                                        }
+                            }
+                        )
+                        NavigationBarItem(
+                            label = { Text("Settings") },
+                            selected = currentRoute.routeIs(settingsScreens),
+                            icon = {
+                                Icon(
+                                    painter = if (currentRoute.routeIs(settingsScreens)) rememberVectorPainter(Icons.Rounded.Settings) else painterResource(R.drawable.ic_settings_hollow),
+                                    contentDescription = "Settings"
+                                )
+                            },
+                            onClick = {
+                                if (currentRoute.routeIs(settingsScreens.filter { it != Settings::class })) {
+                                    navController.popBackStack()
+                                } else if (!currentRoute.routeIs(Settings::class)) {
+                                    navController.navigate(Settings) {
+                                        popUpTo(Settings) { inclusive = true }
                                     }
                                 }
-                            )
-                            NavigationBarItem(
-                                label = { Text("Settings") },
-                                selected = currentRoute.routeIs(settingsScreens),
-                                icon = {
-                                    Icon(
-                                        painter = if (currentRoute.routeIs(settingsScreens)) rememberVectorPainter(Icons.Rounded.Settings) else painterResource(R.drawable.ic_settings_hollow),
-                                        contentDescription = "Settings"
-                                    )
-                                },
-                                onClick = {
-                                    if (currentRoute.routeIs(settingsScreens.filter { it != Settings::class })) {
-                                        navController.popBackStack()
-                                    } else if (!currentRoute.routeIs(Settings::class)) {
-                                        navController.navigate(Settings) {
-                                            popUpTo(Settings) { inclusive = true }
-                                        }
-                                    }
-                                }
-                            )
-                        }
+                            }
+                        )
                     }
                 }
-            ) { paddingValues ->
-                NavHost(
-                    modifier = Modifier.padding(paddingValues.withoutVertical()),
-                    navController = navController,
-                    startDestination = startDestination,
-                    enterTransition = {
-                        if (targetState.destination.routeIs(slideTransitionScreens))
-                            enterTransition
-                        else fadeIn()
-                    },
-                    exitTransition = {
-                        if (targetState.destination.routeIs(slideTransitionScreens))
-                            exitTransition
-                        else fadeOut()
-                    },
-                    popEnterTransition = {
-                        if (initialState.destination.routeIs(slideTransitionScreens))
-                            popEnterTransition
-                        else fadeIn()
-                    },
-                    popExitTransition = {
-                        if (initialState.destination.routeIs(slideTransitionScreens))
-                            popExitTransition
-                        else fadeOut()
-                    }
-                ) {
-                    composable<ImageView> {
-                        val args = it.toRoute<ImageView>()
-                        LazyLargeImageView(navController, args.source, args.id, args.isMd5)
-                    }
-                    composable<Home> { HomeScreen(navController) { isNavigationBarVisible = it } }
-                    composable<Search> { SearchScreen(navController, focusRequester) }
-                    composable<Results> {
-                        val args = it.toRoute<Results>()
-                        SearchResults(navController, args.source, args.tags)
-                    }
-                    composable<Favourites> { FavouritesPage(navController) { isNavigationBarVisible = it } }
-                    composable<Settings> { PreferencesScreen(navController) }
-                    composable<BlockedTagsSettings> { BlockedTagsScreen(navController) }
-                    composable<LibrariesSettings> { LibrariesScreen(navController) }
-                    composable<AboutSettings> { AboutScreen(navController) }
-                    composable<ExperimentalSettings> { ExperimentalScreen(navController) }
-                    composable<RecommendationsSettings> { RecommendationsSettingsScreen(navController) }
-                    composable<IgnoredTagsSettings> { IgnoredTagsScreen(navController) }
-                    composable<ArtistProfile> {
-                        val args = it.toRoute<ArtistProfile>()
-                        ArtistProfileScreen(args.artistTag, navController = navController)
-                    }
+            }
+        ) { paddingValues ->
+            NavHost(
+                modifier = Modifier.padding(paddingValues.withoutVertical()),
+                navController = navController,
+                startDestination = startDestination,
+                enterTransition = {
+                    if (targetState.destination.routeIs(slideTransitionScreens))
+                        enterTransition
+                    else fadeIn()
+                },
+                exitTransition = {
+                    if (targetState.destination.routeIs(slideTransitionScreens))
+                        exitTransition
+                    else fadeOut()
+                },
+                popEnterTransition = {
+                    if (initialState.destination.routeIs(slideTransitionScreens))
+                        popEnterTransition
+                    else fadeIn()
+                },
+                popExitTransition = {
+                    if (initialState.destination.routeIs(slideTransitionScreens))
+                        popExitTransition
+                    else fadeOut()
+                }
+            ) {
+                composable<ImageView> {
+                    val args = it.toRoute<ImageView>()
+                    LazyLargeImageView(navController, args.source, args.id, args.isMd5)
+                }
+                composable<Home> { HomeScreen(navController) { isNavigationBarVisible = it } }
+                composable<Search> { SearchScreen(navController, focusRequester) }
+                composable<Results> {
+                    val args = it.toRoute<Results>()
+                    SearchResults(navController, args.source, args.tags)
+                }
+                composable<Favourites> { FavouritesPage(navController) { isNavigationBarVisible = it } }
+                composable<Settings> { PreferencesScreen(navController) }
+                composable<BlockedTagsSettings> { BlockedTagsScreen(navController) }
+                composable<LibrariesSettings> { LibrariesScreen(navController) }
+                composable<AboutSettings> { AboutScreen(navController) }
+                composable<ExperimentalSettings> { ExperimentalScreen(navController) }
+                composable<RecommendationsSettings> { RecommendationsSettingsScreen(navController) }
+                composable<IgnoredTagsSettings> { IgnoredTagsScreen(navController) }
+                composable<ArtistProfile> {
+                    val args = it.toRoute<ArtistProfile>()
+                    ArtistProfileScreen(args.artistTag, navController = navController)
                 }
             }
         }
