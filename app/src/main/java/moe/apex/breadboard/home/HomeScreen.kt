@@ -30,6 +30,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -54,6 +55,7 @@ import moe.apex.breadboard.preferences.Experiment
 import moe.apex.breadboard.preferences.ImageSource
 import moe.apex.breadboard.preferences.LocalPreferences
 import moe.apex.breadboard.largeimageview.OffsetBasedLargeImageView
+import moe.apex.breadboard.preferences.BrowseTab
 import moe.apex.breadboard.preferences.PreferenceKeys
 import moe.apex.breadboard.prefs
 import moe.apex.breadboard.tag.IgnoredTagsHelper
@@ -95,6 +97,7 @@ fun HomeScreen(
     val context = LocalContext.current
     val prefs = LocalPreferences.current
     val viewModel = getGlobalViewModel()
+    val defaultTab by viewModel.defaultBrowseTab.collectAsState()
     val recommendationsProvider by viewModel.recommendationsProvider.collectAsState()
     val followingProvider by viewModel.followingProvider.collectAsState()
     val blockedTags by rememberUpdatedState(prefs.blockedTags)
@@ -105,7 +108,19 @@ fun HomeScreen(
     var shouldShowLargeImage by remember { mutableStateOf(false) }
     var selectedImageIndex by remember { mutableIntStateOf(0) }
 
-    val pagerState = rememberPagerState { 2 }
+    val pagerState = rememberPagerState(
+        initialPage = defaultTab?.let { BrowseTab.entries.indexOf(it) } ?: run {
+            val t = prefs.defaultBrowseTab
+            viewModel.setDefaultBrowseTab(t)
+            BrowseTab.entries.indexOf(t)
+        },
+    ) {
+        BrowseTab.entries.size
+    }
+
+    SideEffect(pagerState.currentPage) {
+        viewModel.setDefaultBrowseTab(BrowseTab.entries[pagerState.currentPage])
+    }
 
     val blur = prefs.isExperimentEnabled(Experiment.IMMERSIVE_UI_EFFECTS)
 
@@ -116,7 +131,11 @@ fun HomeScreen(
                     title = "Breadboard",
                     additionalActions = {
                         val currentProvider =
-                            if (pagerState.currentPage == 0) recommendationsProvider else followingProvider
+                            if (pagerState.currentPage == BrowseTab.entries.indexOf(BrowseTab.FOR_YOU)) {
+                                recommendationsProvider
+                            } else {
+                                followingProvider
+                            }
                         currentProvider?.let {
                             ScrollToTopArrow(
                                 scrollableState = if (prefs.useStaggeredGrid) it.staggeredGridState else it.uniformGridState,
@@ -137,16 +156,13 @@ fun HomeScreen(
                         .padding(horizontal = SMALL_LARGE_SPACER.dp, vertical = TINY_SPACER.dp),
                     horizontalArrangement = Arrangement.spacedBy(SMALL_SPACER.dp)
                 ) {
-                    TagPageIndicator(
-                        label = "For You",
-                        selected = pagerState.currentPage == 0,
-                        onClick = { scope.launch { pagerState.animateScrollToPage(0) } }
-                    )
-                    TagPageIndicator(
-                        label = "Following",
-                        selected = pagerState.currentPage == 1,
-                        onClick = { scope.launch { pagerState.animateScrollToPage(1) } }
-                    )
+                    BrowseTab.entries.forEachIndexed { index, tab ->
+                        TagPageIndicator(
+                            label = tab.label,
+                            selected = pagerState.currentPage == index,
+                            onClick = { scope.launch { pagerState.animateScrollToPage(index) } }
+                        )
+                    }
                 }
             }
         },
@@ -204,6 +220,7 @@ fun HomeScreen(
 
         HorizontalPager(
             state = pagerState,
+            key = { BrowseTab.entries[it].name },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
@@ -211,7 +228,7 @@ fun HomeScreen(
             verticalAlignment = Alignment.Top,
             userScrollEnabled = !shouldShowLargeImage
         ) { page ->
-            if (page == 0) {
+            if (page == BrowseTab.entries.indexOf(BrowseTab.FOR_YOU)) {
                 recommendationsProvider?.let { provider ->
                     val state = if (prefs.useStaggeredGrid) {
                         provider.staggeredGridState
@@ -278,7 +295,7 @@ fun HomeScreen(
                         onEndReached = { provider.recommendImages() },
                     )
                 }
-            } else {
+            } else if (page == BrowseTab.entries.indexOf(BrowseTab.FOLLOWING)) {
                 followingProvider?.let { provider ->
                     val state = if (prefs.useStaggeredGrid) {
                         provider.staggeredGridState

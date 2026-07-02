@@ -17,6 +17,7 @@ import moe.apex.breadboard.util.FollowingProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
+import moe.apex.breadboard.preferences.BrowseTab
 
 
 object GlobalViewModelOwner : ViewModelStoreOwner {
@@ -46,6 +47,9 @@ class BreadboardViewModel : ViewModel() {
     private val _imageHdQualityOverrides = MutableStateFlow<Map<String, Boolean>>(emptyMap())
     val imageHdQualityOverrides: StateFlow<Map<String, Boolean>> = _imageHdQualityOverrides.asStateFlow()
 
+    private val _defaultBrowseTab = MutableStateFlow<BrowseTab?>(null)
+    val defaultBrowseTab: StateFlow<BrowseTab?> = _defaultBrowseTab.asStateFlow()
+
     fun setRecommendationsProvider(provider: RecommendationsProvider?) {
         _recommendationsProvider.value = provider
     }
@@ -65,6 +69,10 @@ class BreadboardViewModel : ViewModel() {
 
     fun setUserMutePreference(muted: Boolean) {
         _userMutePreference.value = muted
+    }
+
+    fun setDefaultBrowseTab(browseTab: BrowseTab) {
+        _defaultBrowseTab.value = browseTab
     }
 
     @Composable

@@ -98,6 +98,7 @@ data object PrefNames {
     const val AUTOPLAY_VIDEOS = "autoplay_videos"
     const val UNIFIED_INFO_SHEET = "unified_info_sheet"
     const val FOLLOWED_TAGS = "followed_tags"
+    const val DEFAULT_BROWSE_TAB = "default_browse_tab"
 }
 
 
@@ -132,6 +133,7 @@ object PreferenceKeys {
     val AUTOPLAY_VIDEOS = stringPreferencesKey(PrefNames.AUTOPLAY_VIDEOS)
     val UNIFIED_INFO_SHEET = booleanPreferencesKey(PrefNames.UNIFIED_INFO_SHEET)
     val FOLLOWED_TAGS = stringSetPreferencesKey(PrefNames.FOLLOWED_TAGS)
+    val DEFAULT_BROWSE_TAB = stringPreferencesKey(PrefNames.DEFAULT_BROWSE_TAB)
 }
 
 
@@ -185,6 +187,11 @@ enum class AutoplayVideosMode(override val label: String) : PrefEnum<AutoplayVid
     AUTO("When data saver is inactive")
 }
 
+enum class BrowseTab(override val label: String) : PrefEnum<BrowseTab> {
+    FOR_YOU("For You"),
+    FOLLOWING("Following")
+}
+
 enum class Experiment(override val label: String, val description: String? = null) : PrefEnum<Experiment> {
     ALWAYS_ANIMATE_SCROLL("Always animate scroll-to-top", "Enable smooth scrolling on all pages when using the scroll-to-top button."),
     IMMERSIVE_UI_EFFECTS("Immersive UI effects", "Enables immersive UI effects such as blur and translucency. Not all devices support this feature. Disable if you experience poor performance."),
@@ -229,7 +236,8 @@ data class Prefs(
     val internalIgnoreList: Set<String>,
     val autoplayVideos: AutoplayVideosMode,
     val unifiedInfoSheet: Boolean,
-    val followedTags: Set<String>
+    val followedTags: Set<String>,
+    val defaultBrowseTab: BrowseTab,
 ) {
     companion object {
         val DEFAULT = Prefs(
@@ -262,7 +270,8 @@ data class Prefs(
             internalIgnoreList = emptySet(),
             autoplayVideos = AutoplayVideosMode.OFF,
             unifiedInfoSheet = false, // Unified is called 'Classic' in the UI
-            followedTags = emptySet()
+            followedTags = emptySet(),
+            defaultBrowseTab = BrowseTab.FOR_YOU,
         )
     }
 
@@ -326,7 +335,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             PreferenceKeys.INTERNAL_IGNORE_LIST_TIMESTAMP to PrefMeta(PrefCategory.SETTING, exportable = false),
             PreferenceKeys.INTERNAL_IGNORE_LIST to PrefMeta(PrefCategory.SETTING, exportable = false),
             PreferenceKeys.UNIFIED_INFO_SHEET to PrefMeta(PrefCategory.SETTING),
-            PreferenceKeys.FOLLOWED_TAGS to PrefMeta(PrefCategory.SETTING, mergeable = true)
+            PreferenceKeys.FOLLOWED_TAGS to PrefMeta(PrefCategory.SETTING, mergeable = true),
+            PreferenceKeys.DEFAULT_BROWSE_TAB to PrefMeta(PrefCategory.SETTING)
         )
     }
 
@@ -825,6 +835,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val autoplayVideos = preferences[PreferenceKeys.AUTOPLAY_VIDEOS]?.let { AutoplayVideosMode.valueOf(it) } ?: Prefs.DEFAULT.autoplayVideos
         val unifiedInfoSheet = preferences[PreferenceKeys.UNIFIED_INFO_SHEET] ?: Prefs.DEFAULT.unifiedInfoSheet
         val followedTags = preferences[PreferenceKeys.FOLLOWED_TAGS] ?: Prefs.DEFAULT.followedTags
+        val defaultBrowseTab = preferences[PreferenceKeys.DEFAULT_BROWSE_TAB]?.let { BrowseTab.valueOf(it) } ?: Prefs.DEFAULT.defaultBrowseTab
 
         return Prefs(
             dataSaver,
@@ -857,6 +868,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             autoplayVideos,
             unifiedInfoSheet,
             followedTags,
+            defaultBrowseTab,
         )
     }
 }

@@ -468,6 +468,23 @@ fun PreferencesScreen(navController: NavHostController) {
                             }
                         }
                     }
+                    /* It's an enum so EnumPref would be the "correct" implementation,
+                       but I think this is a better UX as there are currently only two options. */
+                    item {
+                        SwitchPref(
+                            checked = currentSettings.defaultBrowseTab == BrowseTab.FOLLOWING,
+                            title = "Prefer Following tab",
+                            summary = "By default, open the Following tab instead of the For You " +
+                                      "tab on the Browse page.",
+                        ) { following ->
+                            scope.launch {
+                                preferencesRepository.updatePref(
+                                    PreferenceKeys.DEFAULT_BROWSE_TAB,
+                                    if (following) BrowseTab.FOLLOWING else BrowseTab.FOR_YOU
+                                )
+                            }
+                        }
+                    }
                     item {
                         EnumPref(
                             title = "Hide app content",
