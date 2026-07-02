@@ -97,16 +97,15 @@ fun HomeScreen(
             Column {
                 SmallTitleBar(
                     title = "Breadboard",
-                    scrollBehavior = scrollBehavior,
                     additionalActions = {
                         val currentProvider =
                             if (pagerState.currentPage == 0) recommendationsProvider else followingProvider
                         currentProvider?.let {
                             ScrollToTopArrow(
-                                staggeredGridState = it.staggeredGridState,
-                                uniformGridState = it.uniformGridState
+                                scrollableState = if (prefs.useStaggeredGrid) it.staggeredGridState else it.uniformGridState,
+                                animate = true
                             ) {
-                                scrollBehavior.state.contentOffset = 0f
+                                navBarVisibilityCallback(true)
                             }
                         }
                     },

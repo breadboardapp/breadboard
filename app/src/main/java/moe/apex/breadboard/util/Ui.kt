@@ -1,6 +1,5 @@
 package moe.apex.breadboard.util
 
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ClipData
 import android.content.Context
@@ -21,6 +20,7 @@ import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -1305,44 +1305,100 @@ object PullToRefreshControllerDefaults {
 
 /** A button that scrolls image grids back to the top.
 
-    Set [animate] to false to scroll immediately without animation. This option is mostly intended
-    to work around what I can only assume is a Compose bug whereby the scrolling animation is jumpy
-    when there is a full width item in the grid (like the filter). */
-@SuppressLint("FrequentlyChangingValue")
+Set [animate] to false to scroll immediately without animation. This option is mostly intended
+to work around what I can only assume is a Compose bug whereby the scrolling animation is jumpy
+when there is a full width item in the grid (like the filter). */
 @Composable
 fun ScrollToTopArrow(
-    staggeredGridState: LazyStaggeredGridState,
-    uniformGridState: LazyGridState,
+    scrollableState: ScrollableState,
     animate: Boolean = true,
     alsoOnClick: (() -> Unit)? = null
 ) {
-    val scope = rememberCoroutineScope()
-    val isScrolledPastFirst by remember(staggeredGridState, uniformGridState) {
-        derivedStateOf { staggeredGridState.firstVisibleItemIndex != 0 || uniformGridState.firstVisibleItemIndex != 0 }
+    if (scrollableState is LazyStaggeredGridState) {
+        ScrollToTopArrow(
+            lazyStaggeredGridState = scrollableState,
+            animate = animate,
+            alsoOnClick = alsoOnClick
+        )
+    } else if (scrollableState is LazyGridState) {
+        ScrollToTopArrow(
+            lazyGridState = scrollableState,
+            animate = animate,
+            alsoOnClick = alsoOnClick
+        )
+    } else {
+        throw NotImplementedError("Not implemented for non-grid scroll states.")
     }
+}
+
+
+@Composable
+private fun ScrollToTopArrow(
+    lazyGridState: LazyGridState,
+    animate: Boolean = true,
+    alsoOnClick: (() -> Unit)? = null
+) {
+    val isScrolledPastFirst by remember(lazyGridState) {
+        derivedStateOf { lazyGridState.firstVisibleItemIndex != 0 }
+    }
+
+    ScrollToTopArrow(
+        visible = isScrolledPastFirst,
+        onScrollToTop = {
+            if (animate) {
+                lazyGridState.animateScrollToItem(0)
+            } else {
+                lazyGridState.scrollToItem(0)
+            }
+        },
+        onClick = alsoOnClick
+    )
+}
+
+
+@Composable
+private fun ScrollToTopArrow(
+    lazyStaggeredGridState: LazyStaggeredGridState,
+    animate: Boolean = true,
+    alsoOnClick: (() -> Unit)? = null
+) {
+    val isScrolledPastFirst by remember(lazyStaggeredGridState) {
+        derivedStateOf { lazyStaggeredGridState.firstVisibleItemIndex != 0 }
+    }
+
+    ScrollToTopArrow(
+        visible = isScrolledPastFirst,
+        onScrollToTop = {
+            if (animate) {
+                lazyStaggeredGridState.animateScrollToItem(0)
+            } else {
+                lazyStaggeredGridState.scrollToItem(0)
+            }
+        },
+        onClick = alsoOnClick
+    )
+}
+
+
+@Composable
+private fun ScrollToTopArrow(
+    visible: Boolean,
+    onScrollToTop: suspend () -> Unit,
+    onClick: (() -> Unit)? = null
+) {
+    val scope = rememberCoroutineScope()
 
     AnimatedVisibility(
         enter = fadeIn(),
         exit = fadeOut(),
-        visible = isScrolledPastFirst
+        visible = visible
     ) {
         IconButton(
             onClick = {
                 scope.launch {
-                    if (animate) {
-                        staggeredGridState.animateScrollToItem(0)
-                    } else {
-                        staggeredGridState.scrollToItem(0)
-                    }
+                    onScrollToTop()
                 }
-                scope.launch {
-                    if (animate) {
-                        uniformGridState.animateScrollToItem(0)
-                    } else {
-                        uniformGridState.scrollToItem(0)
-                    }
-                }
-                alsoOnClick?.invoke()
+                onClick?.invoke()
             }
         ) {
             Icon(Icons.Rounded.KeyboardArrowUp, contentDescription = "Scroll to top")

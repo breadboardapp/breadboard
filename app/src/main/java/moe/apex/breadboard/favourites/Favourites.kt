@@ -124,8 +124,7 @@ fun FavouritesPage(
         blur = isImageCarouselVisible && blur,
         additionalActions = {
             ScrollToTopArrow(
-                staggeredGridState = viewModel.staggeredGridState,
-                uniformGridState = viewModel.uniformGridState,
+                scrollableState = if (prefs.useStaggeredGrid) viewModel.staggeredGridState else viewModel.uniformGridState,
                 animate = Experiment.ALWAYS_ANIMATE_SCROLL.isEnabled()
             ) {
                 navBarVisibilityCallback(true)

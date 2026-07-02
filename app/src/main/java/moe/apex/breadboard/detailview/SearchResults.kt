@@ -175,8 +175,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
                 additionalActions = {
                     if (doneInitialLoad) {
                         ScrollToTopArrow(
-                            staggeredGridState = viewModel.staggeredGridState,
-                            uniformGridState = viewModel.uniformGridState,
+                            scrollableState = if (prefs.useStaggeredGrid) viewModel.staggeredGridState else viewModel.uniformGridState,
                             animate = !filterLocally || Experiment.ALWAYS_ANIMATE_SCROLL.isEnabled(),
                         )
                     }
