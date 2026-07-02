@@ -17,7 +17,7 @@ object RequestUtil {
 
     suspend fun get(url: String, apply: Request.Builder.() -> Unit = {}): String = withContext(Dispatchers.IO) {
         val req = Request.Builder().url(url).apply(apply).get().build()
-        
+
         suspendCancellableCoroutine { continuation ->
             val call = client.newCall(req)
 
@@ -35,8 +35,12 @@ object RequestUtil {
                 override fun onResponse(call: Call, response: Response) {
                     if (continuation.isActive) {
                         response.use {
-                            val body = it.body.string()
-                            continuation.resume(body)
+                            if (it.isSuccessful) {
+                                val body = it.body.string()
+                                continuation.resume(body)
+                            } else {
+                                onFailure(call, IOException("HTTP error code: ${it.code}"))
+                            }
                         }
                     }
                 }

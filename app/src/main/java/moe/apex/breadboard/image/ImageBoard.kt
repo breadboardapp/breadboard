@@ -423,7 +423,6 @@ object Danbooru : ImageBoard {
     override val localFilterType = ImageBoardRequirement.RECOMMENDED
 
     private val artistSearchUrl = "${baseUrl}artists.json?only=name,urls,other_names,tag&search[any_name_matches]=%s"
-    private val sfwUrl = "https://safebooru.donmai.us/posts.json?tags=%s&limit=20"
 
     override fun parseImage(e: JSONObject): Image? {
         if (e.isNull("md5")) return null
@@ -537,22 +536,6 @@ object Danbooru : ImageBoard {
         )
     }
 
-    suspend fun getMostPopularSfwPosts(artistTag: String): List<Image> {
-        val url = sfwUrl.format("$artistTag order:favcount")
-        val body = RequestUtil.get(url)
-        if (body.isEmpty()) return emptyList()
-
-        val json = JSONArray(body)
-        val subjects = mutableListOf<Image>()
-
-        for (i in 0 until json.length()) {
-            val e = json.getJSONObject(i)
-            parseImage(e)?.let { subjects.add(it) }
-        }
-
-        return subjects.toList()
-    }
-
 
     override fun getRatingFromString(rating: String): ImageRating {
         return when (rating) {
@@ -562,6 +545,61 @@ object Danbooru : ImageBoard {
             "e" -> ImageRating.EXPLICIT
             else -> ImageRating.UNKNOWN
         }
+    }
+}
+
+
+object DanbooruSafe : ImageBoard by Danbooru {
+    override val baseUrl = "https://safebooru.donmai.us/"
+    override val autoCompleteSearchUrl = "${baseUrl}autocomplete.json?search[query]=%s&search[type]=tag_query&limit=10"
+    override val imageSearchUrl = "${baseUrl}posts.json?tags=%s&page=%d&limit=100"
+    override val authenticatedImageSearchUrl = "$imageSearchUrl&api_key=%s&login=%s"
+
+    private val popularUrl = "${baseUrl}posts.json?tags=%s order:favcount&limit=20"
+
+    override fun buildImageSearchUrl(tags: String, page: Int, auth: ImageBoardAuth?): String {
+        val encodedTags = URLEncoder.encode(tags, "utf-8")
+
+        val url = if (auth != null) {
+            authenticatedImageSearchUrl.format(encodedTags, page, auth.apiKey, auth.user)
+        } else {
+            imageSearchUrl.format(encodedTags, page)
+        }
+        return url
+    }
+
+
+    override suspend fun loadPage(tags: String, page: Int, auth: ImageBoardAuth?): List<Image> {
+        val url = buildImageSearchUrl(tags, page, auth)
+        val body = RequestUtil.get(url)
+        if (body.isEmpty()) return emptyList()
+
+        val json = JSONArray(body)
+        val subjects = mutableListOf<Image>()
+
+        for (i in 0 until json.length()) {
+            val e = json.getJSONObject(i)
+            Danbooru.parseImage(e)?.let { subjects.add(it) }
+        }
+
+        return subjects.toList()
+    }
+
+
+    suspend fun getMostPopularPosts(artistTag: String): List<Image> {
+        val url = popularUrl.format(artistTag)
+        val body = RequestUtil.get(url)
+        if (body.isEmpty()) return emptyList()
+
+        val json = JSONArray(body)
+        val subjects = mutableListOf<Image>()
+
+        for (i in 0 until json.length()) {
+            val e = json.getJSONObject(i)
+            Danbooru.parseImage(e)?.let { subjects.add(it) }
+        }
+
+        return subjects.toList()
     }
 }
 

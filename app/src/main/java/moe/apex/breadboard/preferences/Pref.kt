@@ -97,6 +97,7 @@ data object PrefNames {
     const val INTERNAL_IGNORE_LIST = "internal_ignore_list"
     const val AUTOPLAY_VIDEOS = "autoplay_videos"
     const val UNIFIED_INFO_SHEET = "unified_info_sheet"
+    const val FOLLOWED_TAGS = "followed_tags"
 }
 
 
@@ -130,6 +131,7 @@ object PreferenceKeys {
     val INTERNAL_IGNORE_LIST = stringSetPreferencesKey(PrefNames.INTERNAL_IGNORE_LIST)
     val AUTOPLAY_VIDEOS = stringPreferencesKey(PrefNames.AUTOPLAY_VIDEOS)
     val UNIFIED_INFO_SHEET = booleanPreferencesKey(PrefNames.UNIFIED_INFO_SHEET)
+    val FOLLOWED_TAGS = stringSetPreferencesKey(PrefNames.FOLLOWED_TAGS)
 }
 
 
@@ -226,7 +228,8 @@ data class Prefs(
     val internalIgnoreListTimestamp: Long,
     val internalIgnoreList: Set<String>,
     val autoplayVideos: AutoplayVideosMode,
-    val unifiedInfoSheet: Boolean
+    val unifiedInfoSheet: Boolean,
+    val followedTags: Set<String>
 ) {
     companion object {
         val DEFAULT = Prefs(
@@ -259,6 +262,7 @@ data class Prefs(
             internalIgnoreList = emptySet(),
             autoplayVideos = AutoplayVideosMode.OFF,
             unifiedInfoSheet = false, // Unified is called 'Classic' in the UI
+            followedTags = emptySet()
         )
     }
 
@@ -321,7 +325,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             PreferenceKeys.RECOMMENDATIONS_POOL_SIZE to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.INTERNAL_IGNORE_LIST_TIMESTAMP to PrefMeta(PrefCategory.SETTING, exportable = false),
             PreferenceKeys.INTERNAL_IGNORE_LIST to PrefMeta(PrefCategory.SETTING, exportable = false),
-            PreferenceKeys.UNIFIED_INFO_SHEET to PrefMeta(PrefCategory.SETTING)
+            PreferenceKeys.UNIFIED_INFO_SHEET to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.FOLLOWED_TAGS to PrefMeta(PrefCategory.SETTING, mergeable = true)
         )
     }
 
@@ -819,6 +824,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val internalIgnoreList = preferences[PreferenceKeys.INTERNAL_IGNORE_LIST] ?: Prefs.DEFAULT.internalIgnoreList
         val autoplayVideos = preferences[PreferenceKeys.AUTOPLAY_VIDEOS]?.let { AutoplayVideosMode.valueOf(it) } ?: Prefs.DEFAULT.autoplayVideos
         val unifiedInfoSheet = preferences[PreferenceKeys.UNIFIED_INFO_SHEET] ?: Prefs.DEFAULT.unifiedInfoSheet
+        val followedTags = preferences[PreferenceKeys.FOLLOWED_TAGS] ?: Prefs.DEFAULT.followedTags
 
         return Prefs(
             dataSaver,
@@ -849,7 +855,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             internalIgnoreListTimestamp,
             internalIgnoreList,
             autoplayVideos,
-            unifiedInfoSheet
+            unifiedInfoSheet,
+            followedTags,
         )
     }
 }

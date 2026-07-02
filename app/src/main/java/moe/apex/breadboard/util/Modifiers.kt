@@ -1,28 +1,16 @@
 package moe.apex.breadboard.util
 
-import androidx.compose.foundation.lazy.grid.LazyGridState
-import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
+import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 
 
 @Composable
-fun Modifier.onScroll(gridState: LazyStaggeredGridState, callback: (LazyStaggeredGridState) -> Unit): Modifier {
-    LaunchedEffect(gridState.isScrollInProgress, gridState.lastScrolledForward) {
-        if (gridState.isScrollInProgress) {
-            callback(gridState)
-        }
-    }
-    return this
-}
-
-
-@Composable
-fun Modifier.onScroll(gridState: LazyGridState, callback: (LazyGridState) -> Unit): Modifier {
-    LaunchedEffect(gridState.isScrollInProgress, gridState.lastScrolledForward) {
-        if (gridState.isScrollInProgress) {
-            callback(gridState)
+fun Modifier.onScroll(scrollableState: ScrollableState, callback: (ScrollableState) -> Unit): Modifier {
+    LaunchedEffect(scrollableState.isScrollInProgress, scrollableState.lastScrolledForward) {
+        if (scrollableState.isScrollInProgress) {
+            callback(scrollableState)
         }
     }
     return this

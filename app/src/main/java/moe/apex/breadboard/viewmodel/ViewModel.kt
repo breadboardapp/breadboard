@@ -13,6 +13,7 @@ import moe.apex.breadboard.image.Image
 import moe.apex.breadboard.preferences.DataSaver
 import moe.apex.breadboard.tag.TagSuggestion
 import moe.apex.breadboard.util.RecommendationsProvider
+import moe.apex.breadboard.util.FollowingProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -30,6 +31,9 @@ class BreadboardViewModel : ViewModel() {
     private val _recommendationsProvider = MutableStateFlow<RecommendationsProvider?>(null)
     val recommendationsProvider: StateFlow<RecommendationsProvider?> = _recommendationsProvider.asStateFlow()
 
+    private val _followingProvider = MutableStateFlow<FollowingProvider?>(null)
+    val followingProvider: StateFlow<FollowingProvider?> = _followingProvider.asStateFlow()
+
     private val _downloadingImages = MutableStateFlow<Set<Image>>(emptySet())
     val downloadingImages: StateFlow<Set<Image>> = _downloadingImages.asStateFlow()
 
@@ -44,6 +48,15 @@ class BreadboardViewModel : ViewModel() {
 
     fun setRecommendationsProvider(provider: RecommendationsProvider?) {
         _recommendationsProvider.value = provider
+    }
+
+    fun setFollowingProvider(provider: FollowingProvider?) {
+        _followingProvider.value = provider
+    }
+
+    fun resetProviders() {
+        _recommendationsProvider.value = null
+        _followingProvider.value = null
     }
 
     fun setIncognito(value: Boolean) {

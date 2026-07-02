@@ -121,7 +121,7 @@ fun PreferencesScreen(navController: NavHostController) {
                 )
             }
             showAuthDialog = false
-            viewModel.setRecommendationsProvider(null)
+            viewModel.resetProviders()
         }
     }
 
@@ -401,7 +401,7 @@ fun PreferencesScreen(navController: NavHostController) {
                                     it
                                 )
                             }
-                            viewModel.setRecommendationsProvider(null)
+                            viewModel.resetProviders()
                         }
                     }
                     item {

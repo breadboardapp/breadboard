@@ -230,8 +230,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
             } } else null,
             pullToRefreshController = pullToRefreshController,
             doneInitialLoad = doneInitialLoad,
-            onEndReached = viewModel::loadMore,
-            noImagesContent = { if (doneInitialLoad) { NoImages() } }
+            onEndReached = viewModel::loadMore
         )
     }
 

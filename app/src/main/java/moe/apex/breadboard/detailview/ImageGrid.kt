@@ -32,6 +32,8 @@ import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -82,6 +84,34 @@ class ImageGridHeaderScopeImpl : ImageGridHeaderScope {
 }
 
 
+object FlexibleImageGridDefaults {
+    @Composable
+    fun WideLoadingIndicator() = WideLinearWavyProgressIndicator(modifier = Modifier.fillMaxWidth())
+
+
+    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+    @Composable
+    fun RoundLoadingIndicator() {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center
+        ) {
+            LoadingIndicator()
+        }
+    }
+
+
+    @Composable
+    fun NoImages() {
+        Text(
+            text = "No images :(",
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+
 @Composable
 private fun ImageGridPullToRefreshContainer(
     modifier: Modifier = Modifier,
@@ -97,6 +127,7 @@ private fun ImageGridPullToRefreshContainer(
             indicator = {
                 pullToRefreshController.indicator(this, pullToRefreshController)
             },
+            enabled = pullToRefreshController.enabled,
             content = { content() }
         )
     } else {
@@ -106,24 +137,25 @@ private fun ImageGridPullToRefreshContainer(
 
 
 @Composable
-private fun InitialLoadingIndicator(
+private fun LoadingIndicatorContainer(
     modifier: Modifier = Modifier,
     doneInitialLoad: Boolean,
     contentPadding: PaddingValues,
-    onInitialLoadCompleted: suspend () -> Unit
+    onInitialLoadCompleted: suspend () -> Unit,
+    content: @Composable () -> Unit
 ) {
-    AnimatedVisibility (
+    AnimatedVisibility(
         visible = !doneInitialLoad,
         enter = EnterTransition.None,
         exit = fadeOut(),
     ) {
         Box(
-            Modifier
+            modifier
                 .fillMaxSize()
                 .padding(contentPadding)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            WideLinearWavyProgressIndicator(modifier = modifier.fillMaxWidth())
+            content()
         }
 
         LaunchedEffect(doneInitialLoad) {
@@ -139,18 +171,21 @@ private fun InitialLoadingIndicator(
 fun FlexibleImageGrid(
     staggered: Boolean,
     modifier: Modifier = Modifier,
+    userScrollEnabled: Boolean = true,
     images: List<Image>,
     onImageClick: (Int, Image) -> Unit,
-    noImagesContent: @Composable () -> Unit = { NoImages() },
+    noImagesContent: @Composable () -> Unit = FlexibleImageGridDefaults::NoImages,
     contentPadding: PaddingValues = PaddingValues(0.dp),
     headerItems: (ImageGridHeaderScope.() -> Unit)? = null,
     pullToRefreshController: PullToRefreshController? = null,
     doneInitialLoad: Boolean = true,
+    loadingIndicator: @Composable () -> Unit = FlexibleImageGridDefaults::WideLoadingIndicator,
     onEndReached: (suspend () -> Unit)? = null
 ) {
     FlexibleImageGrid(
         gridState = if (staggered) rememberLazyStaggeredGridState() else rememberLazyGridState(),
         modifier = modifier,
+        userScrollEnabled = userScrollEnabled,
         images = images,
         onImageClick = onImageClick,
         noImagesContent = noImagesContent,
@@ -158,6 +193,7 @@ fun FlexibleImageGrid(
         headerItems = headerItems,
         pullToRefreshController = pullToRefreshController,
         doneInitialLoad = doneInitialLoad,
+        loadingIndicator = loadingIndicator,
         onEndReached = onEndReached
     )
 }
@@ -167,13 +203,15 @@ fun FlexibleImageGrid(
 fun FlexibleImageGrid(
     gridState: ScrollableState,
     modifier: Modifier = Modifier,
+    userScrollEnabled: Boolean = true,
     images: List<Image>,
     onImageClick: (Int, Image) -> Unit,
-    noImagesContent: @Composable () -> Unit = { NoImages() },
+    noImagesContent: @Composable () -> Unit = FlexibleImageGridDefaults::NoImages,
     contentPadding: PaddingValues = PaddingValues(0.dp),
     headerItems: (ImageGridHeaderScope.() -> Unit)? = null,
     pullToRefreshController: PullToRefreshController? = null,
     doneInitialLoad: Boolean = true,
+    loadingIndicator: @Composable () -> Unit = FlexibleImageGridDefaults::WideLoadingIndicator,
     onEndReached: (suspend () -> Unit)? = null
 ) {
     val scope = ImageGridHeaderScopeImpl()
@@ -183,30 +221,32 @@ fun FlexibleImageGrid(
 
     when (gridState) {
         is LazyStaggeredGridState -> {
-            ImageGridPullToRefreshContainer(
-                modifier = modifier,
-                pullToRefreshController = pullToRefreshController
-            ) {
-                StaggeredImageGrid(
-                    modifier = if (pullToRefreshController == null) modifier else Modifier,
-                    gridState = gridState,
+            Box {
+                ImageGridPullToRefreshContainer(
+                    modifier = modifier,
+                    pullToRefreshController = pullToRefreshController
+                ) {
+                    StaggeredImageGrid(
+                        modifier = if (pullToRefreshController == null) modifier else Modifier,
+                        userScrollEnabled = userScrollEnabled,
+                        gridState = gridState,
+                        contentPadding = contentPadding,
+                        headerItems = scope.items,
+                        images = images,
+                        noImagesContent = noImagesContent,
+                        onImageClick = onImageClick,
+                        onEndReached = onEndReached
+                    )
+                }
+
+                LoadingIndicatorContainer(
+                    modifier = modifier,
+                    doneInitialLoad = doneInitialLoad,
                     contentPadding = contentPadding,
-                    headerItems = scope.items,
-                    images = images,
-                    noImagesContent = noImagesContent,
-                    onImageClick = onImageClick,
-                    onEndReached = onEndReached
+                    onInitialLoadCompleted = { gridState.requestScrollToItem(0) },
+                    content = loadingIndicator
                 )
             }
-
-            InitialLoadingIndicator(
-                modifier = modifier,
-                doneInitialLoad = doneInitialLoad,
-                contentPadding = contentPadding,
-                onInitialLoadCompleted = {
-                    gridState.requestScrollToItem(0)
-                }
-            )
         }
 
         is LazyGridState -> {
@@ -214,26 +254,28 @@ fun FlexibleImageGrid(
                 modifier = modifier,
                 pullToRefreshController = pullToRefreshController
             ) {
-                UniformImageGrid(
-                    modifier = if (pullToRefreshController == null) modifier else Modifier,
-                    gridState = gridState,
-                    contentPadding = contentPadding,
-                    headerItems = scope.items,
-                    images = images,
-                    noImagesContent = noImagesContent,
-                    onImageClick = onImageClick,
-                    onEndReached = onEndReached
-                )
-            }
+                Box {
+                    UniformImageGrid(
+                        modifier = if (pullToRefreshController == null) modifier else Modifier,
+                        userScrollEnabled = userScrollEnabled,
+                        gridState = gridState,
+                        contentPadding = contentPadding,
+                        headerItems = scope.items,
+                        images = images,
+                        noImagesContent = noImagesContent,
+                        onImageClick = onImageClick,
+                        onEndReached = onEndReached
+                    )
 
-            InitialLoadingIndicator(
-                modifier = modifier,
-                doneInitialLoad = doneInitialLoad,
-                contentPadding = contentPadding,
-                onInitialLoadCompleted = {
-                    gridState.scrollToItem(0)
+                    LoadingIndicatorContainer(
+                        modifier = modifier,
+                        doneInitialLoad = doneInitialLoad,
+                        contentPadding = contentPadding,
+                        onInitialLoadCompleted = { gridState.scrollToItem(0) },
+                        content = loadingIndicator
+                    )
                 }
-            )
+            }
         }
 
         else -> {
@@ -244,7 +286,8 @@ fun FlexibleImageGrid(
 
 
 @Deprecated(
-    message = "Use FlexibleImageGrid, which allows for passing in multiple header items, instead.",
+    message = "Use FlexibleImageGrid, which allows for passing in multiple header items, " +
+              "custom loading indicators, and controlling whether user scroll is allowed, instead.",
     replaceWith = ReplaceWith("FlexibleImageGrid")
 )
 @Composable
@@ -254,7 +297,7 @@ fun ImageGrid(
     uniformGridState: LazyGridState = rememberLazyGridState(),
     images: List<Image>,
     onImageClick: (Int, Image) -> Unit,
-    noImagesContent: @Composable () -> Unit = { NoImages() },
+    noImagesContent: @Composable () -> Unit = FlexibleImageGridDefaults::NoImages,
     contentPadding: PaddingValues = PaddingValues(0.dp),
     filterComposable: (@Composable () -> Unit)? = null,
     pullToRefreshController: PullToRefreshController? = null,
@@ -281,6 +324,7 @@ fun ImageGrid(
 @Composable
 private fun StaggeredImageGrid(
     modifier: Modifier = Modifier,
+    userScrollEnabled: Boolean = true,
     gridState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
     contentPadding: PaddingValues,
     headerItems: (List<@Composable () -> Unit>)? = null,
@@ -297,7 +341,8 @@ private fun StaggeredImageGrid(
         modifier = modifier,
         contentPadding = contentPadding,
         horizontalArrangement = Arrangement.spacedBy(SMALL_SPACER.dp),
-        verticalItemSpacing = SMALL_SPACER.dp
+        verticalItemSpacing = SMALL_SPACER.dp,
+        userScrollEnabled = userScrollEnabled
     ) {
         headerItems?.forEachIndexed { index, element ->
             item(key = "header-$index", span = StaggeredGridItemSpan.FullLine) {
@@ -335,6 +380,7 @@ private fun StaggeredImageGrid(
 @Composable
 private fun UniformImageGrid(
     modifier: Modifier = Modifier,
+    userScrollEnabled: Boolean = true,
     gridState: LazyGridState = rememberLazyGridState(),
     contentPadding: PaddingValues,
     headerItems: List<@Composable () -> Unit>? = null,
@@ -351,7 +397,8 @@ private fun UniformImageGrid(
         modifier = modifier,
         contentPadding = contentPadding,
         horizontalArrangement = Arrangement.spacedBy(SMALL_SPACER.dp),
-        verticalArrangement = Arrangement.spacedBy(SMALL_SPACER.dp)
+        verticalArrangement = Arrangement.spacedBy(SMALL_SPACER.dp),
+        userScrollEnabled = userScrollEnabled
     ) {
         headerItems?.forEachIndexed { index, element ->
             item(key = "header-$index", span = { GridItemSpan(maxLineSpan) }) {
@@ -383,16 +430,6 @@ private fun UniformImageGrid(
             NavBarHeightVerticalSpacer()
         }
     }
-}
-
-
-@Composable
-fun NoImages() {
-    Text(
-        text = "No images :(",
-        textAlign = TextAlign.Center,
-        modifier = Modifier.fillMaxWidth()
-    )
 }
 
 

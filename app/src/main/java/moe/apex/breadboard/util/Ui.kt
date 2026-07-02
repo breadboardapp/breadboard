@@ -89,6 +89,7 @@ import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarColors
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.VerticalDivider
@@ -268,15 +269,16 @@ fun SmallTitleBar(
     title: String,
     scrollBehavior: TopAppBarScrollBehavior? = null,
     navController: NavController? = null,
+    colors: TopAppBarColors = TopAppBarDefaults.topAppBarColors(
+        scrolledContainerColor = BreadboardTheme.colors.titleBar
+    ),
     additionalActions: @Composable RowScope.() -> Unit = { }
 ) {
     TopAppBar(
         title = { Text(title) },
         scrollBehavior = scrollBehavior,
         actions = additionalActions,
-        colors = TopAppBarDefaults.topAppBarColors(
-            scrolledContainerColor = BreadboardTheme.colors.titleBar
-        ),
+        colors = colors,
         navigationIcon = { NavigationIcon(navController) },
         windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Vertical)
     )
@@ -1212,11 +1214,16 @@ fun CombinedClickableAction(
 }
 
 
-data class PullToRefreshController(
+class PullToRefreshController(
+    enabled: Boolean,
     val state: PullToRefreshState,
-    val indicator: @Composable BoxScope.(PullToRefreshController) -> Unit,
-    private val refreshCallback: suspend () -> Unit
+    indicator: @Composable BoxScope.(PullToRefreshController) -> Unit,
+    refreshCallback: suspend () -> Unit
 ) {
+    var enabled by mutableStateOf(enabled)
+    var indicator by mutableStateOf(indicator)
+    internal var refreshCallback by mutableStateOf(refreshCallback)
+
     /* We are using the main thread because this is the thread that animations must run on.
        In this case it's for showing/hiding the indicator.
        We'll explicitly use the IO thread when doing the callback. */
@@ -1260,15 +1267,23 @@ fun rememberPullToRefreshController(
             controller = it
         )
     },
+    enabled: Boolean = true,
     onRefresh: suspend () -> Unit = { }
 ): PullToRefreshController {
-    return remember {
+    val controller = remember(state) {
         PullToRefreshController(
+            enabled = enabled,
             state = state,
             indicator = indicator,
             refreshCallback = onRefresh
         )
     }
+
+    controller.enabled = enabled
+    controller.refreshCallback = onRefresh
+    controller.indicator = indicator
+
+    return controller
 }
 
 

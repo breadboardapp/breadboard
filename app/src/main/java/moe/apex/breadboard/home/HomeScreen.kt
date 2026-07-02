@@ -1,17 +1,26 @@
 package moe.apex.breadboard.home
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
@@ -33,17 +42,23 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import moe.apex.breadboard.detailview.ImageGrid
+import moe.apex.breadboard.detailview.FlexibleImageGrid
+import moe.apex.breadboard.detailview.FlexibleImageGridDefaults
 import moe.apex.breadboard.preferences.Experiment
+import moe.apex.breadboard.preferences.ImageSource
 import moe.apex.breadboard.preferences.LocalPreferences
 import moe.apex.breadboard.largeimageview.OffsetBasedLargeImageView
 import moe.apex.breadboard.tag.IgnoredTagsHelper
+import moe.apex.breadboard.ui.theme.BreadboardTheme
+import moe.apex.breadboard.util.FollowingProvider
+import moe.apex.breadboard.util.FullscreenLoadingSpinner
 import moe.apex.breadboard.util.MainScreenScaffold
 import moe.apex.breadboard.util.RecommendationsProvider
 import moe.apex.breadboard.util.SMALL_LARGE_SPACER
 import moe.apex.breadboard.util.SMALL_SPACER
 import moe.apex.breadboard.util.ScrollToTopArrow
-import moe.apex.breadboard.util.WideLinearWavyProgressIndicator
+import moe.apex.breadboard.util.SmallTitleBar
+import moe.apex.breadboard.util.TINY_SPACER
 import moe.apex.breadboard.util.bottomAppBarAndNavBarHeight
 import moe.apex.breadboard.util.differenceOlderThan
 import moe.apex.breadboard.util.onScroll
@@ -64,6 +79,7 @@ fun HomeScreen(
     val prefs = LocalPreferences.current
     val viewModel = getGlobalViewModel()
     val recommendationsProvider by viewModel.recommendationsProvider.collectAsState()
+    val followingProvider by viewModel.followingProvider.collectAsState()
     val blockedTags by rememberUpdatedState(prefs.blockedTags)
     val unfollowedTags by rememberUpdatedState(prefs.unfollowedTags)
     val builtInIgnoredTags by rememberUpdatedState(prefs.internalIgnoreList)
@@ -72,37 +88,54 @@ fun HomeScreen(
     var shouldShowLargeImage by remember { mutableStateOf(false) }
     var selectedImageIndex by remember { mutableIntStateOf(0) }
 
+    val pagerState = rememberPagerState { 2 }
+
     val blur = prefs.isExperimentEnabled(Experiment.IMMERSIVE_UI_EFFECTS)
 
-    val _onRefresh: suspend () -> Unit = {
-        recommendationsProvider?.let {
-            it.replaceBlockedTags(blockedTags)
-            it.replaceUnfollowedTags(unfollowedTags + builtInIgnoredTags)
-            it.prepareRecommendedTags()
-            it.recommendImages()
-            it.resetGridStates()
-        }
-    }
-    val onRefresh by rememberUpdatedState(_onRefresh)
-
-    val pullToRefreshController = rememberPullToRefreshController(onRefresh = onRefresh)
-
     MainScreenScaffold(
-        title = "Breadboard",
-        largeTopBar = false,
-        scrollBehavior = scrollBehavior,
-        addBottomPadding = false,
-        blur = shouldShowLargeImage && blur,
-        additionalActions = {
-            recommendationsProvider?.let {
-                ScrollToTopArrow(
-                    staggeredGridState = it.staggeredGridState,
-                    uniformGridState = it.uniformGridState
+        topAppBar = {
+            Column {
+                SmallTitleBar(
+                    title = "Breadboard",
+                    scrollBehavior = scrollBehavior,
+                    additionalActions = {
+                        val currentProvider =
+                            if (pagerState.currentPage == 0) recommendationsProvider else followingProvider
+                        currentProvider?.let {
+                            ScrollToTopArrow(
+                                staggeredGridState = it.staggeredGridState,
+                                uniformGridState = it.uniformGridState
+                            ) {
+                                scrollBehavior.state.contentOffset = 0f
+                            }
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = BreadboardTheme.colors.titleBar,
+                        scrolledContainerColor = BreadboardTheme.colors.titleBar
+                    )
+                )
+                Row(
+                    modifier = Modifier
+                        .background(color = BreadboardTheme.colors.titleBar)
+                        .padding(horizontal = SMALL_LARGE_SPACER.dp, vertical = TINY_SPACER.dp),
+                    horizontalArrangement = Arrangement.spacedBy(SMALL_SPACER.dp)
                 ) {
-                    scrollBehavior.state.contentOffset = 0f
+                    TagPageIndicator(
+                        label = "For You",
+                        selected = pagerState.currentPage == 0,
+                        onClick = { scope.launch { pagerState.animateScrollToPage(0) } }
+                    )
+                    TagPageIndicator(
+                        label = "Following",
+                        selected = pagerState.currentPage == 1,
+                        onClick = { scope.launch { pagerState.animateScrollToPage(1) } }
+                    )
                 }
             }
-        }
+        },
+        addBottomPadding = false,
+        blur = shouldShowLargeImage && blur,
     ) { padding ->
         LaunchedEffect(Unit) {
             if (differenceOlderThan(7.days, prefs.internalIgnoreListTimestamp)) {
@@ -121,12 +154,7 @@ fun HomeScreen(
         }
 
         if (builtInIgnoredTags.isEmpty()) {
-            WideLinearWavyProgressIndicator(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(padding)
-                    .padding(SMALL_LARGE_SPACER.dp)
-            )
+            FullscreenLoadingSpinner()
         } else {
             if (recommendationsProvider == null) {
                 LaunchedEffect(Unit) {
@@ -145,62 +173,174 @@ fun HomeScreen(
                     viewModel.setRecommendationsProvider(newProvider)
                 }
             }
+            if (followingProvider == null) {
+                LaunchedEffect(Unit) {
+                    val newProvider = FollowingProvider(
+                        followedArtists = prefs.followedTags,
+                        auth = prefs.authFor(ImageSource.DANBOORU, context),
+                        showAllRatings = prefs.recommendAllRatings
+                    )
+                    viewModel.setFollowingProvider(newProvider)
+                }
+            }
         }
 
-        recommendationsProvider?.let { provider ->
-            ImageGrid(
-                modifier = Modifier
-                    .padding(padding)
-                    .nestedScroll(scrollBehavior.nestedScrollConnection)
-                    .onScroll(provider.staggeredGridState) {
-                        navBarVisibilityCallback(!it.lastScrolledForward)
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+            beyondViewportPageCount = 1,
+            verticalAlignment = Alignment.Top,
+            userScrollEnabled = !shouldShowLargeImage
+        ) { page ->
+            if (page == 0) {
+                recommendationsProvider?.let { provider ->
+                    val state = if (prefs.useStaggeredGrid) {
+                        provider.staggeredGridState
+                    } else {
+                        provider.uniformGridState
                     }
-                    .onScroll(provider.uniformGridState) {
-                        navBarVisibilityCallback(!it.lastScrolledForward)
-                    },
-                staggeredGridState = provider.staggeredGridState,
-                uniformGridState = provider.uniformGridState,
-                images = provider.recommendedImages,
-                noImagesContent = {
-                    if (!provider.doneInitialLoad) {
-                        return@ImageGrid
-                    }
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text("No recommendations right now.")
-                        TextButton(
-                            onClick = {
-                                pullToRefreshController.refresh(animate = true)
-                            }
-                        ) {
-                            Icon(Icons.Rounded.Refresh, contentDescription = null)
-                            Spacer(Modifier.width(SMALL_SPACER.dp))
-                            Text("Refresh")
+
+                    val onRefresh: suspend () -> Unit by rememberUpdatedState {
+                        provider.let {
+                            it.replaceBlockedTags(blockedTags)
+                            it.replaceUnfollowedTags(unfollowedTags + builtInIgnoredTags)
+                            it.prepareRecommendedTags()
+                            it.recommendImages()
+                            it.resetGridStates()
                         }
                     }
-                },
-                onImageClick = { index, _ ->
-                    Snapshot.withMutableSnapshot {
-                        selectedImageIndex = index
-                        shouldShowLargeImage = true
+
+                    val ptrController = rememberPullToRefreshController(
+                        enabled = provider.doneInitialLoad,
+                        onRefresh = onRefresh
+                    )
+
+                    FlexibleImageGrid(
+                        gridState = state,
+                        modifier = Modifier
+                            .nestedScroll(scrollBehavior.nestedScrollConnection)
+                            .onScroll(state) {
+                                navBarVisibilityCallback(!it.lastScrolledForward)
+                            },
+                        userScrollEnabled = !shouldShowLargeImage,
+                        images = provider.recommendedImages,
+                        onImageClick = { index, _ ->
+                            Snapshot.withMutableSnapshot {
+                                selectedImageIndex = index
+                                shouldShowLargeImage = true
+                            }
+                        },
+                        noImagesContent = {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text("No recommendations right now.")
+                                TextButton(
+                                    onClick = {
+                                        ptrController.refresh(animate = true)
+                                    }
+                                ) {
+                                    Icon(Icons.Rounded.Refresh, contentDescription = null)
+                                    Spacer(Modifier.width(SMALL_SPACER.dp))
+                                    Text("Refresh")
+                                }
+                            }
+                        },
+                        contentPadding = PaddingValues(
+                            start = SMALL_LARGE_SPACER.dp,
+                            end = SMALL_LARGE_SPACER.dp,
+                            top = SMALL_LARGE_SPACER.dp,
+                            bottom = bottomAppBarAndNavBarHeight
+                        ),
+                        pullToRefreshController = ptrController,
+                        doneInitialLoad = provider.doneInitialLoad,
+                        loadingIndicator = FlexibleImageGridDefaults::RoundLoadingIndicator,
+                        onEndReached = { provider.recommendImages() },
+                    )
+                }
+            } else {
+                followingProvider?.let { provider ->
+                    val state = if (prefs.useStaggeredGrid) {
+                        provider.staggeredGridState
+                    } else {
+                        provider.uniformGridState
                     }
-                },
-                contentPadding = PaddingValues(
-                    start = SMALL_LARGE_SPACER.dp,
-                    end = SMALL_LARGE_SPACER.dp,
-                    top = SMALL_LARGE_SPACER.dp,
-                    bottom = bottomAppBarAndNavBarHeight
-                ),
-                pullToRefreshController = pullToRefreshController,
-                doneInitialLoad = provider.doneInitialLoad,
-                onEndReached = { provider.recommendImages() },
-            )
+
+                    val onRefresh: suspend () -> Unit by rememberUpdatedState {
+                        provider.let {
+                            it.replaceFollowedArtists(prefs.followedTags)
+                            it.reset()
+                            it.loadMore()
+                            it.resetGridStates()
+                        }
+                    }
+
+                    val ptrController = rememberPullToRefreshController(
+                        enabled = provider.doneInitialLoad,
+                        onRefresh = onRefresh
+                    )
+
+                    FlexibleImageGrid(
+                        gridState = state,
+                        modifier = Modifier
+                            .nestedScroll(scrollBehavior.nestedScrollConnection)
+                            .onScroll(state) {
+                                navBarVisibilityCallback(!it.lastScrolledForward)
+                            },
+                        userScrollEnabled = !shouldShowLargeImage,
+                        images = provider.images,
+                        onImageClick = { index, _ ->
+                            Snapshot.withMutableSnapshot {
+                                selectedImageIndex = index
+                                shouldShowLargeImage = true
+                            }
+                        },
+                        noImagesContent = {
+                            if (!provider.doneInitialLoad) {
+                                return@FlexibleImageGrid
+                            }
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    if (prefs.followedTags.isEmpty()){
+                                        "You aren't following anyone yet."
+                                    } else {
+                                        "No new posts from artists you follow."
+                                    }
+                                )
+                                TextButton(
+                                    onClick = {
+                                        ptrController.refresh(animate = true)
+                                    }
+                                ) {
+                                    Icon(Icons.Rounded.Refresh, contentDescription = null)
+                                    Spacer(Modifier.width(SMALL_SPACER.dp))
+                                    Text("Refresh")
+                                }
+                            }
+                        },
+                        contentPadding = PaddingValues(
+                            start = SMALL_LARGE_SPACER.dp,
+                            end = SMALL_LARGE_SPACER.dp,
+                            top = SMALL_LARGE_SPACER.dp,
+                            bottom = bottomAppBarAndNavBarHeight
+                        ),
+                        pullToRefreshController = ptrController,
+                        doneInitialLoad = provider.doneInitialLoad,
+                        loadingIndicator = FlexibleImageGridDefaults::RoundLoadingIndicator,
+                        onEndReached = { provider.loadMore() },
+                    )
+                }
+            }
         }
     }
 
-    val recommendedImages = recommendationsProvider?.recommendedImages
+    val recommendedImages = if (pagerState.currentPage == 0) recommendationsProvider?.recommendedImages else followingProvider?.images
 
     OffsetBasedLargeImageView(
         navController = navController,
@@ -216,5 +356,24 @@ fun HomeScreen(
             val index = recommendedImages.indexOf(oldImage)
             if (index != -1) recommendedImages[index] = newImage
         }
+    }
+}
+
+
+@Composable
+private fun RowScope.TagPageIndicator(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    ToggleButton(
+        checked = selected,
+        modifier = Modifier.weight(1f),
+        onCheckedChange = { onClick() },
+        colors = ToggleButtonDefaults.toggleButtonColors(
+            containerColor = ToggleButtonDefaults.toggleButtonColors().disabledContainerColor
+        )
+    ) {
+        Text(label)
     }
 }

@@ -1,0 +1,97 @@
+package moe.apex.breadboard.util
+
+import android.util.Log
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateSetOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
+import moe.apex.breadboard.image.Danbooru
+import moe.apex.breadboard.image.DanbooruSafe
+import moe.apex.breadboard.image.Image
+import moe.apex.breadboard.image.ImageBoardAuth
+import moe.apex.breadboard.viewmodel.GridStateHolder
+import moe.apex.breadboard.viewmodel.GridStateHolderDelegate
+
+class FollowingProvider(
+    followedArtists: Set<String>,
+    private val auth: ImageBoardAuth?,
+    private val showAllRatings: Boolean,
+) : GridStateHolder by GridStateHolderDelegate() {
+    private val source = if (showAllRatings) Danbooru else DanbooruSafe
+    private val mutableFollowedArtists = mutableStateSetOf<String>().apply { addAll(followedArtists) }
+    val followedArtists: Set<String>
+        get() = mutableFollowedArtists.toSet()
+
+    fun replaceFollowedArtists(artists: Set<String>) {
+        Snapshot.withMutableSnapshot {
+            mutableFollowedArtists.clear()
+            mutableFollowedArtists.addAll(artists)
+        }
+    }
+
+    var images = mutableStateListOf<Image>()
+    var doneInitialLoad by mutableStateOf(false)
+    private var pageNumber by mutableIntStateOf(Danbooru.firstPageIndex)
+
+    private var isLoading by mutableStateOf(false)
+    private var shouldKeepSearching by mutableStateOf(true)
+
+    suspend fun loadMore() {
+        if (isLoading || !shouldKeepSearching || followedArtists.isEmpty()) {
+            if (followedArtists.isEmpty()) doneInitialLoad = true
+            return
+        }
+
+        try {
+            isLoading = true
+            Log.d("FollowingProvider", "Using source: ${source.baseUrl} (showAllRatings: $showAllRatings)")
+            val tagLimit = if (auth == null) 2 else 12
+            
+            val batches = followedArtists.toList().chunked(tagLimit)
+            val allResults = mutableListOf<Image>()
+            
+            for (batch in batches) {
+                val searchQuery = batch.joinToString(" ") { "~$it" }
+                val results = source.loadPage(
+                    tags = searchQuery,
+                    page = pageNumber,
+                    auth = auth
+                )
+                allResults.addAll(results)
+            }
+
+            // Deduplicate and sort by ID descending
+            val sortedResults = allResults.distinctBy { it.id }
+                .sortedByDescending { it.id?.toLongOrNull() ?: 0L }
+
+            if (sortedResults.isEmpty()) {
+                shouldKeepSearching = false
+            } else {
+                if (pageNumber == Danbooru.firstPageIndex) {
+                    Snapshot.withMutableSnapshot {
+                        images.clear()
+                        images.addAll(sortedResults)
+                    }
+                } else {
+                    val newImages = sortedResults.filter { newImg -> images.none { it.id == newImg.id } }
+                    images += newImages
+                }
+                pageNumber++
+            }
+        } catch (e: Exception) {
+            Log.e("FollowingProvider", "Error fetching following feed", e)
+            shouldKeepSearching = false
+        } finally {
+            isLoading = false
+            doneInitialLoad = true
+        }
+    }
+
+    fun reset() {
+        pageNumber = Danbooru.firstPageIndex
+        shouldKeepSearching = true
+    }
+}

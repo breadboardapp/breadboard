@@ -144,10 +144,6 @@ fun RecommendationsSettingsScreen(navController: NavHostController) {
 
     val pagerState = rememberPagerState(ImageSource.entries.indexOf(prefs.imageSource)) { topTags.size }
 
-    fun resetRecommendations() {
-        viewModel.setRecommendationsProvider(null)
-    }
-
     fun showUnfollowedToast(tagName: String) {
         showToast(context, "Ignored $tagName")
     }
@@ -172,7 +168,7 @@ fun RecommendationsSettingsScreen(navController: NavHostController) {
                 showUnfollowedToast(tagName)
             }
         }.invokeOnCompletion {
-            resetRecommendations()
+            viewModel.resetProviders()
         }
     }
 
@@ -387,7 +383,7 @@ fun RecommendationsSettingsScreen(navController: NavHostController) {
                                     it
                                 )
                             }
-                            resetRecommendations()
+                            viewModel.resetProviders()
                         }
                     }
                     item {
@@ -404,7 +400,7 @@ fun RecommendationsSettingsScreen(navController: NavHostController) {
                                     it.roundToInt()
                                 )
                             }
-                            resetRecommendations()
+                            viewModel.resetProviders()
                         }
                     }
                     item {
@@ -421,7 +417,7 @@ fun RecommendationsSettingsScreen(navController: NavHostController) {
                                         it.roundToInt()
                                     )
                                 }
-                                resetRecommendations()
+                                viewModel.resetProviders()
                             }
                             AnimatedVisibility(
                                 visible = prefs.recommendationsTagCount > prefs.recommendationsPoolSize,

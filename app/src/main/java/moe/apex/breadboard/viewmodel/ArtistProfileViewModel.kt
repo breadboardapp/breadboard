@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import moe.apex.breadboard.artist.Artist
 import moe.apex.breadboard.image.Danbooru
+import moe.apex.breadboard.image.DanbooruSafe
 import moe.apex.breadboard.image.Image
 
 
@@ -27,7 +28,7 @@ class ArtistProfileViewModel(private val artistTag: String): ViewModel() {
         Log.i("ArtistProfileViewModel", "Loading artist profile for $artistTag")
 
         _artistProfile.value = Danbooru.getArtist(artistTag)
-        _images.value = Danbooru.getMostPopularSfwPosts(artistTag)
+        _images.value = DanbooruSafe.getMostPopularPosts(artistTag)
 
         _isInitialised.value = true
     }

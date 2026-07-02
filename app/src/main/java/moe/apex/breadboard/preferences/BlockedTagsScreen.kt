@@ -112,7 +112,7 @@ fun BlockedTagsScreen(navController: NavHostController) {
                             }
                         }
                         showAddDialog = false
-                        viewModel.setRecommendationsProvider(null)
+                        viewModel.resetProviders()
                     }
                 ) {
                     Text("Add")
@@ -222,7 +222,7 @@ fun BlockedTagsScreen(navController: NavHostController) {
                                         tag
                                     )
                                 }
-                                viewModel.setRecommendationsProvider(null)
+                                viewModel.resetProviders()
                             }
                         ) {
                             Icon(

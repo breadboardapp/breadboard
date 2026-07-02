@@ -250,7 +250,7 @@ private fun ArtistToolbar(artistTag: String, ) {
             modifier = Modifier.padding(SMALL_SPACER.dp),
             horizontalArrangement = Arrangement.spacedBy(SMALL_SPACER.dp)
         ) {
-            var isFollowing by remember { mutableStateOf(false) } // TODO Implement properly
+            val isFollowing = artistTag in prefs.followedTags
 
             ButtonGroup(
                 overflowIndicator = { },
@@ -267,7 +267,21 @@ private fun ArtistToolbar(artistTag: String, ) {
                                 .height(48.dp)
                                 .weight(3f)
                                 .animateWidth(interactionSource),
-                            onCheckedChange = { isFollowing = it },
+                            onCheckedChange = {
+                                scope.launch {
+                                    if (it) {
+                                        preferencesRepository.addToSet(
+                                            PreferenceKeys.FOLLOWED_TAGS,
+                                            artistTag
+                                        )
+                                    } else {
+                                        preferencesRepository.removeFromSet(
+                                            PreferenceKeys.FOLLOWED_TAGS,
+                                            artistTag
+                                        )
+                                    }
+                                }
+                            },
                             colors = ToggleButtonDefaults.toggleButtonColors(
                                 containerColor = MaterialTheme.colorScheme.primary,
                                 contentColor = MaterialTheme.colorScheme.onPrimary,
