@@ -19,11 +19,23 @@ class FollowingProvider(
     followedArtists: Set<String>,
     private val auth: ImageBoardAuth?,
     private val showAllRatings: Boolean,
+    private val initialBlockedTags: Set<String>,
 ) : GridStateHolder by GridStateHolderDelegate() {
     private val source = if (showAllRatings) Danbooru else DanbooruSafe
     private val mutableFollowedArtists = mutableStateSetOf<String>().apply { addAll(followedArtists) }
     val followedArtists: Set<String>
         get() = mutableFollowedArtists.toSet()
+
+    private val mutableBlockedTags = mutableStateSetOf<String>().apply { addAll(initialBlockedTags) }
+    val blockedTags: Set<String>
+        get() = mutableBlockedTags.toSet()
+
+    fun replaceBlockedTags(tags: Set<String>) {
+        Snapshot.withMutableSnapshot {
+            mutableBlockedTags.clear()
+            mutableBlockedTags.addAll(tags)
+        }
+    }
 
     fun replaceFollowedArtists(artists: Set<String>) {
         Snapshot.withMutableSnapshot {
@@ -40,8 +52,11 @@ class FollowingProvider(
     private var shouldKeepSearching by mutableStateOf(true)
 
     suspend fun loadMore() {
-        if (isLoading || !shouldKeepSearching || followedArtists.isEmpty()) {
-            if (followedArtists.isEmpty()) doneInitialLoad = true
+        if (followedArtists.isEmpty()) {
+            doneInitialLoad = true
+            return images.clear()
+        }
+        if (isLoading || !shouldKeepSearching) {
             return
         }
 
@@ -60,7 +75,11 @@ class FollowingProvider(
                     page = pageNumber,
                     auth = auth
                 )
-                allResults.addAll(results)
+                allResults.addAll(
+                    elements = results.filter {
+                        it.metadata!!.tags.none { tag -> blockedTags.contains(tag.lowercase()) }
+                    }
+                )
             }
 
             // Deduplicate and sort by ID descending

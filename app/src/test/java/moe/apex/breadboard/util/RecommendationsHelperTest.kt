@@ -63,4 +63,38 @@ class RecommendationsHelperTest {
         )
         assertTrue(recommended.isEmpty())
     }
+
+    @Test
+    fun testRecommendedArtists() {
+        fun createImageWithArtists(artists: List<String>): Image {
+            return Image(
+                fileName = "test",
+                fileFormat = "jpg",
+                previewUrl = "",
+                fileUrl = "",
+                sampleUrl = "",
+                metadata = ImageMetadata(
+                    rating = ImageRating.SAFE,
+                    artists = artists
+                )
+            )
+        }
+
+        val images = listOf(
+            createImageWithArtists(listOf("Artist A", "Artist B")),
+            createImageWithArtists(listOf("Artist A")),
+            createImageWithArtists(listOf("Artist C")),
+            createImageWithArtists(listOf("Artist A", "Artist C"))
+        )
+
+        val recommended = RecommendationsHelper.getRecommendedArtists(
+            images = images,
+            followedTags = setOf("artist b")
+        )
+
+        // Expected: Artist A (3), Artist C (2). Artist B is excluded.
+        assertTrue(recommended.size == 2)
+        assertTrue(recommended[0] == "artist a")
+        assertTrue(recommended[1] == "artist c")
+    }
 }

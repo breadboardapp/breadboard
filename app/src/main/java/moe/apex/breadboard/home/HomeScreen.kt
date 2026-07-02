@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,8 +16,12 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
@@ -28,6 +33,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -48,11 +54,21 @@ import moe.apex.breadboard.preferences.Experiment
 import moe.apex.breadboard.preferences.ImageSource
 import moe.apex.breadboard.preferences.LocalPreferences
 import moe.apex.breadboard.largeimageview.OffsetBasedLargeImageView
+import moe.apex.breadboard.preferences.PreferenceKeys
+import moe.apex.breadboard.prefs
 import moe.apex.breadboard.tag.IgnoredTagsHelper
 import moe.apex.breadboard.ui.theme.BreadboardTheme
+import moe.apex.breadboard.ui.theme.prefTitle
+import moe.apex.breadboard.util.BasicExpressiveContainer
+import moe.apex.breadboard.util.CHIP_SPACING
 import moe.apex.breadboard.util.FollowingProvider
 import moe.apex.breadboard.util.FullscreenLoadingSpinner
+import moe.apex.breadboard.util.LARGE_SPACER
+import moe.apex.breadboard.util.ListItemPosition
+import moe.apex.breadboard.util.MEDIUM_LARGE_SPACER
+import moe.apex.breadboard.util.MEDIUM_SPACER
 import moe.apex.breadboard.util.MainScreenScaffold
+import moe.apex.breadboard.util.RecommendationsHelper
 import moe.apex.breadboard.util.RecommendationsProvider
 import moe.apex.breadboard.util.SMALL_LARGE_SPACER
 import moe.apex.breadboard.util.SMALL_SPACER
@@ -61,6 +77,7 @@ import moe.apex.breadboard.util.SmallTitleBar
 import moe.apex.breadboard.util.TINY_SPACER
 import moe.apex.breadboard.util.bottomAppBarAndNavBarHeight
 import moe.apex.breadboard.util.differenceOlderThan
+import moe.apex.breadboard.util.filterChipSolidColor
 import moe.apex.breadboard.util.onScroll
 import moe.apex.breadboard.util.rememberPullToRefreshController
 import moe.apex.breadboard.util.saveIgnoreListWithTimestamp
@@ -177,7 +194,8 @@ fun HomeScreen(
                     val newProvider = FollowingProvider(
                         followedArtists = prefs.followedTags,
                         auth = prefs.authFor(ImageSource.DANBOORU, context),
-                        showAllRatings = prefs.recommendAllRatings
+                        showAllRatings = prefs.recommendAllRatings,
+                        initialBlockedTags = prefs.blockedTags
                     )
                     viewModel.setFollowingProvider(newProvider)
                 }
@@ -270,6 +288,7 @@ fun HomeScreen(
 
                     val onRefresh: suspend () -> Unit by rememberUpdatedState {
                         provider.let {
+                            it.replaceBlockedTags(blockedTags)
                             it.replaceFollowedArtists(prefs.followedTags)
                             it.reset()
                             it.loadMore()
@@ -278,7 +297,8 @@ fun HomeScreen(
                     }
 
                     val ptrController = rememberPullToRefreshController(
-                        enabled = provider.doneInitialLoad,
+                        enabled = provider.images.isNotEmpty() ||
+                                (provider.doneInitialLoad && prefs.followedTags.isNotEmpty()),
                         onRefresh = onRefresh
                     )
 
@@ -305,21 +325,58 @@ fun HomeScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text(
-                                    if (prefs.followedTags.isEmpty()){
-                                        "You aren't following anyone yet."
+                                if (prefs.followedTags.isEmpty()) {
+                                    val suggestedArtists = remember(prefs.favouriteImages, prefs.followedTags) {
+                                        RecommendationsHelper.getRecommendedArtists(
+                                            images = prefs.favouriteImages,
+                                            followedTags = prefs.followedTags
+                                        )
+                                    }
+
+                                    if (suggestedArtists.isNotEmpty()) {
+                                        BasicExpressiveContainer(position = ListItemPosition.SINGLE_ELEMENT) {
+                                            ArtistSuggestions(
+                                                suggestedArtists = suggestedArtists,
+                                                onFollow = { artists ->
+                                                    /* I'm just doing these manually because for
+                                                       some reason calling ptrController.refresh()
+                                                       still treats the following list like it's
+                                                       empty? */
+                                                    provider.reset()
+                                                    provider.replaceFollowedArtists(artists.toSet())
+                                                    provider.replaceBlockedTags(blockedTags)
+                                                    scope.launch {
+                                                        context.prefs.updateSet(
+                                                            key = PreferenceKeys.FOLLOWED_TAGS,
+                                                            to = artists,
+                                                        )
+                                                        provider.doneInitialLoad = false
+                                                        provider.loadMore()
+                                                    }
+                                                }
+                                            )
+                                        }
                                     } else {
-                                        "No new posts from artists you follow."
+                                        Text(
+                                            text = "You aren't following anyone yet.",
+                                            modifier = Modifier.padding(top = LARGE_SPACER.dp)
+                                        )
                                     }
-                                )
-                                TextButton(
-                                    onClick = {
-                                        ptrController.refresh(animate = true)
+                                } else {
+                                    Text(
+                                        text = "No new posts from artists you follow.",
+                                        modifier = Modifier.padding(top = LARGE_SPACER.dp)
+                                    )
+                                    TextButton(
+                                        modifier = Modifier.padding(top = SMALL_SPACER.dp),
+                                        onClick = {
+                                            ptrController.refresh(animate = true)
+                                        }
+                                    ) {
+                                        Icon(Icons.Rounded.Refresh, contentDescription = null)
+                                        Spacer(Modifier.width(SMALL_SPACER.dp))
+                                        Text("Refresh")
                                     }
-                                ) {
-                                    Icon(Icons.Rounded.Refresh, contentDescription = null)
-                                    Spacer(Modifier.width(SMALL_SPACER.dp))
-                                    Text("Refresh")
                                 }
                             }
                         },
@@ -354,6 +411,75 @@ fun HomeScreen(
         if (recommendedImages != null) {
             val index = recommendedImages.indexOf(oldImage)
             if (index != -1) recommendedImages[index] = newImage
+        }
+    }
+}
+
+
+@Composable
+private fun ArtistSuggestions(
+    suggestedArtists: List<String>,
+    onFollow: (List<String>) -> Unit
+) {
+    val selectedForFollow = remember { mutableStateListOf<String>() }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(MEDIUM_LARGE_SPACER.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(TINY_SPACER.dp)
+    ) {
+        Text(
+            style = MaterialTheme.typography.prefTitle,
+            color = MaterialTheme.colorScheme.primary,
+            text = "Welcome to your Following feed!",
+        )
+        Text(
+            text = "Let's get started by following some of your favourite artists.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        FlowRow(
+            modifier = Modifier.padding(vertical = SMALL_LARGE_SPACER.dp),
+            horizontalArrangement = Arrangement.spacedBy(CHIP_SPACING.dp, Alignment.CenterHorizontally),
+        ) {
+            for (artist in suggestedArtists) {
+                FilterChip(
+                    selected = artist in selectedForFollow,
+                    onClick = {
+                        if (artist in selectedForFollow) {
+                            selectedForFollow.remove(artist)
+                        } else {
+                            selectedForFollow.add(artist)
+                        }
+                    },
+                    label = { Text(artist) },
+                    colors = filterChipSolidColor,
+                    border = null
+                )
+            }
+        }
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(MEDIUM_SPACER.dp)
+        ) {
+            OutlinedButton(
+                onClick = {
+                    onFollow(suggestedArtists)
+                }
+            ) {
+                Text("Follow all")
+            }
+            Button(
+                enabled = selectedForFollow.isNotEmpty(),
+                onClick = {
+                    onFollow(selectedForFollow)
+                }
+            ) {
+                Text("Follow selected")
+            }
         }
     }
 }

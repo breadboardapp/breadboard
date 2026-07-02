@@ -350,6 +350,12 @@ private fun StaggeredImageGrid(
             }
         }
 
+        if (images.isEmpty()) {
+            item(key = "no-images", span = StaggeredGridItemSpan.FullLine) {
+                noImagesContent()
+            }
+        }
+
         itemsIndexed(images, key = { _, image -> image.previewUrl }) { index, image ->
             StaggeredImagePreviewContainer(image, index, onImageClick)
         }
@@ -361,12 +367,6 @@ private fun StaggeredImageGrid(
                         it()
                     }
                 }
-            }
-        }
-
-        if (images.isEmpty()) {
-            item(key = "no-images", span = StaggeredGridItemSpan.FullLine) {
-                noImagesContent()
             }
         }
 
@@ -406,6 +406,12 @@ private fun UniformImageGrid(
             }
         }
 
+        if (images.isEmpty()) {
+            item(key = "no-images", span = { GridItemSpan(maxLineSpan) }) {
+                noImagesContent()
+            }
+        }
+
         itemsIndexed(images, key = { _, image -> image.previewUrl }) { index, image ->
             ImagePreviewContainer(image, index, onImageClick)
         }
@@ -417,12 +423,6 @@ private fun UniformImageGrid(
                         it()
                     }
                 }
-            }
-        }
-
-        if (images.isEmpty()) {
-            item(key = "no-images", span = { GridItemSpan(maxLineSpan) }) {
-                noImagesContent()
             }
         }
 
