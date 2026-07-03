@@ -97,6 +97,18 @@ object Favourites
 object Settings
 
 @Serializable
+object GeneralSettings
+
+@Serializable
+object ContentSettings
+
+@Serializable
+object LayoutSettings
+
+@Serializable
+object DataSettings
+
+@Serializable
 object BlockedTagsSettings
 
 @Serializable

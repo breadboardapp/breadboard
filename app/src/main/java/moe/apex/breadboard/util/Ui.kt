@@ -150,6 +150,8 @@ const val LARGE_SPACER = 24
 const val MEDIUM_LARGE_SPACER = 20
 /** 16dp spacing */
 const val SMALL_LARGE_SPACER = 16
+/** 18dp spacing */
+const val TITLE_SUMMARY_VERTICAL_SPACING = 18
 /** 12dp spacing */
 const val MEDIUM_SPACER = 12
 /** 8dp spacing */
@@ -444,7 +446,7 @@ fun TitleSummary(
     trailingIcon: @Composable (() -> Unit)? = null,
     onClick: (() -> Unit)? = null
 ) {
-    val baseModifier = modifier.heightIn(min = 76.dp)
+    val baseModifier = modifier.heightIn(min = 72.dp)
     val finalModifier = onClick?.let { baseModifier.clickable(enabled) { it() } } ?: baseModifier
 
     Row(
@@ -455,7 +457,8 @@ fun TitleSummary(
             Spacer(Modifier.width(SMALL_LARGE_SPACER.dp))
             Box(
                 modifier = Modifier
-                    .size(48.dp)
+                    .padding(vertical = SMALL_LARGE_SPACER.dp)
+                    .size(42.dp)
                     .alpha(if (enabled) 1f else DISABLED_OPACITY),
                 contentAlignment = Alignment.Center
             ) {
@@ -463,33 +466,27 @@ fun TitleSummary(
             }
         }
         Column(
+            // H/V padding are mismatched but this looks more comfortable to me.
             modifier = Modifier
                 .weight(1f)
-                .padding(horizontal = SMALL_LARGE_SPACER.dp)
-                .alpha(if (enabled) 1f else DISABLED_OPACITY)
+                .padding(horizontal = SMALL_LARGE_SPACER.dp, vertical = TITLE_SUMMARY_VERTICAL_SPACING.dp, )
+                .alpha(if (enabled) 1f else DISABLED_OPACITY),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.prefTitle,
-                modifier = Modifier
-                    .padding(
-                        top = SMALL_LARGE_SPACER.dp,
-                        bottom = (if (summary == null) SMALL_LARGE_SPACER.dp else 2.dp)
-                    )
             )
 
             if (summary != null) {
-                Summary(
-                    text = summary,
-                    modifier = Modifier.padding(bottom = SMALL_LARGE_SPACER.dp)
-                )
+                Summary(text = summary)
             }
         }
         trailingIcon?.let {
             Box(
                 modifier = Modifier
                     .padding(end = SMALL_SPACER.dp)
-                    .size(48.dp)
+                    .size(42.dp)
                     .alpha(if (enabled) 1f else DISABLED_OPACITY),
                 contentAlignment = Alignment.Center
             ) {
@@ -1132,12 +1129,12 @@ fun BasicExpressiveGroup(
  *
  * For some reason, the inner container may stop responding to taps after a certain point if the
  * content inside is really long. It's something to do with clipping the shape but I don't know
- * exactly what or why. Set [useBox] to `true` if this is likely to happen.
+ * exactly what or why. Set [clip] to `false` if this is likely to happen.
  * Note this will prevent tap ripples from conforming to the shape of the container. */
 fun LazyListScope.LazyExpressiveGroup(
-    desiredTopPadding: Dp? = LARGE_SPACER.dp,
     title: String? = null,
-    useBox: Boolean = false,
+    desiredTopPadding: Dp? = LARGE_SPACER.dp,
+    clip: Boolean = true,
     content: ExpressiveGroupScope.() -> Unit
 ) {
     val scope = ExpressiveGroupScopeImpl()
@@ -1174,12 +1171,12 @@ fun LazyListScope.LazyExpressiveGroup(
         item {
             val position = remember { ListItemPosition.fromIndex(scope.items, index) }
 
-            if (useBox) {
-                BoxBasedBasicExpressiveContainer(position = position) {
+            if (clip) {
+                BasicExpressiveContainer(position = position) {
                     itemContent()
                 }
             } else {
-                BasicExpressiveContainer(position = position) {
+                BoxBasedBasicExpressiveContainer(position = position) {
                     itemContent()
                 }
             }

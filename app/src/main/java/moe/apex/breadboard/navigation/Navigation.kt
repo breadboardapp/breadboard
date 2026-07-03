@@ -49,8 +49,12 @@ import moe.apex.breadboard.home.HomeScreen
 import moe.apex.breadboard.largeimageview.LazyLargeImageView
 import moe.apex.breadboard.preferences.AboutScreen
 import moe.apex.breadboard.preferences.BlockedTagsScreen
+import moe.apex.breadboard.preferences.ContentSettingsScreen
+import moe.apex.breadboard.preferences.DataSettingsScreen
 import moe.apex.breadboard.preferences.ExperimentalScreen
+import moe.apex.breadboard.preferences.GeneralSettingsScreen
 import moe.apex.breadboard.preferences.IgnoredTagsScreen
+import moe.apex.breadboard.preferences.LayoutSettingsScreen
 import moe.apex.breadboard.preferences.LibrariesScreen
 import moe.apex.breadboard.preferences.PreferencesScreen
 import moe.apex.breadboard.preferences.RecommendationsSettingsScreen
@@ -81,7 +85,19 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
     val popEnterTransition = slideInHorizontally(tween(easing = easing)) { -slideDistance } + fadeIn(tween(easing = easing))
 
     val searchScreens = listOf(Search::class, Results::class, ArtistProfile::class)
-    val settingsScreens = listOf(Settings::class, BlockedTagsSettings::class, AboutSettings::class, LibrariesSettings::class, ExperimentalSettings::class, RecommendationsSettings::class, IgnoredTagsSettings::class)
+    val settingsScreens = listOf(
+        Settings::class,
+        GeneralSettings::class,
+        ContentSettings::class,
+        LayoutSettings::class,
+        DataSettings::class,
+        BlockedTagsSettings::class,
+        AboutSettings::class,
+        LibrariesSettings::class,
+        ExperimentalSettings::class,
+        RecommendationsSettings::class,
+        IgnoredTagsSettings::class
+    )
     val topLevelScreens = listOf(Home::class, Search::class, Favourites::class) + settingsScreens
     val slideTransitionScreens = listOf(Results::class, ImageView::class, ArtistProfile::class, *settingsScreens.filter { it != Settings::class }.toTypedArray())
 
@@ -218,6 +234,10 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
                 }
                 composable<Favourites> { FavouritesPage(navController) { isNavigationBarVisible = it } }
                 composable<Settings> { PreferencesScreen(navController) }
+                composable<GeneralSettings> { GeneralSettingsScreen(navController) }
+                composable<ContentSettings> { ContentSettingsScreen(navController) }
+                composable<LayoutSettings> { LayoutSettingsScreen(navController) }
+                composable<DataSettings> { DataSettingsScreen(navController) }
                 composable<BlockedTagsSettings> { BlockedTagsScreen(navController) }
                 composable<LibrariesSettings> { LibrariesScreen(navController) }
                 composable<AboutSettings> { AboutScreen(navController) }

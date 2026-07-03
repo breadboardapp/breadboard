@@ -2,6 +2,7 @@ package moe.apex.breadboard.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
@@ -18,8 +20,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -64,7 +68,6 @@ import moe.apex.breadboard.ui.theme.prefTitle
 import moe.apex.breadboard.util.BasicExpressiveContainer
 import moe.apex.breadboard.util.CHIP_SPACING
 import moe.apex.breadboard.util.FollowingProvider
-import moe.apex.breadboard.util.FullscreenLoadingSpinner
 import moe.apex.breadboard.util.LARGE_SPACER
 import moe.apex.breadboard.util.ListItemPosition
 import moe.apex.breadboard.util.MEDIUM_LARGE_SPACER
@@ -87,7 +90,7 @@ import moe.apex.breadboard.viewmodel.getGlobalViewModel
 import kotlin.time.Duration.Companion.days
 
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
@@ -186,7 +189,15 @@ fun HomeScreen(
         }
 
         if (builtInIgnoredTags.isEmpty()) {
-            FullscreenLoadingSpinner()
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(padding)
+                    .offset(y = SMALL_LARGE_SPACER.dp),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                LoadingIndicator()
+            }
         } else {
             if (recommendationsProvider == null) {
                 LaunchedEffect(Unit) {

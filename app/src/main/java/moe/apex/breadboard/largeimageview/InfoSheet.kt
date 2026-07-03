@@ -95,6 +95,7 @@ import moe.apex.breadboard.util.MEDIUM_SPACER
 import moe.apex.breadboard.util.LazyExpressiveGroup
 import moe.apex.breadboard.util.SMALL_LARGE_SPACER
 import moe.apex.breadboard.util.TINY_SPACER
+import moe.apex.breadboard.util.TITLE_SUMMARY_VERTICAL_SPACING
 import moe.apex.breadboard.util.TitleSummary
 import moe.apex.breadboard.util.TitledModalBottomSheet
 import moe.apex.breadboard.util.bouncyAnimationSpec
@@ -623,7 +624,7 @@ private fun LazyListScope.infoContentItems(
 
     // In unified mode, these are displayed on the first page instead of this one.
     if (!unified) {
-        LazyExpressiveGroup(useBox = true) {
+        LazyExpressiveGroup(clip = false) {
             mainTagsItems(image, onTagClick, onTagLongClick)
         }
     }
@@ -653,7 +654,7 @@ private fun LazyListScope.imageboardDataContentItems(
         }
     }
 
-    LazyExpressiveGroup(useBox = true) {
+    LazyExpressiveGroup(clip = false) {
         if (unified) {
             mainTagsItems(image, onTagClick, onTagLongClick)
         }
@@ -761,7 +762,7 @@ private fun TagsContainer(
         Modifier
             .fillMaxWidth()
             .padding(
-                top = SMALL_LARGE_SPACER.dp,
+                top = TITLE_SUMMARY_VERTICAL_SPACING.dp,
                 bottom = (SMALL_LARGE_SPACER - 8).dp, // Chips have 8dp vertical padding already
                 start = SMALL_LARGE_SPACER.dp,
                 end = SMALL_LARGE_SPACER.dp
