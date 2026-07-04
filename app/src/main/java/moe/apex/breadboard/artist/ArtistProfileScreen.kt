@@ -254,6 +254,7 @@ private fun ArtistToolbar(artistTag: String, ) {
             horizontalArrangement = Arrangement.spacedBy(SMALL_SPACER.dp)
         ) {
             val isFollowing = artistTag in prefs.followedTags
+            val isBlocked = artistTag in prefs.blockedTags
 
             ButtonGroup(
                 overflowIndicator = { },
@@ -266,6 +267,7 @@ private fun ArtistToolbar(artistTag: String, ) {
                         ToggleButton(
                             interactionSource = interactionSource,
                             checked = isFollowing,
+                            enabled = !isBlocked,
                             modifier = Modifier
                                 .height(48.dp)
                                 .weight(3f)
@@ -309,7 +311,7 @@ private fun ArtistToolbar(artistTag: String, ) {
                             )
                         ) {
                             Text(
-                                text = if (!isFollowing) "Follow" else "Following"
+                                text = if (isBlocked) "Blocked" else if (!isFollowing) "Follow" else "Following"
                             )
                         }
                     },
@@ -371,6 +373,8 @@ private fun ArtistToolbar(artistTag: String, ) {
                                     clipboard = clipboard,
                                     text = "https://breadboard.moe/artist/$artistTag",
                                 )
+                            }.invokeOnCompletion {
+                                showDropdown = false
                             }
                         },
                         text = { Text("Copy link") },
@@ -389,6 +393,8 @@ private fun ArtistToolbar(artistTag: String, ) {
                                     clipboard = clipboard,
                                     text = artistTag,
                                 )
+                            }.invokeOnCompletion {
+                                showDropdown = false
                             }
                         },
                         text = { Text("Copy search tag") },
@@ -412,7 +418,16 @@ private fun ArtistToolbar(artistTag: String, ) {
                                         PreferenceKeys.MANUALLY_BLOCKED_TAGS,
                                         artistTag
                                     )
+                                    if (artistTag in prefs.followedTags) {
+                                        preferencesRepository.removeFromSet(
+                                            PreferenceKeys.FOLLOWED_TAGS,
+                                            artistTag
+                                        )
+                                    }
                                 }
+                            }.invokeOnCompletion {
+                                viewModel.resetProviders()
+                                showDropdown = false
                             }
                         },
                         text = {

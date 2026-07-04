@@ -104,6 +104,13 @@ fun BlockedTagsScreen(navController: NavHostController) {
                                         true
                                     )
                                 } else {
+                                    if (tag in prefs.followedTags) {
+                                        userPreferencesRepository.removeFromSet(
+                                            PreferenceKeys.FOLLOWED_TAGS,
+                                            tag
+                                        )
+                                        viewModel.setFollowingProvider(null)
+                                    }
                                     userPreferencesRepository.addToSet(
                                         PreferenceKeys.MANUALLY_BLOCKED_TAGS,
                                         tag
