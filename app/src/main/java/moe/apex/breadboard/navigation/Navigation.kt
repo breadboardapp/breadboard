@@ -254,7 +254,7 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
                 composable<IgnoredTagsSettings> { IgnoredTagsScreen(navController) }
                 composable<ArtistProfile> {
                     val args = it.toRoute<ArtistProfile>()
-                    ArtistProfileScreen(args.artistTag, navController = navController)
+                    ArtistProfileScreen(args.artistTag, args.originImageSource, navController = navController)
                 }
                 composable<FollowedArtists> { FollowedArtistsScreen(navController) }
             }

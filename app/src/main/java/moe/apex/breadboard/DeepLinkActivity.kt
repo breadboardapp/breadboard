@@ -29,6 +29,7 @@ import kotlinx.coroutines.runBlocking
 import moe.apex.breadboard.navigation.ArtistProfile
 import moe.apex.breadboard.navigation.ImageView
 import moe.apex.breadboard.navigation.Navigation
+import moe.apex.breadboard.preferences.ImageSource
 import moe.apex.breadboard.preferences.LocalPreferences
 import moe.apex.breadboard.util.FlagSecureHelper
 import moe.apex.breadboard.util.createViewIntent
@@ -86,7 +87,7 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity(), Volu
                         val uri = newIntent.data ?: return@Consumer
 
                         if (uri.scheme == "breadboard") {
-                            handleBreadboardScheme(uri)?.let {
+                            handleBreadboardScheme(uri, prefs.imageSource)?.let {
                                 navController.popBackStack()
                                 navController.navigate(it)
                             } ?: finishAndRemoveTask()
@@ -94,7 +95,7 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity(), Volu
                             ImageView.fromUri(uri)?.let {
                                 navController.popBackStack()
                                 navController.navigate(it)
-                            } ?: ArtistProfile.fromUri(uri)?.let {
+                            } ?: ArtistProfile.fromUri(uri, prefs.imageSource)?.let {
                                 navController.popBackStack()
                                 navController.navigate(it)
                             } ?: reopenInBrowser(newIntent)
@@ -105,13 +106,13 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity(), Volu
                 }
                 intent.data?.let {
                     if (it.scheme == "breadboard") {
-                        handleBreadboardScheme(it)?.let { dest ->
+                        handleBreadboardScheme(it, prefs.imageSource)?.let { dest ->
                             Navigation(navController = navController, startDestination = dest)
                         } ?: finishAndRemoveTask()
                     } else {
                         ImageView.fromUri(it)?.let { iv ->
                             Navigation(navController = navController, startDestination = iv)
-                        } ?: ArtistProfile.fromUri(it)?.let { ap ->
+                        } ?: ArtistProfile.fromUri(it, prefs.imageSource)?.let { ap ->
                             Navigation(navController = navController, startDestination = ap)
                         } ?: reopenInBrowser(intent)
                     }
@@ -121,11 +122,11 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity(), Volu
     }
 
 
-    private fun handleBreadboardScheme(uri: Uri): Any? {
+    private fun handleBreadboardScheme(uri: Uri, imageSource: ImageSource): Any? {
         val path = uri.pathSegments
         if (uri.host == "artist") {
             path.getOrNull(0)?.let {
-                return ArtistProfile(it)
+                return ArtistProfile(it, imageSource)
             }
         }
         return null

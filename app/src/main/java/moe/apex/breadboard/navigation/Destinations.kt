@@ -131,17 +131,18 @@ object IgnoredTagsSettings
 
 @Serializable
 data class ArtistProfile(
-    val artistTag: String
+    val artistTag: String,
+    val originImageSource: ImageSource,
 ) {
     companion object {
-        fun fromUri(uri: Uri): ArtistProfile? {
+        fun fromUri(uri: Uri, imageSource: ImageSource): ArtistProfile? {
             val host = uri.host ?: return null
             val path = uri.pathSegments ?: return null
 
             if (host == "breadboard.moe" && path.firstOrNull() == "artist") {
                 val tag = path.getOrNull(1)?.takeIf { it.isNotEmpty() }
                 if (tag != null) {
-                    return ArtistProfile(tag)
+                    return ArtistProfile(tag, imageSource)
                 }
             }
             return null

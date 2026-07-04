@@ -119,6 +119,7 @@ import kotlin.random.Random
 @Composable
 fun ArtistProfileScreen(
     artistTag: String,
+    originImageSource: ImageSource,
     viewModel: ArtistProfileViewModel = viewModel(key = artistTag) { ArtistProfileViewModel(artistTag) },
     navController: NavController
 ) {
@@ -144,7 +145,7 @@ fun ArtistProfileScreen(
         if (artist == null) {
             showToast(context, "Couldn't fetch profile. Performing search instead...")
             navController.popBackStack()
-            navController.navigate(Results(ImageSource.DANBOORU, listOf(artistTag)))
+            navController.navigate(Results(originImageSource, listOf(artistTag)))
         }
     }
 
@@ -167,7 +168,7 @@ fun ArtistProfileScreen(
                         )
                     },
                     onClick = {
-                        navController.navigate(Results(ImageSource.DANBOORU, listOf(artistTag)))
+                        navController.navigate(Results(originImageSource, listOf(artistTag)))
                     }
                 )
             }

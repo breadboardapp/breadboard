@@ -81,9 +81,9 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
 
 
     private fun maybePrepareArtistDestination(intent: Intent): ArtistProfile? {
-        return intent.getStringExtra("artist")?.let {
-            return ArtistProfile(it)
-        }
+        val artist = intent.getStringExtra("artist") ?: return null
+        val source = ImageSource.valueOf(intent.getStringExtra("origin_source") ?: return null)
+        return ArtistProfile(artist, source)
     }
 
 

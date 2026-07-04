@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.launch
 import moe.apex.breadboard.navigation.ArtistProfile
+import moe.apex.breadboard.preferences.ImageSource
 import moe.apex.breadboard.preferences.LocalPreferences
 import moe.apex.breadboard.preferences.PreferenceKeys
 import moe.apex.breadboard.prefs
@@ -150,7 +151,7 @@ fun FollowedArtistsScreen(navController: NavHostController) {
                         }
                     },
                     onClick = {
-                        navController.navigate(ArtistProfile(tag))
+                        navController.navigate(ArtistProfile(tag, ImageSource.DANBOORU))
                     },
                     trailingContent = {
                         IconButton(

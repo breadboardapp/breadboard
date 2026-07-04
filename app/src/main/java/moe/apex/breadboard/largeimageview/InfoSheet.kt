@@ -160,19 +160,19 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
     var selectedTag: String? by remember { mutableStateOf(null) }
     var selectedTagCategory: TagCategory? by remember { mutableStateOf(null) }
 
-    fun startTagSearch(tag: String, category: TagCategory) {
+    fun startTagSearch(tag: String, category: TagCategory, artistProfileForNonArtistTags: Boolean = false) {
         hideAndThen {
             /* Don't do new interactions inside the DeepLinkActivity.
                We should only ever do them inside the main one. */
             if (context is DeepLinkActivity) {
-                val intent = if (category == TagCategory.ARTIST) {
-                    createArtistIntent(context, tag)
+                val intent = if (category == TagCategory.ARTIST || artistProfileForNonArtistTags) {
+                    createArtistIntent(context, tag, image.imageSource)
                 } else {
                     createSearchIntent(context, image.imageSource, tag)
                 }
                 context.startActivity(intent)
-            } else if (category == TagCategory.ARTIST) {
-                navController.navigate(ArtistProfile(tag))
+            } else if (category == TagCategory.ARTIST || artistProfileForNonArtistTags) {
+                navController.navigate(ArtistProfile(tag, image.imageSource))
             } else {
                 navController.navigate(Results(image.imageSource, listOf(tag)))
             }
@@ -216,7 +216,7 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
 
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         ButtonListItem(
-                            label = if (selectedTagCategory == TagCategory.ARTIST) "View profile" else "Search",
+                            label = if (selectedTagCategory == TagCategory.ARTIST || prefs.profilesForAllTags) "View profile" else "Search",
                             icon = Icons.Rounded.Search,
                             modifier = Modifier.fillMaxWidth(),
                             position = ListItemPosition.TOP
@@ -225,7 +225,7 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                             val category = selectedTagCategory!!
                             selectedTag = null
                             selectedTagCategory = null
-                            startTagSearch(searchTag, category)
+                            startTagSearch(searchTag, category, artistProfileForNonArtistTags = prefs.profilesForAllTags)
                         }
                         ButtonListItem(
                             label = "Copy to clipboard",
@@ -838,9 +838,10 @@ private fun createSearchIntent(context: Context, imageSource: ImageSource, query
 }
 
 
-private fun createArtistIntent(context: Context, artistTag: String): Intent {
+private fun createArtistIntent(context: Context, artistTag: String, originImageSource: ImageSource): Intent {
     return createMainActivityIntent(context, "artist")
         .putExtra("artist", artistTag)
+        .putExtra("origin_source", originImageSource.name)
 }
 
 

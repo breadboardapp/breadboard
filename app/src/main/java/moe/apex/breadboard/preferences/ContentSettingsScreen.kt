@@ -122,19 +122,39 @@ fun ContentSettingsScreen(navController: NavHostController) {
                         checked = currentSettings.filterRatingsLocally,
                         title = "Filter ratings locally",
                         summary = "Rather than appending the selected ratings to the search query, " +
-                                "filter the results by rating after searching.",
+                                  "filter the results by rating after searching.",
                         infoText = "Danbooru limits searches to 2 tags " +
-                                "(which includes ratings) without an API key.\n\n" +
-                                "Enabling this option will allow you to filter by rating " +
-                                "on all sources without an API key, and also let you filter " +
-                                "ratings mid-search, but may cause less results to be shown " +
-                                "at once, resulting in slightly higher data usage.\n\n" +
-                                "Yande.re always requires this option.\n\n" +
-                                "If you're unsure, keep this option enabled."
+                                   "(which includes ratings) without an API key.\n\n" +
+                                   "Enabling this option will allow you to filter by rating " +
+                                   "on all sources without an API key, and also let you filter " +
+                                   "ratings mid-search, but may cause less results to be shown " +
+                                   "at once, resulting in slightly higher data usage.\n\n" +
+                                   "Yande.re always requires this option.\n\n" +
+                                   "If you're unsure, keep this option enabled."
                     ) {
                         scope.launch {
                             preferencesRepository.updatePref(
                                 PreferenceKeys.FILTER_RATINGS_LOCALLY,
+                                it
+                            )
+                        }
+                    }
+                }
+                item {
+                    SwitchPref(
+                        checked = currentSettings.profilesForAllTags,
+                        title = "Allow profiles for all tags",
+                        summary = "Replace the search option in the tag menu with an option to " +
+                                  "view its profile.",
+                        infoText = "Not all artists are categorised correctly by the image " +
+                                   "boards, meaning the profile option would normally be " +
+                                   "unavailable for their tag.\n\n" +
+                                   "This option forces the profile option to appear for every " +
+                                   "tag, even non-artist ones."
+                    ) {
+                        scope.launch {
+                            preferencesRepository.updatePref(
+                                PreferenceKeys.PROFILES_FOR_ALL_TAGS,
                                 it
                             )
                         }

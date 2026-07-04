@@ -99,6 +99,7 @@ data object PrefNames {
     const val UNIFIED_INFO_SHEET = "unified_info_sheet"
     const val FOLLOWED_TAGS = "followed_tags"
     const val DEFAULT_BROWSE_TAB = "default_browse_tab"
+    const val PROFILES_FOR_ALL_TAGS = "profiles_for_all_tags"
 }
 
 
@@ -134,6 +135,7 @@ object PreferenceKeys {
     val UNIFIED_INFO_SHEET = booleanPreferencesKey(PrefNames.UNIFIED_INFO_SHEET)
     val FOLLOWED_TAGS = stringSetPreferencesKey(PrefNames.FOLLOWED_TAGS)
     val DEFAULT_BROWSE_TAB = stringPreferencesKey(PrefNames.DEFAULT_BROWSE_TAB)
+    val PROFILES_FOR_ALL_TAGS = booleanPreferencesKey(PrefNames.PROFILES_FOR_ALL_TAGS)
 }
 
 
@@ -238,6 +240,7 @@ data class Prefs(
     val unifiedInfoSheet: Boolean,
     val followedTags: Set<String>,
     val defaultBrowseTab: BrowseTab,
+    val profilesForAllTags: Boolean,
 ) {
     companion object {
         val DEFAULT = Prefs(
@@ -272,6 +275,7 @@ data class Prefs(
             unifiedInfoSheet = false, // Unified is called 'Classic' in the UI
             followedTags = emptySet(),
             defaultBrowseTab = BrowseTab.FOR_YOU,
+            profilesForAllTags = false,
         )
     }
 
@@ -336,7 +340,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             PreferenceKeys.INTERNAL_IGNORE_LIST to PrefMeta(PrefCategory.SETTING, exportable = false),
             PreferenceKeys.UNIFIED_INFO_SHEET to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.FOLLOWED_TAGS to PrefMeta(PrefCategory.SETTING, mergeable = true),
-            PreferenceKeys.DEFAULT_BROWSE_TAB to PrefMeta(PrefCategory.SETTING)
+            PreferenceKeys.DEFAULT_BROWSE_TAB to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.PROFILES_FOR_ALL_TAGS to PrefMeta(PrefCategory.SETTING),
         )
     }
 
@@ -836,6 +841,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val unifiedInfoSheet = preferences[PreferenceKeys.UNIFIED_INFO_SHEET] ?: Prefs.DEFAULT.unifiedInfoSheet
         val followedTags = preferences[PreferenceKeys.FOLLOWED_TAGS] ?: Prefs.DEFAULT.followedTags
         val defaultBrowseTab = preferences[PreferenceKeys.DEFAULT_BROWSE_TAB]?.let { BrowseTab.valueOf(it) } ?: Prefs.DEFAULT.defaultBrowseTab
+        val profilesForAllTags = preferences[PreferenceKeys.PROFILES_FOR_ALL_TAGS] ?: Prefs.DEFAULT.profilesForAllTags
 
         return Prefs(
             dataSaver,
@@ -869,6 +875,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             unifiedInfoSheet,
             followedTags,
             defaultBrowseTab,
+            profilesForAllTags,
         )
     }
 }
