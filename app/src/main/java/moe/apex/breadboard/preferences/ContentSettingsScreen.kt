@@ -57,37 +57,11 @@ fun ContentSettingsScreen(navController: NavHostController) {
                 item {
                     TitleSummary(
                         modifier = Modifier.fillMaxWidth(),
-                        title = "Manage blocked tags",
-                        summary = "Add or remove tags to block from search results and recommendations.",
-                        trailingIcon = { ChevronRight() }
-                    ) {
-                        navController.navigate(BlockedTagsSettings)
-                    }
-                }
-                item {
-                    TitleSummary(
-                        modifier = Modifier.fillMaxWidth(),
                         title = "Manage recommendations",
                         summary = "Fine-tune your recommendations by customising which tags can be used to recommend new content.",
                         trailingIcon = { ChevronRight() }
                     ) {
                         navController.navigate(RecommendationsSettings)
-                    }
-                }
-                item {
-                    SwitchPref(
-                        checked = currentSettings.excludeAi,
-                        title = "Hide AI-generated images",
-                        summary = "Attempt to hide AI-generated images by automatically adding " +
-                                "AI-related tags to your block list."
-                    ) {
-                        scope.launch {
-                            preferencesRepository.updatePref(
-                                PreferenceKeys.EXCLUDE_AI,
-                                it
-                            )
-                        }
-                        viewModel.resetProviders()
                     }
                 }
                 item {
@@ -110,6 +84,35 @@ fun ContentSettingsScreen(navController: NavHostController) {
                             }
                         }
                     )
+                }
+            }
+
+            LazyExpressiveGroup("Filtering") {
+                item {
+                    TitleSummary(
+                        modifier = Modifier.fillMaxWidth(),
+                        title = "Manage blocked tags",
+                        summary = "Add or remove tags to block from search results and recommendations.",
+                        trailingIcon = { ChevronRight() }
+                    ) {
+                        navController.navigate(BlockedTagsSettings)
+                    }
+                }
+                item {
+                    SwitchPref(
+                        checked = currentSettings.excludeAi,
+                        title = "Hide AI-generated images",
+                        summary = "Attempt to hide AI-generated images by automatically adding " +
+                                "AI-related tags to your block list."
+                    ) {
+                        scope.launch {
+                            preferencesRepository.updatePref(
+                                PreferenceKeys.EXCLUDE_AI,
+                                it
+                            )
+                        }
+                        viewModel.resetProviders()
+                    }
                 }
             }
 
