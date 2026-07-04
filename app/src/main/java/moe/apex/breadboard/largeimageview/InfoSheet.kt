@@ -225,7 +225,13 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                             val category = selectedTagCategory!!
                             selectedTag = null
                             selectedTagCategory = null
-                            startTagSearch(searchTag, category, artistProfileForNonArtistTags = prefs.profilesForAllTags)
+                            hideAndThen {
+                                startTagSearch(
+                                    tag = searchTag,
+                                    category = category,
+                                    artistProfileForNonArtistTags = prefs.profilesForAllTags
+                                )
+                            }
                         }
                         ButtonListItem(
                             label = "Copy to clipboard",
@@ -270,6 +276,12 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                                             PreferenceKeys.MANUALLY_BLOCKED_TAGS,
                                             selectedTag!!
                                         )
+                                        if (selectedTag in prefs.followedTags) {
+                                            preferencesRepository.removeFromSet(
+                                                PreferenceKeys.FOLLOWED_TAGS,
+                                                selectedTag!!
+                                            )
+                                        }
                                     }
                                 }
                                 showToast(context, "Blocked tag ${selectedTag!!}")
