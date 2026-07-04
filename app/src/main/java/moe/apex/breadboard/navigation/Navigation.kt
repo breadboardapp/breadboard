@@ -60,6 +60,7 @@ import moe.apex.breadboard.preferences.PreferencesScreen
 import moe.apex.breadboard.preferences.RecommendationsSettingsScreen
 import moe.apex.breadboard.ui.theme.BreadboardTheme
 import moe.apex.breadboard.util.withoutVertical
+import moe.apex.breadboard.home.FollowedArtistsScreen
 
 
 @Composable
@@ -84,6 +85,7 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
     val popExitTransition = slideOutHorizontally(tween(easing = easing)) { slideDistance } + fadeOut( tween(easing = easing))
     val popEnterTransition = slideInHorizontally(tween(easing = easing)) { -slideDistance } + fadeIn(tween(easing = easing))
 
+    val homeScreens = listOf(Home::class, FollowedArtists::class)
     val searchScreens = listOf(Search::class, Results::class, ArtistProfile::class)
     val settingsScreens = listOf(
         Settings::class,
@@ -98,8 +100,8 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
         RecommendationsSettings::class,
         IgnoredTagsSettings::class
     )
-    val topLevelScreens = listOf(Home::class, Search::class, Favourites::class) + settingsScreens
-    val slideTransitionScreens = listOf(Results::class, ImageView::class, ArtistProfile::class, *settingsScreens.filter { it != Settings::class }.toTypedArray())
+    val topLevelScreens = listOf(Home::class, Search::class, Favourites::class, FollowedArtists::class) + settingsScreens
+    val slideTransitionScreens = listOf(Results::class, ImageView::class, ArtistProfile::class, FollowedArtists::class, *settingsScreens.filter { it != Settings::class }.toTypedArray())
 
     /* Some screens have the ability to hide the bottom bar, so we need to ensure it appears again
        when navigating to a different screen. */
@@ -120,18 +122,24 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
                     NavigationBar(containerColor = BreadboardTheme.colors.titleBar) {
                         NavigationBarItem(
                             label = { Text("Browse") },
-                            selected = currentRoute.routeIs(Home::class),
+                            selected = currentRoute.routeIs(homeScreens),
                             icon = {
                                 Icon(
-                                    painter = painterResource(if (currentRoute.routeIs(Home::class)) R.drawable.ic_home_filled else R.drawable.ic_home_hollow),
+                                    painter = painterResource(if (currentRoute.routeIs(homeScreens)){
+                                        R.drawable.ic_home_filled
+                                    } else {
+                                        R.drawable.ic_home_hollow
+                                    }),
                                     contentDescription = "Browse"
                                 )
                             },
                             onClick = {
-                                if (!currentRoute.routeIs(Home::class)) {
+                                if (!currentRoute.routeIs(homeScreens)) {
                                     navController.navigate(Home) {
                                         popUpTo(Home) { inclusive = true }
                                     }
+                                } else {
+                                    navController.popBackStack()
                                 }
                             }
                         )
@@ -248,6 +256,7 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
                     val args = it.toRoute<ArtistProfile>()
                     ArtistProfileScreen(args.artistTag, navController = navController)
                 }
+                composable<FollowedArtists> { FollowedArtistsScreen(navController) }
             }
         }
     }

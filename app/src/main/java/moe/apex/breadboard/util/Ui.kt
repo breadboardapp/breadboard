@@ -111,6 +111,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
@@ -129,6 +130,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.getSystemService
+import androidx.core.graphics.ColorUtils
 import androidx.navigation.NavController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -908,6 +910,7 @@ fun ExpressiveTagEntryContainer(
     modifier: Modifier = Modifier,
     label: String,
     supportingLabel: String? = null,
+    leadingContent: (@Composable () -> Unit)? = null,
     trailingContent: (@Composable RowScope.() -> Unit)? = null,
     position: ListItemPosition,
     onClick: (() -> Unit)? = null
@@ -928,6 +931,15 @@ fun ExpressiveTagEntryContainer(
             .clickable(onClick != null) { onClick!!() },
         verticalAlignment = Alignment.CenterVertically
     ) {
+        leadingContent?.let {
+            Box(
+                modifier = Modifier
+                    .padding(start = SMALL_LARGE_SPACER.dp)
+                    .size(40.dp)
+            ) {
+                it()
+            }
+        }
         Column(
             verticalArrangement = Arrangement.Center,
             modifier = Modifier
@@ -938,6 +950,7 @@ fun ExpressiveTagEntryContainer(
                 text = label,
                 fontSize = 16.sp,
                 lineHeight = 17.sp,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
 
@@ -946,6 +959,7 @@ fun ExpressiveTagEntryContainer(
                     text = it,
                     fontSize = 12.sp,
                     lineHeight = 13.sp,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
@@ -1542,6 +1556,38 @@ fun WideLinearWavyProgressIndicator(modifier: Modifier = Modifier) {
         amplitude = 0.6f,
         wavelength = 40.dp,
     )
+}
+
+
+fun generateColours(
+    darkTheme: Boolean,
+    seed: Any
+): Pair<Color, Color> {
+    // Generate a base hue from on the seed.
+    val seed = seed.hashCode()
+    val hue = (seed and Integer.MAX_VALUE).rem(360).toFloat()
+
+    /* We're going for light backgrounds with a darker inner icon.
+       The specific saturation and lightness depend on darkTheme. */
+    val (bgSat, bgLight) = if (darkTheme) {
+        0.42f to 0.70f
+    } else {
+        0.65f to 0.87f
+    }
+
+    val (iconSat, iconLight) = if (darkTheme) {
+        0.60f to 0.20f
+    } else {
+        0.65f to 0.27f
+    }
+
+    val bgInt = ColorUtils.HSLToColor(floatArrayOf(hue, bgSat, bgLight))
+    val iconInt = ColorUtils.HSLToColor(floatArrayOf(hue, iconSat, iconLight))
+
+    val bgColour = Color(bgInt)
+    val iconTint = Color(iconInt)
+
+    return bgColour to iconTint
 }
 
 

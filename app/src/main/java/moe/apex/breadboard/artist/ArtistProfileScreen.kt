@@ -109,6 +109,7 @@ import moe.apex.breadboard.util.TINY_SPACER
 import moe.apex.breadboard.util.copyText
 import moe.apex.breadboard.util.showToast
 import moe.apex.breadboard.viewmodel.ArtistProfileViewModel
+import moe.apex.breadboard.viewmodel.getGlobalViewModel
 import kotlin.random.Random
 
 
@@ -238,6 +239,7 @@ private fun ArtistToolbar(artistTag: String, ) {
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
     val prefs = LocalPreferences.current
+    val viewModel = getGlobalViewModel()
 
     val scope = rememberCoroutineScope()
     val preferencesRepository = context.prefs
@@ -280,6 +282,8 @@ private fun ArtistToolbar(artistTag: String, ) {
                                             artistTag
                                         )
                                     }
+                                }.invokeOnCompletion {
+                                    viewModel.setFollowingProvider(null)
                                 }
                             },
                             colors = ToggleButtonDefaults.toggleButtonColors(

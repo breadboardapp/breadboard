@@ -82,6 +82,9 @@ data class ImageView(
 object Home
 
 @Serializable
+object FollowedArtists
+
+@Serializable
 object Search
 
 @Serializable

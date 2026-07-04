@@ -1,5 +1,12 @@
 package moe.apex.breadboard.home
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,15 +24,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
@@ -49,6 +57,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import kotlinx.coroutines.Dispatchers
@@ -59,6 +68,7 @@ import moe.apex.breadboard.preferences.Experiment
 import moe.apex.breadboard.preferences.ImageSource
 import moe.apex.breadboard.preferences.LocalPreferences
 import moe.apex.breadboard.largeimageview.OffsetBasedLargeImageView
+import moe.apex.breadboard.navigation.FollowedArtists
 import moe.apex.breadboard.preferences.BrowseTab
 import moe.apex.breadboard.preferences.PreferenceKeys
 import moe.apex.breadboard.prefs
@@ -71,7 +81,6 @@ import moe.apex.breadboard.util.FollowingProvider
 import moe.apex.breadboard.util.LARGE_SPACER
 import moe.apex.breadboard.util.ListItemPosition
 import moe.apex.breadboard.util.MEDIUM_LARGE_SPACER
-import moe.apex.breadboard.util.MEDIUM_SPACER
 import moe.apex.breadboard.util.MainScreenScaffold
 import moe.apex.breadboard.util.RecommendationsHelper
 import moe.apex.breadboard.util.RecommendationsProvider
@@ -156,15 +165,44 @@ fun HomeScreen(
                 Row(
                     modifier = Modifier
                         .background(color = BreadboardTheme.colors.titleBar)
-                        .padding(horizontal = SMALL_LARGE_SPACER.dp, vertical = TINY_SPACER.dp),
-                    horizontalArrangement = Arrangement.spacedBy(SMALL_SPACER.dp)
-                ) {
-                    BrowseTab.entries.forEachIndexed { index, tab ->
-                        TagPageIndicator(
-                            label = tab.label,
-                            selected = pagerState.currentPage == index,
-                            onClick = { scope.launch { pagerState.animateScrollToPage(index) } }
+                        .padding(
+                            horizontal = SMALL_LARGE_SPACER.dp,
+                            vertical = TINY_SPACER.dp
                         )
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(SMALL_SPACER.dp)
+                    ) {
+                        BrowseTab.entries.forEachIndexed { index, tab ->
+                            TagPageIndicator(
+                                label = tab.label,
+                                selected = pagerState.currentPage == index,
+                                onClick = { scope.launch { pagerState.animateScrollToPage(index) } }
+                            )
+                        }
+                    }
+                    AnimatedVisibility(
+                        visible = pagerState.currentPage == BrowseTab.entries.indexOf(BrowseTab.FOLLOWING),
+                        enter = expandHorizontally(
+                            clip = false,
+                            animationSpec = MaterialTheme.motionScheme.slowSpatialSpec(),
+                        )+ fadeIn() + scaleIn(
+                            animationSpec = MaterialTheme.motionScheme.slowSpatialSpec()
+                        ),
+                        exit = shrinkHorizontally() + fadeOut() + scaleOut()
+                    ) {
+                        FilledIconButton(
+                            modifier = Modifier.padding(start = TINY_SPACER.dp),
+                            onClick = {
+                                navController.navigate(FollowedArtists)
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Person,
+                                contentDescription = "Edit followed artists",
+                            )
+                        }
                     }
                 }
             }
@@ -459,14 +497,16 @@ private fun ArtistSuggestions(
         verticalArrangement = Arrangement.spacedBy(TINY_SPACER.dp)
     ) {
         Text(
+            text = "Welcome to your Following feed!",
             style = MaterialTheme.typography.prefTitle,
             color = MaterialTheme.colorScheme.primary,
-            text = "Welcome to your Following feed!",
+            textAlign = TextAlign.Center
         )
         Text(
             text = "Let's get started by following some of your favourite artists.",
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
         )
 
         FlowRow(
@@ -490,24 +530,18 @@ private fun ArtistSuggestions(
             }
         }
 
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(MEDIUM_SPACER.dp)
+        Button(
+            onClick = {
+                onFollow(selectedForFollow.takeIf { it.isNotEmpty() } ?: suggestedArtists)
+            }
         ) {
-            OutlinedButton(
-                onClick = {
-                    onFollow(suggestedArtists)
+            Text(
+                text = if (selectedForFollow.isEmpty()) {
+                    "Follow all"
+                } else {
+                    "Follow selected"
                 }
-            ) {
-                Text("Follow all")
-            }
-            Button(
-                enabled = selectedForFollow.isNotEmpty(),
-                onClick = {
-                    onFollow(selectedForFollow)
-                }
-            ) {
-                Text("Follow selected")
-            }
+            )
         }
     }
 }

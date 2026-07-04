@@ -3,7 +3,6 @@ package moe.apex.breadboard.preferences
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
-import androidx.core.graphics.ColorUtils
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -36,7 +35,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
@@ -52,6 +50,7 @@ import moe.apex.breadboard.util.LazyExpressiveGroup
 import moe.apex.breadboard.util.MainScreenScaffold
 import moe.apex.breadboard.util.MEDIUM_SPACER
 import moe.apex.breadboard.util.TitleSummary
+import moe.apex.breadboard.util.generateColours
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -180,42 +179,22 @@ private fun ContainedIcon(
     label: String,
     imageVector: ImageVector
 ) {
-    val isDark = isSystemInDarkTheme()
-    // Assign the icon a random colour hue based on its label.
-    val seed = label.hashCode()
-    val hue = (seed and Integer.MAX_VALUE).rem(360).toFloat()
-
-    /* We're going for light backgrounds with a darker inner icon.
-       The specific saturation and lightness depend on whether the user is in dark or light mode. */
-    val (bgSat, bgLight) = if (isDark) {
-        0.42f to 0.70f
-    } else {
-        0.65f to 0.87f
+    val darkTheme = isSystemInDarkTheme()
+    val colourPair = remember(label) {
+        generateColours(darkTheme, label)
     }
-
-    val (iconSat, iconLight) = if (isDark) {
-        0.60f to 0.20f
-    } else {
-        0.65f to 0.27f
-    }
-
-    val bgInt = ColorUtils.HSLToColor(floatArrayOf(hue, bgSat, bgLight))
-    val iconInt = ColorUtils.HSLToColor(floatArrayOf(hue, iconSat, iconLight))
-
-    val bgColour = Color(bgInt)
-    val iconTint = Color(iconInt)
 
     Box(
         modifier = Modifier
             .clip(CircleShape)
-            .background(bgColour)
+            .background(colourPair.first)
             .fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         Icon(
             imageVector = imageVector,
             contentDescription = null,
-            tint = iconTint
+            tint = colourPair.second
         )
     }
 }
