@@ -51,7 +51,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -150,7 +150,7 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
     /* The unified sheet should always open in half-expanded state,
        but should never go back to the half-expanded state when closing.  */
     if (unified) {
-        LaunchedEffect(sheetState.targetValue) {
+        SideEffect(sheetState.targetValue) {
             if (sheetState.currentValue == SheetValue.Expanded && sheetState.targetValue == SheetValue.PartiallyExpanded) {
                 hideAndThen()
             }

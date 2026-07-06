@@ -15,7 +15,7 @@ import androidx.compose.material3.ComposeMaterial3Flags
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.core.util.Consumer
@@ -123,7 +123,7 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
             val viewModel = getGlobalViewModel()
             val recommendationsProvider by viewModel.recommendationsProvider.collectAsState()
 
-            LaunchedEffect(prefs.imageSource, prefs.filterRatingsLocally) {
+            SideEffect(prefs.imageSource, prefs.filterRatingsLocally) {
                 if (
                     recommendationsProvider?.imageSource != prefs.imageSource ||
                     recommendationsProvider?.filterRatingsLocally != prefs.filterRatingsLocally

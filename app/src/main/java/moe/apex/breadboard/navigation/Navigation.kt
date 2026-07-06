@@ -21,7 +21,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -105,7 +105,7 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
 
     /* Some screens have the ability to hide the bottom bar, so we need to ensure it appears again
        when navigating to a different screen. */
-    LaunchedEffect(currentRoute) {
+    SideEffect(currentRoute) {
         if (currentRoute.routeIs(topLevelScreens)) {
             isNavigationBarVisible = true
         }

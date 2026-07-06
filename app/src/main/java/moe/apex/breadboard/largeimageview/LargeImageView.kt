@@ -80,6 +80,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -281,14 +282,14 @@ private fun LargeImageView(
                 onImageClick = ::toggleToolbar
             )
 
-            LaunchedEffect(zoomFractionAllowsPageChange, isFullyZoomedOut, pagerState.currentPage) {
+            SideEffect(zoomFractionAllowsPageChange, isFullyZoomedOut, pagerState.currentPage) {
                 canChangePage = zoomFractionAllowsPageChange
                 if (isFullyZoomedOut) {
                     toolbarState = ToolbarState.DEFAULT
                 }
             }
 
-            LaunchedEffect(isFullyZoomedOut) {
+            SideEffect(isFullyZoomedOut) {
                 onZoomedStatusChanged?.invoke(!isFullyZoomedOut)
             }
 
@@ -939,17 +940,17 @@ fun LargeVideo(image: Image, isCurrentPage: Boolean, onLongClick: (() -> Unit)? 
     /* While most of these run very infrequently or only once,
        I still don't like this LaunchedEffect hell.  */
 
-    LaunchedEffect(Unit) {
+    SideEffect(Unit) {
         player.loop = true
     }
 
-    LaunchedEffect(player.isLoading) {
+    SideEffect(player.isLoading) {
         if (player.hasMedia && !player.isLoading) {
             doneInitialLoad = true
         }
     }
 
-    LaunchedEffect(isHovered) {
+    SideEffect(isHovered) {
         showControls = isHovered
     }
 
@@ -960,15 +961,15 @@ fun LargeVideo(image: Image, isCurrentPage: Boolean, onLongClick: (() -> Unit)? 
         }
     }
 
-    LaunchedEffect(muted) {
+    SideEffect(muted) {
         player.volume = if (muted) 0f else 0.5f
     }
 
-    LaunchedEffect(userMutePreference) {
+    SideEffect(userMutePreference) {
         userMutePreference?.let { muted = it }
     }
 
-    LaunchedEffect(isCurrentPage) {
+    SideEffect(isCurrentPage) {
         if (!isCurrentPage) {
             player.pause()
         } else {
@@ -1258,7 +1259,7 @@ fun OffsetBasedLargeImageView(
     }
 
     if (isActive) {
-        LaunchedEffect(Unit) {
+        SideEffect(Unit) {
             /* Theoretically breakable if someone spoofs the system clock to never update,
                that's rather unlikely. */
             onActiveStateChanged(true)

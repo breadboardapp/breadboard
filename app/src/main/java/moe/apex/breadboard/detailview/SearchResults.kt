@@ -14,7 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -97,7 +97,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
 
     fun updateBlockedTags() = viewModel.updateBlockedTags(manuallyBlockedTags, prefs.excludeAi)
 
-    LaunchedEffect(Unit) {
+    SideEffect(Unit) {
         val auth = prefs.authFor(source, context)
         if (auth != viewModelAuth) {
             viewModel.updateAuth(auth)

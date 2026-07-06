@@ -238,7 +238,7 @@ fun HomeScreen(
             }
         } else {
             if (recommendationsProvider == null) {
-                LaunchedEffect(Unit) {
+                SideEffect(Unit) {
                     val newProvider = RecommendationsProvider(
                         seedImages = prefs.favouriteImages,
                         imageSource = prefs.imageSource,
@@ -255,7 +255,7 @@ fun HomeScreen(
                 }
             }
             if (followingProvider == null) {
-                LaunchedEffect(Unit) {
+                SideEffect(Unit) {
                     val newProvider = FollowingProvider(
                         followedArtists = prefs.followedTags,
                         auth = prefs.authFor(ImageSource.DANBOORU, context),

@@ -65,6 +65,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -495,7 +496,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester) {
             ) {
                 var opacity by remember { mutableFloatStateOf(1f) }
                 var scale by remember { mutableFloatStateOf(1f) }
-                LaunchedEffect(showSourceRatingBox) {
+                SideEffect(showSourceRatingBox) {
                     if (showSourceRatingBox) {
                         opacity = 1f
                         scale = 1f
@@ -586,7 +587,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester) {
                             bottom = SMALL_SPACER.dp
                         )
                 ) {
-                    LaunchedEffect(prefs.ratingsFilter) {
+                    SideEffect(prefs.ratingsFilter) {
                         Log.i("Breadboard", "new ratings filter: ${prefs.ratingsFilter}")
                     }
 
