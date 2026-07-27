@@ -23,18 +23,30 @@ private val PIXIV_PRE_2012_RX =
     // https://img13.pixiv.net/img/tubasarei/4894590.jpg (Safebooru #166629)
     """https?://img\d+\.pixiv\.net/img/.+/(?<id>\d+)\.(png|jpg|jpeg|gif)""".toRegex()
 
-private val PIXIV_RX = listOf(PIXIV_CURRENT_RX) + PIXIV_2012_TO_2016_RX + PIXIV_PRE_2012_RX
 
 data class PixivArtwork(val id: Int, val index: Int) {
     companion object {
         fun fromUrl(url: String?): PixivArtwork? {
             if (url == null) return null
 
-            for (regex in PIXIV_RX) {
+            /* Pre-2012 Pixiv URLs don't seem to have indexes at all.
+               It feels better and more intentional/deliberate to handle them specifically,
+               at least compared to putting a try/catch around the index group. */
+
+            val indexedRegexes = listOf(PIXIV_CURRENT_RX) + PIXIV_2012_TO_2016_RX
+            for (regex in indexedRegexes) {
                 val match = regex.find(url) ?: continue
                 val id = match.groups["id"]?.value?.toIntOrNull().takeIf { it != 0 } ?: continue
                 val index = match.groups["index"]?.value?.toIntOrNull() ?: 0
                 return PixivArtwork(id, index)
+            }
+
+            val pre2012Match = PIXIV_PRE_2012_RX.find(url)
+            if (pre2012Match != null) {
+                val id = pre2012Match.groups["id"]?.value?.toIntOrNull().takeIf { it != 0 }
+                if (id != null) {
+                    return PixivArtwork(id, 0)
+                }
             }
 
             return null
