@@ -172,18 +172,20 @@ object SauceNao {
         val json = JSONObject(body)
         val headerJson = json.getJSONObject("header")
 
-        val header = SauceNaoResponseHeader(
-            status = headerJson.getInt("status"),
-            message = headerJson.optString("message", null),
-            resultsCount = headerJson.optInt("results_returned", -1)
-        )
+        val status = headerJson.getInt("status")
+        val message = headerJson.optString("message").takeIf { it.isNotEmpty() }
+        var resultsCount = headerJson.optInt("results_returned", 0)
 
-        if (header.status != 0) {
-            val errorMessage = header.message ?: "SauceNAO returned status ${header.status}"
-            throw SauceNaoException(errorMessage, header.status)
+        if (status != 0) {
+            val errorMessage = message ?: "SauceNAO returned status $status"
+            throw SauceNaoException(errorMessage, status)
         }
 
-        val resultsJson = json.optJSONArray("results") ?: return SauceNaoResponse(header, emptyList())
+        val resultsJson = json.optJSONArray("results") ?: return SauceNaoResponse(
+            header = SauceNaoResponseHeader(status, message, resultsCount),
+            results = emptyList()
+        )
+
         val results = mutableListOf<SauceNaoResult>()
 
         for (i in 0 until resultsJson.length()) {
@@ -245,11 +247,16 @@ object SauceNao {
                     } else {
                         it
                     }
-                } ?: continue, // TODO: No artist name means it's probably from a show or media. We'll skip them for now, but should revisit. Index ID would confirm.
+                } ?: run {
+                    resultsCount -= 1
+                    continue // TODO: No artist name means it's probably from a show or media. We'll skip them for now, but should revisit. Index ID would confirm.
+                },
             )
 
             results.add(SauceNaoResult(resultHeader, resultData))
         }
+
+        val header = SauceNaoResponseHeader(status, message, resultsCount)
 
         return SauceNaoResponse(header, results)
     }
