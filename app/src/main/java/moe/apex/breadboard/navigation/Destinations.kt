@@ -109,6 +109,9 @@ object GeneralSettings
 object ContentSettings
 
 @Serializable
+object ApiKeysSettings
+
+@Serializable
 object LayoutSettings
 
 @Serializable

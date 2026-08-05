@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material.icons.rounded.Settings
@@ -40,6 +41,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import moe.apex.breadboard.navigation.AboutSettings
+import moe.apex.breadboard.navigation.ApiKeysSettings
 import moe.apex.breadboard.navigation.ContentSettings
 import moe.apex.breadboard.navigation.DataSettings
 import moe.apex.breadboard.navigation.ExperimentalSettings
@@ -113,6 +115,19 @@ fun PreferencesScreen(navController: NavHostController) {
                         trailingIcon = { ChevronRight() }
                     ) {
                         navController.navigate(GeneralSettings)
+                    }
+                }
+                item {
+                    TitleSummary(
+                        modifier = Modifier.fillMaxWidth(),
+                        title = "API keys",
+                        summary = "Manage your personal API keys.",
+                        leadingIcon = {
+                            ContainedIcon(imageVector = Icons.Rounded.Key, label = "API keys")
+                        },
+                        trailingIcon = { ChevronRight() }
+                    ) {
+                        navController.navigate(ApiKeysSettings)
                     }
                 }
                 item {

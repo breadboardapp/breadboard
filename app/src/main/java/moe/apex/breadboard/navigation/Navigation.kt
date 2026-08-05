@@ -63,6 +63,7 @@ import moe.apex.breadboard.saucenao.ReverseSearchScreen
 import moe.apex.breadboard.ui.theme.BreadboardTheme
 import moe.apex.breadboard.util.withoutVertical
 import moe.apex.breadboard.home.FollowedArtistsScreen
+import moe.apex.breadboard.preferences.ApiKeysSettingsScreen
 
 
 @Composable
@@ -93,6 +94,7 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
     val settingsScreens = listOf(
         Settings::class,
         GeneralSettings::class,
+        ApiKeysSettings::class,
         ContentSettings::class,
         LayoutSettings::class,
         DataSettings::class,
@@ -270,6 +272,7 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
                 composable<Favourites> { FavouritesPage(navController) { isNavigationBarVisible = it } }
                 composable<Settings> { PreferencesScreen(navController) }
                 composable<GeneralSettings> { GeneralSettingsScreen(navController) }
+                composable<ApiKeysSettings> { ApiKeysSettingsScreen(navController) }
                 composable<ContentSettings> { ContentSettingsScreen(navController) }
                 composable<LayoutSettings> { LayoutSettingsScreen(navController) }
                 composable<DataSettings> { DataSettingsScreen(navController) }

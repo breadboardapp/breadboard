@@ -1,17 +1,11 @@
 package moe.apex.breadboard.preferences
 
-import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
@@ -23,18 +17,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.launch
 import moe.apex.breadboard.image.ImageBoardRequirement
+import moe.apex.breadboard.navigation.ApiKeysSettings
 import moe.apex.breadboard.prefs
 import moe.apex.breadboard.util.AgeVerification
+import moe.apex.breadboard.util.ChevronRight
 import moe.apex.breadboard.util.LargeTitleBar
 import moe.apex.breadboard.util.LazyExpressiveGroup
 import moe.apex.breadboard.util.MainScreenScaffold
 import moe.apex.breadboard.util.MEDIUM_SPACER
-import moe.apex.breadboard.util.SMALL_SPACER
 import moe.apex.breadboard.util.TitleSummary
 import moe.apex.breadboard.viewmodel.getGlobalViewModel
 
@@ -44,51 +38,17 @@ fun GeneralSettingsScreen(navController: NavHostController) {
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
     val viewModel = getGlobalViewModel()
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var showAuthDialog by remember { mutableStateOf(false) }
     var showAgeVerificationDialog by remember { mutableStateOf(false) }
-    var showSauceNaoKeyDialog by remember { mutableStateOf(false) }
 
     val preferencesRepository = LocalContext.current.prefs
     val currentSettings = LocalPreferences.current
-
-    if (showAuthDialog) {
-        AuthDialog(
-            selectedBoard = currentSettings.imageSource.imageBoard,
-            default = currentSettings.authFor(currentSettings.imageSource, context),
-            onDismissRequest = { showAuthDialog = false }
-        ) { username, apiKey ->
-            scope.launch {
-                preferencesRepository.setAuth(
-                    currentSettings.imageSource,
-                    username.takeUnless { it.isBlank() },
-                    apiKey.takeUnless { it.isBlank() }
-                )
-            }
-            showAuthDialog = false
-            viewModel.resetProviders()
-        }
-    }
 
     if (showAgeVerificationDialog) {
         AgeVerification.AgeVerifyDialog(
             onDismissRequest = { showAgeVerificationDialog = false },
             onAgeVerified = { showAgeVerificationDialog = false }
-        )
-    }
-
-    if (showSauceNaoKeyDialog) {
-        SauceNaoApiKeyDialog(
-            currentKey = currentSettings.saucenaoApiKey,
-            onDismissRequest = { showSauceNaoKeyDialog = false },
-            onSave = { key ->
-                scope.launch {
-                    preferencesRepository.updatePref(PreferenceKeys.SAUCENAO_API_KEY, key)
-                }
-                showSauceNaoKeyDialog = false
-            }
         )
     }
 
@@ -133,19 +93,17 @@ fun GeneralSettingsScreen(navController: NavHostController) {
                 item {
                     val authType = currentSettings.imageSource.imageBoard.apiKeyRequirement
                     TitleSummary(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .animateContentSize(),
-                        title = "Set API key",
-                        summary = if (authType != ImageBoardRequirement.NOT_NEEDED) {
-                            "${currentSettings.imageSource.label} requires an API key${if (authType == ImageBoardRequirement.RECOMMENDED) " for the best experience." else "."} " +
-                            "Tap to set."
-                        } else {
-                            "${currentSettings.imageSource.label} does not require an API key."
+                        modifier = Modifier.fillMaxWidth(),
+                        title = "Manage API keys",
+                        summary = if (authType == ImageBoardRequirement.NOT_NEEDED) {
+                            "${currentSettings.imageSource.label} does not require an API key, " +
+                            "but you can manage others here."
+                        } else {"${currentSettings.imageSource.label} requires an API key${if (authType == ImageBoardRequirement.RECOMMENDED) " for the best experience." else "."} " +
+                            "Set in API Key settings."
                         },
-                        enabled = authType != ImageBoardRequirement.NOT_NEEDED
+                        trailingIcon = { ChevronRight() }
                     ) {
-                        showAuthDialog = true
+                        navController.navigate(ApiKeysSettings)
                     }
                 }
                 item {
@@ -187,66 +145,6 @@ fun GeneralSettingsScreen(navController: NavHostController) {
                     }
                 }
             }
-
-            LazyExpressiveGroup("SauceNAO") {
-                item {
-                    TitleSummary(
-                        modifier = Modifier.fillMaxWidth(),
-                        title = "Set SauceNAO API key",
-                        summary = if (currentSettings.saucenaoApiKey.isNotEmpty()) {
-                            "API key is set."
-                        } else {
-                            "An API key is required to use reverse image search. Tap to set."
-                        }
-                    ) {
-                        showSauceNaoKeyDialog = true
-                    }
-                }
-            }
         }
     }
 }
-
-
-@Composable
-private fun SauceNaoApiKeyDialog(
-    currentKey: String,
-    onDismissRequest: () -> Unit,
-    onSave: (String) -> Unit
-) {
-    var apiKey by remember { mutableStateOf(currentKey) }
-
-    AlertDialog(
-        onDismissRequest = onDismissRequest,
-        title = { Text("SauceNAO API key") },
-        text = {
-            Column {
-                Text(
-                    text = "Enter your SauceNAO API key. You can get one from saucenao.com/user.php after creating an account.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = SMALL_SPACER.dp)
-                )
-                PreferenceTextBox(
-                    value = apiKey,
-                    label = "API key",
-                    obscured = true,
-                    keyboardType = KeyboardType.Password
-                ) {
-                    apiKey = it.trim()
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { onSave(apiKey) }) {
-                Text("Save")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismissRequest) {
-                Text("Cancel")
-            }
-        }
-    )
-}
-

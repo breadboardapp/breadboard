@@ -1,10 +1,8 @@
 package moe.apex.breadboard.preferences
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,12 +25,9 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -63,28 +58,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.LinkAnnotation
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLinkStyles
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import moe.apex.breadboard.image.ImageBoard
-import moe.apex.breadboard.image.ImageBoardAuth
 import moe.apex.breadboard.ui.theme.BreadboardTheme
 import moe.apex.breadboard.ui.theme.prefTitle
 import moe.apex.breadboard.ui.theme.searchField
@@ -96,11 +82,9 @@ import moe.apex.breadboard.util.SMALL_LARGE_SPACER
 import moe.apex.breadboard.util.SMALL_SPACER
 import moe.apex.breadboard.util.SmallVerticalSpacer
 import moe.apex.breadboard.util.Summary
-import moe.apex.breadboard.util.TINY_SPACER
 import moe.apex.breadboard.util.TitleSummary
 import moe.apex.breadboard.util.TitledModalBottomSheet
 import moe.apex.breadboard.util.VerticalSpacer
-import moe.apex.breadboard.util.launchInWebBrowser
 import moe.apex.breadboard.util.largerShape
 import moe.apex.breadboard.util.navBarHeight
 import sh.calvin.reorderable.ReorderableItem
@@ -618,155 +602,6 @@ fun <T: PrefEnum<*>> ReorderablePref(
     ) {
         showDialog = true
     }
-}
-
-
-@Composable
-fun AuthDialog(
-    selectedBoard: ImageBoard,
-    default: ImageBoardAuth?,
-    onDismissRequest: () -> Unit,
-    onSave: (String, String) -> Unit
-) {
-    var inQueryParamMode by remember { mutableStateOf(false) }
-    val queryRegex = remember { Regex("&api_key=([^&]+)&user_id=(\\d+)") }
-    var queryString by remember { mutableStateOf("") }
-    var isQueryStringValid by remember { mutableStateOf(false) }
-
-    var userId by remember { mutableStateOf(default?.user ?: "") }
-    var apiKey by remember { mutableStateOf(default?.apiKey ?: "") }
-
-    val context = LocalContext.current
-
-    AlertDialog(
-        onDismissRequest = onDismissRequest,
-        title = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Set API key")
-                Box {
-                    var showMenu by remember { mutableStateOf(false) }
-                    IconButton(onClick = { showMenu = true }) {
-                        Icon(
-                            imageVector = Icons.Rounded.MoreVert,
-                            contentDescription = "Options"
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false },
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        shape = MaterialTheme.shapes.small
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(if (inQueryParamMode) "Enter credentials normally" else "Enter query string") },
-                            onClick = {
-                                inQueryParamMode = !inQueryParamMode
-                                showMenu = false
-                            }
-                        )
-                    }
-                }
-            }
-        },
-        text = {
-            Column {
-                if (inQueryParamMode) {
-                    PreferenceTextBox(
-                        value = queryString,
-                        label = "Query string",
-                        obscured = false,
-                        keyboardType = KeyboardType.Uri,
-                        isError = !isQueryStringValid && queryString.isNotEmpty()
-                    ) { newValue ->
-                        queryString = newValue.trim()
-                        isQueryStringValid = queryRegex.containsMatchIn(queryString)
-                    }
-                } else {
-                    PreferenceTextBox(
-                        value = userId,
-                        label = "User ID/name",
-                        obscured = false
-                    ) {
-                        userId = it.trim()
-                    }
-                }
-
-                AnimatedVisibility(!inQueryParamMode) {
-                    PreferenceTextBox(
-                        modifier = Modifier.padding(top = SMALL_SPACER.dp),
-                        value = apiKey,
-                        label = "API key",
-                        keyboardType = KeyboardType.Password,
-                        obscured = true
-                    ) {
-                        apiKey = it.trim()
-                    }
-                }
-
-                selectedBoard.apiKeyCreationUrl?.let { url ->
-                    val apiKeyCreationText = buildAnnotatedString {
-                        val link = LinkAnnotation.Url(
-                            url,
-                            TextLinkStyles(
-                                SpanStyle(color = MaterialTheme.colorScheme.secondary, textDecoration = TextDecoration.Underline)
-                            )
-                        ) {
-                            launchInWebBrowser(context, url)
-                        }
-
-                        withLink(link) {
-                            append("Find your credentials...")
-                        }
-                    }
-
-                    Text(
-                        text = apiKeyCreationText,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(
-                            start = TINY_SPACER.dp,
-                            top = SMALL_SPACER.dp
-                        )
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                enabled = if (inQueryParamMode) {
-                    isQueryStringValid || queryString.isBlank()
-                } else {
-                    (userId.isNotBlank() && apiKey.isNotBlank()) || (userId.isBlank() && apiKey.isBlank())
-                },
-                onClick = {
-                    if (inQueryParamMode) {
-                        if (queryString.isBlank()) {
-                            onSave("", "")
-                            return@Button
-                        }
-
-                        val match = queryRegex.find(queryString)
-                        if (match != null) {
-                            onSave(match.groupValues[2], match.groupValues[1])
-                        }
-
-                    } else {
-                        onSave(userId, apiKey)
-                    }
-                }
-            ) {
-                Text("Save")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismissRequest) {
-                Text("Cancel")
-            }
-        }
-    )
 }
 
 
