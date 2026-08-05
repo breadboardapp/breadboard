@@ -58,6 +58,8 @@ import moe.apex.breadboard.preferences.LayoutSettingsScreen
 import moe.apex.breadboard.preferences.LibrariesScreen
 import moe.apex.breadboard.preferences.PreferencesScreen
 import moe.apex.breadboard.preferences.RecommendationsSettingsScreen
+import moe.apex.breadboard.saucenao.SauceNaoResultsScreen
+import moe.apex.breadboard.saucenao.ReverseSearchScreen
 import moe.apex.breadboard.ui.theme.BreadboardTheme
 import moe.apex.breadboard.util.withoutVertical
 import moe.apex.breadboard.home.FollowedArtistsScreen
@@ -87,6 +89,7 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
 
     val homeScreens = listOf(Home::class, FollowedArtists::class)
     val searchScreens = listOf(Search::class, Results::class, ArtistProfile::class)
+    val reverseSearchScreens = listOf(ReverseSearch::class, SauceNaoResults::class)
     val settingsScreens = listOf(
         Settings::class,
         GeneralSettings::class,
@@ -100,8 +103,8 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
         RecommendationsSettings::class,
         IgnoredTagsSettings::class
     )
-    val topLevelScreens = listOf(Home::class, Search::class, Favourites::class, FollowedArtists::class) + settingsScreens
-    val slideTransitionScreens = listOf(Results::class, ImageView::class, ArtistProfile::class, FollowedArtists::class, *settingsScreens.filter { it != Settings::class }.toTypedArray())
+    val topLevelScreens = listOf(Home::class, Search::class, ReverseSearch::class, Favourites::class, FollowedArtists::class) + settingsScreens
+    val slideTransitionScreens = listOf(Results::class, ImageView::class, ArtistProfile::class, FollowedArtists::class, SauceNaoResults::class, *settingsScreens.filter { it != Settings::class }.toTypedArray())
 
     /* Some screens have the ability to hide the bottom bar, so we need to ensure it appears again
        when navigating to a different screen. */
@@ -162,6 +165,29 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
                                     keyboard?.show() /* Not technically necessary but allows the keyboard to appear
                                                         again if the user taps away while the search bar is still
                                                         focused */
+                                }
+                            }
+                        )
+                        NavigationBarItem(
+                            label = { Text("SauceNAO") },
+                            selected = currentRoute.routeIs(reverseSearchScreens),
+                            icon = {
+                                Icon(
+                                    painter = painterResource(
+                                        if (currentRoute.routeIs(reverseSearchScreens)) {
+                                            R.drawable.ic_image_search_filled
+                                        } else {
+                                            R.drawable.ic_image_search_hollow
+                                        }
+                                    ),
+                                    contentDescription = "SauceNAO Reverse image search"
+                                )
+                            },
+                            onClick = {
+                                if (!currentRoute.routeIs(ReverseSearch::class)) {
+                                    navController.navigate(ReverseSearch) {
+                                        popUpTo(ReverseSearch) { inclusive = true }
+                                    }
                                 }
                             }
                         )
@@ -236,6 +262,7 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
                 }
                 composable<Home> { HomeScreen(navController) { isNavigationBarVisible = it } }
                 composable<Search> { SearchScreen(navController, focusRequester) }
+                composable<ReverseSearch> { ReverseSearchScreen(navController) }
                 composable<Results> {
                     val args = it.toRoute<Results>()
                     SearchResults(navController, args.source, args.tags)
@@ -257,6 +284,10 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
                     ArtistProfileScreen(args.artistTag, args.originImageSource, navController = navController)
                 }
                 composable<FollowedArtists> { FollowedArtistsScreen(navController) }
+                composable<SauceNaoResults> {
+                    val args = it.toRoute<SauceNaoResults>()
+                    SauceNaoResultsScreen(navController, args.imageUrl, args.fileUri)
+                }
             }
         }
     }

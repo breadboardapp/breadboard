@@ -1,4 +1,4 @@
-package moe.apex.breadboard.artist
+package moe.apex.breadboard.social
 
 import androidx.compose.runtime.Immutable
 import moe.apex.breadboard.R
@@ -6,7 +6,7 @@ import androidx.core.net.toUri
 
 
 @Immutable
-data class ArtistSocial(
+data class SocialEntry(
     val url: String,
     val isActive: Boolean
 )
@@ -35,6 +35,7 @@ enum class SocialSite(
     TWITTER("Twitter", 0xFF1DA1F2, R.drawable.ic_twitter, listOf("twitter.com", "x.com")),
     WEIBO("Weibo", 0xFFE6162D, R.drawable.ic_weibo, listOf("weibo.com", "weibo.cn")),
     YOUTUBE("YouTube", 0xFFFF1A47, R.drawable.ic_youtube, listOf("youtube.com", "youtu.be")),
+    IMAGEBOARD("Imageboard", null, R.drawable.ic_link, listOf("safebooru.org", "danbooru.donmai.us", "safebooru.donmai.us", "gelbooru.com", "yande.re")), // Only intended to be used by saucenao so we can filter them out.
     OTHER("Other links", null, R.drawable.ic_link, emptyList());
 
     companion object {
@@ -60,4 +61,18 @@ enum class SocialSite(
             } ?: OTHER
         }
     }
+}
+
+
+fun sortSocialSites(socialSites: Set<SocialSite>): List<SocialSite> {
+    return socialSites
+        .sortedWith(compareBy<SocialSite> {
+            when (it) { // Site priority, always show Pixiv/Fanbox/Twitter first and OTHER last.
+                SocialSite.PIXIV -> 0
+                SocialSite.FANBOX -> 1
+                SocialSite.TWITTER -> 2
+                SocialSite.OTHER -> 4
+                else -> 3
+            }
+        }.thenBy { it.label.lowercase() }) // And then every other site is alphabetical.
 }

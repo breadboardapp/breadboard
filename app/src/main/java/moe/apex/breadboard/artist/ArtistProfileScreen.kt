@@ -96,6 +96,8 @@ import moe.apex.breadboard.preferences.ImageSource
 import moe.apex.breadboard.preferences.LocalPreferences
 import moe.apex.breadboard.preferences.PreferenceKeys
 import moe.apex.breadboard.prefs
+import moe.apex.breadboard.social.SocialEntry
+import moe.apex.breadboard.social.SocialSite
 import moe.apex.breadboard.ui.theme.BreadboardTheme
 import moe.apex.breadboard.util.LARGE_SPACER
 import moe.apex.breadboard.util.LargeVerticalSpacer
@@ -571,7 +573,7 @@ private fun ArtistHeader(
 @Composable
 private fun SocialChip(
     site: SocialSite,
-    socialProfiles: List<ArtistSocial>,
+    socialProfiles: List<SocialEntry>,
     onClick: (String) -> Unit)
 {
     var showDropdown by remember { mutableStateOf(false) }

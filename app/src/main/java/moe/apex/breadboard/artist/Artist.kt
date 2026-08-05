@@ -1,19 +1,21 @@
 package moe.apex.breadboard.artist
 
 import androidx.compose.runtime.Immutable
+import moe.apex.breadboard.social.SocialEntry
+import moe.apex.breadboard.social.SocialSite
 
 
 @Immutable
 data class Artist(
     val name: String,
     val otherNames: List<String>,
-    val socialUrls: List<ArtistSocial>,
+    val socialUrls: List<SocialEntry>,
     val tag: ArtistTag
 ) {
-    fun groupSocials(): Map<SocialSite, List<ArtistSocial>> {
+    fun groupSocials(): Map<SocialSite, List<SocialEntry>> {
         return socialUrls.groupBy { SocialSite.fromUrl(it.url) }
             .toList()
-            .sortedWith(compareBy<Pair<SocialSite, List<ArtistSocial>>> {
+            .sortedWith(compareBy<Pair<SocialSite, List<SocialEntry>>> {
                 when (it.first) { // Site priority, always show Pixiv/Fanbox/Twitter first and OTHER last.
                     SocialSite.PIXIV -> 0
                     SocialSite.FANBOX -> 1

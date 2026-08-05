@@ -45,11 +45,7 @@ data class ImageMetadata(
         get() = PixivArtwork.fromUrl(source) ?: pixivArtworkId?.let { PixivArtwork(it, 0) }
 
     val pixivUrl: String?
-        get() = pixivArtwork?.let {
-                    val id = if (it.index == 0) it.id.toString()
-                             else "${it.id}#${it.index}"
-                    "https://www.pixiv.net/artworks/$id"
-                }
+        get() = pixivArtwork?.toString()
 
 }
 

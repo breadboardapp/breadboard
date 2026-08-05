@@ -5,7 +5,7 @@ import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import moe.apex.breadboard.RequestUtil
 import moe.apex.breadboard.artist.Artist
-import moe.apex.breadboard.artist.ArtistSocial
+import moe.apex.breadboard.social.SocialEntry
 import moe.apex.breadboard.artist.ArtistTag
 import moe.apex.breadboard.preferences.ImageSource
 import moe.apex.breadboard.tag.TagCategory
@@ -521,7 +521,7 @@ object Danbooru : ImageBoard {
             socialUrls = primaryArtist.optJSONArray("urls")?.let { urlArray ->
                 (0 until urlArray.length()).mapNotNull { index ->
                     val urlEntry = urlArray.optJSONObject(index)
-                    ArtistSocial(
+                    SocialEntry(
                         url = urlEntry.optString("url").takeUnless { it.isBlank() } ?: return@mapNotNull null,
                         isActive = urlEntry.optBoolean("is_active", false)
                     )

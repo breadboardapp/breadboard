@@ -88,6 +88,9 @@ object FollowedArtists
 object Search
 
 @Serializable
+object ReverseSearch
+
+@Serializable
 data class Results(
     val source: ImageSource,
     val tags: List<String>
@@ -128,6 +131,9 @@ object RecommendationsSettings
 
 @Serializable
 object IgnoredTagsSettings
+
+@Serializable
+data class SauceNaoResults(val imageUrl: String = "", val fileUri: String = "")
 
 @Serializable
 data class ArtistProfile(

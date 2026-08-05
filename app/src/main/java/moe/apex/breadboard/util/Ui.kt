@@ -448,6 +448,57 @@ fun TitleSummary(
     trailingIcon: @Composable (() -> Unit)? = null,
     onClick: (() -> Unit)? = null
 ) {
+    TitleSummary(
+        modifier = modifier,
+        title = title,
+        summary = summary,
+        enabled = enabled,
+        leadingIcon = leadingIcon,
+        leadingIconSize = 42.dp,
+        trailingIcon = trailingIcon,
+        onClick = onClick
+    )
+}
+
+
+@Composable
+fun FeaturedImageTitleSummary(
+    modifier: Modifier = Modifier,
+    title: String? = null,
+    summary: String? = null,
+    enabled: Boolean = true,
+    featuredImage: @Composable (() -> Unit)? = null,
+    trailingIcon: @Composable (() -> Unit)? = null,
+    onClick: (() -> Unit)? = null
+) {
+    TitleSummary(
+        modifier = modifier,
+        title = title,
+        summary = summary,
+        enabled = enabled,
+        leadingIcon = featuredImage,
+        leadingIconSize = 80.dp,
+        trailingIcon = trailingIcon,
+        onClick = onClick
+    )
+}
+
+
+@Composable
+private fun TitleSummary(
+    modifier: Modifier = Modifier,
+    title: String? = null,
+    summary: String? = null,
+    enabled: Boolean = true,
+    leadingIcon: @Composable (() -> Unit)? = null,
+    leadingIconSize: Dp,
+    trailingIcon: @Composable (() -> Unit)? = null,
+    onClick: (() -> Unit)? = null
+) {
+    if (title == null && summary == null) {
+        throw IllegalArgumentException("Provide at least one of `title` or `summary`.")
+    }
+
     val baseModifier = modifier.heightIn(min = 72.dp)
     val finalModifier = onClick?.let { baseModifier.clickable(enabled) { it() } } ?: baseModifier
 
@@ -460,7 +511,7 @@ fun TitleSummary(
             Box(
                 modifier = Modifier
                     .padding(vertical = SMALL_LARGE_SPACER.dp)
-                    .size(42.dp)
+                    .size(leadingIconSize)
                     .alpha(if (enabled) 1f else DISABLED_OPACITY),
                 contentAlignment = Alignment.Center
             ) {
@@ -475,13 +526,15 @@ fun TitleSummary(
                 .alpha(if (enabled) 1f else DISABLED_OPACITY),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.prefTitle,
-            )
+            title?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.prefTitle,
+                )
+            }
 
-            if (summary != null) {
-                Summary(text = summary)
+            summary?.let {
+                Summary(text = it)
             }
         }
         trailingIcon?.let {
@@ -881,15 +934,15 @@ fun HorizontalFloatingToolbarOptionalFab(
         toolbarContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
     ),
     floatingActionButton: (@Composable () -> Unit)? = null,
+    elevation: Dp = 6.dp, // This is what spec says it's supposed to be
     actions: @Composable RowScope.() -> Unit
 ) {
-    val shadowElevation = 6.dp // This is what spec says but the M3 implementation does what it wants lol
     if (floatingActionButton != null) {
         HorizontalFloatingToolbar(
             modifier = modifier,
             colors = colors,
             expanded = true,
-            expandedShadowElevation = shadowElevation,
+            expandedShadowElevation = elevation,
             floatingActionButton = floatingActionButton,
             content = actions
         )
@@ -898,7 +951,7 @@ fun HorizontalFloatingToolbarOptionalFab(
             modifier = modifier,
             colors = colors,
             expanded = true,
-            expandedShadowElevation = shadowElevation,
+            expandedShadowElevation = elevation,
             content = actions
         )
     }
