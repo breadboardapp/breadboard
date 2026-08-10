@@ -90,7 +90,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.navigation.NavController
 import kotlinx.coroutines.CancellationException
@@ -137,6 +136,7 @@ import moe.apex.breadboard.util.showToast
 import java.text.SimpleDateFormat
 import java.util.Date
 import androidx.compose.ui.platform.LocalLocale
+import moe.apex.breadboard.util.MediumEmphasisCenteredLabel
 import moe.apex.breadboard.viewmodel.getGlobalViewModel
 
 
@@ -762,13 +762,9 @@ fun AutoCompleteTagResults(
             ) {
                 if (mostRecentSuggestions.isEmpty()) {
                     item {
-                        Text(
-                            fontSize = 16.sp,
+                        MediumEmphasisCenteredLabel(
                             text = "No results :(",
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier
-                                .padding(SMALL_LARGE_SPACER.dp)
-                                .fillMaxWidth(),
+                            modifier = Modifier.padding(SMALL_LARGE_SPACER.dp)
                         )
                     }
                 } else {

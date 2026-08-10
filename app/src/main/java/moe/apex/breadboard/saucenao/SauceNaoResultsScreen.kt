@@ -67,6 +67,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import moe.apex.breadboard.R
+import moe.apex.breadboard.detailview.FlexibleImageGridDefaults
 import moe.apex.breadboard.social.SocialSite
 import moe.apex.breadboard.social.sortSocialSites
 import moe.apex.breadboard.image.ImageBoardRequirement
@@ -206,16 +207,7 @@ fun SauceNaoResultsScreen(
 
                 is ResultsState.Success -> {
                     if (currentState.groups.isEmpty()) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "No results found :(",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        FlexibleImageGridDefaults.NoImages("No matches found :(")
                     } else {
                         var expandedGroupIndex by remember { mutableIntStateOf(-1) }
                         LazyColumn(
