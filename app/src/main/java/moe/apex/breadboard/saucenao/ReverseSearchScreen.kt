@@ -61,6 +61,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import moe.apex.breadboard.navigation.ApiKeysSettings
 import moe.apex.breadboard.navigation.SauceNaoResults
 import moe.apex.breadboard.preferences.LocalPreferences
 import moe.apex.breadboard.ui.theme.searchField
@@ -134,7 +135,8 @@ fun ReverseSearchScreen(navController: NavController) {
 
     fun onSearch() {
         if (prefs.saucenaoApiKey.isEmpty()) {
-            showToast(context, "Set a SauceNAO API key in General Settings")
+            navController.navigate(ApiKeysSettings)
+            showToast(context, "Set a SauceNAO API key first.")
             return
         }
 
