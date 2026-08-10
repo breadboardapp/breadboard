@@ -16,6 +16,10 @@ val Typography = Typography(
                 lineHeight = 24.sp,
                 letterSpacing = 0.2.sp
         ),
+        bodyMedium = Typography().bodyMedium.copy(
+                fontSize = 15.sp,
+                lineHeight = 17.sp
+        ),
         bodySmall = Typography().bodySmall.copy(
                 fontSize = 14.sp,
                 lineHeight = 16.sp,
