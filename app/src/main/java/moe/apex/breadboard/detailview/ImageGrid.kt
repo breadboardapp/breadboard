@@ -220,13 +220,13 @@ fun FlexibleImageGrid(
 
     when (gridState) {
         is LazyStaggeredGridState -> {
-            Box {
+            Box(modifier = modifier) {
                 ImageGridPullToRefreshContainer(
-                    modifier = modifier,
+                    modifier = Modifier.fillMaxSize(),
                     pullToRefreshController = pullToRefreshController
                 ) {
                     StaggeredImageGrid(
-                        modifier = if (pullToRefreshController == null) modifier else Modifier,
+                        modifier = Modifier.fillMaxSize(),
                         userScrollEnabled = userScrollEnabled,
                         gridState = gridState,
                         contentPadding = contentPadding,
@@ -239,7 +239,7 @@ fun FlexibleImageGrid(
                 }
 
                 LoadingIndicatorContainer(
-                    modifier = modifier,
+                    modifier = Modifier.fillMaxSize(),
                     doneInitialLoad = doneInitialLoad,
                     contentPadding = contentPadding,
                     onInitialLoadCompleted = { gridState.requestScrollToItem(0) },
@@ -253,9 +253,9 @@ fun FlexibleImageGrid(
                 modifier = modifier,
                 pullToRefreshController = pullToRefreshController
             ) {
-                Box {
+                Box(modifier = Modifier.fillMaxSize()) {
                     UniformImageGrid(
-                        modifier = if (pullToRefreshController == null) modifier else Modifier,
+                        modifier = Modifier.fillMaxSize(),
                         userScrollEnabled = userScrollEnabled,
                         gridState = gridState,
                         contentPadding = contentPadding,
@@ -267,7 +267,7 @@ fun FlexibleImageGrid(
                     )
 
                     LoadingIndicatorContainer(
-                        modifier = modifier,
+                        modifier = Modifier.fillMaxSize(),
                         doneInitialLoad = doneInitialLoad,
                         contentPadding = contentPadding,
                         onInitialLoadCompleted = { gridState.scrollToItem(0) },

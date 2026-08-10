@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -27,9 +29,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.ContentCopy
@@ -75,7 +79,9 @@ import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -112,6 +118,7 @@ import moe.apex.breadboard.util.Summary
 import moe.apex.breadboard.util.TINY_SPACER
 import moe.apex.breadboard.util.copyText
 import moe.apex.breadboard.util.generateColours
+import moe.apex.breadboard.util.navBarHeight
 import moe.apex.breadboard.util.showToast
 import moe.apex.breadboard.viewmodel.ArtistProfileViewModel
 import moe.apex.breadboard.viewmodel.getGlobalViewModel
@@ -134,6 +141,14 @@ fun ArtistProfileScreen(
 
     val context = LocalContext.current
     val prefs = LocalPreferences.current
+    val windowInfo = LocalWindowInfo.current
+    val density = LocalDensity.current
+
+    val isWideScreen = remember {
+        with(density) {
+            windowInfo.containerSize.width.toDp() >= 840.dp // M3 spec for large device in landscape
+        }
+    }
 
     var shouldShowLargeImage by remember { mutableStateOf(false) }
     var selectedImageIndex by remember { mutableIntStateOf(0) }
@@ -193,43 +208,26 @@ fun ArtistProfileScreen(
                     )
                 }
             }
+        } else if (isWideScreen) {
+            SplitProfileLayout(
+                navController = navController,
+                artist = artist,
+                artistTag = artistTag,
+                images = images
+            ) { index, _ ->
+                selectedImageIndex = index
+                shouldShowLargeImage = true
+            }
         } else {
-            FlexibleImageGrid(
-                staggered = prefs.useStaggeredGrid,
-                contentPadding = PaddingValues(
-                    start = SMALL_LARGE_SPACER.dp,
-                    end = SMALL_LARGE_SPACER.dp,
-                    bottom = 88.dp // FAB height + 16dp vertical padding
-                ),
-                images = images,
-                onImageClick = { index, _ ->
-                    selectedImageIndex = index
-                    shouldShowLargeImage = true
-                },
-                headerItems = {
-                    item {
-                        NavigationButtonBox(
-                            modifier = Modifier.offset(x = -TINY_SPACER.dp),
-                            navController = navController
-                        )
-                    }
-                    item {
-                        ArtistHeader(artist!!, images)
-                    }
-                    item {
-                        ArtistToolbar(artistTag)
-                    }
-                    item {
-                        PopularPostsHeading()
-                    }
-                },
-                noImagesContent = {
-                    FlexibleImageGridDefaults.NoImages(
-                        text = "We weren't able to show any posts here.\n" +
-                               "Tap the button to search all posts."
-                    )
-                }
-            )
+            SinglePaneProfileLayout(
+                navController = navController,
+                artist = artist,
+                artistTag = artistTag,
+                images = images
+            ) { index, _ ->
+                selectedImageIndex = index
+                shouldShowLargeImage = true
+            }
         }
     }
 
@@ -243,6 +241,113 @@ fun ArtistProfileScreen(
             viewModel.updateImage(oldImage, newImage)
         }
     )
+}
+
+
+@Composable
+private fun SinglePaneProfileLayout(
+    navController: NavController,
+    artist: Artist?,
+    artistTag: String,
+    images: List<Image>,
+    onImageClick: (Int, Image) -> Unit
+) {
+    val prefs = LocalPreferences.current
+
+    FlexibleImageGrid(
+        staggered = prefs.useStaggeredGrid,
+        contentPadding = PaddingValues(
+            start = SMALL_LARGE_SPACER.dp,
+            end = SMALL_LARGE_SPACER.dp,
+            bottom = 88.dp // FAB height + 16dp vertical padding
+        ),
+        images = images,
+        onImageClick = onImageClick,
+        headerItems = {
+            item {
+                NavigationButtonBox(
+                    modifier = Modifier.offset(x = -TINY_SPACER.dp),
+                    navController = navController
+                )
+            }
+            item {
+                ArtistHeader(artist!!, images)
+            }
+            item {
+                ArtistToolbar(artistTag)
+            }
+            item {
+                PopularPostsHeading()
+            }
+        },
+        noImagesContent = {
+            FlexibleImageGridDefaults.NoImages(
+                text = "We weren't able to show any posts here.\n" +
+                        "Tap the button to search all posts."
+            )
+        }
+    )
+}
+
+
+@Composable
+private fun SplitProfileLayout(
+    navController: NavController,
+    artist: Artist?,
+    artistTag: String,
+    images: List<Image>,
+    onImageClick: (Int, Image) -> Unit
+) {
+    val prefs = LocalPreferences.current
+
+    Row(modifier = Modifier.fillMaxSize()) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(SMALL_SPACER.dp),
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+                .verticalScroll(rememberScrollState())
+                .padding(
+                    start = SMALL_LARGE_SPACER.dp,
+                    end = SMALL_LARGE_SPACER.dp,
+                    bottom = navBarHeight + SMALL_LARGE_SPACER.dp
+                )
+        ) {
+            NavigationButtonBox(
+                modifier = Modifier.offset(x = -TINY_SPACER.dp),
+                navController = navController
+            )
+            ArtistHeader(artist!!, images)
+            ArtistToolbar(artistTag)
+        }
+        FlexibleImageGrid(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight(),
+            staggered = prefs.useStaggeredGrid,
+            contentPadding = PaddingValues(
+                top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+                        + TopAppBarDefaults.LargeAppBarCollapsedHeight
+                        + SMALL_SPACER.dp,
+                bottom = 88.dp, // FAB height + 16dp vertical padding
+                start = SMALL_LARGE_SPACER.dp,
+                end = SMALL_LARGE_SPACER.dp
+            ),
+            images = images,
+            onImageClick = onImageClick,
+            headerItems = {
+                item {
+                    PopularPostsHeading(withDivider = false)
+                }
+            },
+            noImagesContent = {
+                FlexibleImageGridDefaults.NoImages(
+                    text = "We weren't able to show any posts here.\n" +
+                            "Tap the button to search all posts."
+                )
+            }
+        )
+    }
 }
 
 
@@ -463,7 +568,7 @@ private fun ArtistToolbar(artistTag: String, ) {
 
 
 @Composable
-private fun PopularPostsHeading() {
+private fun PopularPostsHeading(withDivider: Boolean = true) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -471,7 +576,9 @@ private fun PopularPostsHeading() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(LARGE_SPACER.dp)
     ) {
-        HorizontalDivider(Modifier.fillMaxWidth(0.5f))
+        if (withDivider) {
+            HorizontalDivider(Modifier.fillMaxWidth(0.5f))
+        }
         Text(
             text = "Popular posts",
             style = MaterialTheme.typography.titleLarge
