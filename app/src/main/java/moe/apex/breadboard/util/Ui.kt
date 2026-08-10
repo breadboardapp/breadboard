@@ -63,6 +63,7 @@ import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -137,7 +138,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import moe.apex.breadboard.history.SearchHistoryEntry
+import moe.apex.breadboard.navigation.ApiKeysSettings
 import moe.apex.breadboard.preferences.Experiment
+import moe.apex.breadboard.preferences.ImageSource
 import moe.apex.breadboard.preferences.LocalPreferences
 import moe.apex.breadboard.prefs
 import moe.apex.breadboard.ui.theme.BreadboardTheme
@@ -1622,6 +1625,58 @@ fun WideLinearWavyProgressIndicator(modifier: Modifier = Modifier) {
         amplitude = 0.6f,
         wavelength = 40.dp,
     )
+}
+
+
+@Composable
+fun ExpressivePromptWithActions(
+    modifier: Modifier = Modifier,
+    title: String,
+    summary: String? = null,
+    actions: @Composable RowScope.() -> Unit
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(MEDIUM_SPACER.dp)
+    ) {
+        ExpressiveContainer(position = ListItemPosition.SINGLE_ELEMENT) {
+            TitleSummary(
+                title = title,
+                summary = summary,
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(MEDIUM_SPACER.dp)) {
+            actions()
+        }
+    }
+}
+
+
+@Composable
+fun ApiKeyRequiredPrompt(
+    modifier: Modifier = Modifier,
+    source: ImageSource,
+    navController: NavController,
+    beforeActions: (@Composable RowScope.() -> Unit)? = null
+) {
+    ExpressivePromptWithActions(
+        modifier = modifier,
+        title = "API key needed",
+        summary = "To use ${source.label}, you must first set an API key.\n" +
+                  "Alternatively, choose a different source."
+    ) {
+        beforeActions?.invoke(this)
+
+        Button(
+            onClick = {
+                navController.navigate(ApiKeysSettings)
+            },
+            shapes = ButtonDefaults.shapes()
+        ) {
+            Text("API key settings")
+        }
+    }
 }
 
 

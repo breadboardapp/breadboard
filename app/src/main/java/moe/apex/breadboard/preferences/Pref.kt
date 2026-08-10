@@ -298,7 +298,9 @@ data class Prefs(
         if (source == ImageSource.R34) {
             return ImageBoardAuth(BuildConfig.R34_APP_ID, SecretsManager.getApiKey(context)!!)
         }
-        return imageBoardAuths[source]
+        return imageBoardAuths[source].takeIf {
+            it?.user?.isNotEmpty() == true && it.apiKey.isNotEmpty()
+        }
     }
 
 

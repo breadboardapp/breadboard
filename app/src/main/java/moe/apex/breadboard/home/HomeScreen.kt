@@ -36,6 +36,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleButtonDefaults
@@ -65,19 +66,24 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import moe.apex.breadboard.detailview.FlexibleImageGrid
 import moe.apex.breadboard.detailview.FlexibleImageGridDefaults
+import moe.apex.breadboard.image.ImageBoardRequirement
 import moe.apex.breadboard.preferences.Experiment
 import moe.apex.breadboard.preferences.ImageSource
 import moe.apex.breadboard.preferences.LocalPreferences
 import moe.apex.breadboard.largeimageview.OffsetBasedLargeImageView
 import moe.apex.breadboard.navigation.FollowedArtists
+import moe.apex.breadboard.navigation.GeneralSettings
+import moe.apex.breadboard.navigation.RecommendationsSettings
 import moe.apex.breadboard.preferences.BrowseTab
 import moe.apex.breadboard.preferences.PreferenceKeys
 import moe.apex.breadboard.prefs
 import moe.apex.breadboard.tag.IgnoredTagsHelper
 import moe.apex.breadboard.ui.theme.BreadboardTheme
 import moe.apex.breadboard.ui.theme.prefTitle
+import moe.apex.breadboard.util.ApiKeyRequiredPrompt
 import moe.apex.breadboard.util.BasicExpressiveContainer
 import moe.apex.breadboard.util.CHIP_SPACING
+import moe.apex.breadboard.util.ExpressivePromptWithActions
 import moe.apex.breadboard.util.FollowingProvider
 import moe.apex.breadboard.util.ListItemPosition
 import moe.apex.breadboard.util.MEDIUM_LARGE_SPACER
@@ -278,6 +284,59 @@ fun HomeScreen(
             userScrollEnabled = !shouldShowLargeImage
         ) { page ->
             if (page == BrowseTab.entries.indexOf(BrowseTab.FOR_YOU)) {
+                val needsAuth = remember {
+                    prefs.imageSource.imageBoard.apiKeyRequirement == ImageBoardRequirement.REQUIRED &&
+                            prefs.authFor(prefs.imageSource, context) == null
+                }
+
+                if (needsAuth) {
+                    return@HorizontalPager ApiKeyRequiredPrompt(
+                        modifier = Modifier.padding(vertical = SMALL_LARGE_SPACER.dp),
+                        source = prefs.imageSource,
+                        navController = navController
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                navController.navigate(GeneralSettings)
+                            },
+                            shapes = ButtonDefaults.shapes()
+                        ) {
+                            Text("Change source")
+                        }
+                    }
+                }
+
+                /* R34 is overwhelmingly QUESTIONABLE or EXPLICIT rated posts. We'll just
+                   enforce the option to prevent any confusion as to why there would be no (good)
+                   results when disabled. */
+                if (prefs.imageSource == ImageSource.R34 && !prefs.recommendAllRatings) {
+                    return@HorizontalPager ExpressivePromptWithActions(
+                        modifier = Modifier.padding(vertical = SMALL_LARGE_SPACER.dp),
+                        title = "Settings adjustment needed",
+                        summary = "Your selected source is Rule34, but you don't have " +
+                                  "all ratings enabled. Enable the 'Recommend all ratings' " +
+                                  "option to start seeing your recommendations. "
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                navController.navigate(GeneralSettings)
+                            },
+                            shapes = ButtonDefaults.shapes()
+                        ) {
+                            Text("Change source")
+                        }
+
+                        Button(
+                            onClick = {
+                                navController.navigate(RecommendationsSettings)
+                            },
+                            shapes = ButtonDefaults.shapes()
+                        ) {
+                            Text("Go to settings")
+                        }
+                    }
+                }
+
                 recommendationsProvider?.let { provider ->
                     val state = if (prefs.useStaggeredGrid) {
                         provider.staggeredGridState
