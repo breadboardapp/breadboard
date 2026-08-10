@@ -89,6 +89,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import moe.apex.breadboard.R
 import moe.apex.breadboard.detailview.FlexibleImageGrid
+import moe.apex.breadboard.detailview.FlexibleImageGridDefaults
 import moe.apex.breadboard.image.Image
 import moe.apex.breadboard.largeimageview.OffsetBasedLargeImageView
 import moe.apex.breadboard.navigation.Results
@@ -221,6 +222,12 @@ fun ArtistProfileScreen(
                     item {
                         PopularPostsHeading()
                     }
+                },
+                noImagesContent = {
+                    FlexibleImageGridDefaults.NoImages(
+                        text = "We weren't able to show any posts here.\n" +
+                               "Tap the button to search all posts."
+                    )
                 }
             )
         }
