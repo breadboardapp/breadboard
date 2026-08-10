@@ -108,7 +108,7 @@ fun PreferencesScreen(navController: NavHostController) {
                     TitleSummary(
                         modifier = Modifier.fillMaxWidth(),
                         title = "General",
-                        summary = "Image source, API keys, search history, and links.",
+                        summary = "Image source, search history, and links.",
                         leadingIcon = {
                             ContainedIcon(imageVector = Icons.Rounded.Settings, label = "General")
                         },
@@ -134,7 +134,7 @@ fun PreferencesScreen(navController: NavHostController) {
                     TitleSummary(
                         modifier = Modifier.fillMaxWidth(),
                         title = "Content",
-                        summary = "Blocked tags, recommendations, and video settings.",
+                        summary = "Blocked tags, recommendations, AI filtering, and video settings.",
                         leadingIcon = {
                             ContainedIcon(imageVector = Icons.Rounded.Visibility, label = "Content")
                         },
@@ -147,7 +147,7 @@ fun PreferencesScreen(navController: NavHostController) {
                     TitleSummary(
                         modifier = Modifier.fillMaxWidth(),
                         title = "Behaviour and layout",
-                        summary = "Start page, app layout, and image viewer actions.",
+                        summary = "Start page, data saver, visual and layout preferences.",
                         leadingIcon = {
                             ContainedIcon(imageVector = Icons.Rounded.Dashboard, label = "Behaviour and layout")
                         },
