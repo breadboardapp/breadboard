@@ -487,7 +487,7 @@ fun HomeScreen(
                                         )
                                     }
                                 } else {
-                                    FlexibleImageGridDefaults.NoImages("No new posts from your followed artists,")
+                                    FlexibleImageGridDefaults.NoImages("No new posts from your followed artists.")
                                     Button(
                                         onClick = {
                                             ptrController.refresh(animate = true)
