@@ -57,7 +57,6 @@ import moe.apex.breadboard.util.TitleSummary
 import moe.apex.breadboard.util.availableRatingsForCurrentSource
 import moe.apex.breadboard.util.filterChipSolidColor
 import moe.apex.breadboard.util.rememberPullToRefreshController
-import moe.apex.breadboard.util.withoutVertical
 import moe.apex.breadboard.viewmodel.SearchResultsViewModel
 
 
@@ -86,6 +85,11 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
     val viewModelImages by viewModel.images.collectAsStateWithLifecycle()
     val blockedTags by viewModel.blockedTags.collectAsStateWithLifecycle()
     val selectedRatings by viewModel.selectedRatings.collectAsStateWithLifecycle()
+    val state = if (prefs.useStaggeredGrid) {
+        viewModel.staggeredGridState
+    } else {
+        viewModel.uniformGridState
+    }
 
     fun setUpViewModel(auth: ImageBoardAuth? = null) {
         viewModel.setup(
@@ -175,7 +179,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
                 additionalActions = {
                     if (doneInitialLoad) {
                         ScrollToTopArrow(
-                            scrollableState = if (prefs.useStaggeredGrid) viewModel.staggeredGridState else viewModel.uniformGridState,
+                            scrollableState = state,
                             animate = !filterLocally || Experiment.ALWAYS_ANIMATE_SCROLL.isEnabled(),
                         )
                     }
@@ -206,12 +210,11 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
             return@MainScreenScaffold
         }
 
-        ImageGrid(
+        FlexibleImageGrid(
+            gridState = state,
             modifier = Modifier
-                .padding(padding.withoutVertical(top = false))
+                .padding(padding)
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
-            staggeredGridState = viewModel.staggeredGridState,
-            uniformGridState = viewModel.uniformGridState,
             images = imagesToDisplay,
             onImageClick = { index, _ ->
                 Snapshot.withMutableSnapshot {
@@ -219,14 +222,25 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
                     isImageCarouselVisible = true
                 }
             },
+            noImagesContent = {
+                if (selectedRatings.isEmpty()) {
+                    FlexibleImageGridDefaults.NoImages("No ratings selected.")
+                } else {
+                    FlexibleImageGridDefaults.NoImages()
+                }
+            },
             contentPadding = PaddingValues(top = SMALL_LARGE_SPACER.dp, start = SMALL_LARGE_SPACER.dp, end = SMALL_LARGE_SPACER.dp),
-            filterComposable = if (filterLocally) { {
-                HorizontallyScrollingChipsWithLabels(
-                    modifier = Modifier.padding(bottom = TINY_SPACER.dp),
-                    labels = listOf("Ratings"),
-                    content = listOf(ratingRows)
-                )
-            } } else null,
+            headerItems = {
+                if (filterLocally) {
+                    item {
+                        HorizontallyScrollingChipsWithLabels(
+                            modifier = Modifier.padding(bottom = TINY_SPACER.dp),
+                            labels = listOf("Ratings"),
+                            content = listOf(ratingRows)
+                        )
+                    }
+                }
+            },
             pullToRefreshController = pullToRefreshController,
             doneInitialLoad = doneInitialLoad,
             onEndReached = viewModel::loadMore

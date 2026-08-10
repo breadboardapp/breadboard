@@ -422,6 +422,19 @@ fun MainScreenScaffold(
 }
 
 
+@Composable
+fun MediumEmphasisCenteredLabel(
+    text: String,
+    modifier: Modifier = Modifier
+) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth() then modifier
+    )
+}
 
 
 @Composable

@@ -22,7 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
-import moe.apex.breadboard.detailview.ImageGrid
+import moe.apex.breadboard.detailview.FlexibleImageGrid
+import moe.apex.breadboard.detailview.FlexibleImageGridDefaults
 import moe.apex.breadboard.image.ImageRating
 import moe.apex.breadboard.preferences.Experiment
 import moe.apex.breadboard.preferences.ImageSource
@@ -63,6 +64,12 @@ fun FavouritesPage(
         &&
         if (it.metadata?.rating == null) ImageRating.UNKNOWN in prefs.favouritesRatingsFilter
         else it.metadata.rating in prefs.favouritesRatingsFilter
+    }
+
+    val state = if (prefs.useStaggeredGrid) {
+        viewModel.staggeredGridState
+    } else {
+        viewModel.uniformGridState
     }
 
     val chips = mutableListOf<List<@Composable () -> Unit>>()
@@ -131,18 +138,14 @@ fun FavouritesPage(
             }
         }
     ) { padding ->
-        ImageGrid(
+        FlexibleImageGrid(
+            gridState = state,
             modifier = Modifier
                 .padding(padding)
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
-                .onScroll(viewModel.staggeredGridState) {
+                .onScroll(state) {
                     navBarVisibilityCallback(!it.lastScrolledForward)
-                }
-                .onScroll(viewModel.uniformGridState) {
-                    navBarVisibilityCallback(!it.lastScrolledForward)
-                  },
-            staggeredGridState = viewModel.staggeredGridState,
-            uniformGridState = viewModel.uniformGridState,
+                },
             images = images,
             onImageClick = { index, _ ->
                 Snapshot.withMutableSnapshot {
@@ -150,13 +153,28 @@ fun FavouritesPage(
                     isImageCarouselVisible = true
                 }
             },
-            contentPadding = PaddingValues(top = SMALL_LARGE_SPACER.dp, start = SMALL_LARGE_SPACER.dp, end = SMALL_LARGE_SPACER.dp, bottom = bottomAppBarAndNavBarHeight),
-            filterComposable = {
-                HorizontallyScrollingChipsWithLabels(
-                    modifier = Modifier.padding(bottom = TINY_SPACER.dp),
-                    labels = listOf("Sources", "Ratings"),
-                    content = chips
+            noImagesContent = {
+                FlexibleImageGridDefaults.NoImages(
+                    text = if (prefs.favouritesFilter.isEmpty() && prefs.favouritesRatingsFilter.isEmpty()) {
+                        "No sources or ratings selected."
+                    } else if (prefs.favouritesFilter.isEmpty()) {
+                        "No sources selected."
+                    } else if (prefs.favouritesRatingsFilter.isEmpty()) {
+                        "No ratings selected."
+                    } else {
+                        "No favourite posts yet.\nStart browsing to find your new favourite art!"
+                    }
                 )
+            },
+            contentPadding = PaddingValues(top = SMALL_LARGE_SPACER.dp, start = SMALL_LARGE_SPACER.dp, end = SMALL_LARGE_SPACER.dp, bottom = bottomAppBarAndNavBarHeight),
+            headerItems = {
+                item {
+                    HorizontallyScrollingChipsWithLabels(
+                        modifier = Modifier.padding(bottom = TINY_SPACER.dp),
+                        labels = listOf("Sources", "Ratings"),
+                        content = chips
+                    )
+                }
             }
         )
     }

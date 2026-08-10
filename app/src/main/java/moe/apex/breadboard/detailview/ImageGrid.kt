@@ -47,7 +47,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.network.NetworkHeaders
@@ -56,7 +55,8 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import kotlinx.coroutines.launch
 import moe.apex.breadboard.image.Image
-import moe.apex.breadboard.preferences.LocalPreferences
+import moe.apex.breadboard.util.MEDIUM_SPACER
+import moe.apex.breadboard.util.MediumEmphasisCenteredLabel
 import moe.apex.breadboard.util.NavBarHeightVerticalSpacer
 import moe.apex.breadboard.util.PullToRefreshController
 import moe.apex.breadboard.util.SMALL_SPACER
@@ -102,11 +102,10 @@ object FlexibleImageGridDefaults {
 
 
     @Composable
-    fun NoImages() {
-        Text(
-            text = "No images :(",
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
+    fun NoImages(text: String = "No matching posts :(") {
+        MediumEmphasisCenteredLabel(
+            text = text,
+            modifier = Modifier.padding(MEDIUM_SPACER.dp)
         )
     }
 }
@@ -282,42 +281,6 @@ fun FlexibleImageGrid(
             throw IllegalArgumentException("gridState must be either LazyStaggeredGridState or LazyGridState")
         }
     }
-}
-
-
-@Deprecated(
-    message = "Use FlexibleImageGrid, which allows for passing in multiple header items, " +
-              "custom loading indicators, and controlling whether user scroll is allowed, instead.",
-    replaceWith = ReplaceWith("FlexibleImageGrid")
-)
-@Composable
-fun ImageGrid(
-    modifier: Modifier = Modifier,
-    staggeredGridState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
-    uniformGridState: LazyGridState = rememberLazyGridState(),
-    images: List<Image>,
-    onImageClick: (Int, Image) -> Unit,
-    noImagesContent: @Composable () -> Unit = FlexibleImageGridDefaults::NoImages,
-    contentPadding: PaddingValues = PaddingValues(0.dp),
-    filterComposable: (@Composable () -> Unit)? = null,
-    pullToRefreshController: PullToRefreshController? = null,
-    doneInitialLoad: Boolean = true,
-    onEndReached: (suspend () -> Unit)? = null
-) {
-    val prefs = LocalPreferences.current
-
-    FlexibleImageGrid(
-        gridState = if (prefs.useStaggeredGrid) staggeredGridState else uniformGridState,
-        modifier = modifier,
-        images = images,
-        onImageClick = onImageClick,
-        noImagesContent = noImagesContent,
-        contentPadding = contentPadding,
-        headerItems = filterComposable?.let { { item { it() }} },
-        pullToRefreshController = pullToRefreshController,
-        doneInitialLoad = doneInitialLoad,
-        onEndReached = onEndReached
-    )
 }
 
 
