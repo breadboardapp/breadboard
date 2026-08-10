@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -27,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
@@ -35,7 +37,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.material3.TopAppBarDefaults
@@ -78,7 +79,6 @@ import moe.apex.breadboard.ui.theme.prefTitle
 import moe.apex.breadboard.util.BasicExpressiveContainer
 import moe.apex.breadboard.util.CHIP_SPACING
 import moe.apex.breadboard.util.FollowingProvider
-import moe.apex.breadboard.util.LARGE_SPACER
 import moe.apex.breadboard.util.ListItemPosition
 import moe.apex.breadboard.util.MEDIUM_LARGE_SPACER
 import moe.apex.breadboard.util.MainScreenScaffold
@@ -316,18 +316,20 @@ fun HomeScreen(
                             }
                         },
                         noImagesContent = {
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text("No recommendations right now.")
-                                TextButton(
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                FlexibleImageGridDefaults.NoImages("No recommendations right now.")
+                                Button(
                                     onClick = {
                                         ptrController.refresh(animate = true)
-                                    }
+                                    },
+                                    shapes = ButtonDefaults.shapes()
                                 ) {
-                                    Icon(Icons.Rounded.Refresh, contentDescription = null)
-                                    Spacer(Modifier.width(SMALL_SPACER.dp))
+                                    Icon(
+                                        imageVector = Icons.Rounded.Refresh,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(ButtonDefaults.IconSize)
+                                    )
+                                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
                                     Text("Refresh")
                                 }
                             }
@@ -387,10 +389,7 @@ fun HomeScreen(
                             if (!provider.doneInitialLoad) {
                                 return@FlexibleImageGrid
                             }
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 if (prefs.followedTags.isEmpty()) {
                                     val suggestedArtists = remember(prefs.favouriteImages, prefs.followedTags) {
                                         RecommendationsHelper.getRecommendedArtists(
@@ -423,24 +422,25 @@ fun HomeScreen(
                                             )
                                         }
                                     } else {
-                                        Text(
-                                            text = "You aren't following anyone yet.",
-                                            modifier = Modifier.padding(top = LARGE_SPACER.dp)
+                                        FlexibleImageGridDefaults.NoImages(
+                                            text = "You aren't following anyone yet.\n" +
+                                                   "Add some posts to your Favourites and Breadboard will suggest artists for you to follow."
                                         )
                                     }
                                 } else {
-                                    Text(
-                                        text = "No new posts from artists you follow.",
-                                        modifier = Modifier.padding(top = LARGE_SPACER.dp)
-                                    )
-                                    TextButton(
-                                        modifier = Modifier.padding(top = SMALL_SPACER.dp),
+                                    FlexibleImageGridDefaults.NoImages("No new posts from your followed artists,")
+                                    Button(
                                         onClick = {
                                             ptrController.refresh(animate = true)
-                                        }
+                                        },
+                                        shapes = ButtonDefaults.shapes()
                                     ) {
-                                        Icon(Icons.Rounded.Refresh, contentDescription = null)
-                                        Spacer(Modifier.width(SMALL_SPACER.dp))
+                                        Icon(
+                                            imageVector = Icons.Rounded.Refresh,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(ButtonDefaults.IconSize)
+                                        )
+                                        Spacer(Modifier.width(ButtonDefaults.IconSpacing))
                                         Text("Refresh")
                                     }
                                 }
