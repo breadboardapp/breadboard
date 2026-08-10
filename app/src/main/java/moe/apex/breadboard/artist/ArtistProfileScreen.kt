@@ -71,6 +71,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
@@ -109,6 +110,7 @@ import moe.apex.breadboard.util.SMALL_SPACER
 import moe.apex.breadboard.util.Summary
 import moe.apex.breadboard.util.TINY_SPACER
 import moe.apex.breadboard.util.copyText
+import moe.apex.breadboard.util.generateColours
 import moe.apex.breadboard.util.showToast
 import moe.apex.breadboard.viewmodel.ArtistProfileViewModel
 import moe.apex.breadboard.viewmodel.getGlobalViewModel
@@ -497,31 +499,42 @@ private fun ArtistHeader(
     images: List<Image>,
 ) {
     val uriHandler = LocalUriHandler.current
-    val randomImageIndex = rememberSaveable { Random.nextInt(images.size) }
 
     val groupedSocials = remember { artist.groupSocials() }
 
     BreadboardTheme(darkTheme = true) { // We're adding a dark scrim, so assume always dark theme.
         Surface(shape = MaterialTheme.shapes.extraLargeIncreased) {
             Box {
-                AsyncImage(
-                    model = images[randomImageIndex].let {
-                        if (it.isVideo || it.fileFormat == "gif" || it.fileFormat == "webp") {
-                            it.previewUrl // Can't use videos, and we don't want animated images
-                        } else {
-                            it.sampleUrl // Highest quality isn't needed when we're blurring it anyway
-                        }
-                    },
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .matchParentSize()
-                        .then(
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) { // Android 12
-                                Modifier.blur(radius = 16.dp)
-                            } else Modifier
-                        )
-                )
+                if (images.isNotEmpty()) {
+                    val randomImageIndex = rememberSaveable { Random.nextInt(images.size) }
+                    AsyncImage(
+                        model = images[randomImageIndex].let {
+                            if (it.isVideo || it.fileFormat == "gif" || it.fileFormat == "webp") {
+                                it.previewUrl // Can't use videos, and we don't want animated images
+                            } else {
+                                it.sampleUrl // Highest quality isn't needed when we're blurring it anyway
+                            }
+                        },
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .matchParentSize()
+                            .then(
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) { // Android 12
+                                    Modifier.blur(radius = 16.dp)
+                                } else Modifier
+                            )
+                    )
+                } else {
+                    // If no images to show, just show a solid colour based on their name.
+                    val painter = remember { ColorPainter(generateColours(false, artist.name).first) }
+                    androidx.compose.foundation.Image(
+                        painter = painter,
+                        contentDescription = null,
+                        modifier = Modifier.matchParentSize()
+                    )
+                }
+
                 Column(
                     modifier = Modifier
                         .background(Color.Black.copy(alpha = 0.5f))
@@ -554,12 +567,14 @@ private fun ArtistHeader(
                         horizontalArrangement = Arrangement.spacedBy(MEDIUM_SPACER.dp)
                     ) {
                         groupedSocials.forEach { (site, socials) ->
-                            item {
-                                SocialChip(
-                                    site = site,
-                                    socialProfiles = socials,
-                                    onClick = { uriHandler.openUri(it) }
-                                )
+                            if (site != SocialSite.IMAGEBOARD) {
+                                item {
+                                    SocialChip(
+                                        site = site,
+                                        socialProfiles = socials,
+                                        onClick = { uriHandler.openUri(it) }
+                                    )
+                                }
                             }
                         }
                     }
