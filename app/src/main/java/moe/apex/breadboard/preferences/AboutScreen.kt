@@ -2,7 +2,6 @@ package moe.apex.breadboard.preferences
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -45,13 +44,13 @@ import moe.apex.breadboard.BuildConfig
 import moe.apex.breadboard.R
 import moe.apex.breadboard.navigation.LibrariesSettings
 import moe.apex.breadboard.util.ChevronRight
-import moe.apex.breadboard.util.ExpressiveGroup
-import moe.apex.breadboard.util.LARGE_SPACER
 import moe.apex.breadboard.util.LargeTitleBar
+import moe.apex.breadboard.util.LazyExpressiveGroup
 import moe.apex.breadboard.util.MainScreenScaffold
 import moe.apex.breadboard.util.SmallVerticalSpacer
 import moe.apex.breadboard.util.MEDIUM_SPACER
 import moe.apex.breadboard.util.TitleSummary
+import moe.apex.breadboard.util.WhatsNewState
 import moe.apex.breadboard.util.openUrl
 import moe.apex.breadboard.util.releasePlatform
 
@@ -101,8 +100,7 @@ fun AboutScreen(navController: NavHostController) {
                 .fillMaxSize()
                 .padding(it)
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
-            contentPadding = PaddingValues(vertical = MEDIUM_SPACER.dp),
-            verticalArrangement = Arrangement.spacedBy(LARGE_SPACER.dp)
+            contentPadding = PaddingValues(MEDIUM_SPACER.dp)
         ) {
             item {
                 var isMonochrome by remember { mutableStateOf(false) }
@@ -120,7 +118,10 @@ fun AboutScreen(navController: NavHostController) {
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                             .clickable {
                                 if (easterEggCounter == 5) {
-                                    openUrl(context, "https://www.youtube.com/watch?v=3ZeHmdJnny4") // 🐟
+                                    openUrl(
+                                        context,
+                                        "https://www.youtube.com/watch?v=3ZeHmdJnny4"
+                                    ) // 🐟
                                     easterEggCounter = 0
                                 } else {
                                     easterEggCounter++
@@ -155,37 +156,44 @@ fun AboutScreen(navController: NavHostController) {
                     )
                 }
             }
-            item {
-                ExpressiveGroup("Maintainer") {
-                    item {
-                        GitHubUserContainer(apex2504)
+
+            LazyExpressiveGroup("Maintainer", desiredTopPadding = null) {
+                item {
+                    GitHubUserContainer(apex2504)
+                }
+            }
+
+            LazyExpressiveGroup("Original concept") {
+                item {
+                    GitHubUserContainer(devoxin)
+                }
+            }
+
+            LazyExpressiveGroup("Breadboard") {
+                item {
+                    TitleSummary(
+                        title = "What's new"
+                    ) {
+                        WhatsNewState.show()
                     }
                 }
             }
-            item {
-                ExpressiveGroup("Original concept") {
-                    item {
-                        GitHubUserContainer(devoxin)
-                    }
+
+            LazyExpressiveGroup {
+                item {
+                    TitleSummary(
+                        modifier = Modifier.fillMaxWidth(),
+                        title = "GitHub",
+                        summary = "Report bugs, request features, or contribute!"
+                    ) { openUrl(context, "https://github.com/breadboardapp/breadboard") }
                 }
-            }
-            item {
-                ExpressiveGroup("Breadboard") {
-                    item {
-                        TitleSummary(
-                            modifier = Modifier.fillMaxWidth(),
-                            title = "GitHub",
-                            summary = "Report bugs, request features, or contribute!"
-                        ) { openUrl(context, "https://github.com/breadboardapp/breadboard") }
-                    }
-                    item {
-                        TitleSummary(
-                            modifier = Modifier.fillMaxWidth(),
-                            title = "Third-party notices",
-                            summary = "Libraries used in Breadboard",
-                            trailingIcon = { ChevronRight() }
-                        ) { navController.navigate(LibrariesSettings) }
-                    }
+                item {
+                    TitleSummary(
+                        modifier = Modifier.fillMaxWidth(),
+                        title = "Third-party notices",
+                        summary = "Libraries used in Breadboard",
+                        trailingIcon = { ChevronRight() }
+                    ) { navController.navigate(LibrariesSettings) }
                 }
             }
         }

@@ -49,6 +49,7 @@ import moe.apex.breadboard.util.AgeVerification
 import moe.apex.breadboard.util.MigrationOnlyField
 import moe.apex.breadboard.util.PixivArtwork
 import moe.apex.breadboard.util.SecretsManager
+import moe.apex.breadboard.util.WhatsNewState
 import moe.apex.breadboard.util.availableRatingsForSource
 import moe.apex.breadboard.util.decodeHtml
 import moe.apex.breadboard.util.replaceGelbooruSubdomain
@@ -590,6 +591,12 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
                 updateSet(PreferenceKeys.MANUALLY_BLOCKED_TAGS, blockedTagsWithoutAi)
                 updatePref(PreferenceKeys.EXCLUDE_AI, true)
             }
+        }
+
+        /* We're going to show a What's New sheet on major updates, starting with 3.3.0.
+           Adding a pref for it adds unnecessary complexity, but controlling it here makes sense. */
+        if (lastUsedVersionCode < 330) {
+            WhatsNewState.show()
         }
 
         /* Always clear the internal ignored list on updates. */

@@ -64,6 +64,7 @@ import moe.apex.breadboard.ui.theme.BreadboardTheme
 import moe.apex.breadboard.util.withoutVertical
 import moe.apex.breadboard.home.FollowedArtistsScreen
 import moe.apex.breadboard.preferences.ApiKeysSettingsScreen
+import moe.apex.breadboard.util.WhatsNew
 
 
 @Composable
@@ -117,6 +118,8 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
     }
 
     BreadboardTheme {
+        WhatsNew()
+
         Scaffold(
             bottomBar = {
                 AnimatedVisibility(
