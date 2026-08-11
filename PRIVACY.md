@@ -1,6 +1,6 @@
 # Privacy Policy for Breadboard
 
-**Last Updated:** 30 July 2025
+**Last Updated:** 11 August 2026
 
 This Privacy Policy describes how Breadboard ("we," "us," or "our") handles your information when you use our mobile application (the "App").
 
@@ -9,7 +9,6 @@ This Privacy Policy describes how Breadboard ("we," "us," or "our") handles your
 We want to be clear: Breadboard is designed with your privacy in mind.
 
 - **No Sale of Personal Data:** We do not sell, rent, or trade any of your personal data to third parties.
-- **No Analytics or Usage Stats:** We do not collect analytics or usage statistics about how you interact with the App.
 
 ### Information We Process and Why
 
@@ -37,6 +36,17 @@ To improve your user experience and allow you to quickly revisit previous search
 - **User Control and Deletion:** You have full control over your search history. You can delete individual search history entries at any time within the App. You also have the option to disable the search history feature entirely through the App's settings, which will prevent any future search queries from being saved. If you disable search history, any previously saved search history will also be cleared.
 - **Data Storage:** Your search history is stored only on your device. It is not transmitted to us or any third party.
 
+### Reverse Image Search
+
+Breadboard provides the ability to perform a 'reverse image search', whereby the user submits an image and the App provides insight such as the artist and original source.
+Reverse image search functionality is provided by [SauceNAO](https://saucenao.com/legal.html) and you should consult the SauceNAO privacy policy to learn about how your data and submitted images are handled.
+
+### Artist Sharing
+
+Breadboard provides the ability to share an artist profile with other users. This is in the form of a URL that points to a Breadboard-owned domain.
+These URLs use industry-standard encryption. Access logs containing the path, requesting IP address, and user agent are kept for 14 days for the purpose of abuse prevention.
+Additionally, web requests to Breadboard's domain are routed through [Cloudflare](https://www.cloudflare.com/privacypolicy/) and as such, you should consult their privacy policy.
+
 ### Data Export
 
 Breadboard provides you with the functionality to export your application data to a file. This allows you to back up or transfer your information.
@@ -49,7 +59,7 @@ Breadboard provides you with the functionality to export your application data t
 
 We take reasonable measures to help protect the information we process. When you provide API credentials, they are stored locally on your device, the App's developers do not have access to these credentials, and they are only used for the purpose of making requests to the external platforms you choose to interact with.
 
-As Breadboard does not store any personal data off-device, we do not have a process for you to request deletion of personal data. You can, however, delete any stored API credentials through the App, or clear the App's data through your device settings, which will remove all locally stored information.
+As Breadboard does not identify individual users or store data for reasons other than those that are technically necessary, we do not have a process for you to request deletion of personal data. You can, however, delete any stored API credentials through the App, or clear the App's data through your device settings, which will remove all locally stored information.
 
 ### Third-Party Services
 
