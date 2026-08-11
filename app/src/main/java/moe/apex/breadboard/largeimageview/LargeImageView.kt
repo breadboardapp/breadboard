@@ -197,15 +197,15 @@ private enum class ToolbarState {
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun LargeImageView(
+private fun LargeImageView(
     navController: NavController,
-    initialPage: Int,
+    initialSelectedImageIndex: Int,
     allImages: List<Image>,
     onImageUpdate: (suspend (Image, Image) -> Unit)? = null,
     onZoomedStatusChanged: ((Boolean) -> Unit)? = null
 ) {
     val pagerState = rememberPagerState(
-        initialPage = initialPage,
+        initialPage = initialSelectedImageIndex,
         initialPageOffsetFraction = 0f
     ) { allImages.size }
     var canChangePage by remember { mutableStateOf(false) }
@@ -788,7 +788,6 @@ fun LargeImage(image: Image) {
 }
 
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun VideoMuteButton(
     muted: Boolean,
@@ -822,7 +821,7 @@ private fun VideoMuteButton(
 }
 
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun VideoPlayPauseButton(
     isPlaying: Boolean,
@@ -867,7 +866,7 @@ private fun VideoPlayPauseButton(
 }
 
 
-@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun LargeVideo(image: Image, isCurrentPage: Boolean, onLongClick: (() -> Unit)? = null) {
     val context = LocalContext.current
@@ -1186,7 +1185,7 @@ fun LargeVideo(image: Image, isCurrentPage: Boolean, onLongClick: (() -> Unit)? 
 fun OffsetBasedLargeImageView(
     navController: NavController,
     isActive: Boolean,
-    initialPage: Int,
+    initialSelectedImageIndex: Int,
     allImages: List<Image>,
     onActiveStateChanged: (Boolean) -> Unit = { },
     onImageUpdate: (suspend (Image, Image) -> Unit)? = null,
@@ -1312,7 +1311,7 @@ fun OffsetBasedLargeImageView(
             key(viewerSessionId) {
                 LargeImageView(
                     navController = navController,
-                    initialPage = initialPage,
+                    initialSelectedImageIndex = initialSelectedImageIndex,
                     allImages = allImages,
                     onImageUpdate = onImageUpdate,
                     onZoomedStatusChanged = { canDragDown = !it }

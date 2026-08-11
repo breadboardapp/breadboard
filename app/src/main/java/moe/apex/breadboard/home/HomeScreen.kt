@@ -10,7 +10,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -44,6 +43,7 @@ import moe.apex.breadboard.util.RecommendationsProvider
 import moe.apex.breadboard.util.SMALL_LARGE_SPACER
 import moe.apex.breadboard.util.SMALL_SPACER
 import moe.apex.breadboard.util.ScrollToTopArrow
+import moe.apex.breadboard.util.WideLinearWavyProgressIndicator
 import moe.apex.breadboard.util.bottomAppBarAndNavBarHeight
 import moe.apex.breadboard.util.differenceOlderThan
 import moe.apex.breadboard.util.onScroll
@@ -70,7 +70,7 @@ fun HomeScreen(
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(topAppBarState)
     var shouldShowLargeImage by remember { mutableStateOf(false) }
-    var initialPage by remember { mutableIntStateOf(0) }
+    var selectedImageIndex by remember { mutableIntStateOf(0) }
 
     val blur = prefs.isExperimentEnabled(Experiment.IMMERSIVE_UI_EFFECTS)
 
@@ -121,7 +121,7 @@ fun HomeScreen(
         }
 
         if (builtInIgnoredTags.isEmpty()) {
-            LinearProgressIndicator(
+            WideLinearWavyProgressIndicator(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(padding)
@@ -139,8 +139,7 @@ fun HomeScreen(
                         initialBlockedTags = prefs.blockedTags,
                         initialUnfollowedTags = prefs.unfollowedTags + builtInIgnoredTags,
                         selectionSize = prefs.recommendationsTagCount,
-                        poolSize = prefs.recommendationsPoolSize,
-                        useWeightedSelection = prefs.recommendationsWeightedSelection
+                        poolSize = prefs.recommendationsPoolSize
                     )
                     newProvider.prepareRecommendedTags()
                     viewModel.setRecommendationsProvider(newProvider)
@@ -184,7 +183,7 @@ fun HomeScreen(
                 },
                 onImageClick = { index, _ ->
                     Snapshot.withMutableSnapshot {
-                        initialPage = index
+                        selectedImageIndex = index
                         shouldShowLargeImage = true
                     }
                 },
@@ -206,7 +205,7 @@ fun HomeScreen(
     OffsetBasedLargeImageView(
         navController = navController,
         isActive = shouldShowLargeImage,
-        initialPage = initialPage,
+        initialSelectedImageIndex = selectedImageIndex,
         allImages = recommendedImages ?: emptyList(),
         onActiveStateChanged = {
             shouldShowLargeImage = it

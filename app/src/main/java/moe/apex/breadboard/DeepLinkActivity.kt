@@ -10,6 +10,8 @@ import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.material3.ComposeMaterial3Flags
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -58,9 +60,13 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity(), Volu
     }
 
 
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+
+        // https://issuetracker.google.com/issues/521534697 TODO
+        ComposeMaterial3Flags.isBottomSheetPartiallyExpandedDeterministicEnabled = false
 
         applicationContext.preferencesDataStoreFile("preferences")
         runBlocking { prefs.handleMigration(applicationContext) }

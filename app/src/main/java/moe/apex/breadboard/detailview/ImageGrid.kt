@@ -31,8 +31,6 @@ import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -49,6 +47,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import coil3.network.NetworkHeaders
+import coil3.network.httpHeaders
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import kotlinx.coroutines.launch
@@ -57,6 +57,7 @@ import moe.apex.breadboard.preferences.LocalPreferences
 import moe.apex.breadboard.util.NavBarHeightVerticalSpacer
 import moe.apex.breadboard.util.PullToRefreshController
 import moe.apex.breadboard.util.SMALL_SPACER
+import moe.apex.breadboard.util.WideLinearWavyProgressIndicator
 import moe.apex.breadboard.util.largerShape
 
 
@@ -66,7 +67,6 @@ private const val MIN_CELL_WIDTH   = 120
 private const val MAX_CELL_WIDTH   = 144
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ImageGrid(
     modifier: Modifier = Modifier,
@@ -138,10 +138,7 @@ fun ImageGrid(
                 .padding(contentPadding)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            LinearProgressIndicator(
-                modifier = modifier
-                    .fillMaxWidth()
-            )
+            WideLinearWavyProgressIndicator(modifier = modifier.fillMaxWidth())
         }
 
         LaunchedEffect(doneInitialLoad) {
@@ -154,7 +151,6 @@ fun ImageGrid(
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun StaggeredImageGrid(
     modifier: Modifier = Modifier,
@@ -313,8 +309,14 @@ private fun ImagePreview(
     onImageClick: (Int, Image) -> Unit
 ) {
     val context = LocalContext.current
+
+    val headersBuilder = remember {
+        NetworkHeaders.Builder()
+            .set("Referer", image.imageSource.imageBoard.baseUrl)
+    }
     val model = remember { ImageRequest.Builder(context)
         .data(image.previewUrl)
+        .httpHeaders(headersBuilder.build())
         .crossfade(true)
         .build()
     }

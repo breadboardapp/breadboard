@@ -77,12 +77,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.SelectableChipColors
 import androidx.compose.material3.SheetState
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -92,7 +95,7 @@ import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -220,8 +223,8 @@ private fun NavigationIcon(navController: NavController? = null) {
 }
 
 
-@Composable
 @OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun LargeTitleBar(
     title: String,
     scrollBehavior: TopAppBarScrollBehavior?,
@@ -235,7 +238,8 @@ fun LargeTitleBar(
         navigationIcon = { NavigationIcon(navController) },
         colors = TopAppBarDefaults.topAppBarColors().copy(
             scrolledContainerColor = BreadboardTheme.colors.titleBar
-        )
+        ),
+       windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Vertical)
     )
 }
 
@@ -255,7 +259,8 @@ fun SmallTitleBar(
         colors = TopAppBarDefaults.topAppBarColors(
             scrolledContainerColor = BreadboardTheme.colors.titleBar
         ),
-        navigationIcon = { NavigationIcon(navController) }
+        navigationIcon = { NavigationIcon(navController) },
+        windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Vertical)
     )
 }
 
@@ -322,7 +327,6 @@ fun MainScreenScaffold(
     fine grained control over its behaviour and appearance.
 
     [blur] is not supported on Android 11 or below.*/
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreenScaffold(
     topAppBar: @Composable () -> Unit,
@@ -356,7 +360,8 @@ fun MainScreenScaffold(
                     it()
                 }
             }
-        }
+        },
+        contentWindowInsets = ScaffoldDefaults.contentWindowInsets.only(WindowInsetsSides.Vertical)
     ) {
         val lld = LocalLayoutDirection.current
         val newPadding = PaddingValues(
@@ -810,11 +815,18 @@ fun SearchHistoryListItem(
 fun TitledModalBottomSheet(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
-    sheetState: SheetState = rememberModalBottomSheetState(),
+    sheetState: SheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden),
     contentWindowInsets: @Composable () -> WindowInsets = { BottomSheetDefaults.modalWindowInsets.only(WindowInsetsSides.Horizontal) },
     title: String,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    LaunchedEffect(Unit) {
+        if (sheetState.hasPartiallyExpandedState) {
+            sheetState.partialExpand()
+        } else {
+            sheetState.expand()
+        }
+    }
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         modifier = modifier.windowInsetsPadding(WindowInsets.statusBars),
@@ -1182,7 +1194,6 @@ fun CombinedClickableAction(
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 data class PullToRefreshController(
     val state: PullToRefreshState,
     val indicator: @Composable BoxScope.(PullToRefreshController) -> Unit,
@@ -1222,7 +1233,6 @@ data class PullToRefreshController(
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun rememberPullToRefreshController(
     state: PullToRefreshState = rememberPullToRefreshState(),
@@ -1245,18 +1255,16 @@ fun rememberPullToRefreshController(
 
 
 object PullToRefreshControllerDefaults {
-    @OptIn(ExperimentalMaterial3Api::class)
+    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     @Composable
     fun Indicator(
         modifier: Modifier = Modifier,
         controller: PullToRefreshController,
     ) {
-        PullToRefreshDefaults.Indicator(
+        PullToRefreshDefaults.LoadingIndicator(
             state = controller.state,
             isRefreshing = controller.isRefreshing,
-            modifier = modifier,
-            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-            color = MaterialTheme.colorScheme.onTertiaryContainer
+            modifier = modifier
         )
     }
 }
@@ -1268,7 +1276,6 @@ object PullToRefreshControllerDefaults {
     to work around what I can only assume is a Compose bug whereby the scrolling animation is jumpy
     when there is a full width item in the grid (like the filter). */
 @SuppressLint("FrequentlyChangingValue")
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScrollToTopArrow(
     staggeredGridState: LazyStaggeredGridState,
@@ -1439,6 +1446,16 @@ fun rememberIsBlurEnabled(): Boolean {
             && prefs.isExperimentEnabled(Experiment.IMMERSIVE_UI_EFFECTS)
             && !powerManager.isPowerSaveMode
     }
+}
+
+
+@Composable
+fun WideLinearWavyProgressIndicator(modifier: Modifier = Modifier) {
+    LinearWavyProgressIndicator(
+        modifier = modifier,
+        amplitude = 0.6f,
+        wavelength = 40.dp,
+    )
 }
 
 

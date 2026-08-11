@@ -53,7 +53,7 @@ fun FavouritesPage(
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
     var isImageCarouselVisible by remember { mutableStateOf(false) }
-    var initialPage by remember { mutableIntStateOf(0) }
+    var selectedImageIndex by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
 
     val blur = prefs.isExperimentEnabled(Experiment.IMMERSIVE_UI_EFFECTS)
@@ -147,7 +147,7 @@ fun FavouritesPage(
             images = images,
             onImageClick = { index, _ ->
                 Snapshot.withMutableSnapshot {
-                    initialPage = index
+                    selectedImageIndex = index
                     isImageCarouselVisible = true
                 }
             },
@@ -165,7 +165,7 @@ fun FavouritesPage(
     OffsetBasedLargeImageView(
         navController = navController,
         isActive = isImageCarouselVisible,
-        initialPage = initialPage,
+        initialSelectedImageIndex = selectedImageIndex,
         allImages = images,
         onActiveStateChanged = {
             isImageCarouselVisible = it

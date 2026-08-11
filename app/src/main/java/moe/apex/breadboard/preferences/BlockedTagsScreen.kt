@@ -96,13 +96,19 @@ fun BlockedTagsScreen(navController: NavHostController) {
                             .trim()
                             .split(" ")
                             .filter { it.isNotBlank() }
-                            .filterNot { it in AI_TAG_NAMES }
                         scope.launch {
                             for (tag in newBlocks) {
-                                userPreferencesRepository.addToSet(
-                                    PreferenceKeys.MANUALLY_BLOCKED_TAGS,
-                                    tag
-                                )
+                                if (tag in AI_TAG_NAMES) {
+                                    userPreferencesRepository.updatePref(
+                                        PreferenceKeys.EXCLUDE_AI,
+                                        true
+                                    )
+                                } else {
+                                    userPreferencesRepository.addToSet(
+                                        PreferenceKeys.MANUALLY_BLOCKED_TAGS,
+                                        tag
+                                    )
+                                }
                             }
                         }
                         showAddDialog = false

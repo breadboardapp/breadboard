@@ -82,7 +82,7 @@ private const val INFO_SECTION = -2
 private const val PAGER_BUTTON_SIZE_DP = 64
 
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun RecommendationsSettingsScreen(navController: NavHostController) {
     val viewModel = getGlobalViewModel()
@@ -362,9 +362,9 @@ fun RecommendationsSettingsScreen(navController: NavHostController) {
                 Summary(
                     modifier = Modifier.padding(horizontal = MEDIUM_LARGE_SPACER.dp),
                     text = "Your frequent tags consist of the most common tags from your " +
-                            "favourite images. Breadboard will use these tags to recommend " +
-                            "new content. You can tap a tag above to ignore it, preventing it " +
-                            "from being used to recommend new content."
+                            "favourite images. Breadboard will intelligently use these tags to " +
+                            "recommend new content. You can tap a tag above to ignore it, " +
+                            "preventing it from being used to recommend new content."
                 )
             }
 
@@ -437,22 +437,6 @@ fun RecommendationsSettingsScreen(navController: NavHostController) {
                                            "frequent tags."
                                 )
                             }
-                        }
-                    }
-                    item {
-                        SwitchPref(
-                            checked = prefs.recommendationsWeightedSelection,
-                            title = "Respect tag order",
-                            summary = "Tags that appear earlier in your frequent tags list are " +
-                                      "more likely to be used when recommending new content."
-                        ) {
-                            scope.launch {
-                                userPreferencesRepository.updatePref(
-                                    PreferenceKeys.RECOMMENDATIONS_WEIGHTED_SELECTION,
-                                    it
-                                )
-                            }
-                            resetRecommendations()
                         }
                     }
                 }

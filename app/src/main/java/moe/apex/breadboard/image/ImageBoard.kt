@@ -9,7 +9,6 @@ import moe.apex.breadboard.tag.TagCategory
 import moe.apex.breadboard.tag.TagGroup
 import moe.apex.breadboard.tag.TagSuggestion
 import moe.apex.breadboard.util.decodeHtml
-import moe.apex.breadboard.util.extractPixivId
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -195,7 +194,6 @@ interface GelbooruBasedImageBoard : ImageBoard {
         }
 
         val metaRating = getRatingFromString(e.getString("rating"))
-        val metaPixivId = extractPixivId(metaSource)
         val metadata = ImageMetadata(
             parentId = metaParentId,
             hasChildren = null, // Not available for Gelbooru-based image boards
@@ -203,7 +201,6 @@ interface GelbooruBasedImageBoard : ImageBoard {
             source = metaSource,
             groupedTags = metaGroupedTags,
             rating = metaRating,
-            pixivId = metaPixivId,
         )
 
         return Image(id, fileName, fileFormat, previewUrl, fileUrl, sampleUrl, imageSource, aspectRatio, metadata)
@@ -286,7 +283,8 @@ object Rule34 : GelbooruBasedImageBoard {
     }
 
     override suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth?): ImageMetadata? {
-        return image.id?.let { loadImage(it, auth)?.metadata }
+        val img = image.id?.let { loadImage(it, auth) } ?: loadImageMd5(image.fileName, auth)
+        return img?.metadata
     }
 }
 
@@ -314,6 +312,9 @@ object Safebooru : GelbooruBasedImageBoard {
     }
 
     override suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth?): ImageMetadata? {
+        /* We can't use MD5 as a fallback here because on Safebooru,
+           the fileName (which Breadboard stores) is different from the MD5 hash,
+           and I haven't found a way to search using the filename. */
         return image.id?.let { loadImage(it, auth)?.metadata }
     }
 }
@@ -459,7 +460,7 @@ object Danbooru : ImageBoard {
             source = metaSource,
             groupedTags = metaGroupedTags,
             rating = metaRating,
-            pixivId = metaPixivId,
+            pixivArtworkId = metaPixivId,
         )
 
         return Image(id, fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.DANBOORU, aspectRatio, metadata)
@@ -491,8 +492,10 @@ object Danbooru : ImageBoard {
     }
 
     override suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth?): ImageMetadata? {
-        return image.id?.let { loadImage(it, auth)?.metadata }
+        val img = image.id?.let { loadImage(it, auth) } ?: loadImageMd5(image.fileName, auth)
+        return img?.metadata
     }
+
 
     override fun getRatingFromString(rating: String): ImageRating {
         return when (rating) {
@@ -543,14 +546,12 @@ object Yandere : ImageBoard {
             TagCategory.GENERAL.group(e.getString("tags").decodeHtml().split(" ")),
         )
         val metaRating = getRatingFromString(e.getString("rating"))
-        val metaPixivId = extractPixivId(metaSource)
         val metadata = ImageMetadata(
             parentId = metaParentId,
             hasChildren = metaHasChildren,
             source = metaSource,
             groupedTags = metaGroupedTags,
             rating = metaRating,
-            pixivId = metaPixivId,
         )
 
         return Image(id, fileName, fileFormat, previewUrl, fileUrl, sampleUrl, ImageSource.YANDERE, aspectRatio, metadata)

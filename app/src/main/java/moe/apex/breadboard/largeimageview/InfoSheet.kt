@@ -32,6 +32,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.material.icons.rounded.ContentCopy
@@ -48,7 +49,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -69,6 +70,7 @@ import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import moe.apex.breadboard.DeepLinkActivity
 import moe.apex.breadboard.MainActivity
+import moe.apex.breadboard.image.AI_TAG_NAMES
 import moe.apex.breadboard.image.Image
 import moe.apex.breadboard.navigation.ImageView
 import moe.apex.breadboard.navigation.Results
@@ -111,9 +113,7 @@ private enum class InfoSheetPage {
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class,
-    ExperimentalMaterial3ExpressiveApi::class
-)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -> Unit) {
     /* I don't really like this whole info/options implementation.
@@ -130,7 +130,10 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
     val scope = rememberCoroutineScope()
 
     val unified = prefs.unifiedInfoSheet
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = !unified)
+    val sheetState = rememberBottomSheetState(
+        initialValue = SheetValue.Hidden,
+        enabledValues = if (unified) SheetValue.entries.toSet() else setOf(SheetValue.Expanded, SheetValue.Hidden),
+    )
     var sheetPage by remember { mutableStateOf(InfoSheetPage.SOURCES) }
 
     fun hideAndThen(block: () -> Unit = { }) {
@@ -172,7 +175,7 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
     TitledModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
-        title = "About this image",
+        title = "About this art",
     ) {
         if (selectedTag != null) {
             /* We need to have this dialog inside the sheet otherwise it'll just automatically
@@ -231,18 +234,32 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                         ) {
                             if (blocked) {
                                 scope.launch {
-                                    preferencesRepository.removeFromSet(
-                                        PreferenceKeys.MANUALLY_BLOCKED_TAGS,
-                                        selectedTag!!
-                                    )
+                                    if (selectedTag!! in AI_TAG_NAMES) {
+                                        preferencesRepository.updatePref(
+                                            PreferenceKeys.EXCLUDE_AI,
+                                            false
+                                        )
+                                    } else {
+                                        preferencesRepository.removeFromSet(
+                                            PreferenceKeys.MANUALLY_BLOCKED_TAGS,
+                                            selectedTag!!
+                                        )
+                                    }
                                 }
                                 showToast(context, "Unblocked tag ${selectedTag!!}")
                             } else {
                                 scope.launch {
-                                    preferencesRepository.addToSet(
-                                        PreferenceKeys.MANUALLY_BLOCKED_TAGS,
-                                        selectedTag!!
-                                    )
+                                    if (selectedTag in AI_TAG_NAMES) {
+                                        preferencesRepository.updatePref(
+                                            PreferenceKeys.EXCLUDE_AI,
+                                            true
+                                        )
+                                    } else {
+                                        preferencesRepository.addToSet(
+                                            PreferenceKeys.MANUALLY_BLOCKED_TAGS,
+                                            selectedTag!!
+                                        )
+                                    }
                                 }
                                 showToast(context, "Blocked tag ${selectedTag!!}")
                             }
@@ -436,7 +453,6 @@ private fun ImageboardDataTabContent(
 }
 
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun UnifiedInfoContent(
     image: Image,
@@ -492,7 +508,6 @@ private fun SplitInfoSheetLazyColumn(content: LazyListScope.() -> Unit) {
 }
 
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 private fun LazyListScope.infoContentItems(
     image: Image,
     onLinkClick: (String) -> Unit,
@@ -504,6 +519,12 @@ private fun LazyListScope.infoContentItems(
     onTagLongClick: (String) -> Unit,
     unified: Boolean = false
 ) {
+    if (image.isAiGenerated) {
+        item {
+            InfoSheetAiWarning()
+        }
+    }
+
     item {
         Row {
             BasicExpressiveContainer(
@@ -599,7 +620,6 @@ private fun LazyListScope.infoContentItems(
 
 
 @Suppress("unused")
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 private fun LazyListScope.imageboardDataContentItems(
     image: Image,
     onLinkClick: (String) -> Unit, // Not currently used but keeping for consistency and possible future use
@@ -779,7 +799,6 @@ private fun TagsContainer(
 }
 
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ExpandCollapseRow(
     label: String,
@@ -815,4 +834,31 @@ private fun createSearchIntent(context: Context, imageSource: ImageSource, queri
         MainActivity::class.java
     )
     return intent
+}
+
+
+private val Image.isAiGenerated: Boolean
+    get() = AI_TAG_NAMES.any { it in this.metadata?.tags.orEmpty() }
+
+
+@Composable
+private fun InfoSheetAiWarning() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = LARGE_SPACER.dp),
+        horizontalArrangement = Arrangement.spacedBy(MEDIUM_SPACER.dp, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            imageVector = Icons.Outlined.Info,
+            contentDescription = null
+        )
+        Text(
+            text = "This post is AI-generated.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
 }

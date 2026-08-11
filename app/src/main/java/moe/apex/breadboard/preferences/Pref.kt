@@ -47,10 +47,11 @@ import moe.apex.breadboard.image.AI_TAG_NAMES
 import moe.apex.breadboard.tag.TagCategory
 import moe.apex.breadboard.util.AgeVerification
 import moe.apex.breadboard.util.MigrationOnlyField
+import moe.apex.breadboard.util.PixivArtwork
 import moe.apex.breadboard.util.SecretsManager
 import moe.apex.breadboard.util.availableRatingsForSource
-import moe.apex.breadboard.util.extractPixivId
 import moe.apex.breadboard.util.decodeHtml
+import moe.apex.breadboard.util.replaceGelbooruSubdomain
 import java.io.IOException
 
 
@@ -92,7 +93,6 @@ data object PrefNames {
     const val UNFOLLOWED_TAGS = "unfollowed_tags"
     const val RECOMMENDATIONS_TAG_COUNT = "recommendations_tag_count"
     const val RECOMMENDATIONS_POOL_SIZE = "recommendations_pool_size"
-    const val RECOMMENDATIONS_WEIGHTED_SELECTION = "recommendations_weighted_selection"
     const val INTERNAL_IGNORE_LIST_TIMESTAMP = "internal_ignore_list_timestamp"
     const val INTERNAL_IGNORE_LIST = "internal_ignore_list"
     const val AUTOPLAY_VIDEOS = "autoplay_videos"
@@ -126,7 +126,6 @@ object PreferenceKeys {
     val UNFOLLOWED_TAGS = stringSetPreferencesKey(PrefNames.UNFOLLOWED_TAGS)
     val RECOMMENDATIONS_TAG_COUNT = intPreferencesKey(PrefNames.RECOMMENDATIONS_TAG_COUNT)
     val RECOMMENDATIONS_POOL_SIZE = intPreferencesKey(PrefNames.RECOMMENDATIONS_POOL_SIZE)
-    val RECOMMENDATIONS_WEIGHTED_SELECTION = booleanPreferencesKey(PrefNames.RECOMMENDATIONS_WEIGHTED_SELECTION)
     val INTERNAL_IGNORE_LIST_TIMESTAMP = longPreferencesKey(PrefNames.INTERNAL_IGNORE_LIST_TIMESTAMP)
     val INTERNAL_IGNORE_LIST = stringSetPreferencesKey(PrefNames.INTERNAL_IGNORE_LIST)
     val AUTOPLAY_VIDEOS = stringPreferencesKey(PrefNames.AUTOPLAY_VIDEOS)
@@ -224,7 +223,6 @@ data class Prefs(
     val unfollowedTags: Set<String>,
     val recommendationsTagCount: Int,
     val recommendationsPoolSize: Int,
-    val recommendationsWeightedSelection: Boolean,
     val internalIgnoreListTimestamp: Long,
     val internalIgnoreList: Set<String>,
     val autoplayVideos: AutoplayVideosMode,
@@ -257,7 +255,6 @@ data class Prefs(
             unfollowedTags = emptySet(),
             recommendationsTagCount = 3,
             recommendationsPoolSize = 7,
-            recommendationsWeightedSelection = true,
             internalIgnoreListTimestamp = 0,
             internalIgnoreList = emptySet(),
             autoplayVideos = AutoplayVideosMode.OFF,
@@ -322,7 +319,6 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             PreferenceKeys.UNFOLLOWED_TAGS to PrefMeta(PrefCategory.SETTING, mergeable = true),
             PreferenceKeys.RECOMMENDATIONS_TAG_COUNT to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.RECOMMENDATIONS_POOL_SIZE to PrefMeta(PrefCategory.SETTING),
-            PreferenceKeys.RECOMMENDATIONS_WEIGHTED_SELECTION to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.INTERNAL_IGNORE_LIST_TIMESTAMP to PrefMeta(PrefCategory.SETTING, exportable = false),
             PreferenceKeys.INTERNAL_IGNORE_LIST to PrefMeta(PrefCategory.SETTING, exportable = false),
             PreferenceKeys.UNIFIED_INFO_SHEET to PrefMeta(PrefCategory.SETTING)
@@ -404,7 +400,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
                             uncategorisedTags = null,
                             groupedTags = if (!image.metadata.uncategorisedTags.isNullOrEmpty()) listOf(TagCategory.GENERAL.group(image.metadata.tags))
                                           else emptyList(),
-                            pixivId = image.metadata.pixivId ?: extractPixivId(image.metadata.source)
+                            pixivArtworkId = image.metadata.pixivId ?: PixivArtwork.fromUrl(image.metadata.source)?.id
                         )
                     )
                 )
@@ -422,31 +418,6 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             val filterRatingsLocally = data[PreferenceKeys.FILTER_RATINGS_LOCALLY]
             if (filterRatingsLocally == null)
                 updatePref(PreferenceKeys.FILTER_RATINGS_LOCALLY, false)
-        }
-
-        /* Version code 270 enabled the staggered grid by default. Don't change it for people who
-           hadn't enabled it previously.
-           Additionally, fix Gelbooru favourite image links since their subdomain changed from img3
-           to img4. */
-        if (lastUsedVersionCode < 270) {
-            val data = dataStore.data.first()
-            val brokenFavouritesByteArray = data[PreferenceKeys.FAVOURITE_IMAGES]
-
-            if (brokenFavouritesByteArray != null) {
-                val brokenFavourites: List<Image> = Cbor.decodeFromByteArray(brokenFavouritesByteArray)
-                val tempFavourites = brokenFavourites.toMutableList()
-                brokenFavourites.forEachIndexed { index, img ->
-                    if (img.imageSource == ImageSource.GELBOORU) {
-                        val fixedImage = img.copy(
-                            previewUrl = img.previewUrl.replace("img3.gelbooru", "img4.gelbooru"),
-                            fileUrl = img.fileUrl.replace("img3.gelbooru", "img4.gelbooru"),
-                            sampleUrl = img.sampleUrl.replace("img3.gelbooru", "img4.gelbooru")
-                        )
-                        tempFavourites[index] = fixedImage
-                    }
-                }
-                updateFavouriteImages(tempFavourites)
-            }
         }
 
         // v3 (code 300) migrations start here
@@ -545,6 +516,47 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
                     } else image
                 }
                 updateFavouriteImages(migrated)
+            }
+        }
+
+        /* Version 3.2.2 removes the weighted tags pref in favour of a new recommendation system. */
+        if (lastUsedVersionCode < 322) {
+            val data = dataStore.data.first()
+            val key = booleanPreferencesKey("recommendations_weighted_selection")
+            if (data.contains(key)) {
+                dataStore.edit { prefs ->
+                    prefs.remove(key)
+                }
+            }
+
+            val favouritesByteArray = data[PreferenceKeys.FAVOURITE_IMAGES]
+
+            if (favouritesByteArray != null) {
+                val favouriteImages: List<Image> = Cbor.decodeFromByteArray(favouritesByteArray)
+                val tempFavourites = favouriteImages.toMutableList()
+                tempFavourites.forEachIndexed { index, img ->
+                    if (img.imageSource == ImageSource.GELBOORU) {
+                        val fixedImage = img.copy(
+                            previewUrl = replaceGelbooruSubdomain(img.previewUrl),
+                            fileUrl = replaceGelbooruSubdomain(img.fileUrl),
+                            sampleUrl = replaceGelbooruSubdomain(img.sampleUrl)
+                        )
+                        tempFavourites[index] = fixedImage
+                    }
+                }
+                updateFavouriteImages(tempFavourites)
+            }
+        }
+
+        /* Version 3.2.3 removes AI tags from the manual section in favour of handling them all
+           with the EXCLUDE_AI pref. */
+        if (lastUsedVersionCode < 323) {
+            val data = dataStore.data.first()
+            val blockedTags = data[PreferenceKeys.MANUALLY_BLOCKED_TAGS] ?: emptySet()
+            val blockedTagsWithoutAi = blockedTags.filterNot { it in AI_TAG_NAMES }
+            if (blockedTags.size != blockedTagsWithoutAi.size) {
+                updateSet(PreferenceKeys.MANUALLY_BLOCKED_TAGS, blockedTagsWithoutAi)
+                updatePref(PreferenceKeys.EXCLUDE_AI, true)
             }
         }
 
@@ -803,7 +815,6 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val unfollowedTags = preferences[PreferenceKeys.UNFOLLOWED_TAGS] ?: Prefs.DEFAULT.unfollowedTags
         val recommendationsTagCount = preferences[PreferenceKeys.RECOMMENDATIONS_TAG_COUNT] ?: Prefs.DEFAULT.recommendationsTagCount
         val recommendationsPoolSize = preferences[PreferenceKeys.RECOMMENDATIONS_POOL_SIZE] ?: Prefs.DEFAULT.recommendationsPoolSize
-        val recommendationsWeightedSelection = preferences[PreferenceKeys.RECOMMENDATIONS_WEIGHTED_SELECTION] ?: Prefs.DEFAULT.recommendationsWeightedSelection
         val internalIgnoreListTimestamp = preferences[PreferenceKeys.INTERNAL_IGNORE_LIST_TIMESTAMP] ?: Prefs.DEFAULT.internalIgnoreListTimestamp
         val internalIgnoreList = preferences[PreferenceKeys.INTERNAL_IGNORE_LIST] ?: Prefs.DEFAULT.internalIgnoreList
         val autoplayVideos = preferences[PreferenceKeys.AUTOPLAY_VIDEOS]?.let { AutoplayVideosMode.valueOf(it) } ?: Prefs.DEFAULT.autoplayVideos
@@ -835,7 +846,6 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             unfollowedTags,
             recommendationsTagCount,
             recommendationsPoolSize,
-            recommendationsWeightedSelection,
             internalIgnoreListTimestamp,
             internalIgnoreList,
             autoplayVideos,
