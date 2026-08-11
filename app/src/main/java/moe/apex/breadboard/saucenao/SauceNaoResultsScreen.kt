@@ -331,6 +331,7 @@ fun SauceNaoResultsScreen(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         textAlign = TextAlign.Center,
                                         modifier = Modifier
+                                            .animateItem()
                                             .fillMaxWidth()
                                             .padding(MEDIUM_SPACER.dp)
                                     )
