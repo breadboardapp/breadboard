@@ -20,8 +20,8 @@ android {
         applicationId "moe.apex.breadboard"
         minSdk 26
         targetSdk 36
-        versionCode 323
-        versionName "3.2.3"
+        versionCode 330
+        versionName "3.3.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
