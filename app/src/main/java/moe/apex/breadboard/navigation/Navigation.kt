@@ -312,8 +312,8 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
 private fun Modifier.pulseOnSelect(selected: Boolean): Modifier {
     val scale = remember { Animatable(1f) }
 
-    if (selected) {
-        LaunchedEffect(Unit) {
+    LaunchedEffect(selected) {
+        if (selected) {
             scale.animateTo(1.1f, tween(200))
             scale.animateTo(1f, tween(300))
         }
