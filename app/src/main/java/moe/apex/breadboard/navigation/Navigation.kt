@@ -1,6 +1,7 @@
 package moe.apex.breadboard.navigation
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -21,6 +22,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -138,7 +141,8 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
                                     } else {
                                         R.drawable.ic_home_hollow
                                     }),
-                                    contentDescription = "Browse"
+                                    contentDescription = "Browse",
+                                    modifier = Modifier.pulseOnSelect(currentRoute.routeIs(homeScreens))
                                 )
                             },
                             onClick = {
@@ -157,7 +161,8 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
                             icon = {
                                 Icon(
                                     imageVector = Icons.Rounded.Search,
-                                    contentDescription = "Search"
+                                    contentDescription = "Search",
+                                    modifier = Modifier.pulseOnSelect(currentRoute.routeIs(searchScreens))
                                 )
                             },
                             onClick = {
@@ -185,7 +190,8 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
                                             R.drawable.ic_image_search_hollow
                                         }
                                     ),
-                                    contentDescription = "SauceNAO Reverse image search"
+                                    contentDescription = "SauceNAO Reverse image search",
+                                    modifier = Modifier.pulseOnSelect(currentRoute.routeIs(reverseSearchScreens))
                                 )
                             },
                             onClick = {
@@ -202,7 +208,8 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
                             icon = {
                                 Icon(
                                     imageVector = if (currentRoute.routeIs(Favourites::class)) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                                    contentDescription = "Favourite images"
+                                    contentDescription = "Favourite images",
+                                    modifier = Modifier.pulseOnSelect(currentRoute.routeIs(Favourites::class))
                                 )
                             },
                             onClick = {
@@ -219,7 +226,8 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
                             icon = {
                                 Icon(
                                     painter = if (currentRoute.routeIs(settingsScreens)) rememberVectorPainter(Icons.Rounded.Settings) else painterResource(R.drawable.ic_settings_hollow),
-                                    contentDescription = "Settings"
+                                    contentDescription = "Settings",
+                                    modifier = Modifier.pulseOnSelect(currentRoute.routeIs(settingsScreens))
                                 )
                             },
                             onClick = {
@@ -296,5 +304,23 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
                 }
             }
         }
+    }
+}
+
+
+@Composable
+private fun Modifier.pulseOnSelect(selected: Boolean): Modifier {
+    val scale = remember { Animatable(1f) }
+
+    LaunchedEffect(selected) {
+        if (selected) {
+            scale.animateTo(1.1f, tween(200))
+            scale.animateTo(1f, tween(300))
+        }
+    }
+
+    return this.graphicsLayer {
+        scaleX = scale.value
+        scaleY = scale.value
     }
 }
