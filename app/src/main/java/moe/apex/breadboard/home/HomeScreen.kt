@@ -264,7 +264,6 @@ fun HomeScreen(
                 SideEffect(Unit) {
                     val newProvider = FollowingProvider(
                         followedArtists = prefs.followedTags,
-                        auth = prefs.authFor(ImageSource.DANBOORU, context),
                         showAllRatings = prefs.recommendAllRatings,
                         initialBlockedTags = prefs.blockedTags
                     )

@@ -424,6 +424,25 @@ object Danbooru : ImageBoard {
 
     private val artistSearchUrl = "${baseUrl}artists.json?only=name,urls,other_names,tag&search[any_name_matches]=%s"
 
+    suspend fun loadFollowingPage(artists: List<String>, page: Int, safe: Boolean): List<Image> {
+        val baseUrl = "https://breadboard.moe/api/v1/following/posts"
+        val artistsQuery = artists.joinToString(",") { URLEncoder.encode(it, "utf-8") }
+        val url = "$baseUrl?artists=$artistsQuery&page=$page&safe=$safe"
+        
+        val body = RequestUtil.get(url)
+        if (body.isEmpty()) return emptyList()
+
+        val json = JSONArray(body)
+        val images = mutableListOf<Image>()
+
+        for (i in 0 until json.length()) {
+            val e = json.getJSONObject(i)
+            parseImage(e)?.let { images.add(it) }
+        }
+
+        return images
+    }
+
     override fun parseImage(e: JSONObject): Image? {
         if (e.isNull("md5")) return null
 

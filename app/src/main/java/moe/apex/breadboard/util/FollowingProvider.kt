@@ -9,19 +9,15 @@ import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
 import moe.apex.breadboard.image.Danbooru
-import moe.apex.breadboard.image.DanbooruSafe
 import moe.apex.breadboard.image.Image
-import moe.apex.breadboard.image.ImageBoardAuth
 import moe.apex.breadboard.viewmodel.GridStateHolder
 import moe.apex.breadboard.viewmodel.GridStateHolderDelegate
 
 class FollowingProvider(
     followedArtists: Set<String>,
-    private val auth: ImageBoardAuth?,
     private val showAllRatings: Boolean,
     private val initialBlockedTags: Set<String>,
 ) : GridStateHolder by GridStateHolderDelegate() {
-    private val source = if (showAllRatings) Danbooru else DanbooruSafe
     private val mutableFollowedArtists = mutableStateSetOf<String>().apply { addAll(followedArtists) }
     val followedArtists: Set<String>
         get() = mutableFollowedArtists.toSet()
@@ -62,40 +58,28 @@ class FollowingProvider(
 
         try {
             isLoading = true
-            Log.d("FollowingProvider", "Using source: ${source.baseUrl} (showAllRatings: $showAllRatings)")
-            val tagLimit = if (auth == null) 2 else 12
+            Log.d("FollowingProvider", "Using Breadboard proxy (showAllRatings: $showAllRatings)")
             
-            val batches = followedArtists.toList().chunked(tagLimit)
-            val allResults = mutableListOf<Image>()
+            val results = Danbooru.loadFollowingPage(
+                artists = followedArtists.toList(),
+                page = pageNumber,
+                safe = !showAllRatings,
+            )
             
-            for (batch in batches) {
-                val searchQuery = batch.joinToString(" ") { "~$it" }
-                val results = source.loadPage(
-                    tags = searchQuery,
-                    page = pageNumber,
-                    auth = auth
-                )
-                allResults.addAll(
-                    elements = results.filter {
-                        it.metadata!!.tags.none { tag -> blockedTags.contains(tag.lowercase()) }
-                    }
-                )
+            val filteredResults = results.filter {
+                it.metadata!!.tags.none { tag -> blockedTags.contains(tag.lowercase()) }
             }
 
-            // Deduplicate and sort by ID descending
-            val sortedResults = allResults.distinctBy { it.id }
-                .sortedByDescending { it.id?.toLongOrNull() ?: 0L }
-
-            if (sortedResults.isEmpty()) {
+            if (results.isEmpty()) {
                 shouldKeepSearching = false
             } else {
                 if (pageNumber == Danbooru.firstPageIndex) {
                     Snapshot.withMutableSnapshot {
                         images.clear()
-                        images.addAll(sortedResults)
+                        images.addAll(filteredResults)
                     }
                 } else {
-                    val newImages = sortedResults.filter { newImg -> images.none { it.id == newImg.id } }
+                    val newImages = filteredResults.filter { newImg -> images.none { it.id == newImg.id } }
                     images += newImages
                 }
                 pageNumber++
