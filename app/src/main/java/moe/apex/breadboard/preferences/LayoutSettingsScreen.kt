@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.launch
 import moe.apex.breadboard.prefs
+import moe.apex.breadboard.ui.theme.doesSystemSupportDarkTheme
 import moe.apex.breadboard.util.LargeTitleBar
 import moe.apex.breadboard.util.LazyExpressiveGroup
 import moe.apex.breadboard.util.MainScreenScaffold
@@ -119,7 +120,26 @@ fun LayoutSettingsScreen(navController: NavHostController) {
                 }
             }
 
-            LazyExpressiveGroup("Layout") {
+            LazyExpressiveGroup("Appearance and Layout") {
+                item {
+                    EnumPref(
+                        title = "Dark theme",
+                        summary = currentSettings.darkTheme.label,
+                        enumItems = DarkTheme.entries.filter { entry ->
+                            // Hide the auto option if system dark theme is not supported
+                            !(entry == DarkTheme.AUTO && !doesSystemSupportDarkTheme())
+                        },
+                        selectedItem = currentSettings.darkTheme,
+                        onSelection = {
+                            scope.launch {
+                                preferencesRepository.updatePref(
+                                    PreferenceKeys.DARK_THEME,
+                                    it
+                                )
+                            }
+                        }
+                    )
+                }
                 item {
                     ReorderablePref(
                         title = "Reorder image actions",

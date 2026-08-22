@@ -45,6 +45,7 @@ import moe.apex.breadboard.image.Safebooru
 import moe.apex.breadboard.image.Yandere
 import moe.apex.breadboard.image.AI_TAG_NAMES
 import moe.apex.breadboard.tag.TagCategory
+import moe.apex.breadboard.ui.theme.doesSystemSupportDarkTheme
 import moe.apex.breadboard.util.AgeVerification
 import moe.apex.breadboard.util.MigrationOnlyField
 import moe.apex.breadboard.util.PixivArtwork
@@ -98,6 +99,7 @@ data object PrefNames {
     const val INTERNAL_IGNORE_LIST = "internal_ignore_list"
     const val AUTOPLAY_VIDEOS = "autoplay_videos"
     const val UNIFIED_INFO_SHEET = "unified_info_sheet"
+    const val DARK_THEME = "dark_theme"
     const val FOLLOWED_TAGS = "followed_tags"
     const val DEFAULT_BROWSE_TAB = "default_browse_tab"
     const val PROFILES_FOR_ALL_TAGS = "profiles_for_all_tags"
@@ -136,6 +138,7 @@ object PreferenceKeys {
     val INTERNAL_IGNORE_LIST = stringSetPreferencesKey(PrefNames.INTERNAL_IGNORE_LIST)
     val AUTOPLAY_VIDEOS = stringPreferencesKey(PrefNames.AUTOPLAY_VIDEOS)
     val UNIFIED_INFO_SHEET = booleanPreferencesKey(PrefNames.UNIFIED_INFO_SHEET)
+    val DARK_THEME = stringPreferencesKey(PrefNames.DARK_THEME)
     val FOLLOWED_TAGS = stringSetPreferencesKey(PrefNames.FOLLOWED_TAGS)
     val DEFAULT_BROWSE_TAB = stringPreferencesKey(PrefNames.DEFAULT_BROWSE_TAB)
     val PROFILES_FOR_ALL_TAGS = booleanPreferencesKey(PrefNames.PROFILES_FOR_ALL_TAGS)
@@ -243,6 +246,7 @@ data class Prefs(
     val internalIgnoreList: Set<String>,
     val autoplayVideos: AutoplayVideosMode,
     val unifiedInfoSheet: Boolean,
+    val darkTheme: DarkTheme,
     val followedTags: Set<String>,
     val defaultBrowseTab: BrowseTab,
     val profilesForAllTags: Boolean,
@@ -280,6 +284,7 @@ data class Prefs(
             internalIgnoreList = emptySet(),
             autoplayVideos = AutoplayVideosMode.OFF,
             unifiedInfoSheet = false, // Unified is called 'Classic' in the UI
+            darkTheme = DarkTheme.AUTO,
             followedTags = emptySet(),
             defaultBrowseTab = BrowseTab.FOR_YOU,
             profilesForAllTags = false,
@@ -350,6 +355,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             PreferenceKeys.INTERNAL_IGNORE_LIST_TIMESTAMP to PrefMeta(PrefCategory.SETTING, exportable = false),
             PreferenceKeys.INTERNAL_IGNORE_LIST to PrefMeta(PrefCategory.SETTING, exportable = false),
             PreferenceKeys.UNIFIED_INFO_SHEET to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.DARK_THEME to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.FOLLOWED_TAGS to PrefMeta(PrefCategory.SETTING, mergeable = true),
             PreferenceKeys.DEFAULT_BROWSE_TAB to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.PROFILES_FOR_ALL_TAGS to PrefMeta(PrefCategory.SETTING),
@@ -392,6 +398,18 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
 
         val currentPreferences = dataStore.data.first()
         val lastUsedVersionCode = currentPreferences[PreferenceKeys.LAST_USED_VERSION_CODE] ?: 0
+
+        /* Version 3.3.2 introduces the manual dark theme preference. Android 9 had some partial
+           support for system dark theme, but older versions would have no support whatsoever.
+           Set the default dark theme preference to a manual OFF state on those versions. */
+        val darkTheme = currentPreferences[PreferenceKeys.DARK_THEME]
+
+        if (
+            !doesSystemSupportDarkTheme() &&
+            (darkTheme == null || darkTheme == DarkTheme.AUTO.name)
+        ) {
+            updatePref(PreferenceKeys.DARK_THEME, DarkTheme.OFF)
+        }
 
         /* lastUsedVersionCode can be 0 if the user had it installed already but cleared the data.
            In such a case, we can't reliably determine what their previous version was. Just load
@@ -858,6 +876,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val internalIgnoreList = preferences[PreferenceKeys.INTERNAL_IGNORE_LIST] ?: Prefs.DEFAULT.internalIgnoreList
         val autoplayVideos = preferences[PreferenceKeys.AUTOPLAY_VIDEOS]?.let { AutoplayVideosMode.valueOf(it) } ?: Prefs.DEFAULT.autoplayVideos
         val unifiedInfoSheet = preferences[PreferenceKeys.UNIFIED_INFO_SHEET] ?: Prefs.DEFAULT.unifiedInfoSheet
+        val darkTheme = preferences[PreferenceKeys.DARK_THEME]?.let { DarkTheme.valueOf(it) } ?: Prefs.DEFAULT.darkTheme
         val followedTags = preferences[PreferenceKeys.FOLLOWED_TAGS] ?: Prefs.DEFAULT.followedTags
         val defaultBrowseTab = preferences[PreferenceKeys.DEFAULT_BROWSE_TAB]?.let { BrowseTab.valueOf(it) } ?: Prefs.DEFAULT.defaultBrowseTab
         val profilesForAllTags = preferences[PreferenceKeys.PROFILES_FOR_ALL_TAGS] ?: Prefs.DEFAULT.profilesForAllTags
@@ -894,6 +913,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             internalIgnoreList,
             autoplayVideos,
             unifiedInfoSheet,
+            darkTheme,
             followedTags,
             defaultBrowseTab,
             profilesForAllTags,
@@ -912,4 +932,11 @@ enum class ImageSource(override val label: String, val imageBoard: ImageBoard) :
     GELBOORU("Gelbooru", Gelbooru),
     YANDERE("Yande.re", Yandere),
     R34("Rule34", Rule34)
+}
+
+
+enum class DarkTheme(override val label: String) : PrefEnum<DarkTheme> {
+    ON("Always"),
+    OFF("Never"),
+    AUTO("Follow system")
 }
