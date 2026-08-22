@@ -126,7 +126,7 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
             val recommendationsProvider by viewModel.recommendationsProvider.collectAsState()
 
             /* Sync the UiModeManager's app night mode preference with the selected app dark theme
-               preference. This ensures that the splash screen color scheme matches the selected app
+               preference. This ensures that the splash screen colour scheme matches the selected app
                dark theme preference.
 
                UiModeManager#setApplicationNightMode() is only supported on Android 12+. */

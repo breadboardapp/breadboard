@@ -87,8 +87,8 @@ fun BreadboardTheme(
         dynamicColor: Boolean = true,
         content: @Composable () -> Unit
 ) {
-    /* Ensure that the status bar and navigation bar color scheme match the current app dark theme
-       preference. This is necessary on Android 11 amd lower if the app dark theme preference
+    /* Ensure that the status bar and navigation bar colour scheme match the current app dark theme
+       preference. This is necessary on Android 11 and lower if the app dark theme preference
        is the opposite of the system dark theme preference.
 
        This is not necessary for Android 12+ since we already sync the UiModeManager's app night mode
