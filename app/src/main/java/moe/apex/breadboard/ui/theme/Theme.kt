@@ -65,10 +65,11 @@ val LocalBreadboardColors = staticCompositionLocalOf {
 fun shouldUseDarkTheme(): Boolean {
     val preferences = LocalPreferences.current
 
-    val userSelectedDarkMode = preferences.darkTheme == DarkTheme.ON
-    val followSystemDarkMode = preferences.darkTheme == DarkTheme.AUTO && isSystemInDarkTheme()
-
-    return userSelectedDarkMode || followSystemDarkMode
+    return when (preferences.darkTheme) {
+        DarkTheme.ON -> true
+        DarkTheme.OFF -> false
+        DarkTheme.AUTO -> isSystemInDarkTheme()
+    }
 }
 
 
