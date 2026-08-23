@@ -1,6 +1,10 @@
 package moe.apex.breadboard.ui.theme
 
 import android.os.Build
+import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.compose.LocalActivity
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialExpressiveTheme
@@ -11,9 +15,12 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import moe.apex.breadboard.preferences.DarkTheme
+import moe.apex.breadboard.preferences.LocalPreferences
 
 
 private val DarkColorScheme = darkColorScheme(
@@ -54,14 +61,58 @@ val LocalBreadboardColors = staticCompositionLocalOf {
 }
 
 
+@Composable
+fun shouldUseDarkTheme(): Boolean {
+    val preferences = LocalPreferences.current
+
+    return when (preferences.darkTheme) {
+        DarkTheme.ON -> true
+        DarkTheme.OFF -> false
+        DarkTheme.AUTO -> isSystemInDarkTheme()
+    }
+}
+
+
+fun doesSystemSupportDarkTheme(): Boolean {
+    /* Android 9 had some partial support for system dark theme,
+       but older versions would have no support whatsoever. */
+    return Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+}
+
+
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun BreadboardTheme(
-        darkTheme: Boolean = isSystemInDarkTheme(),
+        darkTheme: Boolean = shouldUseDarkTheme(),
         // Dynamic color is available on Android 12+
         dynamicColor: Boolean = true,
         content: @Composable () -> Unit
 ) {
+    /* Ensure that the status bar and navigation bar colour scheme match the current app dark theme
+       preference. This is necessary on Android 11 and lower if the app dark theme preference
+       is the opposite of the system dark theme preference.
+
+       This is not necessary for Android 12+ since we already sync the UiModeManager's app night mode
+       preference to match the app dark theme preference, so the system changes the style accordingly. */
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+        val context = LocalActivity.current as ComponentActivity
+
+        SideEffect(darkTheme) {
+            val systemBarStyle = if (darkTheme) {
+                SystemBarStyle.dark(
+                    scrim = android.graphics.Color.TRANSPARENT
+                )
+            } else {
+                SystemBarStyle.light(
+                    scrim = android.graphics.Color.TRANSPARENT,
+                    darkScrim = android.graphics.Color.TRANSPARENT
+                )
+            }
+
+            context.enableEdgeToEdge(statusBarStyle = systemBarStyle, navigationBarStyle = systemBarStyle)
+        }
+    }
+
     var colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current

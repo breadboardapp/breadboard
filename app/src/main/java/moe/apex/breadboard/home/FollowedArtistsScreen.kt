@@ -1,7 +1,6 @@
 package moe.apex.breadboard.home
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,6 +41,7 @@ import moe.apex.breadboard.preferences.ImageSource
 import moe.apex.breadboard.preferences.LocalPreferences
 import moe.apex.breadboard.preferences.PreferenceKeys
 import moe.apex.breadboard.prefs
+import moe.apex.breadboard.ui.theme.shouldUseDarkTheme
 import moe.apex.breadboard.util.DISABLED_OPACITY
 import moe.apex.breadboard.util.ExpressiveTagEntryContainer
 import moe.apex.breadboard.util.LargeTitleBar
@@ -65,7 +65,7 @@ fun FollowedArtistsScreen(navController: NavHostController) {
     val userPreferencesRepository = LocalContext.current.prefs
     val prefs = LocalPreferences.current
     val followedTags = prefs.followedTags.toList().sorted()
-    val darkTheme = isSystemInDarkTheme()
+    val darkTheme = shouldUseDarkTheme()
 
     MainScreenScaffold(
         topAppBar = {

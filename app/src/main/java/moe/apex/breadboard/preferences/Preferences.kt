@@ -1,7 +1,6 @@
 package moe.apex.breadboard.preferences
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -47,6 +46,7 @@ import moe.apex.breadboard.navigation.DataSettings
 import moe.apex.breadboard.navigation.ExperimentalSettings
 import moe.apex.breadboard.navigation.GeneralSettings
 import moe.apex.breadboard.navigation.LayoutSettings
+import moe.apex.breadboard.ui.theme.shouldUseDarkTheme
 import moe.apex.breadboard.util.ChevronRight
 import moe.apex.breadboard.util.LazyExpressiveGroup
 import moe.apex.breadboard.util.MainScreenScaffold
@@ -194,7 +194,7 @@ private fun ContainedIcon(
     label: String,
     imageVector: ImageVector
 ) {
-    val darkTheme = isSystemInDarkTheme()
+    val darkTheme = shouldUseDarkTheme()
     val colourPair = remember(label) {
         generateColours(darkTheme, label)
     }

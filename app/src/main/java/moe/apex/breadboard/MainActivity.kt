@@ -1,5 +1,6 @@
 package moe.apex.breadboard
 
+import android.app.UiModeManager
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -35,6 +36,7 @@ import moe.apex.breadboard.navigation.Home
 import moe.apex.breadboard.navigation.Navigation
 import moe.apex.breadboard.navigation.Results
 import moe.apex.breadboard.navigation.Search
+import moe.apex.breadboard.preferences.DarkTheme
 import moe.apex.breadboard.preferences.ImageSource
 import moe.apex.breadboard.preferences.LocalPreferences
 import moe.apex.breadboard.preferences.StartDestination
@@ -122,6 +124,25 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
             val prefs by prefs.getPreferences.collectAsState(initialPrefs)
             val viewModel = getGlobalViewModel()
             val recommendationsProvider by viewModel.recommendationsProvider.collectAsState()
+
+            /* Sync the UiModeManager's app night mode preference with the selected app dark theme
+               preference. This ensures that the splash screen colour scheme matches the selected app
+               dark theme preference.
+
+               UiModeManager#setApplicationNightMode() is only supported on Android 12+. */
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val uiModeManager = getSystemService(UI_MODE_SERVICE) as UiModeManager
+
+                SideEffect(prefs.darkTheme) {
+                    uiModeManager.setApplicationNightMode(
+                        when (prefs.darkTheme) {
+                            DarkTheme.ON -> UiModeManager.MODE_NIGHT_YES
+                            DarkTheme.OFF -> UiModeManager.MODE_NIGHT_NO
+                            DarkTheme.AUTO -> UiModeManager.MODE_NIGHT_AUTO
+                        }
+                    )
+                }
+            }
 
             SideEffect(prefs.imageSource, prefs.filterRatingsLocally) {
                 if (
