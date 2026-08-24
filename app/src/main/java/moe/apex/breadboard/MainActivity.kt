@@ -98,7 +98,8 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
 
 
     private fun determineDestination(intent: Intent): Any? {
-        val intent = createReverseSearchIntent(intent) ?: intent
+        // Transform any Intent.ACTION_SEND intent to a valid reverse search destination intent
+        if (intent.action == Intent.ACTION_SEND) transformReverseSearchIntent(intent)
 
         return when (intent.getStringExtra("destination")) {
             "artist" -> maybePrepareArtistDestination(intent)
@@ -183,9 +184,7 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
     }
 
 
-    private fun createReverseSearchIntent(intent: Intent): Intent? {
-        if (intent.action != Intent.ACTION_SEND) return null
-
+    private fun transformReverseSearchIntent(intent: Intent) {
         intent.putExtra("destination", "reverse_search")
 
         val initialImageUrl = intent.extras?.getString(Intent.EXTRA_TEXT)
@@ -198,7 +197,5 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
         } else if (initialFileUri != null) {
             intent.putExtra("initial_file_uri", initialFileUri.toString())
         }
-
-        return intent
     }
 }
