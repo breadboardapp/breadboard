@@ -146,12 +146,18 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
                                 )
                             },
                             onClick = {
-                                if (!currentRoute.routeIs(homeScreens)) {
+                                /* The 2nd clause is currently always true,
+                                   but might not be in the future.
+                                   Handling that now because I'll probably forget otherwise. */
+                                if (
+                                    currentRoute.routeIs(FollowedArtists::class) &&
+                                    navController.previousBackStackEntry?.destination.routeIs(Home::class)
+                                ) {
+                                    navController.popBackStack()
+                                } else if (!currentRoute.routeIs(Home::class)) {
                                     navController.navigate(Home) {
                                         popUpTo(Home) { inclusive = true }
                                     }
-                                } else {
-                                    navController.popBackStack()
                                 }
                             }
                         )
@@ -231,7 +237,14 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
                                 )
                             },
                             onClick = {
-                                if (currentRoute.routeIs(settingsScreens.filter { it != Settings::class })) {
+                                /* The 2nd clause might be false if the user clicks a button that
+                                   takes them to a specific settings page.
+                                   In such cases, tapping the settings tab should take them to the
+                                   settings home page, not back to where they were before. */
+                                if (
+                                    currentRoute.routeIs(settingsScreens.filter { it != Settings::class }) &&
+                                    navController.previousBackStackEntry?.destination.routeIs(settingsScreens)
+                                ) {
                                     navController.popBackStack()
                                 } else if (!currentRoute.routeIs(Settings::class)) {
                                     navController.navigate(Settings) {
