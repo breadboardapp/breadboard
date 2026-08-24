@@ -201,13 +201,21 @@ fun ReverseSearchScreen(
                             IconButton(
                                 onClick = {
                                     scope.launch {
-                                        val clipboardText =
-                                            clipboard.nativeClipboard.primaryClip?.getItemAt(
-                                                0
-                                            )?.text?.toString()
-                                        if (clipboardText != null) {
-                                            imageUrl = clipboardText
-                                            selectedFileUri = null
+                                        val clipboardItem = clipboard.nativeClipboard.primaryClip?.getItemAt(
+                                            0
+                                        )
+
+                                        if (clipboardItem != null) {
+                                            val uri = clipboardItem.uri
+                                            val mimeType = uri?.let {
+                                                context.contentResolver.getType(it)
+                                            }
+
+                                            if (mimeType?.startsWith("image/") == true) {
+                                                selectedFileUri = uri
+                                            } else {
+                                                imageUrl = clipboardItem.text.toString()
+                                            }
                                         } else {
                                             showToast(context, "Nothing on the clipboard")
                                         }
