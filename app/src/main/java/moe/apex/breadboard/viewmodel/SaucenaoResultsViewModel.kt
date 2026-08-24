@@ -89,7 +89,7 @@ class SaucenaoResultsViewModel: ViewModel() {
                                 _viewableImages.value += image
                             } else {
                                 val meta = it.source.imageBoard.loadImageGroupedTags(image, auth)
-                                _viewableImages.value += image.copy(metadata = meta)
+                                _viewableImages.value += meta?.let { image.copy(metadata = it) } ?: image
                             }
                         }
                     } catch (e: Exception) {
