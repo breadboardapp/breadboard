@@ -118,7 +118,6 @@ fun SauceNaoResultsScreen(
     var selectedImages by remember { mutableStateOf(viewableImages) }
     val state by viewModel.resultsState.collectAsState()
 
-    // For inline image viewing via OffsetBasedLargeImageView
     var isImageViewerActive by remember { mutableStateOf(false) }
 
     fun onViewInBreadboard(vararg ids: Int?) {
