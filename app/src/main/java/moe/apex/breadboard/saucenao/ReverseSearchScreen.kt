@@ -201,9 +201,10 @@ fun ReverseSearchScreen(
                             IconButton(
                                 onClick = {
                                     scope.launch {
-                                        val clipboardItem = clipboard.nativeClipboard.primaryClip?.getItemAt(
-                                            0
-                                        )
+                                        val clipboardItem =
+                                            clipboard.nativeClipboard.primaryClip?.getItemAt(
+                                                0
+                                            )
 
                                         if (clipboardItem != null) {
                                             val uri = clipboardItem.uri

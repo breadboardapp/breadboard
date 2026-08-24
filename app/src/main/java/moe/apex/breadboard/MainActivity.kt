@@ -99,7 +99,7 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
 
     private fun determineDestination(intent: Intent): Any? {
         // Transform any Intent.ACTION_SEND intent to a valid reverse search destination intent
-        if (intent.action == Intent.ACTION_SEND) transformReverseSearchIntent(intent)
+        if (intent.action == Intent.ACTION_SEND) transformReverseSearchDestinationIntent(intent)
 
         return when (intent.getStringExtra("destination")) {
             "artist" -> maybePrepareArtistDestination(intent)
@@ -184,14 +184,14 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
     }
 
 
-    private fun transformReverseSearchIntent(intent: Intent) {
+    private fun transformReverseSearchDestinationIntent(intent: Intent) {
         intent.putExtra("destination", "reverse_search")
 
         val initialImageUrl = intent.extras?.getString(Intent.EXTRA_TEXT)
         val initialFileUri = intent.clipData?.getItemAt(0)?.uri
 
         /* Sometimes a shared link may contain an image clipData of the favicon, so we must
-           prioritize the text over the clipData. Providing them both would be bad. */
+           prioritise the text over the clipData. Providing them both would be bad. */
         if (initialImageUrl != null) {
             intent.putExtra("initial_image_url", initialImageUrl)
         } else if (initialFileUri != null) {
