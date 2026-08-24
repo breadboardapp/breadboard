@@ -1,6 +1,7 @@
 package moe.apex.breadboard
 
 import android.app.UiModeManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -35,6 +36,7 @@ import moe.apex.breadboard.navigation.Favourites
 import moe.apex.breadboard.navigation.Home
 import moe.apex.breadboard.navigation.Navigation
 import moe.apex.breadboard.navigation.Results
+import moe.apex.breadboard.navigation.ReverseSearch
 import moe.apex.breadboard.navigation.Search
 import moe.apex.breadboard.preferences.DarkTheme
 import moe.apex.breadboard.preferences.ImageSource
@@ -75,13 +77,6 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
     }
 
 
-    private fun maybePrepareResultsDestination(intent: Intent): Results? {
-        val searchSource = ImageSource.valueOf(intent.getStringExtra("source") ?: return null)
-        val searchQuery = intent.getStringArrayExtra("query") ?: return null
-        return Results(searchSource, searchQuery.toList())
-    }
-
-
     private fun maybePrepareArtistDestination(intent: Intent): ArtistProfile? {
         val artist = intent.getStringExtra("artist") ?: return null
         val source = ImageSource.valueOf(intent.getStringExtra("origin_source") ?: return null)
@@ -89,10 +84,27 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
     }
 
 
+    private fun maybePrepareResultsDestination(intent: Intent): Results? {
+        val searchSource = ImageSource.valueOf(intent.getStringExtra("source") ?: return null)
+        val searchQuery = intent.getStringArrayExtra("query") ?: return null
+        return Results(searchSource, searchQuery.toList())
+    }
+
+
+    private fun maybePrepareReverseSearchDestination(intent: Intent): ReverseSearch? {
+        val initialImageUrl = intent.getStringExtra("initial_image_url")
+        val initialFileUri = intent.getStringExtra("initial_file_uri")
+        return ReverseSearch(initialImageUrl, initialFileUri)
+    }
+
+
     private fun determineDestination(intent: Intent): Any? {
-        return when (intent.getStringExtra("destination")) {
-            "artist" -> maybePrepareArtistDestination(intent)
-            "search" -> maybePrepareResultsDestination(intent)
+        val newIntent = createReverseSearchIntent(intent) ?: intent
+
+        return when (newIntent.getStringExtra("destination")) {
+            "artist" -> maybePrepareArtistDestination(newIntent)
+            "search" -> maybePrepareResultsDestination(newIntent)
+            "reverse_search" -> maybePrepareReverseSearchDestination(newIntent)
             else -> null
         }
     }
@@ -169,5 +181,28 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
                 Navigation(navController, determineDestination(intent) ?: startDestination)
             }
         }
+    }
+
+
+    private fun createReverseSearchIntent(intent: Intent): Intent? {
+        if (intent.action != Intent.ACTION_SEND) return null
+
+        val initialImageUrl = intent.extras?.getString(Intent.EXTRA_TEXT)
+        val initialFileUri = intent.clipData?.getItemAt(0)?.uri
+
+        val intent = Intent(Intent.ACTION_VIEW)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        intent.component = ComponentName(this, MainActivity::class.java)
+        intent.putExtra("destination", "reverse_search")
+
+        /* Sometimes a shared link may contain an image clipData of the favicon, so we must
+           prioritize the text over the clipData. Providing them both would be bad. */
+        if (initialImageUrl != null) {
+            intent.putExtra("initial_image_url", initialImageUrl)
+        } else if (initialFileUri != null) {
+            intent.putExtra("initial_file_uri", initialFileUri.toString())
+        }
+
+        return intent
     }
 }

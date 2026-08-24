@@ -202,8 +202,8 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
                             },
                             onClick = {
                                 if (!currentRoute.routeIs(ReverseSearch::class)) {
-                                    navController.navigate(ReverseSearch) {
-                                        popUpTo(ReverseSearch) { inclusive = true }
+                                    navController.navigate(ReverseSearch()) {
+                                        popUpTo(ReverseSearch()) { inclusive = true }
                                     }
                                 }
                             }
@@ -288,7 +288,10 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
                 }
                 composable<Home> { HomeScreen(navController) { isNavigationBarVisible = it } }
                 composable<Search> { SearchScreen(navController, focusRequester) }
-                composable<ReverseSearch> { ReverseSearchScreen(navController) }
+                composable<ReverseSearch> {
+                    val args = it.toRoute<ReverseSearch>()
+                    ReverseSearchScreen(navController, args.initialImageUrl, args.initialFileUri)
+                }
                 composable<Results> {
                     val args = it.toRoute<Results>()
                     SearchResults(navController, args.source, args.tags)

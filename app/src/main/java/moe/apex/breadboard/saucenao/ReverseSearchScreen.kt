@@ -80,14 +80,18 @@ import moe.apex.breadboard.util.showToast
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun ReverseSearchScreen(navController: NavController) {
+fun ReverseSearchScreen(
+    navController: NavController,
+    initialImageUrl: String? = null,
+    initialFileUri: String? = null
+) {
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
     val prefs = LocalPreferences.current
     val scope = rememberCoroutineScope()
 
-    var imageUrl by rememberSaveable { mutableStateOf("") }
-    var selectedFileUri by rememberSaveable { mutableStateOf<Uri?>(null) }
+    var imageUrl by rememberSaveable { mutableStateOf(initialImageUrl ?: "") }
+    var selectedFileUri by rememberSaveable { mutableStateOf(initialFileUri?.toUri()) }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
