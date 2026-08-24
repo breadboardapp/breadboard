@@ -1,7 +1,6 @@
 package moe.apex.breadboard
 
 import android.app.UiModeManager
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Build
