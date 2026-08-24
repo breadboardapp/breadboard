@@ -214,6 +214,10 @@ fun ReverseSearchScreen(
                                             if (mimeType?.startsWith("image/") == true) {
                                                 selectedFileUri = uri
                                             } else {
+                                                /* onValueChange does not trigger when you press
+                                                   the paste button, so we still have to reset the
+                                                   selected file URI. */
+                                                selectedFileUri = null
                                                 imageUrl = clipboardItem.text.toString()
                                             }
                                         } else {
