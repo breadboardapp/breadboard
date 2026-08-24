@@ -99,12 +99,12 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
 
 
     private fun determineDestination(intent: Intent): Any? {
-        val newIntent = createReverseSearchIntent(intent) ?: intent
+        val intent = createReverseSearchIntent(intent) ?: intent
 
-        return when (newIntent.getStringExtra("destination")) {
-            "artist" -> maybePrepareArtistDestination(newIntent)
-            "search" -> maybePrepareResultsDestination(newIntent)
-            "reverse_search" -> maybePrepareReverseSearchDestination(newIntent)
+        return when (intent.getStringExtra("destination")) {
+            "artist" -> maybePrepareArtistDestination(intent)
+            "search" -> maybePrepareResultsDestination(intent)
+            "reverse_search" -> maybePrepareReverseSearchDestination(intent)
             else -> null
         }
     }
