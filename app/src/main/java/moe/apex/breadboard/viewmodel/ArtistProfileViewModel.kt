@@ -32,13 +32,4 @@ class ArtistProfileViewModel(private val artistTag: String): ViewModel() {
 
         _isInitialised.value = true
     }
-
-
-    fun updateImage(oldImage: Image, newImage: Image) {
-        val index = _images.value.indexOf(oldImage)
-        if (index != -1) {
-            val updatedImages = _images.value.toMutableList().apply { this[index] = newImage }
-            _images.value = updatedImages
-        }
-    }
 }

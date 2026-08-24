@@ -47,6 +47,7 @@ import moe.apex.breadboard.util.ScrollToTopArrow
 import moe.apex.breadboard.util.TINY_SPACER
 import moe.apex.breadboard.util.availableRatingsForCurrentSource
 import moe.apex.breadboard.util.filterChipSolidColor
+import moe.apex.breadboard.util.refreshImageMetadata
 import moe.apex.breadboard.util.rememberPullToRefreshController
 import moe.apex.breadboard.viewmodel.SearchResultsViewModel
 
@@ -242,7 +243,11 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
         initialSelectedImageIndex = selectedImageIndex,
         allImages = imagesToDisplay,
         onActiveStateChanged = { isImageCarouselVisible = it }
-    ) { oldImage, newImage ->
-        viewModel.updateImage(oldImage, newImage)
+    ) { image ->
+        if (!image.hasGroupedTags) {
+            refreshImageMetadata(image, prefs.authFor(image.imageSource, context)) {
+                viewModel.updateImage(image, it)
+            }
+        }
     }
 }

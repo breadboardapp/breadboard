@@ -3,11 +3,13 @@ package moe.apex.breadboard.util
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import moe.apex.breadboard.image.Image
 import moe.apex.breadboard.image.ImageBoardAuth
 import moe.apex.breadboard.image.ImageBoardRequirement
@@ -32,7 +34,9 @@ class RecommendationsProvider(
         private const val SELECTION_SIZE_DANBOORU = 2
     }
 
-    val recommendedImages = mutableStateListOf<Image>()
+    private val _recommendedImages = MutableStateFlow(listOf<Image>())
+    val recommendedImages = _recommendedImages.asStateFlow()
+
     var doneInitialLoad by mutableStateOf(false)
     val recommendedTags = mutableListOf<String>()
     private var pageNumber by mutableIntStateOf(imageSource.imageBoard.firstPageIndex)
@@ -58,6 +62,12 @@ class RecommendationsProvider(
         Snapshot.withMutableSnapshot {
             mutableUnfollowedTags.clear()
             mutableUnfollowedTags.addAll(tags)
+        }
+    }
+
+    fun updateImage(index: Int, newImage: Image) {
+        _recommendedImages.update {
+            it.toMutableList().apply { this[index] = newImage }
         }
     }
 
@@ -141,12 +151,11 @@ class RecommendationsProvider(
                 shouldKeepSearching = false
             } else {
                 if (pageNumber == imageSource.imageBoard.firstPageIndex) {
-                    Snapshot.withMutableSnapshot {
-                        recommendedImages.clear()
-                        recommendedImages.addAll(wantedResults)
-                    }
+                    _recommendedImages.update { wantedResults }
                 } else if (wantedResults.isNotEmpty()) {
-                    recommendedImages.addAll(wantedResults.filter { it !in recommendedImages })
+                    _recommendedImages.update { current ->
+                        current + wantedResults.filter { it !in current }
+                    }
                 }
             }
             pageNumber++

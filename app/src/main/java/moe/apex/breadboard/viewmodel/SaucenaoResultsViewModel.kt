@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import moe.apex.breadboard.image.Image
 import moe.apex.breadboard.image.ImageBoardAuth
 import moe.apex.breadboard.preferences.ImageSource
@@ -13,6 +14,7 @@ import moe.apex.breadboard.saucenao.SauceNaoResponse
 import moe.apex.breadboard.saucenao.SauceNaoResponseHeader
 import moe.apex.breadboard.saucenao.SauceNaoResultGroup
 import moe.apex.breadboard.saucenao.groupResults
+import moe.apex.breadboard.util.refreshImageMetadata
 
 
 sealed class ResultsState {
@@ -88,8 +90,12 @@ class SaucenaoResultsViewModel: ViewModel() {
                             if (image.hasGroupedTags) {
                                 _viewableImages.value += image
                             } else {
-                                val meta = it.source.imageBoard.loadImageGroupedTags(image, auth)
-                                _viewableImages.value += meta?.let { image.copy(metadata = it) } ?: image
+                                val refreshed = refreshImageMetadata(image, auth) { newImage ->
+                                    _viewableImages.update { it + newImage }
+                                }
+                                if (!refreshed) {
+                                    _viewableImages.update { it + image }
+                                }
                             }
                         }
                     } catch (e: Exception) {

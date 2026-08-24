@@ -98,10 +98,12 @@ import moe.apex.breadboard.util.TINY_SPACER
 import moe.apex.breadboard.util.bottomAppBarAndNavBarHeight
 import moe.apex.breadboard.util.differenceOlderThan
 import moe.apex.breadboard.util.filterChipSolidColor
+import moe.apex.breadboard.util.refreshImageMetadata
 import moe.apex.breadboard.util.onScroll
 import moe.apex.breadboard.util.rememberPullToRefreshController
 import moe.apex.breadboard.util.saveIgnoreListWithTimestamp
 import moe.apex.breadboard.viewmodel.getGlobalViewModel
+import kotlin.collections.emptyList
 import kotlin.time.Duration.Companion.days
 
 
@@ -116,8 +118,13 @@ fun HomeScreen(
     val prefs = LocalPreferences.current
     val viewModel = getGlobalViewModel()
     val defaultTab by viewModel.defaultBrowseTab.collectAsState()
+
     val recommendationsProvider by viewModel.recommendationsProvider.collectAsState()
+    val recommendedImages = recommendationsProvider?.recommendedImages?.collectAsState()?.value ?: emptyList()
+
     val followingProvider by viewModel.followingProvider.collectAsState()
+    val followingImages = followingProvider?.images?.collectAsState()?.value ?: emptyList()
+
     val blockedTags by rememberUpdatedState(prefs.blockedTags)
     val unfollowedTags by rememberUpdatedState(prefs.unfollowedTags)
     val builtInIgnoredTags by rememberUpdatedState(prefs.internalIgnoreList)
@@ -366,7 +373,7 @@ fun HomeScreen(
                                 navBarVisibilityCallback(!it.lastScrolledForward)
                             },
                         userScrollEnabled = !shouldShowLargeImage,
-                        images = provider.recommendedImages,
+                        images = recommendedImages,
                         onImageClick = { index, _ ->
                             Snapshot.withMutableSnapshot {
                                 selectedImageIndex = index
@@ -423,7 +430,7 @@ fun HomeScreen(
                     }
 
                     val ptrController = rememberPullToRefreshController(
-                        enabled = provider.images.isNotEmpty() ||
+                        enabled = followingImages.isNotEmpty() ||
                                 (provider.doneInitialLoad && prefs.followedTags.isNotEmpty()),
                         onRefresh = onRefresh
                     )
@@ -436,7 +443,7 @@ fun HomeScreen(
                                 navBarVisibilityCallback(!it.lastScrolledForward)
                             },
                         userScrollEnabled = !shouldShowLargeImage,
-                        images = provider.images,
+                        images = followingImages,
                         onImageClick = { index, _ ->
                             Snapshot.withMutableSnapshot {
                                 selectedImageIndex = index
@@ -520,21 +527,24 @@ fun HomeScreen(
         }
     }
 
-    val recommendedImages = if (pagerState.currentPage == 0) recommendationsProvider?.recommendedImages else followingProvider?.images
+    val displayImages = if (pagerState.currentPage == 0) recommendedImages else followingImages
 
     OffsetBasedLargeImageView(
         navController = navController,
         isActive = shouldShowLargeImage,
         initialSelectedImageIndex = selectedImageIndex,
-        allImages = recommendedImages ?: emptyList(),
+        allImages = displayImages,
         onActiveStateChanged = {
             shouldShowLargeImage = it
             navBarVisibilityCallback(!it)
         }
-    ) { oldImage, newImage ->
-        if (recommendedImages != null) {
-            val index = recommendedImages.indexOf(oldImage)
-            if (index != -1) recommendedImages[index] = newImage
+    ) { image ->
+        // Following feed is Danbooru which always has grouped tags so not needed for that.
+        if (pagerState.currentPage == 0 && !image.hasGroupedTags) {
+            refreshImageMetadata(image, prefs.authFor(image.imageSource, context)) { newImage ->
+                val index = recommendedImages.indexOf(image)
+                recommendationsProvider?.updateImage(index, newImage)
+            }
         }
     }
 }

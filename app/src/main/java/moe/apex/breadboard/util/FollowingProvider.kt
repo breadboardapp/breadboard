@@ -3,11 +3,13 @@ package moe.apex.breadboard.util
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import moe.apex.breadboard.image.Danbooru
 import moe.apex.breadboard.image.Image
 import moe.apex.breadboard.viewmodel.GridStateHolder
@@ -40,7 +42,9 @@ class FollowingProvider(
         }
     }
 
-    var images = mutableStateListOf<Image>()
+    private val _images = MutableStateFlow(listOf<Image>())
+    val images = _images.asStateFlow()
+
     var doneInitialLoad by mutableStateOf(false)
     private var pageNumber by mutableIntStateOf(Danbooru.firstPageIndex)
 
@@ -50,7 +54,7 @@ class FollowingProvider(
     suspend fun loadMore() {
         if (followedArtists.isEmpty()) {
             doneInitialLoad = true
-            return images.clear()
+            return _images.update { emptyList() }
         }
         if (isLoading || !shouldKeepSearching) {
             return
@@ -74,13 +78,11 @@ class FollowingProvider(
                 shouldKeepSearching = false
             } else {
                 if (pageNumber == Danbooru.firstPageIndex) {
-                    Snapshot.withMutableSnapshot {
-                        images.clear()
-                        images.addAll(filteredResults)
-                    }
+                    _images.update { filteredResults }
                 } else {
-                    val newImages = filteredResults.filter { newImg -> images.none { it.id == newImg.id } }
-                    images += newImages
+                    _images.update { current ->
+                        current + filteredResults.filter { it !in current }
+                    }
                 }
                 pageNumber++
             }

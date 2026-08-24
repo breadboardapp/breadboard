@@ -38,6 +38,7 @@ import moe.apex.breadboard.util.ScrollToTopArrow
 import moe.apex.breadboard.util.TINY_SPACER
 import moe.apex.breadboard.util.bottomAppBarAndNavBarHeight
 import moe.apex.breadboard.util.filterChipSolidColor
+import moe.apex.breadboard.util.refreshImageMetadata
 import moe.apex.breadboard.util.onScroll
 import moe.apex.breadboard.viewmodel.FavouritesViewModel
 
@@ -49,6 +50,7 @@ fun FavouritesPage(
     viewModel: FavouritesViewModel = viewModel(),
     navBarVisibilityCallback: (Boolean) -> Unit = { }
 ) {
+    val context = LocalContext.current
     val prefs = LocalPreferences.current
     val preferencesRepository = LocalContext.current.prefs
     val topAppBarState = rememberTopAppBarState()
@@ -188,7 +190,11 @@ fun FavouritesPage(
             isImageCarouselVisible = it
             navBarVisibilityCallback(!it)
         }
-    ) { oldImage, newImage ->
-        preferencesRepository.updateFavouriteImage(oldImage, newImage)
+    ) { image ->
+        refreshImageMetadata(image, prefs.authFor(image.imageSource, context)) { newImage ->
+            scope.launch {
+                preferencesRepository.updateFavouriteImage(image, newImage)
+            }
+        }
     }
 }

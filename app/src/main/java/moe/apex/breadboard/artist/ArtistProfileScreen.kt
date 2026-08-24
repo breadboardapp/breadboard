@@ -231,15 +231,13 @@ fun ArtistProfileScreen(
         }
     }
 
+    // Danbooru always provides grouped tags, the main use for onImageUpdate, so we don't need it.
     OffsetBasedLargeImageView(
         navController = navController,
         isActive = shouldShowLargeImage,
         initialSelectedImageIndex = selectedImageIndex,
         allImages = images,
         onActiveStateChanged = { shouldShowLargeImage = it },
-        onImageUpdate = { oldImage, newImage ->
-            viewModel.updateImage(oldImage, newImage)
-        }
     )
 }
 

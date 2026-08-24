@@ -166,6 +166,7 @@ import moe.apex.breadboard.util.downloadImage
 import moe.apex.breadboard.util.downloadImageToClipboard
 import moe.apex.breadboard.util.fixLink
 import moe.apex.breadboard.util.isWebLink
+import moe.apex.breadboard.util.refreshImageMetadata
 import moe.apex.breadboard.util.rememberIsBlurEnabled
 import moe.apex.breadboard.util.saveUriToPref
 import moe.apex.breadboard.util.morphingBackground
@@ -202,7 +203,7 @@ private fun LargeImageView(
     navController: NavController,
     initialSelectedImageIndex: Int,
     allImages: List<Image>,
-    onImageUpdate: (suspend (Image, Image) -> Unit)? = null,
+    onImageUpdate: (suspend (Image) -> Unit)? = null,
     onZoomedStatusChanged: ((Boolean) -> Unit)? = null
 ) {
     val pagerState = rememberPagerState(
@@ -223,10 +224,6 @@ private fun LargeImageView(
         derivedStateOf { activeZoomState?.zoomFraction?.let { it < MAX_ZOOM_FOR_PAGE_CHANGE } ?: true }
     }
 
-    val context = LocalContext.current
-    val prefs = LocalPreferences.current
-    val scope = rememberCoroutineScope()
-
     LaunchedEffect(allImages.size) {
         if (pagerState.currentPage >= allImages.size && allImages.isNotEmpty()) {
             pagerState.scrollToPage(allImages.size - 1)
@@ -234,23 +231,11 @@ private fun LargeImageView(
     }
 
     val currentImage = allImages[pagerState.currentPage.coerceIn(0, allImages.size - 1)]
-    val hasGroupedTags = remember(currentImage) { currentImage.hasGroupedTags }
 
-    if (!hasGroupedTags && onImageUpdate != null) {
+    if (onImageUpdate != null) {
         LaunchedEffect(currentImage) {
             try {
-                val metadata = currentImage.imageSource.imageBoard.loadImageGroupedTags(
-                    currentImage,
-                    prefs.authFor(currentImage.imageSource, context)
-                )
-
-                if (metadata != null) {
-                    val newImage = currentImage.copy(metadata = metadata)
-
-                    scope.launch {
-                        onImageUpdate(currentImage, newImage)
-                    }
-                }
+                onImageUpdate(currentImage)
             } catch (e: CancellationException) {
                 // Ignore the CancellationException error above because we want it to be cancelled
             } catch (e: Exception) {
@@ -665,17 +650,27 @@ fun LazyLargeImageView(
         isLoading = false
     }
 
-    if (isLoading)
+    if (isLoading) {
         FullscreenLoadingSpinner()
-    else if (image == null)
+    } else if (image == null) {
         ImageNotFound()
-    else
+    } else {
         LargeImageView(
             navController,
             0,
             listOf(image!!),
-            onImageUpdate = { _, newImage -> image = newImage }
+            onImageUpdate = {
+                if (image?.hasGroupedTags == false) {
+                    refreshImageMetadata(
+                        image = image!!,
+                        auth = prefs.authFor(image!!.imageSource, context)
+                    ) { newImage ->
+                        image = newImage
+                    }
+                }
+            }
         )
+    }
 }
 
 
@@ -1189,7 +1184,7 @@ fun OffsetBasedLargeImageView(
     initialSelectedImageIndex: Int,
     allImages: List<Image>,
     onActiveStateChanged: (Boolean) -> Unit = { },
-    onImageUpdate: (suspend (Image, Image) -> Unit)? = null,
+    onImageUpdate: (suspend (Image) -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current

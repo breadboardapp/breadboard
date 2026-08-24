@@ -67,27 +67,29 @@ data class Image(
     val highestQualityFormatUrl = fileUrl.takeIf { it.isNotEmpty() } ?: sampleUrl
     val isVideo = fileFormat == "mp4" || fileFormat == "webm"
 
-    val hasGroupedTags: Boolean
-        get() {
-            /* We use this to determine whether we should fetch updated (grouped) tags for a post.
-               On Gelbooru this required the tags themselves, which won't exist if metadata is null.
-               That adds a bit of complexity that we need to handle elsewhere,
-               but it keeps this property 'truthful' so to speak. */
-            if (metadata == null) return false
-
-            /* Usually, we can tell that the existing grouped tags are grouped properly if they have more than one group.
-
-               Otherwise, the least we could do is make sure that the only existing group is a non-general one.
-               This does not usually happen, but we would at least know that it is already grouped in this case.
-
-               The images that pass would usually have ungrouped tags, but it could also catch actual images that
-               literally only have general tags. They're usually due to bad tagging and should be re-fetched anyway. */
-            if (
-                metadata.groupedTags.size > 1 ||
-                (metadata.groupedTags.size == 1 && metadata.groupedTags[0].category != TagCategory.GENERAL)
-            )
-                return true
-
-            return false
+    val hasGroupedTags: Boolean by lazy {
+        /* We use this to determine whether we should fetch updated (grouped) tags for a post.
+           On Gelbooru this required the tags themselves, which won't exist if metadata is null.
+           That adds a bit of complexity that we need to handle elsewhere,
+           but it keeps this property 'truthful' so to speak. */
+        if (metadata == null) {
+            return@lazy false
         }
+
+        /* Usually, we can tell that the existing grouped tags are grouped properly if they have more than one group.
+
+           Otherwise, the least we could do is make sure that the only existing group is a non-general one.
+           This does not usually happen, but we would at least know that it is already grouped in this case.
+
+           The images that pass would usually have ungrouped tags, but it could also catch actual images that
+           literally only have general tags. They're usually due to bad tagging and should be re-fetched anyway. */
+        if (
+            metadata.groupedTags.size > 1 ||
+            (metadata.groupedTags.size == 1 && metadata.groupedTags[0].category != TagCategory.GENERAL)
+        ) {
+            return@lazy true
+        }
+
+        return@lazy false
+    }
 }
