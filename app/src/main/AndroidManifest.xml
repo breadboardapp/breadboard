@@ -2,6 +2,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- android:configChanges="uiMode" is added to prevent the activity from recreating itself
+         during night mode change, avoiding unnecessary state resets wherever possible.
+
+         android:documentLaunchMode="intoExisting" is added to prevent the activity from stacking
+         on top of the current app while sharing images (if no existing instance of Breadboard was
+         found) on older Android versions. -->
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -12,17 +18,15 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Breadboard"
         android:windowSoftInputMode="adjustResize"
-        android:enableOnBackInvokedCallback="true">
+        android:enableOnBackInvokedCallback="true"
+        android:configChanges="uiMode"
+        android:documentLaunchMode="intoExisting">
         <activity
             android:name=".MainActivity"
             android:launchMode="singleTop"
             android:taskAffinity="moe.apex.breadboard.MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.Breadboard"
-            android:configChanges="uiMode"> <!-- Add "uiMode" to "configChanges" to prevent the
-                                                 activity from recreating itself during night mode
-                                                 change, avoiding unnecessary state resets wherever
-                                                 possible. -->
+            android:theme="@style/Theme.Breadboard">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -39,8 +43,7 @@
             android:taskAffinity="moe.apex.breadboard.DeepLinkActivity"
             android:launchMode="singleTop"
             android:exported="true"
-            android:theme="@style/Theme.Breadboard"
-            android:configChanges="uiMode">
+            android:theme="@style/Theme.Breadboard">
 
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
