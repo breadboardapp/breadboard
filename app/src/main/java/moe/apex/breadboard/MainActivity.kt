@@ -187,13 +187,10 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
     private fun createReverseSearchIntent(intent: Intent): Intent? {
         if (intent.action != Intent.ACTION_SEND) return null
 
+        intent.putExtra("destination", "reverse_search")
+
         val initialImageUrl = intent.extras?.getString(Intent.EXTRA_TEXT)
         val initialFileUri = intent.clipData?.getItemAt(0)?.uri
-
-        val intent = Intent(Intent.ACTION_VIEW)
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-        intent.component = ComponentName(this, MainActivity::class.java)
-        intent.putExtra("destination", "reverse_search")
 
         /* Sometimes a shared link may contain an image clipData of the favicon, so we must
            prioritize the text over the clipData. Providing them both would be bad. */
