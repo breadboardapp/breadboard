@@ -80,14 +80,18 @@ import moe.apex.breadboard.util.showToast
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun ReverseSearchScreen(navController: NavController) {
+fun ReverseSearchScreen(
+    navController: NavController,
+    initialImageUrl: String? = null,
+    initialFileUri: String? = null
+) {
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
     val prefs = LocalPreferences.current
     val scope = rememberCoroutineScope()
 
-    var imageUrl by rememberSaveable { mutableStateOf("") }
-    var selectedFileUri by rememberSaveable { mutableStateOf<Uri?>(null) }
+    var imageUrl by rememberSaveable { mutableStateOf(initialImageUrl ?: "") }
+    var selectedFileUri by rememberSaveable { mutableStateOf(initialFileUri?.toUri()) }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -197,13 +201,26 @@ fun ReverseSearchScreen(navController: NavController) {
                             IconButton(
                                 onClick = {
                                     scope.launch {
-                                        val clipboardText =
+                                        val clipboardItem =
                                             clipboard.nativeClipboard.primaryClip?.getItemAt(
                                                 0
-                                            )?.text?.toString()
-                                        if (clipboardText != null) {
-                                            imageUrl = clipboardText
-                                            selectedFileUri = null
+                                            )
+
+                                        if (clipboardItem != null) {
+                                            val uri = clipboardItem.uri
+                                            val mimeType = uri?.let {
+                                                context.contentResolver.getType(it)
+                                            }
+
+                                            if (mimeType?.startsWith("image/") == true) {
+                                                selectedFileUri = uri
+                                            } else {
+                                                /* onValueChange does not trigger when you mutate
+                                                   imageUrl via code, so we still have to reset
+                                                   selectedFileUri here. */
+                                                selectedFileUri = null
+                                                imageUrl = clipboardItem.text.toString()
+                                            }
                                         } else {
                                             showToast(context, "Nothing on the clipboard")
                                         }

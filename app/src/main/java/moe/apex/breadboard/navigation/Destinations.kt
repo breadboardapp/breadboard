@@ -88,7 +88,7 @@ object FollowedArtists
 object Search
 
 @Serializable
-object ReverseSearch
+data class ReverseSearch(val initialImageUrl: String? = null, val initialFileUri: String? = null)
 
 @Serializable
 data class Results(

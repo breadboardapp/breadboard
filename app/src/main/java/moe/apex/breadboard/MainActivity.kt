@@ -35,6 +35,7 @@ import moe.apex.breadboard.navigation.Favourites
 import moe.apex.breadboard.navigation.Home
 import moe.apex.breadboard.navigation.Navigation
 import moe.apex.breadboard.navigation.Results
+import moe.apex.breadboard.navigation.ReverseSearch
 import moe.apex.breadboard.navigation.Search
 import moe.apex.breadboard.preferences.DarkTheme
 import moe.apex.breadboard.preferences.ImageSource
@@ -90,6 +91,19 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
 
 
     private fun determineDestination(intent: Intent): Any? {
+        // Handle Intent.ACTION_SEND intent for reverse search
+        if (intent.action == Intent.ACTION_SEND) {
+            /* Sometimes a shared link may contain an image clipData of the favicon, so we must
+               prioritise the text over the clipData. Providing them both would be bad. */
+            intent.extras?.getString(Intent.EXTRA_TEXT)?.let { initialImageUrl ->
+                return ReverseSearch(initialImageUrl = initialImageUrl)
+            }
+
+            intent.clipData?.getItemAt(0)?.uri?.let { initialFileUri ->
+                return ReverseSearch(initialFileUri = initialFileUri.toString())
+            }
+        }
+
         return when (intent.getStringExtra("destination")) {
             "artist" -> maybePrepareArtistDestination(intent)
             "search" -> maybePrepareResultsDestination(intent)
