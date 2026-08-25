@@ -90,25 +90,23 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
     }
 
 
-    private fun maybePrepareReverseSearchDestination(intent: Intent): ReverseSearch? {
-        val initialImageUrl = intent.getStringExtra("initial_image_url")
-        val initialFileUri = intent.getStringExtra("initial_file_uri")
-        return ReverseSearch(initialImageUrl, initialFileUri)
-    }
-
-
     private fun determineDestination(intent: Intent): Any? {
-        val intent = if (intent.action == Intent.ACTION_SEND) {
-            // Transform any Intent.ACTION_SEND intent to a valid reverse search destination intent
-            createReverseSearchDestinationIntent(intent)
-        } else {
-            intent
+        // Handle reverse search Intent.ACTION_SEND intent
+        if (intent.action == Intent.ACTION_SEND) {
+            /* Sometimes a shared link may contain an image clipData of the favicon, so we must
+               prioritise the text over the clipData. Providing them both would be bad. */
+            intent.extras?.getString(Intent.EXTRA_TEXT)?.let { initialImageUrl ->
+                return ReverseSearch(initialImageUrl = initialImageUrl)
+            }
+
+            intent.clipData?.getItemAt(0)?.uri?.let { initialFileUri ->
+                return ReverseSearch(initialFileUri = initialFileUri.toString())
+            }
         }
 
         return when (intent.getStringExtra("destination")) {
             "artist" -> maybePrepareArtistDestination(intent)
             "search" -> maybePrepareResultsDestination(intent)
-            "reverse_search" -> maybePrepareReverseSearchDestination(intent)
             else -> null
         }
     }
@@ -185,25 +183,5 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
                 Navigation(navController, determineDestination(intent) ?: startDestination)
             }
         }
-    }
-
-
-    private fun createReverseSearchDestinationIntent(intent: Intent): Intent {
-        val intent = Intent(intent)
-
-        intent.putExtra("destination", "reverse_search")
-
-        val initialImageUrl = intent.extras?.getString(Intent.EXTRA_TEXT)
-        val initialFileUri = intent.clipData?.getItemAt(0)?.uri
-
-        /* Sometimes a shared link may contain an image clipData of the favicon, so we must
-           prioritise the text over the clipData. Providing them both would be bad. */
-        if (initialImageUrl != null) {
-            intent.putExtra("initial_image_url", initialImageUrl)
-        } else if (initialFileUri != null) {
-            intent.putExtra("initial_file_uri", initialFileUri.toString())
-        }
-
-        return intent
     }
 }
