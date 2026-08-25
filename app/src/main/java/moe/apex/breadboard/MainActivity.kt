@@ -76,13 +76,6 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
     }
 
 
-    private fun maybePrepareArtistDestination(intent: Intent): ArtistProfile? {
-        val artist = intent.getStringExtra("artist") ?: return null
-        val source = ImageSource.valueOf(intent.getStringExtra("origin_source") ?: return null)
-        return ArtistProfile(artist, source)
-    }
-
-
     private fun maybePrepareResultsDestination(intent: Intent): Results? {
         val searchSource = ImageSource.valueOf(intent.getStringExtra("source") ?: return null)
         val searchQuery = intent.getStringArrayExtra("query") ?: return null
@@ -90,8 +83,15 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
     }
 
 
+    private fun maybePrepareArtistDestination(intent: Intent): ArtistProfile? {
+        val artist = intent.getStringExtra("artist") ?: return null
+        val source = ImageSource.valueOf(intent.getStringExtra("origin_source") ?: return null)
+        return ArtistProfile(artist, source)
+    }
+
+
     private fun determineDestination(intent: Intent): Any? {
-        // Handle reverse search Intent.ACTION_SEND intent
+        // Handle Intent.ACTION_SEND intent for reverse search
         if (intent.action == Intent.ACTION_SEND) {
             /* Sometimes a shared link may contain an image clipData of the favicon, so we must
                prioritise the text over the clipData. Providing them both would be bad. */
