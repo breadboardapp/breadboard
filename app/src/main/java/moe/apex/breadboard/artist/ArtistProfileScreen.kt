@@ -446,11 +446,7 @@ private fun ArtistToolbar(artistTag: String, ) {
                                 bottomStart = CornerSize(8.dp)
                             ),
                             onClick = {
-                                shareArtist(
-                                    context = context,
-                                    artistTag = artistTag,
-                                    addFriendlyMessage = true
-                                )
+                                shareArtist(context = context, artistTag = artistTag)
                             }
                         ) {
                             Text("Share")
@@ -805,12 +801,12 @@ private fun SocialChip(
 }
 
 
-private fun shareArtist(context: Context, artistTag: String, addFriendlyMessage: Boolean) {
+private fun shareArtist(context: Context, artistTag: String) {
     val shareIntent = Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"
         putExtra(
             Intent.EXTRA_TEXT,
-            "${if (addFriendlyMessage) "Check out this artist on Breadboard! " else ""}https://breadboard.moe/artist/$artistTag"
+            "https://breadboard.moe/artist/$artistTag"
         )
     }
     context.startActivity(Intent.createChooser(shareIntent, null))
