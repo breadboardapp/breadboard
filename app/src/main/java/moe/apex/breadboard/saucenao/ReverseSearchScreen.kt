@@ -205,24 +205,28 @@ fun ReverseSearchScreen(
                                             clipboard.nativeClipboard.primaryClip?.getItemAt(
                                                 0
                                             )
-
-                                        if (clipboardItem != null) {
-                                            val uri = clipboardItem.uri
-                                            val mimeType = uri?.let {
+                                        val mimeType =
+                                            clipboardItem?.uri?.let {
                                                 context.contentResolver.getType(it)
                                             }
 
-                                            if (mimeType?.startsWith("image/") == true) {
-                                                selectedFileUri = uri
-                                            } else {
+                                        if (mimeType?.startsWith("image/") == true) {
+                                            selectedFileUri = clipboardItem.uri
+                                        } else {
+                                            val clipboardText =
+                                                clipboardItem?.text?.toString()?.trim()?.takeIf {
+                                                    it.isNotEmpty()
+                                                }
+
+                                            if (clipboardText != null) {
                                                 /* onValueChange does not trigger when you mutate
                                                    imageUrl via code, so we still have to reset
                                                    selectedFileUri here. */
                                                 selectedFileUri = null
-                                                imageUrl = clipboardItem.text.toString()
+                                                imageUrl = clipboardText
+                                            } else {
+                                                showToast(context, "Nothing on the clipboard")
                                             }
-                                        } else {
-                                            showToast(context, "Nothing on the clipboard")
                                         }
                                     }
                                 }
