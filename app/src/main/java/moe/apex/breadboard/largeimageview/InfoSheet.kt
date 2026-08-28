@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.animateColorAsState
@@ -36,6 +37,10 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Copyright
+import androidx.compose.material.icons.rounded.DataObject
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.PersonSearch
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.ButtonDefaults
@@ -61,6 +66,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.selected
@@ -115,6 +121,14 @@ private enum class InfoSheetPage {
 }
 
 
+private sealed class TagMenuAction(val icon: ImageVector, val label: String)
+private object ArtistAction : TagMenuAction(Icons.Rounded.Person, "View profile")
+private object CharacterAction : TagMenuAction(Icons.Rounded.PersonSearch, "Search character")
+private object CopyrightAction : TagMenuAction(Icons.Rounded.Copyright, "Search copyright")
+private object MetaAction : TagMenuAction(Icons.Rounded.DataObject, "Search meta")
+private object GeneralAction : TagMenuAction(Icons.Rounded.Search, "Search")
+
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -> Unit) {
@@ -160,18 +174,18 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
     var selectedTag: String? by remember { mutableStateOf(null) }
     var selectedTagCategory: TagCategory? by remember { mutableStateOf(null) }
 
-    fun startTagSearch(tag: String, category: TagCategory, artistProfileForNonArtistTags: Boolean = false) {
+    fun startTagSearch(tag: String, category: TagCategory, artistProfileForUncategorisedTags: Boolean = false) {
         hideAndThen {
             /* Don't do new interactions inside the DeepLinkActivity.
                We should only ever do them inside the main one. */
             if (context is DeepLinkActivity) {
-                val intent = if (category == TagCategory.ARTIST || artistProfileForNonArtistTags) {
+                val intent = if (category == TagCategory.ARTIST || (category == TagCategory.GENERAL && artistProfileForUncategorisedTags)) {
                     createArtistIntent(context, tag, image.imageSource)
                 } else {
                     createSearchIntent(context, image.imageSource, tag)
                 }
                 context.startActivity(intent)
-            } else if (category == TagCategory.ARTIST || artistProfileForNonArtistTags) {
+            } else if (category == TagCategory.ARTIST || (category == TagCategory.GENERAL && artistProfileForUncategorisedTags)) {
                 navController.navigate(ArtistProfile(tag, image.imageSource))
             } else {
                 navController.navigate(Results(image.imageSource, listOf(tag)))
@@ -215,9 +229,20 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                     )
 
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        val action = when {
+                            selectedTagCategory == TagCategory.ARTIST || (prefs.profilesForAllTags && selectedTagCategory == TagCategory.GENERAL) -> ArtistAction
+                            selectedTagCategory == TagCategory.CHARACTER -> CharacterAction
+                            selectedTagCategory == TagCategory.COPYRIGHT -> CopyrightAction
+                            selectedTagCategory == TagCategory.META -> MetaAction
+                            selectedTagCategory == TagCategory.GENERAL -> GeneralAction
+                            else -> {
+                                Log.w("InfoSheet", "Action not implemented for category: $selectedTagCategory")
+                                GeneralAction
+                            }
+                        }
                         ButtonListItem(
-                            label = if (selectedTagCategory == TagCategory.ARTIST || prefs.profilesForAllTags) "View profile" else "Search",
-                            icon = Icons.Rounded.Search,
+                            label = action.label,
+                            icon = action.icon,
                             modifier = Modifier.fillMaxWidth(),
                             position = ListItemPosition.TOP
                         ) {
@@ -229,7 +254,7 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                                 startTagSearch(
                                     tag = searchTag,
                                     category = category,
-                                    artistProfileForNonArtistTags = prefs.profilesForAllTags
+                                    artistProfileForUncategorisedTags = prefs.profilesForAllTags
                                 )
                             }
                         }

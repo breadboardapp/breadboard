@@ -179,14 +179,14 @@ fun ContentSettingsScreen(navController: NavHostController) {
                 item {
                     SwitchPref(
                         checked = currentSettings.profilesForAllTags,
-                        title = "Allow profiles for all tags",
-                        summary = "Replace the search option in the tag menu with an option to " +
-                                  "view its profile.",
-                        infoText = "Not all artists are categorised correctly by the image " +
-                                   "boards, meaning the profile option would normally be " +
-                                   "unavailable for their tag.\n\n" +
+                        title = "View profile for general tags",
+                        summary = "Replace the search option in the menu for general tags with " +
+                                  "an option to view its profile.",
+                        infoText = "Not all artists are categorised by the image boards, " +
+                                   "meaning the profile option would normally be unavailable for " +
+                                   "their tag.\n\n" +
                                    "This option forces the profile option to appear for every " +
-                                   "tag, even non-artist ones."
+                                   "tag without a dedicated category."
                     ) {
                         scope.launch {
                             preferencesRepository.updatePref(
