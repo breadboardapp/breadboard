@@ -169,11 +169,15 @@ enum class DataSaver(override val label: String) : PrefEnum<DataSaver> {
 }
 
 
+/* v3.3.3 changed the order of these.
+   Previously:  DOWNLOAD, TOGGLE_HD, SHARE, FAVOURITE, INFO
+   After 3.3.3: SHARE, TOGGLE_HD, DOWNLOAD, FAVOURITE, INFO
+   The first action is displayed in a dedicated FAB in the UI. */
 enum class ToolbarAction(override val label: String, override val enabledIcon: ImageVector) : PrefEnum<ToolbarAction> {
-    DOWNLOAD("Download", Icons.Rounded.Download),
-    TOGGLE_HD("Toggle HD", Icons.Rounded.Hd),
-    FAVOURITE("Favourite", Icons.Rounded.Favorite),
     SHARE("Share", Icons.Rounded.Share),
+    TOGGLE_HD("Toggle HD", Icons.Rounded.Hd),
+    DOWNLOAD("Download", Icons.Rounded.Download),
+    FAVOURITE("Favourite", Icons.Rounded.Favorite),
     INFO("About", Icons.Rounded.Info)
 }
 
@@ -615,6 +619,27 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
            Adding a pref for it adds unnecessary complexity, but controlling it here makes sense. */
         if (lastUsedVersionCode < 330) {
             WhatsNewState.show()
+        }
+
+        /* Version 3.3.3 changed the default order of the image viewer actions.
+           Version code 300 was the first version to make them re-orderable.
+           As that version changed also the design of the image action bar,
+           I think it's safe to let v2 updaters receive the new order too.
+           For existing v3 users, we won't change things. */
+        if (lastUsedVersionCode in 300..332) {
+            val data = dataStore.data.first()
+            if (data[PreferenceKeys.IMAGE_VIEWER_ACTION_ORDER] == null) {
+                updateEnumList(
+                    key = PreferenceKeys.IMAGE_VIEWER_ACTION_ORDER,
+                    to = listOf( // The original order
+                        ToolbarAction.DOWNLOAD,
+                        ToolbarAction.TOGGLE_HD,
+                        ToolbarAction.FAVOURITE,
+                        ToolbarAction.SHARE,
+                        ToolbarAction.INFO
+                    )
+                )
+            }
         }
 
         /* Always clear the internal ignored list on updates. */
