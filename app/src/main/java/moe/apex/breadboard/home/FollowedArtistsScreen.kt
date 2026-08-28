@@ -11,8 +11,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Sort
 import androidx.compose.material.icons.rounded.PersonOff
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -22,8 +24,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -53,18 +59,40 @@ import moe.apex.breadboard.util.SMALL_LARGE_SPACER
 import moe.apex.breadboard.util.Summary
 import moe.apex.breadboard.util.TINY_SPACER
 import moe.apex.breadboard.util.generateColours
+import moe.apex.breadboard.util.showToast
 import moe.apex.breadboard.viewmodel.getGlobalViewModel
+
+
+private enum class ArtistSortOrder(val label: String) {
+    ALPHABETICAL("Alphabetical"),
+    TIME_FOLLOWED("Time followed")
+}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FollowedArtistsScreen(navController: NavHostController) {
+    val context = LocalContext.current
     val viewModel = getGlobalViewModel()
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
     val scope = rememberCoroutineScope()
     val userPreferencesRepository = LocalContext.current.prefs
     val prefs = LocalPreferences.current
-    val followedTags = prefs.followedTags.toList().sorted()
+
+    val state = rememberLazyListState()
+
+    // TODO: Search bar?
+    var sortOrder by rememberSaveable { mutableStateOf(ArtistSortOrder.TIME_FOLLOWED) }
+    val followedTags = remember(prefs.followedTags, sortOrder) {
+        val list = prefs.followedTags.toList()
+        if (sortOrder == ArtistSortOrder.ALPHABETICAL) {
+            list.sorted()
+        } else {
+            list.reversed()
+        }
+    }
+
     val darkTheme = shouldUseDarkTheme()
 
     MainScreenScaffold(
@@ -72,11 +100,32 @@ fun FollowedArtistsScreen(navController: NavHostController) {
             LargeTitleBar(
                 title = "Followed artists",
                 scrollBehavior = scrollBehavior,
-                navController = navController
+                navController = navController,
+                additionalActions = {
+                    IconButton(
+                        onClick = {
+                            scope.launch {
+                                state.scrollToItem(0)
+                            }
+                            sortOrder = if (sortOrder == ArtistSortOrder.ALPHABETICAL) {
+                                ArtistSortOrder.TIME_FOLLOWED
+                            } else {
+                                ArtistSortOrder.ALPHABETICAL
+                            }
+                            showToast(context, "Sort order: ${sortOrder.label}")
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.Sort,
+                            contentDescription = "Change sort order"
+                        )
+                    }
+                }
             )
         }
     ) {
         LazyColumn(
+            state = state,
             modifier = Modifier
                 .padding(it)
                 .fillMaxSize()
