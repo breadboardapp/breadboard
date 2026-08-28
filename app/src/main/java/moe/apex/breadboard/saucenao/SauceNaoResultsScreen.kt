@@ -322,7 +322,7 @@ fun SauceNaoResultsScreen(
                             val totalResults =
                                 currentState.groups.sumOf { 1 + it.relatedResults.size }
                             if (currentState.header.resultsCount != totalResults) {
-                                item {
+                                item(key = "potentially-explicit-hidden-nag") {
                                     Text(
                                         text = "Some potentially explicit results have been hidden.\n" +
                                                 "Adjust this in Content settings.",
@@ -330,7 +330,7 @@ fun SauceNaoResultsScreen(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         textAlign = TextAlign.Center,
                                         modifier = Modifier
-                                            .animateItem()
+                                            .animateItem(placementSpec = bouncyAnimationSpec())
                                             .fillMaxWidth()
                                             .padding(MEDIUM_SPACER.dp)
                                     )
