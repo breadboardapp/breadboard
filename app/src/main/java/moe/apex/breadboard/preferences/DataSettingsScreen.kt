@@ -214,8 +214,9 @@ fun DataSettingsScreen(navController: NavHostController) {
                     TitleSummary(
                         modifier = Modifier.fillMaxWidth(),
                         title = "Export data",
-                        summary = "Export a backup file containing your current settings, favourite images, " +
-                                  "and search history. Downloads are not included."
+                        summary = "Export a backup file containing your current settings," +
+                                  "favourite posts, and search history. " +
+                                  "Downloads are not included."
                     ) {
                         showExportDialog = true
                     }

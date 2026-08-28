@@ -127,7 +127,7 @@ fun FavouritesPage(
     } })
 
     MainScreenScaffold(
-        title = "Favourite images",
+        title = "Favourite posts",
         scrollBehavior = scrollBehavior,
         addBottomPadding = false,
         blur = isImageCarouselVisible && blur,

@@ -71,7 +71,7 @@ fun GeneralSettingsScreen(navController: NavHostController) {
             LazyExpressiveGroup(desiredTopPadding = null) {
                 item {
                     EnumPref(
-                        title = "Image source",
+                        title = "Content source",
                         summary = currentSettings.imageSource.label,
                         enumItems = ImageSource.entries,
                         selectedItem = currentSettings.imageSource,

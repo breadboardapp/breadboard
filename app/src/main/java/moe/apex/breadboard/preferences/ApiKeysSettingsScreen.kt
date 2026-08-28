@@ -112,7 +112,7 @@ fun ApiKeysSettingsScreen(navController: NavHostController) {
             contentPadding = PaddingValues(MEDIUM_SPACER.dp)
         ) {
             LazyExpressiveGroup(
-                title = "Image sources",
+                title = "Content sources",
                 desiredTopPadding = null
             ) {
                 for (imageBoard in ImageSource.entries) {

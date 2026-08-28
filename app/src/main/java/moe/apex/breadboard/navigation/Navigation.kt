@@ -214,7 +214,7 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
                             icon = {
                                 Icon(
                                     imageVector = if (currentRoute.routeIs(Favourites::class)) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                                    contentDescription = "Favourite images",
+                                    contentDescription = "Favourite posts",
                                     modifier = Modifier.pulseOnSelect(currentRoute.routeIs(Favourites::class))
                                 )
                             },

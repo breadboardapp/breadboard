@@ -108,7 +108,7 @@ fun PreferencesScreen(navController: NavHostController) {
                     TitleSummary(
                         modifier = Modifier.fillMaxWidth(),
                         title = "General",
-                        summary = "Image source, search history, and links.",
+                        summary = "Content source, search history, and links.",
                         leadingIcon = {
                             ContainedIcon(imageVector = Icons.Rounded.Settings, label = "General")
                         },

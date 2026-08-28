@@ -150,7 +150,7 @@ object PreferenceKeys {
 enum class PrefCategory(val label: String) {
     BUILD("Build"),
     SETTING("Settings"),
-    FAVOURITE_IMAGES("Favourite images"),
+    FAVOURITE_IMAGES("Favourite posts"),
     SEARCH_HISTORY("Search history")
 }
 
