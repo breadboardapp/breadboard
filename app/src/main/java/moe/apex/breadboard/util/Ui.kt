@@ -7,7 +7,6 @@ import android.os.Build
 import android.os.PowerManager
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FiniteAnimationSpec
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -1598,9 +1597,10 @@ fun ButtonListItem(
 }
 
 
+// Values taken from expressive motion scheme default spatial spec
 fun <T> bouncyAnimationSpec(): FiniteAnimationSpec<T> = spring(
-    dampingRatio = Spring.DampingRatioLowBouncy,
-    stiffness = Spring.StiffnessMediumLow,
+    dampingRatio = 0.8f,
+    stiffness = 380f,
 )
 
 
