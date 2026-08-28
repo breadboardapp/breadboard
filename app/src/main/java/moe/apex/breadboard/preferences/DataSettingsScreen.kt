@@ -57,6 +57,7 @@ fun DataSettingsScreen(navController: NavHostController) {
     var storageLocationPromptLaunched by remember { mutableStateOf(false) }
 
     val currentSettings = LocalPreferences.current
+    val preferencesRepository = context.prefs
 
     if (storageLocationPromptLaunched) {
         StorageLocationSelection(
@@ -176,6 +177,26 @@ fun DataSettingsScreen(navController: NavHostController) {
             contentPadding = PaddingValues(MEDIUM_SPACER.dp)
         ) {
             LazyExpressiveGroup(desiredTopPadding = null) {
+                item {
+                    EnumPref(
+                        title = "Data saver",
+                        summary = currentSettings.dataSaver.label,
+                        enumItems = DataSaver.entries,
+                        infoText = "When data saver is enabled, images will load in a " +
+                                "lower resolution by default.\n\n" +
+                                "Downloads will always be in the maximum resolution " +
+                                "regardless of this setting.",
+                        selectedItem = currentSettings.dataSaver,
+                        onSelection = {
+                            scope.launch {
+                                preferencesRepository.updatePref(
+                                    PreferenceKeys.DATA_SAVER,
+                                    it
+                                )
+                            }
+                        }
+                    )
+                }
                 item {
                     TitleSummary(
                         modifier = Modifier.fillMaxWidth(),

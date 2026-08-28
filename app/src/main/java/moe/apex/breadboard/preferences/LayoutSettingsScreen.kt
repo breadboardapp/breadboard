@@ -48,79 +48,9 @@ fun LayoutSettingsScreen(navController: NavHostController) {
             contentPadding = PaddingValues(MEDIUM_SPACER.dp),
         ) {
             LazyExpressiveGroup(
-                title = "Behaviour",
+                title = "Appearance and layout",
                 desiredTopPadding = null
             ) {
-                item {
-                    EnumPref(
-                        title = "Start page",
-                        summary = currentSettings.defaultStartDestination.label,
-                        enumItems = StartDestination.entries,
-                        selectedItem = currentSettings.defaultStartDestination,
-                    ) {
-                        scope.launch {
-                            preferencesRepository.updatePref(
-                                PreferenceKeys.DEFAULT_START_DESTINATION,
-                                it
-                            )
-                        }
-                    }
-                }
-                /* It's an enum so EnumPref would be the "correct" implementation,
-                   but I think this is a better UX as there are currently only two options. */
-                item {
-                    SwitchPref(
-                        checked = currentSettings.defaultBrowseTab == BrowseTab.FOLLOWING,
-                        title = "Prefer Following tab",
-                        summary = "By default, open the Following tab instead of the For You " +
-                                "tab on the Browse page.",
-                    ) { following ->
-                        scope.launch {
-                            preferencesRepository.updatePref(
-                                PreferenceKeys.DEFAULT_BROWSE_TAB,
-                                if (following) BrowseTab.FOLLOWING else BrowseTab.FOR_YOU
-                            )
-                        }
-                    }
-                }
-                item {
-                    EnumPref(
-                        title = "Hide app content",
-                        summary = currentSettings.flagSecureMode.label,
-                        enumItems = FlagSecureMode.entries,
-                        selectedItem = currentSettings.flagSecureMode
-                    ) {
-                        scope.launch {
-                            preferencesRepository.updatePref(
-                                PreferenceKeys.FLAG_SECURE_MODE,
-                                it
-                            )
-                        }
-                    }
-                }
-                item {
-                    EnumPref(
-                        title = "Data saver",
-                        summary = currentSettings.dataSaver.label,
-                        enumItems = DataSaver.entries,
-                        infoText = "When data saver is enabled, images will load in a " +
-                                "lower resolution by default.\n\n" +
-                                "Downloads will always be in the maximum resolution " +
-                                "regardless of this setting.",
-                        selectedItem = currentSettings.dataSaver,
-                        onSelection = {
-                            scope.launch {
-                                preferencesRepository.updatePref(
-                                    PreferenceKeys.DATA_SAVER,
-                                    it
-                                )
-                            }
-                        }
-                    )
-                }
-            }
-
-            LazyExpressiveGroup("Appearance and Layout") {
                 item {
                     EnumPref(
                         title = "Dark theme",
@@ -145,7 +75,7 @@ fun LayoutSettingsScreen(navController: NavHostController) {
                         title = "Reorder image actions",
                         dialogTitle = "Image actions",
                         summary = "Customise the order of actions in the image viewer. The top " +
-                                "action will be displayed separately in its own dedicated button.",
+                                  "action will be displayed separately in its own dedicated button.",
                         items = currentSettings.imageViewerActions
                     ) {
                         scope.launch {
@@ -180,6 +110,56 @@ fun LayoutSettingsScreen(navController: NavHostController) {
                         scope.launch {
                             preferencesRepository.updatePref(
                                 PreferenceKeys.UNIFIED_INFO_SHEET,
+                                it
+                            )
+                        }
+                    }
+                }
+            }
+
+            LazyExpressiveGroup("Behaviour") {
+                item {
+                    EnumPref(
+                        title = "Start page",
+                        summary = currentSettings.defaultStartDestination.label,
+                        enumItems = StartDestination.entries,
+                        selectedItem = currentSettings.defaultStartDestination,
+                    ) {
+                        scope.launch {
+                            preferencesRepository.updatePref(
+                                PreferenceKeys.DEFAULT_START_DESTINATION,
+                                it
+                            )
+                        }
+                    }
+                }
+                /* It's an enum so EnumPref would be the "correct" implementation,
+                   but I think this is a better UX as there are currently only two options. */
+                item {
+                    SwitchPref(
+                        checked = currentSettings.defaultBrowseTab == BrowseTab.FOLLOWING,
+                        title = "Prefer Following tab",
+                        summary = "By default, open the Following tab instead of the For You " +
+                                  "tab on the Browse page.",
+                    ) { following ->
+                        scope.launch {
+                            preferencesRepository.updatePref(
+                                PreferenceKeys.DEFAULT_BROWSE_TAB,
+                                if (following) BrowseTab.FOLLOWING else BrowseTab.FOR_YOU
+                            )
+                        }
+                    }
+                }
+                item {
+                    EnumPref(
+                        title = "Hide app content",
+                        summary = currentSettings.flagSecureMode.label,
+                        enumItems = FlagSecureMode.entries,
+                        selectedItem = currentSettings.flagSecureMode
+                    ) {
+                        scope.launch {
+                            preferencesRepository.updatePref(
+                                PreferenceKeys.FLAG_SECURE_MODE,
                                 it
                             )
                         }

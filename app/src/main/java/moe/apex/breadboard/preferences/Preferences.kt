@@ -146,9 +146,10 @@ fun PreferencesScreen(navController: NavHostController) {
                 item {
                     TitleSummary(
                         modifier = Modifier.fillMaxWidth(),
-                        title = "Behaviour and layout",
-                        summary = "Start page, data saver, visual and layout preferences.",
+                        title = "Appearance and behaviour",
+                        summary = "Appearance, layout, and behaviour options.",
                         leadingIcon = {
+                            // Keeping the original label here for colour reasons
                             ContainedIcon(imageVector = Icons.Rounded.Dashboard, label = "Behaviour and layout")
                         },
                         trailingIcon = { ChevronRight() }
@@ -160,7 +161,7 @@ fun PreferencesScreen(navController: NavHostController) {
                     TitleSummary(
                         modifier = Modifier.fillMaxWidth(),
                         title = "Data and storage",
-                        summary = "Download location and your Breadboard data.",
+                        summary = "Data saver, downloads, and import/export.",
                         leadingIcon = {
                             ContainedIcon(imageVector = Icons.Rounded.Storage, label = "Data and storage")
                         },

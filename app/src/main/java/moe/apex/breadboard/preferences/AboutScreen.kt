@@ -2,9 +2,11 @@ package moe.apex.breadboard.preferences
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
@@ -34,6 +36,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import coil3.compose.AsyncImage
@@ -49,6 +56,7 @@ import moe.apex.breadboard.util.LazyExpressiveGroup
 import moe.apex.breadboard.util.MainScreenScaffold
 import moe.apex.breadboard.util.SmallVerticalSpacer
 import moe.apex.breadboard.util.MEDIUM_SPACER
+import moe.apex.breadboard.util.SMALL_SPACER
 import moe.apex.breadboard.util.TitleSummary
 import moe.apex.breadboard.util.WhatsNewState
 import moe.apex.breadboard.util.openUrl
@@ -144,20 +152,52 @@ fun AboutScreen(navController: NavHostController) {
                                 .offset(y = (-2).dp),
                         )
                     }
+
                     SmallVerticalSpacer()
+
                     Text(
                         text = "Breadboard",
                         style = MaterialTheme.typography.titleLarge
                     )
-                    Text(
-                        text = "${BuildConfig.VERSION_NAME} (${releasePlatform.displayName})",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(SMALL_SPACER.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "${BuildConfig.VERSION_NAME} (${releasePlatform.displayName})",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "•",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = buildAnnotatedString {
+                                withLink(
+                                    LinkAnnotation.Clickable(
+                                        tag = "What's new",
+                                        styles = TextLinkStyles(
+                                            style = SpanStyle(
+                                                color = MaterialTheme.colorScheme.secondary
+                                            )
+                                        )
+                                    ) {
+                                        WhatsNewState.show()
+                                    }
+                                ) {
+                                    append("What's new")
+                                }
+                            },
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
                 }
             }
 
-            LazyExpressiveGroup("Maintainer", desiredTopPadding = null) {
+            LazyExpressiveGroup("Maintainer") {
                 item {
                     GitHubUserContainer(apex2504)
                 }
@@ -170,16 +210,6 @@ fun AboutScreen(navController: NavHostController) {
             }
 
             LazyExpressiveGroup("Breadboard") {
-                item {
-                    TitleSummary(
-                        title = "What's new"
-                    ) {
-                        WhatsNewState.show()
-                    }
-                }
-            }
-
-            LazyExpressiveGroup {
                 item {
                     TitleSummary(
                         modifier = Modifier.fillMaxWidth(),
