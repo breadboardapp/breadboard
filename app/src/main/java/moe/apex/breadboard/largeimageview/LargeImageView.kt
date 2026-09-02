@@ -486,7 +486,7 @@ private fun LargeImageToolbar(
                             )
 
                             if (result.isSuccess) {
-                                showToast(context, "Image saved.")
+                                showToast(context, "Post saved.")
                             } else {
                                 val exc = result.exceptionOrNull()!!
                                 exc.printStackTrace()
@@ -499,7 +499,7 @@ private fun LargeImageToolbar(
                                 }
                                 Log.e(
                                     "Downloader",
-                                    exc.message ?: "Error downloading image",
+                                    exc.message ?: "Error downloading post",
                                     exc
                                 )
                             }
@@ -508,7 +508,13 @@ private fun LargeImageToolbar(
                     }
                 },
                 onLongClick = {
-                    if (!prefs.isExperimentEnabled(Experiment.COPY_TO_CLIPBOARD)) return@ImageAction
+                    if (!prefs.isExperimentEnabled(Experiment.COPY_TO_CLIPBOARD)) {
+                        return@ImageAction
+                    }
+                    if (currentImage.isVideo) {
+                        showToast(context, "Android does not support copying videos.")
+                        return@ImageAction
+                    }
 
                     if (currentImage !in downloadingImages) {
                         viewModel.viewModelScope.launch {

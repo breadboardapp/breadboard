@@ -635,7 +635,7 @@ private fun LazyListScope.infoContentItems(
         image.metadata.parentId?.let {
             item {
                 TitleSummary(
-                    title = "View parent image",
+                    title = "View parent post",
                     onClick = { onViewParentClick(it) },
                     trailingIcon = {
                         ChevronRight()
@@ -648,7 +648,7 @@ private fun LazyListScope.infoContentItems(
             image.id?.let {
                 item {
                     TitleSummary(
-                        title = "View related images",
+                        title = "View related posts",
                         onClick = { onViewRelatedClick(it) },
                         trailingIcon = {
                             ChevronRight()
