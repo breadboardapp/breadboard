@@ -93,6 +93,7 @@ fun RecommendationsSettingsScreen(navController: NavHostController) {
     val userPreferencesRepository = LocalContext.current.prefs
     val prefs = LocalPreferences.current
     val recommendationsProvider by viewModel.recommendationsProvider.collectAsState()
+    val recommendedTags = recommendationsProvider?.recommendedTags?.collectAsState()?.value ?: emptyList()
 
     var showAgeVerificationDialog by remember { mutableStateOf(false) }
     var showIgnored by rememberSaveable { mutableStateOf(false) }
@@ -189,7 +190,8 @@ fun RecommendationsSettingsScreen(navController: NavHostController) {
         }
     ) {
         val hasProvider = rememberSaveable { recommendationsProvider != null }
-        val recentRecommendations = rememberSaveable { recommendationsProvider?.recommendedTags ?: emptyList() }
+        val recentRecommendations = rememberSaveable { recommendedTags }
+
         LazyColumn(
             modifier = Modifier
                 .padding(it)

@@ -350,6 +350,8 @@ fun HomeScreen(
                         provider.uniformGridState
                     }
 
+                    val doneInitialLoad by provider.doneInitialLoad.collectAsState()
+
                     val onRefresh: suspend () -> Unit by rememberUpdatedState {
                         provider.let {
                             it.replaceBlockedTags(blockedTags)
@@ -361,7 +363,7 @@ fun HomeScreen(
                     }
 
                     val ptrController = rememberPullToRefreshController(
-                        enabled = provider.doneInitialLoad,
+                        enabled = doneInitialLoad,
                         onRefresh = onRefresh
                     )
 
@@ -406,7 +408,7 @@ fun HomeScreen(
                             bottom = bottomAppBarAndNavBarHeight
                         ),
                         pullToRefreshController = ptrController,
-                        doneInitialLoad = provider.doneInitialLoad,
+                        doneInitialLoad = doneInitialLoad,
                         loadingIndicator = FlexibleImageGridDefaults::RoundLoadingIndicator,
                         onEndReached = { provider.recommendImages() },
                     )

@@ -1,12 +1,6 @@
 package moe.apex.breadboard.util
 
 import android.util.Log
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableStateSetOf
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.Snapshot
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -15,9 +9,8 @@ import moe.apex.breadboard.image.ImageBoardAuth
 import moe.apex.breadboard.image.ImageBoardRequirement
 import moe.apex.breadboard.image.ImageRating
 import moe.apex.breadboard.preferences.ImageSource
-import moe.apex.breadboard.viewmodel.GridStateHolderDelegate
 import moe.apex.breadboard.viewmodel.GridStateHolder
-
+import moe.apex.breadboard.viewmodel.GridStateHolderDelegate
 
 class RecommendationsProvider(
     private val seedImages: List<Image>,
@@ -25,8 +18,8 @@ class RecommendationsProvider(
     val auth: ImageBoardAuth?,
     val showAllRatings: Boolean,
     val filterRatingsLocally: Boolean,
-    private val initialBlockedTags: Set<String>,
-    private val initialUnfollowedTags: Set<String>,
+    initialBlockedTags: Set<String>,
+    initialUnfollowedTags: Set<String>,
     private val selectionSize: Int,
     private val poolSize: Int,
 ) : GridStateHolder by GridStateHolderDelegate() {
@@ -37,46 +30,42 @@ class RecommendationsProvider(
     private val _recommendedImages = MutableStateFlow(listOf<Image>())
     val recommendedImages = _recommendedImages.asStateFlow()
 
-    var doneInitialLoad by mutableStateOf(false)
-    val recommendedTags = mutableListOf<String>()
-    private var pageNumber by mutableIntStateOf(imageSource.imageBoard.firstPageIndex)
+    private val _doneInitialLoad = MutableStateFlow(false)
+    val doneInitialLoad = _doneInitialLoad.asStateFlow()
 
-    private var isLoading by mutableStateOf(false)
-    private var shouldKeepSearching by mutableStateOf(true)
+    private val _recommendedTags = MutableStateFlow(listOf<String>())
+    val recommendedTags = _recommendedTags.asStateFlow()
 
-    private val mutableBlockedTags = mutableStateSetOf<String>().apply { addAll(initialBlockedTags) }
-    val blockedTags: Set<String>
-        get() = mutableBlockedTags.toSet()
-    private val mutableUnfollowedTags = mutableStateSetOf<String>().apply { addAll(initialUnfollowedTags) }
-    val unfollowedTags: Set<String>
-        get() = mutableUnfollowedTags.toSet()
+    private val pageNumber = MutableStateFlow(imageSource.imageBoard.firstPageIndex)
+    private val isLoading = MutableStateFlow(false)
+    private val shouldKeepSearching = MutableStateFlow(true)
+
+    private val _blockedTags = MutableStateFlow(initialBlockedTags)
+    val blockedTags = _blockedTags.asStateFlow()
+
+    private val _unfollowedTags = MutableStateFlow(initialUnfollowedTags)
 
     fun replaceBlockedTags(tags: Set<String>) {
-        Snapshot.withMutableSnapshot {
-            mutableBlockedTags.clear()
-            mutableBlockedTags.addAll(tags)
-        }
+        _blockedTags.update { tags }
     }
 
     fun replaceUnfollowedTags(tags: Set<String>) {
-        Snapshot.withMutableSnapshot {
-            mutableUnfollowedTags.clear()
-            mutableUnfollowedTags.addAll(tags)
-        }
+        _unfollowedTags.update { tags }
     }
 
     fun updateImage(index: Int, newImage: Image) {
-        _recommendedImages.update {
-            it.toMutableList().apply { this[index] = newImage }
+        _recommendedImages.update { current ->
+            current.toMutableList().apply { this[index] = newImage }
         }
     }
 
     fun prepareRecommendedTags() {
-        recommendedTags.clear()
-        shouldKeepSearching = true
-        pageNumber = imageSource.imageBoard.firstPageIndex
+        _recommendedTags.update { emptyList() }
+        shouldKeepSearching.update { true }
+        pageNumber.update { imageSource.imageBoard.firstPageIndex }
 
-        val filteredSeedImages = seedImages.filter { it.imageSource == imageSource }
+        val filteredSeedImages = seedImages
+            .filter { it.imageSource == imageSource }
             .filter { showAllRatings || it.metadata?.rating == ImageRating.SAFE }
 
         if (filteredSeedImages.isEmpty()) {
@@ -89,22 +78,24 @@ class RecommendationsProvider(
             images = filteredSeedImages,
             selectionSize = finalSelectionSize,
             poolSize = poolSize,
-            hiddenTags = blockedTags,
-            unfollowedTags = unfollowedTags
+            hiddenTags = _blockedTags.value,
+            unfollowedTags = _unfollowedTags.value
         )
 
-        recommendedTags.addAll(selected)
+        _recommendedTags.update { selected }
     }
 
-
     suspend fun recommendImages() {
-        if (isLoading || !shouldKeepSearching) {
+        if (isLoading.value || !shouldKeepSearching.value) {
             return
         }
 
+        val currentTags = _recommendedTags.value
+        val currentPage = pageNumber.value
+
         Log.i(
             "Recommendations",
-            "Fetching recommended posts for tags: ${recommendedTags.joinToString(", ")} - page $pageNumber"
+            "Fetching recommended posts for tags: ${currentTags.joinToString(", ")} - page $currentPage"
         )
         val filterRatingsLocally = filterRatingsLocally ||
                 imageSource.imageBoard.localFilterType == ImageBoardRequirement.REQUIRED ||
@@ -115,9 +106,9 @@ class RecommendationsProvider(
                 "Recommendations",
                 "Filtering recommendations locally because either the local filter is enabled, or the image source does not support server-side filtering."
             )
-            imageSource.imageBoard.formatTagNameString(recommendedTags)
+            imageSource.imageBoard.formatTagNameString(currentTags)
         } else {
-            "${imageSource.imageBoard.formatTagNameString(recommendedTags)} ${
+            "${imageSource.imageBoard.formatTagNameString(currentTags)} ${
                 ImageRating.buildSearchStringFor(
                     if (showAllRatings) {
                         ImageRating.entries.filter { it != ImageRating.UNKNOWN }
@@ -129,28 +120,33 @@ class RecommendationsProvider(
         }
 
         try {
-            isLoading = true
+            isLoading.update { true }
             // if recommendedTags is empty, it should just return the most recent uploaded posts
             val results = imageSource.imageBoard.loadPage(
                 tags = searchQuery,
-                page = pageNumber,
+                page = currentPage,
                 auth = auth,
             )
+
             val safeResults = results.filter {
                 if (filterRatingsLocally) {
                     showAllRatings || it.metadata!!.rating == ImageRating.SAFE
                 } else true
             }
+
+            val currentBlocked = _blockedTags.value
             val wantedResults = safeResults.filter {
-                it.metadata!!.tags.none { tag -> blockedTags.contains(tag.lowercase()) }
+                it.metadata!!.tags.none { tag -> currentBlocked.contains(tag.lowercase()) }
             }
-            Log.i("Recommendations", "Found ${results.size} new images for tags: ${recommendedTags.joinToString(", ")}")
-            Log.i("Recommendations", "Found ${safeResults.size} safe images for tags: ${recommendedTags.joinToString(", ")}")
-            Log.i("Recommendations", "Found ${wantedResults.size} wanted images for tags: ${recommendedTags.joinToString(", ")}")
+
+            Log.i("Recommendations", "Found ${results.size} new images for tags: ${currentTags.joinToString(", ")}")
+            Log.i("Recommendations", "Found ${safeResults.size} safe images for tags: ${currentTags.joinToString(", ")}")
+            Log.i("Recommendations", "Found ${wantedResults.size} wanted images for tags: ${currentTags.joinToString(", ")}")
+
             if (results.isEmpty() || safeResults.isEmpty()) {
-                shouldKeepSearching = false
+                shouldKeepSearching.update { false }
             } else {
-                if (pageNumber == imageSource.imageBoard.firstPageIndex) {
+                if (currentPage == imageSource.imageBoard.firstPageIndex) {
                     _recommendedImages.update { wantedResults }
                 } else if (wantedResults.isNotEmpty()) {
                     _recommendedImages.update { current ->
@@ -158,17 +154,16 @@ class RecommendationsProvider(
                     }
                 }
             }
-            pageNumber++
+            pageNumber.update { it + 1 }
         } catch (e: Exception) {
             Log.e(
                 "Recommendations",
                 "Error fetching images with recommended tags: ${e.message}"
             )
-            shouldKeepSearching = false
-        }
-        isLoading = false
-        if (!doneInitialLoad) {
-            doneInitialLoad = true
+            shouldKeepSearching.update { false }
+        } finally {
+            isLoading.update { false }
+            _doneInitialLoad.update { true }
         }
     }
 }
