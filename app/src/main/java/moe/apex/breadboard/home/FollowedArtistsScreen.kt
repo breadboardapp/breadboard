@@ -102,6 +102,14 @@ fun FollowedArtistsScreen(navController: NavHostController) {
                 scrollBehavior = scrollBehavior,
                 navController = navController,
                 additionalActions = {
+                    if (followedTags.isEmpty()) {
+                        return@LargeTitleBar
+                    }
+                    Text(
+                        text = followedTags.size.toString(),
+                        fontWeight = FontWeight.Black,
+                        style = MaterialTheme.typography.labelLarge
+                    )
                     IconButton(
                         onClick = {
                             scope.launch {
@@ -140,17 +148,21 @@ fun FollowedArtistsScreen(navController: NavHostController) {
         ) {
             item {
                 Summary(
-                    modifier = Modifier.padding(horizontal = TINY_SPACER.dp),
+                    modifier = Modifier
+                        .animateItem()
+                        .padding(horizontal = TINY_SPACER.dp),
                     text = "Posts from these artists will appear in your Following feed.\n" +
                            "Tap an artist's name to visit their profile, or unfollow them by " +
                            "tapping the icon.",
                 )
                 LargeVerticalSpacer()
             }
+
             if (followedTags.isEmpty()) {
                 item {
                     Column(
                         modifier = Modifier
+                            .animateItem()
                             .fillMaxWidth()
                             .alpha(DISABLED_OPACITY),
                         horizontalAlignment = Alignment.CenterHorizontally,
