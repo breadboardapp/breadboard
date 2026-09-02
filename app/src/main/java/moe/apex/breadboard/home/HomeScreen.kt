@@ -1,5 +1,6 @@
 package moe.apex.breadboard.home
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
@@ -7,6 +8,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -455,7 +457,7 @@ fun HomeScreen(
                             }
                         },
                         noImagesContent = {
-                            if (doneInitialLoad) {
+                            if (!doneInitialLoad) {
                                 return@FlexibleImageGrid
                             }
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -484,7 +486,7 @@ fun HomeScreen(
                                                             key = PreferenceKeys.FOLLOWED_TAGS,
                                                             to = artists,
                                                         )
-                                                        provider.updateDoneInitialLoad(true)
+                                                        provider.updateDoneInitialLoad(false)
                                                         provider.loadMore()
                                                     }
                                                 }
@@ -603,17 +605,22 @@ private fun ArtistSuggestions(
         }
 
         Button(
+            shapes = ButtonDefaults.shapes(),
             onClick = {
                 onFollow(selectedForFollow.takeIf { it.isNotEmpty() } ?: suggestedArtists)
             }
         ) {
-            Text(
-                text = if (selectedForFollow.isEmpty()) {
-                    "Follow all"
+            Text("Follow ")
+            AnimatedContent(
+                targetState = selectedForFollow.isEmpty(),
+                transitionSpec = { fadeIn() togetherWith fadeOut() }
+            ) {
+                if (it) {
+                    Text("all")
                 } else {
-                    "Follow selected"
+                    Text("selected")
                 }
-            )
+            }
         }
     }
 }
