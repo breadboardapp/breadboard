@@ -2,6 +2,7 @@ package moe.apex.breadboard
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Browser
@@ -25,8 +26,10 @@ import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import moe.apex.breadboard.navigation.ArtistProfile
 import moe.apex.breadboard.navigation.ImageView
 import moe.apex.breadboard.navigation.Navigation
+import moe.apex.breadboard.preferences.ImageSource
 import moe.apex.breadboard.preferences.LocalPreferences
 import moe.apex.breadboard.util.FlagSecureHelper
 import moe.apex.breadboard.util.createViewIntent
@@ -81,9 +84,18 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity(), Volu
 
                 DisposableEffect(Unit) {
                     val listener = Consumer<Intent> { newIntent ->
-                        val uri = newIntent.data
-                        if (uri != null) {
+                        val uri = newIntent.data ?: return@Consumer
+
+                        if (uri.scheme == "breadboard") {
+                            handleBreadboardScheme(uri, prefs.imageSource)?.let {
+                                navController.popBackStack()
+                                navController.navigate(it)
+                            } ?: finishAndRemoveTask()
+                        } else {
                             ImageView.fromUri(uri)?.let {
+                                navController.popBackStack()
+                                navController.navigate(it)
+                            } ?: ArtistProfile.fromUri(uri, prefs.imageSource)?.let {
                                 navController.popBackStack()
                                 navController.navigate(it)
                             } ?: reopenInBrowser(newIntent)
@@ -93,12 +105,31 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity(), Volu
                     onDispose { removeOnNewIntentListener(listener) }
                 }
                 intent.data?.let {
-                    ImageView.fromUri(it)?.let { iv ->
-                        Navigation(navController = navController, startDestination = iv)
-                    } ?: reopenInBrowser(intent)
+                    if (it.scheme == "breadboard") {
+                        handleBreadboardScheme(it, prefs.imageSource)?.let { dest ->
+                            Navigation(navController = navController, startDestination = dest)
+                        } ?: finishAndRemoveTask()
+                    } else {
+                        ImageView.fromUri(it)?.let { iv ->
+                            Navigation(navController = navController, startDestination = iv)
+                        } ?: ArtistProfile.fromUri(it, prefs.imageSource)?.let { ap ->
+                            Navigation(navController = navController, startDestination = ap)
+                        } ?: reopenInBrowser(intent)
+                    }
                 } ?: finishAndRemoveTask()
             }
         }
+    }
+
+
+    private fun handleBreadboardScheme(uri: Uri, imageSource: ImageSource): Any? {
+        val path = uri.pathSegments
+        if (uri.host == "artist") {
+            path.getOrNull(0)?.let {
+                return ArtistProfile(it, imageSource)
+            }
+        }
+        return null
     }
 
 

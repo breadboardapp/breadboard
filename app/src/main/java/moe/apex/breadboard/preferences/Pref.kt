@@ -45,10 +45,12 @@ import moe.apex.breadboard.image.Safebooru
 import moe.apex.breadboard.image.Yandere
 import moe.apex.breadboard.image.AI_TAG_NAMES
 import moe.apex.breadboard.tag.TagCategory
+import moe.apex.breadboard.ui.theme.doesSystemSupportDarkTheme
 import moe.apex.breadboard.util.AgeVerification
 import moe.apex.breadboard.util.MigrationOnlyField
 import moe.apex.breadboard.util.PixivArtwork
 import moe.apex.breadboard.util.SecretsManager
+import moe.apex.breadboard.util.WhatsNewState
 import moe.apex.breadboard.util.availableRatingsForSource
 import moe.apex.breadboard.util.decodeHtml
 import moe.apex.breadboard.util.replaceGelbooruSubdomain
@@ -97,6 +99,12 @@ data object PrefNames {
     const val INTERNAL_IGNORE_LIST = "internal_ignore_list"
     const val AUTOPLAY_VIDEOS = "autoplay_videos"
     const val UNIFIED_INFO_SHEET = "unified_info_sheet"
+    const val DARK_THEME = "dark_theme"
+    const val FOLLOWED_TAGS = "followed_tags"
+    const val DEFAULT_BROWSE_TAB = "default_browse_tab"
+    const val PROFILES_FOR_ALL_TAGS = "profiles_for_all_tags"
+    const val SAUCENAO_API_KEY = "saucenao_api_key"
+    const val SAUCENAO_ALLOW_NSFW = "saucenao_allow_nsfw"
 }
 
 
@@ -130,13 +138,19 @@ object PreferenceKeys {
     val INTERNAL_IGNORE_LIST = stringSetPreferencesKey(PrefNames.INTERNAL_IGNORE_LIST)
     val AUTOPLAY_VIDEOS = stringPreferencesKey(PrefNames.AUTOPLAY_VIDEOS)
     val UNIFIED_INFO_SHEET = booleanPreferencesKey(PrefNames.UNIFIED_INFO_SHEET)
+    val DARK_THEME = stringPreferencesKey(PrefNames.DARK_THEME)
+    val FOLLOWED_TAGS = stringSetPreferencesKey(PrefNames.FOLLOWED_TAGS)
+    val DEFAULT_BROWSE_TAB = stringPreferencesKey(PrefNames.DEFAULT_BROWSE_TAB)
+    val PROFILES_FOR_ALL_TAGS = booleanPreferencesKey(PrefNames.PROFILES_FOR_ALL_TAGS)
+    val SAUCENAO_API_KEY = stringPreferencesKey(PrefNames.SAUCENAO_API_KEY)
+    val SAUCENAO_ALLOW_NSFW = booleanPreferencesKey(PrefNames.SAUCENAO_ALLOW_NSFW)
 }
 
 
 enum class PrefCategory(val label: String) {
     BUILD("Build"),
     SETTING("Settings"),
-    FAVOURITE_IMAGES("Favourite images"),
+    FAVOURITE_IMAGES("Favourite posts"),
     SEARCH_HISTORY("Search history")
 }
 
@@ -155,11 +169,15 @@ enum class DataSaver(override val label: String) : PrefEnum<DataSaver> {
 }
 
 
+/* v3.3.3 changed the order of these.
+   Previously:  DOWNLOAD, TOGGLE_HD, SHARE, FAVOURITE, INFO
+   After 3.3.3: SHARE, TOGGLE_HD, DOWNLOAD, FAVOURITE, INFO
+   The first action is displayed in a dedicated FAB in the UI. */
 enum class ToolbarAction(override val label: String, override val enabledIcon: ImageVector) : PrefEnum<ToolbarAction> {
-    DOWNLOAD("Download", Icons.Rounded.Download),
-    TOGGLE_HD("Toggle HD", Icons.Rounded.Hd),
-    FAVOURITE("Favourite", Icons.Rounded.Favorite),
     SHARE("Share", Icons.Rounded.Share),
+    TOGGLE_HD("Toggle HD", Icons.Rounded.Hd),
+    DOWNLOAD("Download", Icons.Rounded.Download),
+    FAVOURITE("Favourite", Icons.Rounded.Favorite),
     INFO("About", Icons.Rounded.Info)
 }
 
@@ -181,6 +199,11 @@ enum class AutoplayVideosMode(override val label: String) : PrefEnum<AutoplayVid
     ON("Always"),
     OFF("Never"),
     AUTO("When data saver is inactive")
+}
+
+enum class BrowseTab(override val label: String) : PrefEnum<BrowseTab> {
+    FOR_YOU("For You"),
+    FOLLOWING("Following")
 }
 
 enum class Experiment(override val label: String, val description: String? = null) : PrefEnum<Experiment> {
@@ -226,7 +249,13 @@ data class Prefs(
     val internalIgnoreListTimestamp: Long,
     val internalIgnoreList: Set<String>,
     val autoplayVideos: AutoplayVideosMode,
-    val unifiedInfoSheet: Boolean
+    val unifiedInfoSheet: Boolean,
+    val darkTheme: DarkTheme,
+    val followedTags: Set<String>,
+    val defaultBrowseTab: BrowseTab,
+    val profilesForAllTags: Boolean,
+    val saucenaoApiKey: String,
+    val saucenaoAllowNsfw: Boolean,
 ) {
     companion object {
         val DEFAULT = Prefs(
@@ -259,6 +288,12 @@ data class Prefs(
             internalIgnoreList = emptySet(),
             autoplayVideos = AutoplayVideosMode.OFF,
             unifiedInfoSheet = false, // Unified is called 'Classic' in the UI
+            darkTheme = DarkTheme.AUTO,
+            followedTags = emptySet(),
+            defaultBrowseTab = BrowseTab.FOR_YOU,
+            profilesForAllTags = false,
+            saucenaoApiKey = "",
+            saucenaoAllowNsfw = false,
         )
     }
 
@@ -273,7 +308,9 @@ data class Prefs(
         if (source == ImageSource.R34) {
             return ImageBoardAuth(BuildConfig.R34_APP_ID, SecretsManager.getApiKey(context)!!)
         }
-        return imageBoardAuths[source]
+        return imageBoardAuths[source].takeIf {
+            it?.user?.isNotEmpty() == true && it.apiKey.isNotEmpty()
+        }
     }
 
 
@@ -321,7 +358,13 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             PreferenceKeys.RECOMMENDATIONS_POOL_SIZE to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.INTERNAL_IGNORE_LIST_TIMESTAMP to PrefMeta(PrefCategory.SETTING, exportable = false),
             PreferenceKeys.INTERNAL_IGNORE_LIST to PrefMeta(PrefCategory.SETTING, exportable = false),
-            PreferenceKeys.UNIFIED_INFO_SHEET to PrefMeta(PrefCategory.SETTING)
+            PreferenceKeys.UNIFIED_INFO_SHEET to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.DARK_THEME to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.FOLLOWED_TAGS to PrefMeta(PrefCategory.SETTING, mergeable = true),
+            PreferenceKeys.DEFAULT_BROWSE_TAB to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.PROFILES_FOR_ALL_TAGS to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.SAUCENAO_API_KEY to PrefMeta(PrefCategory.SETTING, exportable = false),
+            PreferenceKeys.SAUCENAO_ALLOW_NSFW to PrefMeta(PrefCategory.SETTING),
         )
     }
 
@@ -359,6 +402,18 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
 
         val currentPreferences = dataStore.data.first()
         val lastUsedVersionCode = currentPreferences[PreferenceKeys.LAST_USED_VERSION_CODE] ?: 0
+
+        /* Version 3.3.2 introduces the manual dark theme preference. Android 9 had some partial
+           support for system dark theme, but older versions would have no support whatsoever.
+           Set the default dark theme preference to a manual OFF state on those versions. */
+        val darkTheme = currentPreferences[PreferenceKeys.DARK_THEME]
+
+        if (
+            !doesSystemSupportDarkTheme() &&
+            (darkTheme == null || darkTheme == DarkTheme.AUTO.name)
+        ) {
+            updatePref(PreferenceKeys.DARK_THEME, DarkTheme.OFF)
+        }
 
         /* lastUsedVersionCode can be 0 if the user had it installed already but cleared the data.
            In such a case, we can't reliably determine what their previous version was. Just load
@@ -557,6 +612,33 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             if (blockedTags.size != blockedTagsWithoutAi.size) {
                 updateSet(PreferenceKeys.MANUALLY_BLOCKED_TAGS, blockedTagsWithoutAi)
                 updatePref(PreferenceKeys.EXCLUDE_AI, true)
+            }
+        }
+
+        /* We're going to show a What's New sheet on major updates, starting with 3.3.0.
+           Adding a pref for it adds unnecessary complexity, but controlling it here makes sense. */
+        if (lastUsedVersionCode < 330) {
+            WhatsNewState.show()
+        }
+
+        /* Version 3.3.3 changed the default order of the image viewer actions.
+           Version code 300 was the first version to make them re-orderable.
+           As that version changed also the design of the image action bar,
+           I think it's safe to let v2 updaters receive the new order too.
+           For existing v3 users, we won't change things. */
+        if (lastUsedVersionCode in 300..332) {
+            val data = dataStore.data.first()
+            if (data[PreferenceKeys.IMAGE_VIEWER_ACTION_ORDER] == null) {
+                updateEnumList(
+                    key = PreferenceKeys.IMAGE_VIEWER_ACTION_ORDER,
+                    to = listOf( // The original order
+                        ToolbarAction.DOWNLOAD,
+                        ToolbarAction.TOGGLE_HD,
+                        ToolbarAction.FAVOURITE,
+                        ToolbarAction.SHARE,
+                        ToolbarAction.INFO
+                    )
+                )
             }
         }
 
@@ -819,6 +901,12 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val internalIgnoreList = preferences[PreferenceKeys.INTERNAL_IGNORE_LIST] ?: Prefs.DEFAULT.internalIgnoreList
         val autoplayVideos = preferences[PreferenceKeys.AUTOPLAY_VIDEOS]?.let { AutoplayVideosMode.valueOf(it) } ?: Prefs.DEFAULT.autoplayVideos
         val unifiedInfoSheet = preferences[PreferenceKeys.UNIFIED_INFO_SHEET] ?: Prefs.DEFAULT.unifiedInfoSheet
+        val darkTheme = preferences[PreferenceKeys.DARK_THEME]?.let { DarkTheme.valueOf(it) } ?: Prefs.DEFAULT.darkTheme
+        val followedTags = preferences[PreferenceKeys.FOLLOWED_TAGS] ?: Prefs.DEFAULT.followedTags
+        val defaultBrowseTab = preferences[PreferenceKeys.DEFAULT_BROWSE_TAB]?.let { BrowseTab.valueOf(it) } ?: Prefs.DEFAULT.defaultBrowseTab
+        val profilesForAllTags = preferences[PreferenceKeys.PROFILES_FOR_ALL_TAGS] ?: Prefs.DEFAULT.profilesForAllTags
+        val saucenaoApiKey = preferences[PreferenceKeys.SAUCENAO_API_KEY] ?: Prefs.DEFAULT.saucenaoApiKey
+        val saucenaoAllowNsfw = preferences[PreferenceKeys.SAUCENAO_ALLOW_NSFW] ?: Prefs.DEFAULT.saucenaoAllowNsfw
 
         return Prefs(
             dataSaver,
@@ -849,7 +937,13 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             internalIgnoreListTimestamp,
             internalIgnoreList,
             autoplayVideos,
-            unifiedInfoSheet
+            unifiedInfoSheet,
+            darkTheme,
+            followedTags,
+            defaultBrowseTab,
+            profilesForAllTags,
+            saucenaoApiKey,
+            saucenaoAllowNsfw,
         )
     }
 }
@@ -863,4 +957,11 @@ enum class ImageSource(override val label: String, val imageBoard: ImageBoard) :
     GELBOORU("Gelbooru", Gelbooru),
     YANDERE("Yande.re", Yandere),
     R34("Rule34", Rule34)
+}
+
+
+enum class DarkTheme(override val label: String) : PrefEnum<DarkTheme> {
+    ON("Always"),
+    OFF("Never"),
+    AUTO("Follow system")
 }

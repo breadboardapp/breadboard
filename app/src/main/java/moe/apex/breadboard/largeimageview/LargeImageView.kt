@@ -80,6 +80,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -165,6 +166,7 @@ import moe.apex.breadboard.util.downloadImage
 import moe.apex.breadboard.util.downloadImageToClipboard
 import moe.apex.breadboard.util.fixLink
 import moe.apex.breadboard.util.isWebLink
+import moe.apex.breadboard.util.refreshImageMetadata
 import moe.apex.breadboard.util.rememberIsBlurEnabled
 import moe.apex.breadboard.util.saveUriToPref
 import moe.apex.breadboard.util.morphingBackground
@@ -201,7 +203,7 @@ private fun LargeImageView(
     navController: NavController,
     initialSelectedImageIndex: Int,
     allImages: List<Image>,
-    onImageUpdate: (suspend (Image, Image) -> Unit)? = null,
+    onImageUpdate: (suspend (Image) -> Unit)? = null,
     onZoomedStatusChanged: ((Boolean) -> Unit)? = null
 ) {
     val pagerState = rememberPagerState(
@@ -222,10 +224,6 @@ private fun LargeImageView(
         derivedStateOf { activeZoomState?.zoomFraction?.let { it < MAX_ZOOM_FOR_PAGE_CHANGE } ?: true }
     }
 
-    val context = LocalContext.current
-    val prefs = LocalPreferences.current
-    val scope = rememberCoroutineScope()
-
     LaunchedEffect(allImages.size) {
         if (pagerState.currentPage >= allImages.size && allImages.isNotEmpty()) {
             pagerState.scrollToPage(allImages.size - 1)
@@ -233,23 +231,11 @@ private fun LargeImageView(
     }
 
     val currentImage = allImages[pagerState.currentPage.coerceIn(0, allImages.size - 1)]
-    val hasGroupedTags = remember(currentImage) { currentImage.hasGroupedTags }
 
-    if (!hasGroupedTags && onImageUpdate != null) {
+    if (onImageUpdate != null) {
         LaunchedEffect(currentImage) {
             try {
-                val metadata = currentImage.imageSource.imageBoard.loadImageGroupedTags(
-                    currentImage,
-                    prefs.authFor(currentImage.imageSource, context)
-                )
-
-                if (metadata != null) {
-                    val newImage = currentImage.copy(metadata = metadata)
-
-                    scope.launch {
-                        onImageUpdate(currentImage, newImage)
-                    }
-                }
+                onImageUpdate(currentImage)
             } catch (e: CancellationException) {
                 // Ignore the CancellationException error above because we want it to be cancelled
             } catch (e: Exception) {
@@ -281,14 +267,14 @@ private fun LargeImageView(
                 onImageClick = ::toggleToolbar
             )
 
-            LaunchedEffect(zoomFractionAllowsPageChange, isFullyZoomedOut, pagerState.currentPage) {
+            SideEffect(zoomFractionAllowsPageChange, isFullyZoomedOut, pagerState.currentPage) {
                 canChangePage = zoomFractionAllowsPageChange
                 if (isFullyZoomedOut) {
                     toolbarState = ToolbarState.DEFAULT
                 }
             }
 
-            LaunchedEffect(isFullyZoomedOut) {
+            SideEffect(isFullyZoomedOut) {
                 onZoomedStatusChanged?.invoke(!isFullyZoomedOut)
             }
 
@@ -500,7 +486,7 @@ private fun LargeImageToolbar(
                             )
 
                             if (result.isSuccess) {
-                                showToast(context, "Image saved.")
+                                showToast(context, "Post saved.")
                             } else {
                                 val exc = result.exceptionOrNull()!!
                                 exc.printStackTrace()
@@ -513,7 +499,7 @@ private fun LargeImageToolbar(
                                 }
                                 Log.e(
                                     "Downloader",
-                                    exc.message ?: "Error downloading image",
+                                    exc.message ?: "Error downloading post",
                                     exc
                                 )
                             }
@@ -522,7 +508,13 @@ private fun LargeImageToolbar(
                     }
                 },
                 onLongClick = {
-                    if (!prefs.isExperimentEnabled(Experiment.COPY_TO_CLIPBOARD)) return@ImageAction
+                    if (!prefs.isExperimentEnabled(Experiment.COPY_TO_CLIPBOARD)) {
+                        return@ImageAction
+                    }
+                    if (currentImage.isVideo) {
+                        showToast(context, "Android does not support copying videos.")
+                        return@ImageAction
+                    }
 
                     if (currentImage !in downloadingImages) {
                         viewModel.viewModelScope.launch {
@@ -664,17 +656,27 @@ fun LazyLargeImageView(
         isLoading = false
     }
 
-    if (isLoading)
+    if (isLoading) {
         FullscreenLoadingSpinner()
-    else if (image == null)
+    } else if (image == null) {
         ImageNotFound()
-    else
+    } else {
         LargeImageView(
             navController,
             0,
             listOf(image!!),
-            onImageUpdate = { _, newImage -> image = newImage }
+            onImageUpdate = {
+                if (image?.hasGroupedTags == false) {
+                    refreshImageMetadata(
+                        image = image!!,
+                        auth = prefs.authFor(image!!.imageSource, context)
+                    ) { newImage ->
+                        image = newImage
+                    }
+                }
+            }
         )
+    }
 }
 
 
@@ -939,17 +941,17 @@ fun LargeVideo(image: Image, isCurrentPage: Boolean, onLongClick: (() -> Unit)? 
     /* While most of these run very infrequently or only once,
        I still don't like this LaunchedEffect hell.  */
 
-    LaunchedEffect(Unit) {
+    SideEffect(Unit) {
         player.loop = true
     }
 
-    LaunchedEffect(player.isLoading) {
+    SideEffect(player.isLoading) {
         if (player.hasMedia && !player.isLoading) {
             doneInitialLoad = true
         }
     }
 
-    LaunchedEffect(isHovered) {
+    SideEffect(isHovered) {
         showControls = isHovered
     }
 
@@ -960,15 +962,15 @@ fun LargeVideo(image: Image, isCurrentPage: Boolean, onLongClick: (() -> Unit)? 
         }
     }
 
-    LaunchedEffect(muted) {
+    SideEffect(muted) {
         player.volume = if (muted) 0f else 0.5f
     }
 
-    LaunchedEffect(userMutePreference) {
+    SideEffect(userMutePreference) {
         userMutePreference?.let { muted = it }
     }
 
-    LaunchedEffect(isCurrentPage) {
+    SideEffect(isCurrentPage) {
         if (!isCurrentPage) {
             player.pause()
         } else {
@@ -1188,7 +1190,7 @@ fun OffsetBasedLargeImageView(
     initialSelectedImageIndex: Int,
     allImages: List<Image>,
     onActiveStateChanged: (Boolean) -> Unit = { },
-    onImageUpdate: (suspend (Image, Image) -> Unit)? = null,
+    onImageUpdate: (suspend (Image) -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
@@ -1258,7 +1260,7 @@ fun OffsetBasedLargeImageView(
     }
 
     if (isActive) {
-        LaunchedEffect(Unit) {
+        SideEffect(Unit) {
             /* Theoretically breakable if someone spoofs the system clock to never update,
                that's rather unlikely. */
             onActiveStateChanged(true)

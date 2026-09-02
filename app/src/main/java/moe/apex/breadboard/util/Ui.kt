@@ -1,6 +1,5 @@
 package moe.apex.breadboard.util
 
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ClipData
 import android.content.Context
@@ -8,7 +7,6 @@ import android.os.Build
 import android.os.PowerManager
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FiniteAnimationSpec
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -21,6 +19,7 @@ import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -63,6 +62,7 @@ import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -89,6 +89,7 @@ import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarColors
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.VerticalDivider
@@ -110,6 +111,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
@@ -128,13 +130,16 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.getSystemService
+import androidx.core.graphics.ColorUtils
 import androidx.navigation.NavController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import moe.apex.breadboard.history.SearchHistoryEntry
+import moe.apex.breadboard.navigation.ApiKeysSettings
 import moe.apex.breadboard.preferences.Experiment
+import moe.apex.breadboard.preferences.ImageSource
 import moe.apex.breadboard.preferences.LocalPreferences
 import moe.apex.breadboard.prefs
 import moe.apex.breadboard.ui.theme.BreadboardTheme
@@ -149,6 +154,8 @@ const val LARGE_SPACER = 24
 const val MEDIUM_LARGE_SPACER = 20
 /** 16dp spacing */
 const val SMALL_LARGE_SPACER = 16
+/** 18dp spacing */
+const val TITLE_SUMMARY_VERTICAL_SPACING = 18
 /** 12dp spacing */
 const val MEDIUM_SPACER = 12
 /** 8dp spacing */
@@ -196,12 +203,30 @@ fun animateBottomCornerSizeForPosition(position: ListItemPosition): Dp {
 }
 
 
+/** Default drop-in navigation icon to be used in top bars.
+
+    Includes padding by default to fit Breadboard style. For more control, use the overload with
+    a `modifier` parameter. **/
 @Composable
-private fun NavigationIcon(navController: NavController? = null) {
+fun NavigationIcon(navController: NavController?) {
+    NavigationIcon(
+        modifier = Modifier.padding(horizontal = SMALL_SPACER.dp),
+        navController = navController
+    )
+}
+
+
+/** A lower level navigation icon that accepts a [modifier] to allow for more flexible behaviour and
+    appearance. */
+@Composable
+fun NavigationIcon(
+    modifier: Modifier,
+    navController: NavController? = null
+) {
     val context = LocalContext.current
     if (navController != null) {
         FilledIconButton(
-            modifier = Modifier.padding(horizontal = SMALL_SPACER.dp),
+            modifier = modifier,
             colors = IconButtonDefaults.filledIconButtonColors(
                 containerColor = IconButtonDefaults.filledIconButtonColors().disabledContainerColor.copy(alpha = 0.065f),
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -250,15 +275,16 @@ fun SmallTitleBar(
     title: String,
     scrollBehavior: TopAppBarScrollBehavior? = null,
     navController: NavController? = null,
+    colors: TopAppBarColors = TopAppBarDefaults.topAppBarColors(
+        scrolledContainerColor = BreadboardTheme.colors.titleBar
+    ),
     additionalActions: @Composable RowScope.() -> Unit = { }
 ) {
     TopAppBar(
         title = { Text(title) },
         scrollBehavior = scrollBehavior,
         actions = additionalActions,
-        colors = TopAppBarDefaults.topAppBarColors(
-            scrolledContainerColor = BreadboardTheme.colors.titleBar
-        ),
+        colors = colors,
         navigationIcon = { NavigationIcon(navController) },
         windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Vertical)
     )
@@ -398,6 +424,19 @@ fun MainScreenScaffold(
 }
 
 
+@Composable
+fun MediumEmphasisCenteredLabel(
+    text: String,
+    modifier: Modifier = Modifier
+) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth() then modifier
+    )
+}
 
 
 @Composable
@@ -424,7 +463,58 @@ fun TitleSummary(
     trailingIcon: @Composable (() -> Unit)? = null,
     onClick: (() -> Unit)? = null
 ) {
-    val baseModifier = modifier.heightIn(min = 76.dp)
+    TitleSummary(
+        modifier = modifier,
+        title = title,
+        summary = summary,
+        enabled = enabled,
+        leadingIcon = leadingIcon,
+        leadingIconSize = 42.dp,
+        trailingIcon = trailingIcon,
+        onClick = onClick
+    )
+}
+
+
+@Composable
+fun FeaturedImageTitleSummary(
+    modifier: Modifier = Modifier,
+    title: String? = null,
+    summary: String? = null,
+    enabled: Boolean = true,
+    featuredImage: @Composable (() -> Unit)? = null,
+    trailingIcon: @Composable (() -> Unit)? = null,
+    onClick: (() -> Unit)? = null
+) {
+    TitleSummary(
+        modifier = modifier,
+        title = title,
+        summary = summary,
+        enabled = enabled,
+        leadingIcon = featuredImage,
+        leadingIconSize = 80.dp,
+        trailingIcon = trailingIcon,
+        onClick = onClick
+    )
+}
+
+
+@Composable
+private fun TitleSummary(
+    modifier: Modifier = Modifier,
+    title: String? = null,
+    summary: String? = null,
+    enabled: Boolean = true,
+    leadingIcon: @Composable (() -> Unit)? = null,
+    leadingIconSize: Dp,
+    trailingIcon: @Composable (() -> Unit)? = null,
+    onClick: (() -> Unit)? = null
+) {
+    if (title == null && summary == null) {
+        throw IllegalArgumentException("Provide at least one of `title` or `summary`.")
+    }
+
+    val baseModifier = modifier.heightIn(min = 72.dp)
     val finalModifier = onClick?.let { baseModifier.clickable(enabled) { it() } } ?: baseModifier
 
     Row(
@@ -435,7 +525,8 @@ fun TitleSummary(
             Spacer(Modifier.width(SMALL_LARGE_SPACER.dp))
             Box(
                 modifier = Modifier
-                    .size(48.dp)
+                    .padding(vertical = SMALL_LARGE_SPACER.dp)
+                    .size(leadingIconSize)
                     .alpha(if (enabled) 1f else DISABLED_OPACITY),
                 contentAlignment = Alignment.Center
             ) {
@@ -443,33 +534,29 @@ fun TitleSummary(
             }
         }
         Column(
+            // H/V padding are mismatched but this looks more comfortable to me.
             modifier = Modifier
                 .weight(1f)
-                .padding(horizontal = SMALL_LARGE_SPACER.dp)
-                .alpha(if (enabled) 1f else DISABLED_OPACITY)
+                .padding(horizontal = SMALL_LARGE_SPACER.dp, vertical = TITLE_SUMMARY_VERTICAL_SPACING.dp, )
+                .alpha(if (enabled) 1f else DISABLED_OPACITY),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.prefTitle,
-                modifier = Modifier
-                    .padding(
-                        top = SMALL_LARGE_SPACER.dp,
-                        bottom = (if (summary == null) SMALL_LARGE_SPACER.dp else 2.dp)
-                    )
-            )
-
-            if (summary != null) {
-                Summary(
-                    text = summary,
-                    modifier = Modifier.padding(bottom = SMALL_LARGE_SPACER.dp)
+            title?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.prefTitle,
                 )
+            }
+
+            summary?.let {
+                Summary(text = it)
             }
         }
         trailingIcon?.let {
             Box(
                 modifier = Modifier
                     .padding(end = SMALL_SPACER.dp)
-                    .size(48.dp)
+                    .size(42.dp)
                     .alpha(if (enabled) 1f else DISABLED_OPACITY),
                 contentAlignment = Alignment.Center
             ) {
@@ -862,15 +949,15 @@ fun HorizontalFloatingToolbarOptionalFab(
         toolbarContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
     ),
     floatingActionButton: (@Composable () -> Unit)? = null,
+    elevation: Dp = 6.dp, // This is what spec says it's supposed to be
     actions: @Composable RowScope.() -> Unit
 ) {
-    val shadowElevation = 6.dp // This is what spec says but the M3 implementation does what it wants lol
     if (floatingActionButton != null) {
         HorizontalFloatingToolbar(
             modifier = modifier,
             colors = colors,
             expanded = true,
-            expandedShadowElevation = shadowElevation,
+            expandedShadowElevation = elevation,
             floatingActionButton = floatingActionButton,
             content = actions
         )
@@ -879,7 +966,7 @@ fun HorizontalFloatingToolbarOptionalFab(
             modifier = modifier,
             colors = colors,
             expanded = true,
-            expandedShadowElevation = shadowElevation,
+            expandedShadowElevation = elevation,
             content = actions
         )
     }
@@ -891,6 +978,7 @@ fun ExpressiveTagEntryContainer(
     modifier: Modifier = Modifier,
     label: String,
     supportingLabel: String? = null,
+    leadingContent: (@Composable () -> Unit)? = null,
     trailingContent: (@Composable RowScope.() -> Unit)? = null,
     position: ListItemPosition,
     onClick: (() -> Unit)? = null
@@ -911,6 +999,15 @@ fun ExpressiveTagEntryContainer(
             .clickable(onClick != null) { onClick!!() },
         verticalAlignment = Alignment.CenterVertically
     ) {
+        leadingContent?.let {
+            Box(
+                modifier = Modifier
+                    .padding(start = SMALL_LARGE_SPACER.dp)
+                    .size(40.dp)
+            ) {
+                it()
+            }
+        }
         Column(
             verticalArrangement = Arrangement.Center,
             modifier = Modifier
@@ -921,6 +1018,7 @@ fun ExpressiveTagEntryContainer(
                 text = label,
                 fontSize = 16.sp,
                 lineHeight = 17.sp,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
 
@@ -929,6 +1027,7 @@ fun ExpressiveTagEntryContainer(
                     text = it,
                     fontSize = 12.sp,
                     lineHeight = 13.sp,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
@@ -1112,12 +1211,12 @@ fun BasicExpressiveGroup(
  *
  * For some reason, the inner container may stop responding to taps after a certain point if the
  * content inside is really long. It's something to do with clipping the shape but I don't know
- * exactly what or why. Set [useBox] to `true` if this is likely to happen.
+ * exactly what or why. Set [clip] to `false` if this is likely to happen.
  * Note this will prevent tap ripples from conforming to the shape of the container. */
 fun LazyListScope.LazyExpressiveGroup(
-    desiredTopPadding: Dp? = LARGE_SPACER.dp,
     title: String? = null,
-    useBox: Boolean = false,
+    desiredTopPadding: Dp? = LARGE_SPACER.dp,
+    clip: Boolean = true,
     content: ExpressiveGroupScope.() -> Unit
 ) {
     val scope = ExpressiveGroupScopeImpl()
@@ -1154,12 +1253,12 @@ fun LazyListScope.LazyExpressiveGroup(
         item {
             val position = remember { ListItemPosition.fromIndex(scope.items, index) }
 
-            if (useBox) {
-                BoxBasedBasicExpressiveContainer(position = position) {
+            if (clip) {
+                BasicExpressiveContainer(position = position) {
                     itemContent()
                 }
             } else {
-                BasicExpressiveContainer(position = position) {
+                BoxBasedBasicExpressiveContainer(position = position) {
                     itemContent()
                 }
             }
@@ -1194,11 +1293,16 @@ fun CombinedClickableAction(
 }
 
 
-data class PullToRefreshController(
+class PullToRefreshController(
+    enabled: Boolean,
     val state: PullToRefreshState,
-    val indicator: @Composable BoxScope.(PullToRefreshController) -> Unit,
-    private val refreshCallback: suspend () -> Unit
+    indicator: @Composable BoxScope.(PullToRefreshController) -> Unit,
+    refreshCallback: suspend () -> Unit
 ) {
+    var enabled by mutableStateOf(enabled)
+    var indicator by mutableStateOf(indicator)
+    internal var refreshCallback by mutableStateOf(refreshCallback)
+
     /* We are using the main thread because this is the thread that animations must run on.
        In this case it's for showing/hiding the indicator.
        We'll explicitly use the IO thread when doing the callback. */
@@ -1242,15 +1346,23 @@ fun rememberPullToRefreshController(
             controller = it
         )
     },
+    enabled: Boolean = true,
     onRefresh: suspend () -> Unit = { }
 ): PullToRefreshController {
-    return remember {
+    val controller = remember(state) {
         PullToRefreshController(
+            enabled = enabled,
             state = state,
             indicator = indicator,
             refreshCallback = onRefresh
         )
     }
+
+    controller.enabled = enabled
+    controller.refreshCallback = onRefresh
+    controller.indicator = indicator
+
+    return controller
 }
 
 
@@ -1272,44 +1384,100 @@ object PullToRefreshControllerDefaults {
 
 /** A button that scrolls image grids back to the top.
 
-    Set [animate] to false to scroll immediately without animation. This option is mostly intended
-    to work around what I can only assume is a Compose bug whereby the scrolling animation is jumpy
-    when there is a full width item in the grid (like the filter). */
-@SuppressLint("FrequentlyChangingValue")
+Set [animate] to false to scroll immediately without animation. This option is mostly intended
+to work around what I can only assume is a Compose bug whereby the scrolling animation is jumpy
+when there is a full width item in the grid (like the filter). */
 @Composable
 fun ScrollToTopArrow(
-    staggeredGridState: LazyStaggeredGridState,
-    uniformGridState: LazyGridState,
+    scrollableState: ScrollableState,
     animate: Boolean = true,
     alsoOnClick: (() -> Unit)? = null
 ) {
-    val scope = rememberCoroutineScope()
-    val isScrolledPastFirst by remember(staggeredGridState, uniformGridState) {
-        derivedStateOf { staggeredGridState.firstVisibleItemIndex != 0 || uniformGridState.firstVisibleItemIndex != 0 }
+    if (scrollableState is LazyStaggeredGridState) {
+        ScrollToTopArrow(
+            lazyStaggeredGridState = scrollableState,
+            animate = animate,
+            alsoOnClick = alsoOnClick
+        )
+    } else if (scrollableState is LazyGridState) {
+        ScrollToTopArrow(
+            lazyGridState = scrollableState,
+            animate = animate,
+            alsoOnClick = alsoOnClick
+        )
+    } else {
+        throw NotImplementedError("Not implemented for non-grid scroll states.")
     }
+}
+
+
+@Composable
+private fun ScrollToTopArrow(
+    lazyGridState: LazyGridState,
+    animate: Boolean = true,
+    alsoOnClick: (() -> Unit)? = null
+) {
+    val isScrolledPastFirst by remember(lazyGridState) {
+        derivedStateOf { lazyGridState.firstVisibleItemIndex != 0 }
+    }
+
+    ScrollToTopArrow(
+        visible = isScrolledPastFirst,
+        onScrollToTop = {
+            if (animate) {
+                lazyGridState.animateScrollToItem(0)
+            } else {
+                lazyGridState.scrollToItem(0)
+            }
+        },
+        onClick = alsoOnClick
+    )
+}
+
+
+@Composable
+private fun ScrollToTopArrow(
+    lazyStaggeredGridState: LazyStaggeredGridState,
+    animate: Boolean = true,
+    alsoOnClick: (() -> Unit)? = null
+) {
+    val isScrolledPastFirst by remember(lazyStaggeredGridState) {
+        derivedStateOf { lazyStaggeredGridState.firstVisibleItemIndex != 0 }
+    }
+
+    ScrollToTopArrow(
+        visible = isScrolledPastFirst,
+        onScrollToTop = {
+            if (animate) {
+                lazyStaggeredGridState.animateScrollToItem(0)
+            } else {
+                lazyStaggeredGridState.scrollToItem(0)
+            }
+        },
+        onClick = alsoOnClick
+    )
+}
+
+
+@Composable
+private fun ScrollToTopArrow(
+    visible: Boolean,
+    onScrollToTop: suspend () -> Unit,
+    onClick: (() -> Unit)? = null
+) {
+    val scope = rememberCoroutineScope()
 
     AnimatedVisibility(
         enter = fadeIn(),
         exit = fadeOut(),
-        visible = isScrolledPastFirst
+        visible = visible
     ) {
         IconButton(
             onClick = {
                 scope.launch {
-                    if (animate) {
-                        staggeredGridState.animateScrollToItem(0)
-                    } else {
-                        staggeredGridState.scrollToItem(0)
-                    }
+                    onScrollToTop()
                 }
-                scope.launch {
-                    if (animate) {
-                        uniformGridState.animateScrollToItem(0)
-                    } else {
-                        uniformGridState.scrollToItem(0)
-                    }
-                }
-                alsoOnClick?.invoke()
+                onClick?.invoke()
             }
         ) {
             Icon(Icons.Rounded.KeyboardArrowUp, contentDescription = "Scroll to top")
@@ -1429,9 +1597,10 @@ fun ButtonListItem(
 }
 
 
+// Values taken from expressive motion scheme default spatial spec
 fun <T> bouncyAnimationSpec(): FiniteAnimationSpec<T> = spring(
-    dampingRatio = Spring.DampingRatioLowBouncy,
-    stiffness = Spring.StiffnessMediumLow,
+    dampingRatio = 0.8f,
+    stiffness = 380f,
 )
 
 
@@ -1456,6 +1625,90 @@ fun WideLinearWavyProgressIndicator(modifier: Modifier = Modifier) {
         amplitude = 0.6f,
         wavelength = 40.dp,
     )
+}
+
+
+@Composable
+fun ExpressivePromptWithActions(
+    modifier: Modifier = Modifier,
+    title: String,
+    summary: String? = null,
+    actions: @Composable RowScope.() -> Unit
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(MEDIUM_SPACER.dp)
+    ) {
+        ExpressiveContainer(position = ListItemPosition.SINGLE_ELEMENT) {
+            TitleSummary(
+                title = title,
+                summary = summary,
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(MEDIUM_SPACER.dp)) {
+            actions()
+        }
+    }
+}
+
+
+@Composable
+fun ApiKeyRequiredPrompt(
+    modifier: Modifier = Modifier,
+    source: ImageSource,
+    navController: NavController,
+    beforeActions: (@Composable RowScope.() -> Unit)? = null
+) {
+    ExpressivePromptWithActions(
+        modifier = modifier,
+        title = "API key needed",
+        summary = "To use ${source.label}, you must first set an API key.\n" +
+                  "Alternatively, choose a different source."
+    ) {
+        beforeActions?.invoke(this)
+
+        Button(
+            onClick = {
+                navController.navigate(ApiKeysSettings)
+            },
+            shapes = ButtonDefaults.shapes()
+        ) {
+            Text("API key settings")
+        }
+    }
+}
+
+
+fun generateColours(
+    darkTheme: Boolean,
+    seed: Any
+): Pair<Color, Color> {
+    // Generate a base hue from on the seed.
+    val seed = seed.hashCode()
+    val hue = (seed and Integer.MAX_VALUE).rem(360).toFloat()
+
+    /* We're going for light backgrounds with a darker inner icon.
+       The specific saturation and lightness depend on darkTheme. */
+    val (bgSat, bgLight) = if (darkTheme) {
+        0.42f to 0.70f
+    } else {
+        0.65f to 0.87f
+    }
+
+    val (iconSat, iconLight) = if (darkTheme) {
+        0.60f to 0.20f
+    } else {
+        0.65f to 0.27f
+    }
+
+    val bgInt = ColorUtils.HSLToColor(floatArrayOf(hue, bgSat, bgLight))
+    val iconInt = ColorUtils.HSLToColor(floatArrayOf(hue, iconSat, iconLight))
+
+    val bgColour = Color(bgInt)
+    val iconTint = Color(iconInt)
+
+    return bgColour to iconTint
 }
 
 

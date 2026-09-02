@@ -12,21 +12,27 @@ suspend fun <T> saveWithTimestamp(
     context: Context,
     timestampKey: Preferences.Key<Long>,
     dataKey: Preferences.Key<T>,
-    data: T
+    data: T,
+    timestamp: Long = System.currentTimeMillis()
 ) {
     context.dataStore.edit { prefs ->
-        prefs[timestampKey] = System.currentTimeMillis()
+        prefs[timestampKey] = timestamp
         prefs[dataKey] = data
     }
 }
 
 
-suspend fun saveIgnoreListWithTimestamp(context: Context, data: Set<String>) {
+suspend fun saveIgnoreListWithTimestamp(
+    context: Context,
+    data: Set<String>,
+    timestamp: Long = System.currentTimeMillis()
+) {
     saveWithTimestamp(
         context = context,
         timestampKey = PreferenceKeys.INTERNAL_IGNORE_LIST_TIMESTAMP,
         dataKey = PreferenceKeys.INTERNAL_IGNORE_LIST,
-        data = data
+        data = data,
+        timestamp = timestamp
     )
 }
 

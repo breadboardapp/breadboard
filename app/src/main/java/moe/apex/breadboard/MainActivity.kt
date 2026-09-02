@@ -1,5 +1,6 @@
 package moe.apex.breadboard
 
+import android.app.UiModeManager
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -15,7 +16,7 @@ import androidx.compose.material3.ComposeMaterial3Flags
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.core.util.Consumer
@@ -29,11 +30,14 @@ import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import moe.apex.breadboard.navigation.ArtistProfile
 import moe.apex.breadboard.navigation.Favourites
 import moe.apex.breadboard.navigation.Home
 import moe.apex.breadboard.navigation.Navigation
 import moe.apex.breadboard.navigation.Results
+import moe.apex.breadboard.navigation.ReverseSearch
 import moe.apex.breadboard.navigation.Search
+import moe.apex.breadboard.preferences.DarkTheme
 import moe.apex.breadboard.preferences.ImageSource
 import moe.apex.breadboard.preferences.LocalPreferences
 import moe.apex.breadboard.preferences.StartDestination
@@ -79,6 +83,35 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
     }
 
 
+    private fun maybePrepareArtistDestination(intent: Intent): ArtistProfile? {
+        val artist = intent.getStringExtra("artist") ?: return null
+        val source = ImageSource.valueOf(intent.getStringExtra("origin_source") ?: return null)
+        return ArtistProfile(artist, source)
+    }
+
+
+    private fun determineDestination(intent: Intent): Any? {
+        // Handle Intent.ACTION_SEND intent for reverse search
+        if (intent.action == Intent.ACTION_SEND) {
+            /* Sometimes a shared link may contain an image clipData of the favicon, so we must
+               prioritise the text over the clipData. Providing them both would be bad. */
+            intent.extras?.getString(Intent.EXTRA_TEXT)?.let { initialImageUrl ->
+                return ReverseSearch(initialImageUrl = initialImageUrl)
+            }
+
+            intent.clipData?.getItemAt(0)?.uri?.let { initialFileUri ->
+                return ReverseSearch(initialFileUri = initialFileUri.toString())
+            }
+        }
+
+        return when (intent.getStringExtra("destination")) {
+            "artist" -> maybePrepareArtistDestination(intent)
+            "search" -> maybePrepareResultsDestination(intent)
+            else -> null
+        }
+    }
+
+
     @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -106,7 +139,26 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
             val viewModel = getGlobalViewModel()
             val recommendationsProvider by viewModel.recommendationsProvider.collectAsState()
 
-            LaunchedEffect(prefs.imageSource, prefs.filterRatingsLocally) {
+            /* Sync the UiModeManager's app night mode preference with the selected app dark theme
+               preference. This ensures that the splash screen colour scheme matches the selected app
+               dark theme preference.
+
+               UiModeManager#setApplicationNightMode() is only supported on Android 12+. */
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val uiModeManager = getSystemService(UI_MODE_SERVICE) as UiModeManager
+
+                SideEffect(prefs.darkTheme) {
+                    uiModeManager.setApplicationNightMode(
+                        when (prefs.darkTheme) {
+                            DarkTheme.ON -> UiModeManager.MODE_NIGHT_YES
+                            DarkTheme.OFF -> UiModeManager.MODE_NIGHT_NO
+                            DarkTheme.AUTO -> UiModeManager.MODE_NIGHT_AUTO
+                        }
+                    )
+                }
+            }
+
+            SideEffect(prefs.imageSource, prefs.filterRatingsLocally) {
                 if (
                     recommendationsProvider?.imageSource != prefs.imageSource ||
                     recommendationsProvider?.filterRatingsLocally != prefs.filterRatingsLocally
@@ -120,7 +172,7 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
                    to be done inside of this activity rather than the DeepLinkActivity. */
                 DisposableEffect(Unit) {
                     val innerListener = Consumer<Intent> { intent ->
-                        maybePrepareResultsDestination(intent)?.let {
+                        determineDestination(intent)?.let {
                             navController.navigate(it)
                         }
                     }
@@ -128,7 +180,7 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
                     onDispose { removeOnNewIntentListener(innerListener) }
                 }
                 FlagSecureHelper.register()
-                Navigation(navController, maybePrepareResultsDestination(intent) ?: startDestination)
+                Navigation(navController, determineDestination(intent) ?: startDestination)
             }
         }
     }

@@ -16,6 +16,10 @@ val Typography = Typography(
                 lineHeight = 24.sp,
                 letterSpacing = 0.2.sp
         ),
+        bodyMedium = Typography().bodyMedium.copy(
+                fontSize = 15.sp,
+                lineHeight = 17.sp
+        ),
         bodySmall = Typography().bodySmall.copy(
                 fontSize = 14.sp,
                 lineHeight = 16.sp,
@@ -35,11 +39,11 @@ val Typography = Typography(
         titleMedium = Typography().titleMedium.copy(
                 fontFamily = FontFamily(Font(R.font.kumbh)),
                 fontWeight = FontWeight.Bold,
-                fontSize = 15.sp,
+                fontSize = 14.sp,
         ),
         headlineMedium = Typography().headlineMedium.copy(
-                fontFamily = FontFamily(Font(R.font.kumbh)),
-                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily(Font(R.font.special_gothic_one_expanded)),
+                fontWeight = FontWeight.Normal,
                 fontSize = 30.sp
         ),
         headlineSmall = Typography().headlineSmall.copy(
@@ -47,8 +51,8 @@ val Typography = Typography(
                 fontWeight = FontWeight.Bold
         ),
         titleLarge = Typography().titleLarge.copy(
-                fontFamily = FontFamily(Font(R.font.kumbh)),
-                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily(Font(R.font.special_gothic_one_expanded)),
+                fontWeight = FontWeight.Normal,
         )
 )
 
@@ -57,8 +61,8 @@ val Typography.searchField: TextStyle
 
 val Typography.prefTitle: TextStyle
         get() = Typography().bodyLarge.copy(
-                        fontSize = 17.sp,
-                        lineHeight = 17.sp,
+                        fontSize = 16.sp,
+                        lineHeight = 16.sp,
                         letterSpacing = 0.sp,
                         fontFamily = FontFamily(Font(R.font.kumbh)),
                         fontWeight = FontWeight.Bold

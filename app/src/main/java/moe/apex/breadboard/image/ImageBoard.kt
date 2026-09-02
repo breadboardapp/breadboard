@@ -4,6 +4,9 @@ import android.util.Log
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import moe.apex.breadboard.RequestUtil
+import moe.apex.breadboard.artist.Artist
+import moe.apex.breadboard.social.SocialEntry
+import moe.apex.breadboard.artist.ArtistTag
 import moe.apex.breadboard.preferences.ImageSource
 import moe.apex.breadboard.tag.TagCategory
 import moe.apex.breadboard.tag.TagGroup
@@ -419,6 +422,27 @@ object Danbooru : ImageBoard {
     override val apiKeyRequirement = ImageBoardRequirement.RECOMMENDED
     override val localFilterType = ImageBoardRequirement.RECOMMENDED
 
+    private val artistSearchUrl = "${baseUrl}artists.json?only=name,urls,other_names,tag&search[any_name_matches]=%s"
+
+    suspend fun loadFollowingPage(artists: List<String>, page: Int, safe: Boolean): List<Image> {
+        val baseUrl = "https://breadboard.moe/api/v1/following/posts"
+        val artistsQuery = artists.joinToString(",") { URLEncoder.encode(it, "utf-8") }
+        val url = "$baseUrl?artists=$artistsQuery&page=$page&safe=$safe"
+        
+        val body = RequestUtil.get(url)
+        if (body.isEmpty()) return emptyList()
+
+        val json = JSONArray(body)
+        val images = mutableListOf<Image>()
+
+        for (i in 0 until json.length()) {
+            val e = json.getJSONObject(i)
+            parseImage(e)?.let { images.add(it) }
+        }
+
+        return images
+    }
+
     override fun parseImage(e: JSONObject): Image? {
         if (e.isNull("md5")) return null
 
@@ -496,6 +520,41 @@ object Danbooru : ImageBoard {
         return img?.metadata
     }
 
+    suspend fun getArtist(artistTag: String): Artist? {
+        val url = artistSearchUrl.format(artistTag)
+        val body = RequestUtil.get(url)
+        val json = JSONArray(body)
+
+        if (json.length() == 0){
+            return null
+        }
+
+        val primaryArtist = json.getJSONObject(0)
+        return Artist(
+            name = primaryArtist.getString("name"),
+            otherNames = primaryArtist.optJSONArray("other_names")?.let { otherNamesArray ->
+                (0 until otherNamesArray.length()).mapNotNull { index ->
+                    otherNamesArray.optString(index).takeIf { it.isNotBlank() }
+                }
+            } ?: emptyList(),
+            socialUrls = primaryArtist.optJSONArray("urls")?.let { urlArray ->
+                (0 until urlArray.length()).mapNotNull { index ->
+                    val urlEntry = urlArray.optJSONObject(index)
+                    SocialEntry(
+                        url = urlEntry.optString("url").takeUnless { it.isBlank() } ?: return@mapNotNull null,
+                        isActive = urlEntry.optBoolean("is_active", false)
+                    )
+                }
+            } ?: emptyList(),
+            tag = primaryArtist.getJSONObject("tag").let { tagObj ->
+                ArtistTag(
+                    name = tagObj.getString("name"),
+                    postCount = tagObj.getInt("post_count")
+                )
+            }
+        )
+    }
+
 
     override fun getRatingFromString(rating: String): ImageRating {
         return when (rating) {
@@ -505,6 +564,61 @@ object Danbooru : ImageBoard {
             "e" -> ImageRating.EXPLICIT
             else -> ImageRating.UNKNOWN
         }
+    }
+}
+
+
+object DanbooruSafe : ImageBoard by Danbooru {
+    override val baseUrl = "https://safebooru.donmai.us/"
+    override val autoCompleteSearchUrl = "${baseUrl}autocomplete.json?search[query]=%s&search[type]=tag_query&limit=10"
+    override val imageSearchUrl = "${baseUrl}posts.json?tags=%s&page=%d&limit=100"
+    override val authenticatedImageSearchUrl = "$imageSearchUrl&api_key=%s&login=%s"
+
+    private val popularUrl = "${baseUrl}posts.json?tags=%s order:favcount&limit=20"
+
+    override fun buildImageSearchUrl(tags: String, page: Int, auth: ImageBoardAuth?): String {
+        val encodedTags = URLEncoder.encode(tags, "utf-8")
+
+        val url = if (auth != null) {
+            authenticatedImageSearchUrl.format(encodedTags, page, auth.apiKey, auth.user)
+        } else {
+            imageSearchUrl.format(encodedTags, page)
+        }
+        return url
+    }
+
+
+    override suspend fun loadPage(tags: String, page: Int, auth: ImageBoardAuth?): List<Image> {
+        val url = buildImageSearchUrl(tags, page, auth)
+        val body = RequestUtil.get(url)
+        if (body.isEmpty()) return emptyList()
+
+        val json = JSONArray(body)
+        val subjects = mutableListOf<Image>()
+
+        for (i in 0 until json.length()) {
+            val e = json.getJSONObject(i)
+            Danbooru.parseImage(e)?.let { subjects.add(it) }
+        }
+
+        return subjects.toList()
+    }
+
+
+    suspend fun getMostPopularPosts(artistTag: String): List<Image> {
+        val url = popularUrl.format(artistTag)
+        val body = RequestUtil.get(url)
+        if (body.isEmpty()) return emptyList()
+
+        val json = JSONArray(body)
+        val subjects = mutableListOf<Image>()
+
+        for (i in 0 until json.length()) {
+            val e = json.getJSONObject(i)
+            Danbooru.parseImage(e)?.let { subjects.add(it) }
+        }
+
+        return subjects.toList()
     }
 }
 

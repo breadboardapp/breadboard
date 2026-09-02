@@ -1,20 +1,15 @@
 package moe.apex.breadboard.detailview
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -35,29 +30,25 @@ import kotlinx.coroutines.launch
 import moe.apex.breadboard.image.ImageBoardAuth
 import moe.apex.breadboard.image.ImageBoardRequirement
 import moe.apex.breadboard.image.ImageRating
-import moe.apex.breadboard.navigation.Settings
 import moe.apex.breadboard.preferences.Experiment
 import moe.apex.breadboard.preferences.ImageSource
 import moe.apex.breadboard.preferences.LocalPreferences
 import moe.apex.breadboard.preferences.PreferenceKeys
 import moe.apex.breadboard.prefs
 import moe.apex.breadboard.util.AgeVerification
-import moe.apex.breadboard.util.ExpressiveContainer
 import moe.apex.breadboard.util.HorizontallyScrollingChipsWithLabels
 import moe.apex.breadboard.util.LargeTitleBar
-import moe.apex.breadboard.util.ListItemPosition
-import moe.apex.breadboard.util.MEDIUM_SPACER
 import moe.apex.breadboard.util.MainScreenScaffold
 import moe.apex.breadboard.largeimageview.OffsetBasedLargeImageView
+import moe.apex.breadboard.util.ApiKeyRequiredPrompt
 import moe.apex.breadboard.util.PullToRefreshControllerDefaults
 import moe.apex.breadboard.util.SMALL_LARGE_SPACER
 import moe.apex.breadboard.util.ScrollToTopArrow
 import moe.apex.breadboard.util.TINY_SPACER
-import moe.apex.breadboard.util.TitleSummary
 import moe.apex.breadboard.util.availableRatingsForCurrentSource
 import moe.apex.breadboard.util.filterChipSolidColor
+import moe.apex.breadboard.util.refreshImageMetadata
 import moe.apex.breadboard.util.rememberPullToRefreshController
-import moe.apex.breadboard.util.withoutVertical
 import moe.apex.breadboard.viewmodel.SearchResultsViewModel
 
 
@@ -86,6 +77,11 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
     val viewModelImages by viewModel.images.collectAsStateWithLifecycle()
     val blockedTags by viewModel.blockedTags.collectAsStateWithLifecycle()
     val selectedRatings by viewModel.selectedRatings.collectAsStateWithLifecycle()
+    val state = if (prefs.useStaggeredGrid) {
+        viewModel.staggeredGridState
+    } else {
+        viewModel.uniformGridState
+    }
 
     fun setUpViewModel(auth: ImageBoardAuth? = null) {
         viewModel.setup(
@@ -97,7 +93,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
 
     fun updateBlockedTags() = viewModel.updateBlockedTags(manuallyBlockedTags, prefs.excludeAi)
 
-    LaunchedEffect(Unit) {
+    SideEffect(Unit) {
         val auth = prefs.authFor(source, context)
         if (auth != viewModelAuth) {
             viewModel.updateAuth(auth)
@@ -175,8 +171,7 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
                 additionalActions = {
                     if (doneInitialLoad) {
                         ScrollToTopArrow(
-                            staggeredGridState = viewModel.staggeredGridState,
-                            uniformGridState = viewModel.uniformGridState,
+                            scrollableState = state,
                             animate = !filterLocally || Experiment.ALWAYS_ANIMATE_SCROLL.isEnabled(),
                         )
                     }
@@ -192,27 +187,24 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
         }
 
         if (needsAuth) {
-            return@MainScreenScaffold ApiKeyRequiredColumn(
+            return@MainScreenScaffold ApiKeyRequiredPrompt(
                 modifier = Modifier
                     .padding(padding)
-                    .padding(top = SMALL_LARGE_SPACER.dp)
-                    .fillMaxWidth(),
-                source = source
-            ) {
-                navController.navigate(Settings)
-            }
+                    .padding(top = SMALL_LARGE_SPACER.dp),
+                source = source,
+                navController = navController
+            )
         }
 
         if (!isReady) {
             return@MainScreenScaffold
         }
 
-        ImageGrid(
+        FlexibleImageGrid(
+            gridState = state,
             modifier = Modifier
-                .padding(padding.withoutVertical(top = false))
+                .padding(padding)
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
-            staggeredGridState = viewModel.staggeredGridState,
-            uniformGridState = viewModel.uniformGridState,
             images = imagesToDisplay,
             onImageClick = { index, _ ->
                 Snapshot.withMutableSnapshot {
@@ -220,18 +212,28 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
                     isImageCarouselVisible = true
                 }
             },
+            noImagesContent = {
+                if (selectedRatings.isEmpty()) {
+                    FlexibleImageGridDefaults.NoImages("No ratings selected.")
+                } else {
+                    FlexibleImageGridDefaults.NoImages()
+                }
+            },
             contentPadding = PaddingValues(top = SMALL_LARGE_SPACER.dp, start = SMALL_LARGE_SPACER.dp, end = SMALL_LARGE_SPACER.dp),
-            filterComposable = if (filterLocally) { {
-                HorizontallyScrollingChipsWithLabels(
-                    modifier = Modifier.padding(bottom = TINY_SPACER.dp),
-                    labels = listOf("Ratings"),
-                    content = listOf(ratingRows)
-                )
-            } } else null,
+            headerItems = {
+                if (filterLocally) {
+                    item {
+                        HorizontallyScrollingChipsWithLabels(
+                            modifier = Modifier.padding(bottom = TINY_SPACER.dp),
+                            labels = listOf("Ratings"),
+                            content = listOf(ratingRows)
+                        )
+                    }
+                }
+            },
             pullToRefreshController = pullToRefreshController,
             doneInitialLoad = doneInitialLoad,
-            onEndReached = viewModel::loadMore,
-            noImagesContent = { if (doneInitialLoad) { NoImages() } }
+            onEndReached = viewModel::loadMore
         )
     }
 
@@ -241,37 +243,11 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
         initialSelectedImageIndex = selectedImageIndex,
         allImages = imagesToDisplay,
         onActiveStateChanged = { isImageCarouselVisible = it }
-    ) { oldImage, newImage ->
-        viewModel.updateImage(oldImage, newImage)
-    }
-}
-
-
-
-@Composable
-fun ApiKeyRequiredColumn(
-    modifier: Modifier = Modifier,
-    source: ImageSource,
-    onClick: () -> Unit
-) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(MEDIUM_SPACER.dp)
-    ) {
-        ExpressiveContainer(position = ListItemPosition.SINGLE_ELEMENT) {
-            TitleSummary(
-                title = "API Key required",
-                summary = "${source.label} requires an API key to search.\n" +
-                        "Add an API key in Settings.\n" +
-                        "Alternatively, use a different image source.",
-            )
-        }
-        Button(
-            onClick = onClick,
-            colors = ButtonDefaults.buttonColors()
-        ) {
-            Text("Go to Settings")
+    ) { image ->
+        if (!image.hasGroupedTags) {
+            refreshImageMetadata(image, prefs.authFor(image.imageSource, context)) {
+                viewModel.updateImage(image, it)
+            }
         }
     }
 }
