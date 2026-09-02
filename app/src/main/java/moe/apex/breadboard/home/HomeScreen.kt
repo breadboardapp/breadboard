@@ -270,9 +270,9 @@ fun HomeScreen(
             if (followingProvider == null) {
                 SideEffect(Unit) {
                     val newProvider = FollowingProvider(
-                        followedArtists = prefs.followedTags,
-                        showAllRatings = prefs.recommendAllRatings,
-                        initialBlockedTags = prefs.blockedTags
+                        initialFollowedArtists = prefs.followedTags,
+                        initialBlockedTags = prefs.blockedTags,
+                        showAllRatings = prefs.recommendAllRatings
                     )
                     viewModel.setFollowingProvider(newProvider)
                 }
@@ -419,6 +419,8 @@ fun HomeScreen(
                         provider.uniformGridState
                     }
 
+                    val doneInitialLoad by provider.doneInitialLoad.collectAsState()
+
                     val onRefresh: suspend () -> Unit by rememberUpdatedState {
                         provider.let {
                             it.replaceBlockedTags(blockedTags)
@@ -431,7 +433,7 @@ fun HomeScreen(
 
                     val ptrController = rememberPullToRefreshController(
                         enabled = followingImages.isNotEmpty() ||
-                                (provider.doneInitialLoad && prefs.followedTags.isNotEmpty()),
+                                (doneInitialLoad && prefs.followedTags.isNotEmpty()),
                         onRefresh = onRefresh
                     )
 
@@ -451,7 +453,7 @@ fun HomeScreen(
                             }
                         },
                         noImagesContent = {
-                            if (!provider.doneInitialLoad) {
+                            if (doneInitialLoad) {
                                 return@FlexibleImageGrid
                             }
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -480,7 +482,7 @@ fun HomeScreen(
                                                             key = PreferenceKeys.FOLLOWED_TAGS,
                                                             to = artists,
                                                         )
-                                                        provider.doneInitialLoad = false
+                                                        provider.updateDoneInitialLoad(true)
                                                         provider.loadMore()
                                                     }
                                                 }
@@ -518,7 +520,7 @@ fun HomeScreen(
                             bottom = bottomAppBarAndNavBarHeight
                         ),
                         pullToRefreshController = ptrController,
-                        doneInitialLoad = provider.doneInitialLoad,
+                        doneInitialLoad = doneInitialLoad,
                         loadingIndicator = FlexibleImageGridDefaults::RoundLoadingIndicator,
                         onEndReached = { provider.loadMore() },
                     )
