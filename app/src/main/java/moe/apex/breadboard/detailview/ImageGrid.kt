@@ -249,11 +249,11 @@ fun FlexibleImageGrid(
         }
 
         is LazyGridState -> {
-            ImageGridPullToRefreshContainer(
-                modifier = modifier,
-                pullToRefreshController = pullToRefreshController
-            ) {
-                Box(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = modifier) {
+                ImageGridPullToRefreshContainer(
+                    modifier = Modifier.fillMaxSize(),
+                    pullToRefreshController = pullToRefreshController
+                ) {
                     UniformImageGrid(
                         modifier = Modifier.fillMaxSize(),
                         userScrollEnabled = userScrollEnabled,
