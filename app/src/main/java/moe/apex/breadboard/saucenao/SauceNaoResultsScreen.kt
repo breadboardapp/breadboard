@@ -240,6 +240,7 @@ fun SauceNaoResultsScreen(
                                             isExpanded -> ListItemPosition.TOP // If this result is expanded
                                             currentState.header.resultsCount == 1 -> ListItemPosition.SINGLE_ELEMENT // If this is the only result
                                             groupIndex == 0 && expandedGroupIndex == 1 -> ListItemPosition.SINGLE_ELEMENT // If this is the first result and the result below this is expanded
+                                            groupIndex == 0 && currentState.groups.size == 1 -> ListItemPosition.SINGLE_ELEMENT // If this is the first result and all other results are part of this one's group
                                             groupIndex == 0 -> ListItemPosition.TOP // If this is the first result and the result below this is not expanded
                                             groupIndex == currentState.groups.lastIndex && expandedGroupIndex == groupIndex - 1 -> ListItemPosition.SINGLE_ELEMENT // If this is the last result and the one above this is expanded
                                             groupIndex - 1 == expandedGroupIndex -> ListItemPosition.TOP // If this is not the last result, but the result above this is expanded
