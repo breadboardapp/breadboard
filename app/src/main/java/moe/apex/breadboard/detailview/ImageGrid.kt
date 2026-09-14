@@ -218,9 +218,9 @@ fun FlexibleImageGrid(
         scope.headerItems()
     }
 
-    when (gridState) {
-        is LazyStaggeredGridState -> {
-            Box(modifier = modifier) {
+    Box(modifier = modifier) {
+        when (gridState) {
+            is LazyStaggeredGridState -> {
                 ImageGridPullToRefreshContainer(
                     modifier = Modifier.fillMaxSize(),
                     pullToRefreshController = pullToRefreshController
@@ -246,10 +246,8 @@ fun FlexibleImageGrid(
                     content = loadingIndicator
                 )
             }
-        }
 
-        is LazyGridState -> {
-            Box(modifier = modifier) {
+            is LazyGridState -> {
                 ImageGridPullToRefreshContainer(
                     modifier = Modifier.fillMaxSize(),
                     pullToRefreshController = pullToRefreshController
@@ -275,10 +273,10 @@ fun FlexibleImageGrid(
                     )
                 }
             }
-        }
 
-        else -> {
-            throw IllegalArgumentException("gridState must be either LazyStaggeredGridState or LazyGridState")
+            else -> {
+                throw IllegalArgumentException("gridState must be either LazyStaggeredGridState or LazyGridState")
+            }
         }
     }
 }
