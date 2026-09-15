@@ -1654,28 +1654,45 @@ fun ExpressivePromptWithActions(
 
 
 @Composable
+fun ApiKeyPrompt(
+    title: String,
+    summary: String,
+    modifier: Modifier = Modifier,
+    beforeActions: (@Composable RowScope.() -> Unit)? = null,
+    onSettingsClick: () -> Unit
+) {
+    ExpressivePromptWithActions(
+        modifier = modifier,
+        title = title,
+        summary = summary
+    ) {
+        beforeActions?.invoke(this)
+
+        Button(
+            onClick = onSettingsClick,
+            shapes = ButtonDefaults.shapes()
+        ) {
+            Text("API key settings")
+        }
+    }
+}
+
+
+@Composable
 fun ApiKeyRequiredPrompt(
     modifier: Modifier = Modifier,
     source: ImageSource,
     navController: NavController,
     beforeActions: (@Composable RowScope.() -> Unit)? = null
 ) {
-    ExpressivePromptWithActions(
-        modifier = modifier,
+    ApiKeyPrompt(
         title = "API key needed",
         summary = "To use ${source.label}, you must first set an API key.\n" +
-                  "Alternatively, choose a different source."
+                  "Alternatively, choose a different source.",
+        modifier = modifier,
+        beforeActions = beforeActions
     ) {
-        beforeActions?.invoke(this)
-
-        Button(
-            onClick = {
-                navController.navigate(ApiKeysSettings)
-            },
-            shapes = ButtonDefaults.shapes()
-        ) {
-            Text("API key settings")
-        }
+        navController.navigate(ApiKeysSettings)
     }
 }
 

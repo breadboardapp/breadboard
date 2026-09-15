@@ -1,6 +1,7 @@
 package moe.apex.breadboard.largeimageview
 
 import android.annotation.SuppressLint
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
@@ -138,9 +139,11 @@ import me.saket.telephoto.zoomable.ZoomSpec
 import me.saket.telephoto.zoomable.ZoomableState
 import me.saket.telephoto.zoomable.rememberZoomableState
 import me.saket.telephoto.zoomable.zoomable
+import moe.apex.breadboard.MainActivity
 import moe.apex.breadboard.R
 import moe.apex.breadboard.VolumeButtonHandler
 import moe.apex.breadboard.image.Image
+import moe.apex.breadboard.image.ImageBoardRequirement
 import moe.apex.breadboard.preferences.AutoplayVideosMode
 import moe.apex.breadboard.preferences.DataSaver
 import moe.apex.breadboard.preferences.Experiment
@@ -150,6 +153,7 @@ import moe.apex.breadboard.preferences.ToolbarAction
 import moe.apex.breadboard.prefs
 import moe.apex.breadboard.ui.theme.BreadboardTheme
 import moe.apex.breadboard.ui.theme.Typography
+import moe.apex.breadboard.util.ApiKeyPrompt
 import moe.apex.breadboard.util.CombinedClickableAction
 import moe.apex.breadboard.util.showToast
 import moe.apex.breadboard.util.FullscreenLoadingSpinner
@@ -640,18 +644,44 @@ fun LazyLargeImageView(
 ) {
     val context = LocalContext.current
     val prefs = LocalPreferences.current
+    val auth = prefs.authFor(imageSource, context)
     var image by remember { mutableStateOf<Image?>(null) }
     var isLoading by remember { mutableStateOf(true) }
+    val needsAuth = remember {
+        imageSource.imageBoard.apiKeyRequirement == ImageBoardRequirement.REQUIRED && auth == null
+    }
+    var failedAuth by remember { mutableStateOf(false) }
+
+    if (needsAuth || failedAuth) {
+        return Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            ApiKeyPrompt(
+                title = "API key missing or invalid",
+                summary = "To view a post from ${imageSource.label}, you must first set a valid API key."
+            ) {
+                val intent = Intent(Intent.ACTION_VIEW)
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                intent.component = ComponentName(context, MainActivity::class.java)
+                intent.putExtra("destination", "api_key_settings")
+                context.startActivity(intent)
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         try {
-            val auth = prefs.authFor(imageSource, context)
             image = if (isMd5) imageSource.imageBoard.loadImageMd5(id, auth)
                     else imageSource.imageBoard.loadImage(id, auth)
-        } catch (e: ExecutionException) {
-            if (e.cause is SocketTimeoutException) {
+        } catch (e: Exception) {
+            if (e is ExecutionException && e.cause is SocketTimeoutException) {
                 showToast(context, "Connection timed out")
             }
+            /* Set `failedAuth` to `true` if the image failed to load despite
+               the image board requiring an API key (and an API key is already set). */
+            failedAuth = imageSource.imageBoard.apiKeyRequirement == ImageBoardRequirement.REQUIRED && auth != null
+            Log.e("LazyLargeImageView", "Error loading image", e)
         }
         isLoading = false
     }
@@ -667,10 +697,7 @@ fun LazyLargeImageView(
             listOf(image!!),
             onImageUpdate = {
                 if (image?.hasGroupedTags == false) {
-                    refreshImageMetadata(
-                        image = image!!,
-                        auth = prefs.authFor(image!!.imageSource, context)
-                    ) { newImage ->
+                    refreshImageMetadata(image!!, auth) { newImage ->
                         image = newImage
                     }
                 }
