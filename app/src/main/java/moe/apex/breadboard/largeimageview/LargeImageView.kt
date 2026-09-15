@@ -664,7 +664,7 @@ fun LazyLargeImageView(
                 val intent = Intent(Intent.ACTION_VIEW)
                 intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 intent.component = ComponentName(context, MainActivity::class.java)
-                intent.putExtra("destination", "api_key_settings")
+                intent.putExtra("destination", "api_keys_settings")
                 context.startActivity(intent)
             }
         }

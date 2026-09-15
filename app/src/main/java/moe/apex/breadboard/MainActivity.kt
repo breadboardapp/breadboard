@@ -108,7 +108,7 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
         return when (intent.getStringExtra("destination")) {
             "artist" -> maybePrepareArtistDestination(intent)
             "search" -> maybePrepareResultsDestination(intent)
-            "api_key_settings" -> ApiKeysSettings
+            "api_keys_settings" -> ApiKeysSettings
             else -> null
         }
     }
