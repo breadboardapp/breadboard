@@ -30,6 +30,7 @@ import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import moe.apex.breadboard.navigation.ApiKeysSettings
 import moe.apex.breadboard.navigation.ArtistProfile
 import moe.apex.breadboard.navigation.Favourites
 import moe.apex.breadboard.navigation.Home
@@ -107,6 +108,7 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
         return when (intent.getStringExtra("destination")) {
             "artist" -> maybePrepareArtistDestination(intent)
             "search" -> maybePrepareResultsDestination(intent)
+            "api_keys_settings" -> ApiKeysSettings
             else -> null
         }
     }
