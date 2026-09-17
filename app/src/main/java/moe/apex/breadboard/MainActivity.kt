@@ -30,7 +30,6 @@ import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import moe.apex.breadboard.navigation.ArtistProfile
 import moe.apex.breadboard.navigation.Favourites
 import moe.apex.breadboard.navigation.Home
 import moe.apex.breadboard.navigation.Navigation
@@ -83,13 +82,6 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
     }
 
 
-    private fun maybePrepareArtistDestination(intent: Intent): ArtistProfile? {
-        val artist = intent.getStringExtra("artist") ?: return null
-        val source = ImageSource.valueOf(intent.getStringExtra("origin_source") ?: return null)
-        return ArtistProfile(artist, source)
-    }
-
-
     private fun determineDestination(intent: Intent): Any? {
         // Handle Intent.ACTION_SEND intent for reverse search
         if (intent.action == Intent.ACTION_SEND) {
@@ -105,7 +97,6 @@ class MainActivity : SingletonImageLoader.Factory, ComponentActivity(), VolumeBu
         }
 
         return when (intent.getStringExtra("destination")) {
-            "artist" -> maybePrepareArtistDestination(intent)
             "search" -> maybePrepareResultsDestination(intent)
             else -> null
         }
