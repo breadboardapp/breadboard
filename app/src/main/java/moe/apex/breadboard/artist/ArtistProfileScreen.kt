@@ -146,6 +146,10 @@ fun ArtistProfileScreen(
     val windowInfo = LocalWindowInfo.current
     val density = LocalDensity.current
 
+    val filteredImages = remember(images) {
+        images.filter { it.metadata?.tags?.all { t -> t !in prefs.blockedTags } ?: true }
+    }
+
     val isWideScreen = remember {
         with(density) {
             windowInfo.containerSize.width.toDp() >= 840.dp // M3 spec for large device in landscape
@@ -219,7 +223,7 @@ fun ArtistProfileScreen(
                 navController = navController,
                 artist = artist,
                 artistTag = artistTag,
-                images = images
+                images = filteredImages
             ) { index, _ ->
                 selectedImageIndex = index
                 shouldShowLargeImage = true
@@ -229,7 +233,7 @@ fun ArtistProfileScreen(
                 navController = navController,
                 artist = artist,
                 artistTag = artistTag,
-                images = images
+                images = filteredImages
             ) { index, _ ->
                 selectedImageIndex = index
                 shouldShowLargeImage = true
@@ -242,7 +246,7 @@ fun ArtistProfileScreen(
         navController = navController,
         isActive = shouldShowLargeImage,
         initialSelectedImageIndex = selectedImageIndex,
-        allImages = images,
+        allImages = filteredImages,
         onActiveStateChanged = { shouldShowLargeImage = it },
     )
 }
