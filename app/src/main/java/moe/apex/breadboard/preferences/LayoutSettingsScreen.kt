@@ -34,7 +34,7 @@ fun LayoutSettingsScreen(navController: NavHostController) {
     MainScreenScaffold(
         topAppBar = {
             LargeTitleBar(
-                title = "Behaviour and layout",
+                title = "Appearance and behaviour",
                 scrollBehavior = scrollBehavior,
                 navController = navController
             )

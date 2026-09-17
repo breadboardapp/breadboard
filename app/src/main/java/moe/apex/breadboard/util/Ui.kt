@@ -260,7 +260,7 @@ fun LargeTitleBar(
     additionalActions: @Composable RowScope.() -> Unit = { }
 ) {
     LargeTopAppBar(
-        title = { Text(title, overflow = TextOverflow.Ellipsis) },
+        title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         scrollBehavior = scrollBehavior,
         actions = additionalActions,
         navigationIcon = { NavigationIcon(navController) },
@@ -305,7 +305,7 @@ fun SmallTitleBar(
     additionalActions: @Composable RowScope.() -> Unit = { }
 ) {
     TopAppBar(
-        title = { Text(title) },
+        title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         scrollBehavior = scrollBehavior,
         actions = additionalActions,
         colors = colors,
