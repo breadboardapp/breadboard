@@ -115,6 +115,20 @@ fun LayoutSettingsScreen(navController: NavHostController) {
                         }
                     }
                 }
+                item {
+                    SwitchPref(
+                        checked = currentSettings.showResultsCount,
+                        title = "Show search result count",
+                        summary = "Show the total number of unfiltered results in search."
+                    ) {
+                        scope.launch {
+                            preferencesRepository.updatePref(
+                                PreferenceKeys.SHOW_RESULTS_COUNT,
+                                it
+                            )
+                        }
+                    }
+                }
             }
 
             LazyExpressiveGroup("Behaviour") {

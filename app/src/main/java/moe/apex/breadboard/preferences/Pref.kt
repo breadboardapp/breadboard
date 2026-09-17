@@ -105,6 +105,7 @@ data object PrefNames {
     const val PROFILES_FOR_ALL_TAGS = "profiles_for_all_tags"
     const val SAUCENAO_API_KEY = "saucenao_api_key"
     const val SAUCENAO_ALLOW_NSFW = "saucenao_allow_nsfw"
+    const val SHOW_RESULTS_COUNT = "show_results_count"
 }
 
 
@@ -144,6 +145,7 @@ object PreferenceKeys {
     val PROFILES_FOR_ALL_TAGS = booleanPreferencesKey(PrefNames.PROFILES_FOR_ALL_TAGS)
     val SAUCENAO_API_KEY = stringPreferencesKey(PrefNames.SAUCENAO_API_KEY)
     val SAUCENAO_ALLOW_NSFW = booleanPreferencesKey(PrefNames.SAUCENAO_ALLOW_NSFW)
+    val SHOW_RESULTS_COUNT = booleanPreferencesKey(PrefNames.SHOW_RESULTS_COUNT)
 }
 
 
@@ -256,6 +258,7 @@ data class Prefs(
     val profilesForAllTags: Boolean,
     val saucenaoApiKey: String,
     val saucenaoAllowNsfw: Boolean,
+    val showResultsCount: Boolean,
 ) {
     companion object {
         val DEFAULT = Prefs(
@@ -294,6 +297,7 @@ data class Prefs(
             profilesForAllTags = false,
             saucenaoApiKey = "",
             saucenaoAllowNsfw = false,
+            showResultsCount = false,
         )
     }
 
@@ -365,6 +369,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             PreferenceKeys.PROFILES_FOR_ALL_TAGS to PrefMeta(PrefCategory.SETTING),
             PreferenceKeys.SAUCENAO_API_KEY to PrefMeta(PrefCategory.SETTING, exportable = false),
             PreferenceKeys.SAUCENAO_ALLOW_NSFW to PrefMeta(PrefCategory.SETTING),
+            PreferenceKeys.SHOW_RESULTS_COUNT to PrefMeta(PrefCategory.SETTING)
         )
     }
 
@@ -907,6 +912,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val profilesForAllTags = preferences[PreferenceKeys.PROFILES_FOR_ALL_TAGS] ?: Prefs.DEFAULT.profilesForAllTags
         val saucenaoApiKey = preferences[PreferenceKeys.SAUCENAO_API_KEY] ?: Prefs.DEFAULT.saucenaoApiKey
         val saucenaoAllowNsfw = preferences[PreferenceKeys.SAUCENAO_ALLOW_NSFW] ?: Prefs.DEFAULT.saucenaoAllowNsfw
+        val showResultsCount = preferences[PreferenceKeys.SHOW_RESULTS_COUNT] ?: Prefs.DEFAULT.showResultsCount
 
         return Prefs(
             dataSaver,
@@ -944,6 +950,7 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
             profilesForAllTags,
             saucenaoApiKey,
             saucenaoAllowNsfw,
+            showResultsCount,
         )
     }
 }

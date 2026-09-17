@@ -6,6 +6,8 @@ import android.content.Context
 import android.os.Build
 import android.os.PowerManager
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
@@ -266,6 +268,27 @@ fun LargeTitleBar(
             scrolledContainerColor = BreadboardTheme.colors.titleBar
         ),
        windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Vertical)
+    )
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LargeTitleBar(
+    title: @Composable () -> Unit,
+    scrollBehavior: TopAppBarScrollBehavior?,
+    navController: NavController? = null,
+    additionalActions: @Composable RowScope.() -> Unit = { }
+) {
+    LargeTopAppBar(
+        title = title,
+        scrollBehavior = scrollBehavior,
+        actions = additionalActions,
+        navigationIcon = { NavigationIcon(navController) },
+        colors = TopAppBarDefaults.topAppBarColors().copy(
+            scrolledContainerColor = BreadboardTheme.colors.titleBar
+        ),
+        windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Vertical)
     )
 }
 
@@ -1392,18 +1415,24 @@ when there is a full width item in the grid (like the filter). */
 fun ScrollToTopArrow(
     scrollableState: ScrollableState,
     animate: Boolean = true,
+    enterAnimation: EnterTransition = fadeIn(),
+    exitAnimation: ExitTransition = fadeOut(),
     alsoOnClick: (() -> Unit)? = null
 ) {
     if (scrollableState is LazyStaggeredGridState) {
         ScrollToTopArrow(
             lazyStaggeredGridState = scrollableState,
             animate = animate,
+            enterAnimation = enterAnimation,
+            exitAnimation = exitAnimation,
             alsoOnClick = alsoOnClick
         )
     } else if (scrollableState is LazyGridState) {
         ScrollToTopArrow(
             lazyGridState = scrollableState,
             animate = animate,
+            enterAnimation = enterAnimation,
+            exitAnimation = exitAnimation,
             alsoOnClick = alsoOnClick
         )
     } else {
@@ -1416,6 +1445,8 @@ fun ScrollToTopArrow(
 private fun ScrollToTopArrow(
     lazyGridState: LazyGridState,
     animate: Boolean = true,
+    enterAnimation: EnterTransition = fadeIn(),
+    exitAnimation: ExitTransition = fadeOut(),
     alsoOnClick: (() -> Unit)? = null
 ) {
     val isScrolledPastFirst by remember(lazyGridState) {
@@ -1424,6 +1455,8 @@ private fun ScrollToTopArrow(
 
     ScrollToTopArrow(
         visible = isScrolledPastFirst,
+        enterAnimation = enterAnimation,
+        exitAnimation = exitAnimation,
         onScrollToTop = {
             if (animate) {
                 lazyGridState.animateScrollToItem(0)
@@ -1440,6 +1473,8 @@ private fun ScrollToTopArrow(
 private fun ScrollToTopArrow(
     lazyStaggeredGridState: LazyStaggeredGridState,
     animate: Boolean = true,
+    enterAnimation: EnterTransition = fadeIn(),
+    exitAnimation: ExitTransition = fadeOut(),
     alsoOnClick: (() -> Unit)? = null
 ) {
     val isScrolledPastFirst by remember(lazyStaggeredGridState) {
@@ -1448,6 +1483,8 @@ private fun ScrollToTopArrow(
 
     ScrollToTopArrow(
         visible = isScrolledPastFirst,
+        enterAnimation = enterAnimation,
+        exitAnimation = exitAnimation,
         onScrollToTop = {
             if (animate) {
                 lazyStaggeredGridState.animateScrollToItem(0)
@@ -1463,14 +1500,16 @@ private fun ScrollToTopArrow(
 @Composable
 private fun ScrollToTopArrow(
     visible: Boolean,
+    enterAnimation: EnterTransition = fadeIn(),
+    exitAnimation: ExitTransition = fadeOut(),
     onScrollToTop: suspend () -> Unit,
     onClick: (() -> Unit)? = null
 ) {
     val scope = rememberCoroutineScope()
 
     AnimatedVisibility(
-        enter = fadeIn(),
-        exit = fadeOut(),
+        enter = enterAnimation,
+        exit = exitAnimation,
         visible = visible
     ) {
         IconButton(

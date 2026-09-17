@@ -51,6 +51,9 @@ interface ImageBoard {
         get() = null
     val authenticatedTagSearchUrl: String?
         get() = tagSearchUrl?.let { "$it&api_key=%s&user_id=%s" }
+    val totalPostCountUrl: String
+    val authenticatedTotalPostCountUrl: String
+        get() = "$totalPostCountUrl&api_key=%s&user_id=%s"
     val apiKeyCreationUrl: String?
         get() = null
     val firstPageIndex: Int
@@ -99,6 +102,8 @@ interface ImageBoard {
 
     suspend fun loadPage(tags: String, page: Int, auth: ImageBoardAuth? = null): List<Image>
 
+    suspend fun loadTotalCount(tags: String, auth: ImageBoardAuth? = null): Int? = null
+
     suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth? = null): ImageMetadata?
 
     fun formatTagString(tags: List<TagSuggestion>): String {
@@ -141,6 +146,9 @@ interface ImageBoard {
 
 
 interface GelbooruBasedImageBoard : ImageBoard {
+    override val totalPostCountUrl: String
+        get() = "${baseUrl}index.php?page=dapi&s=post&q=index&limit=1&tags=%s"
+
     fun parseImage(imageSource: ImageSource, e: JSONObject): Image? {
         val id = e.getString("id")
         val (fileName, fileFormat) = e.getString("image").split('.', limit = 2)
@@ -246,6 +254,24 @@ interface GelbooruBasedImageBoard : ImageBoard {
         }
 
         return images
+    }
+
+    override suspend fun loadTotalCount(tags: String, auth: ImageBoardAuth?): Int? {
+        return try {
+            val encodedTags = URLEncoder.encode(tags, "utf-8")
+            val url = if (auth != null) {
+                authenticatedTotalPostCountUrl.format(encodedTags, auth.apiKey, auth.user)
+            } else {
+                totalPostCountUrl.format(encodedTags)
+            }
+
+            val body = RequestUtil.get(url)
+
+            Regex("""count="(\d+)"""").find(body)?.groupValues?.get(1)?.toIntOrNull()
+        } catch (e: Exception) {
+            Log.e("ImageBoard", "Error loading total count for $baseUrl", e)
+            null
+        }
     }
 
     override fun getRatingFromString(rating: String): ImageRating {
@@ -416,8 +442,9 @@ object Danbooru : ImageBoard {
         "5" to "meta",
     )
     override val imageSearchUrl = "${baseUrl}posts.json?tags=%s&page=%d&limit=100"
-    override val firstPageIndex = 1
     override val authenticatedImageSearchUrl = "$imageSearchUrl&api_key=%s&login=%s"
+    override val totalPostCountUrl = "${baseUrl}counts/posts.json?tags=%s"
+    override val firstPageIndex = 1
     override val apiKeyCreationUrl = "${baseUrl}/profile"
     override val apiKeyRequirement = ImageBoardRequirement.RECOMMENDED
     override val localFilterType = ImageBoardRequirement.RECOMMENDED
@@ -515,6 +542,28 @@ object Danbooru : ImageBoard {
         return subjects.toList()
     }
 
+    override suspend fun loadTotalCount(tags: String, auth: ImageBoardAuth?): Int? {
+        return try {
+            val encodedTags = URLEncoder.encode(tags, "utf-8")
+            val url = if (auth != null) {
+                authenticatedTotalPostCountUrl.format(encodedTags, auth.apiKey, auth.user)
+            } else {
+                totalPostCountUrl.format(encodedTags)
+            }
+
+            val body = RequestUtil.get(url)
+            if (body.isEmpty()) {
+                return null
+            }
+            val json = JSONObject(body)
+
+            json.optJSONObject("counts")?.optInt("posts") ?: json.optInt("posts")
+        } catch (e: Exception) {
+            Log.e("ImageBoard", "Error loading total count for Danbooru", e)
+            null
+        }
+    }
+
     override suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth?): ImageMetadata? {
         val img = image.id?.let { loadImage(it, auth) } ?: loadImageMd5(image.fileName, auth)
         return img?.metadata
@@ -605,6 +654,29 @@ object DanbooruSafe : ImageBoard by Danbooru {
     }
 
 
+    override suspend fun loadTotalCount(tags: String, auth: ImageBoardAuth?): Int? {
+        return try {
+            val encodedTags = URLEncoder.encode(tags, "utf-8")
+            val url = if (auth != null) {
+                authenticatedTotalPostCountUrl.format(encodedTags, auth.apiKey, auth.user)
+            } else {
+                totalPostCountUrl.format(encodedTags)
+            }
+
+            val body = RequestUtil.get(url)
+            if (body.isEmpty()){
+                return null
+            }
+            val json = JSONObject(body)
+
+            json.optJSONObject("counts")?.optInt("posts") ?: json.optInt("posts")
+        } catch (e: Exception) {
+            Log.e("ImageBoard", "Error loading total count for DanbooruSafe", e)
+            null
+        }
+    }
+
+
     suspend fun getMostPopularPosts(artistTag: String): List<Image> {
         val url = popularUrl.format(artistTag)
         val body = RequestUtil.get(url)
@@ -635,6 +707,7 @@ object Yandere : ImageBoard {
         "6" to "faults",
     )
     override val imageSearchUrl = "${baseUrl}post.json?tags=%s&page=%d&limit=100"
+    override val totalPostCountUrl = "${baseUrl}post.xml?tags=%s&limit=1"
     override val firstPageIndex = 1
     override val localFilterType = ImageBoardRequirement.REQUIRED
 
@@ -698,6 +771,27 @@ object Yandere : ImageBoard {
 
     override suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth?): ImageMetadata? {
         return null // TODO
+    }
+
+    override suspend fun loadTotalCount(tags: String, auth: ImageBoardAuth?): Int? {
+        return try {
+            val encodedTags = URLEncoder.encode(tags, "utf-8")
+            val url = if (auth != null) {
+                authenticatedTotalPostCountUrl.format(encodedTags, auth.apiKey, auth.user)
+            } else {
+                totalPostCountUrl.format(encodedTags)
+            }
+
+            val body = RequestUtil.get(url)
+            if (body.isEmpty()) {
+                return null
+            }
+
+            Regex("""count="(\d+)"""").find(body)?.groupValues?.get(1)?.toIntOrNull()
+        } catch (e: Exception) {
+            Log.e("ImageBoard", "Error loading total count for Yandere", e)
+            null
+        }
     }
 
     override fun getRatingFromString(rating: String): ImageRating {

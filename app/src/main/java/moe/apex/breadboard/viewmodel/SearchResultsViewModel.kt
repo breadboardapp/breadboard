@@ -2,8 +2,10 @@ package moe.apex.breadboard.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import moe.apex.breadboard.image.Image
 import moe.apex.breadboard.image.ImageBoardAuth
 import moe.apex.breadboard.image.AI_TAG_NAMES
@@ -24,6 +26,9 @@ class SearchResultsViewModel : ViewModel(), GridStateHolder by GridStateHolderDe
     private val _images = MutableStateFlow<List<Image>>(emptyList())
     val images = _images.asStateFlow()
 
+    private val _totalResultsCount = MutableStateFlow<Int?>(null)
+    val totalResultsCount = _totalResultsCount.asStateFlow()
+
     private val _shouldKeepSearching = MutableStateFlow(true)
 
     private val _pageNumber = MutableStateFlow(0)
@@ -37,12 +42,14 @@ class SearchResultsViewModel : ViewModel(), GridStateHolder by GridStateHolderDe
     private lateinit var imageSource: ImageSource
     private lateinit var query: String
     private var tagList: List<String> = emptyList()
+    private var loadResultsCount: Boolean = false
 
 
     fun setup(
         imageSource: ImageSource,
         auth: ImageBoardAuth?,
-        tags: List<String>
+        tags: List<String>,
+        loadResultsCount: Boolean = false
     ) {
         Log.i("SearchResults", "Setting up SearchResultsViewModel with source: ${imageSource.name}, tags: $tags")
         this.imageSource = imageSource
@@ -50,6 +57,7 @@ class SearchResultsViewModel : ViewModel(), GridStateHolder by GridStateHolderDe
         query = imageSource.imageBoard.formatTagNameString(tags)
         _auth.value = auth
         _pageNumber.value = imageSource.imageBoard.firstPageIndex
+        this.loadResultsCount = loadResultsCount
         resetGridStates()
         _isReady.value = true
     }
@@ -57,6 +65,7 @@ class SearchResultsViewModel : ViewModel(), GridStateHolder by GridStateHolderDe
 
     fun prepareReset() {
         Log.i("SearchResults", "Resetting SearchResultsViewModel")
+        _totalResultsCount.value = null
         _isReady.value = false
     }
 
@@ -96,6 +105,14 @@ class SearchResultsViewModel : ViewModel(), GridStateHolder by GridStateHolderDe
             } else {
                 if (_pageNumber.value == imageSource.imageBoard.firstPageIndex) {
                     _images.value = newImages
+                    if (loadResultsCount) {
+                        viewModelScope.launch {
+                            _totalResultsCount.value = imageSource.imageBoard.loadTotalCount(query, auth.value)
+                        }
+                    }
+                    else {
+                        _images.value = newImages
+                    }
                 } else {
                     _images.value += newImages.filter { it !in _images.value }
                 }

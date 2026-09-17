@@ -1,5 +1,9 @@
 package moe.apex.breadboard.detailview
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -22,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -37,6 +42,7 @@ import moe.apex.breadboard.preferences.PreferenceKeys
 import moe.apex.breadboard.prefs
 import moe.apex.breadboard.util.AgeVerification
 import moe.apex.breadboard.util.HorizontallyScrollingChipsWithLabels
+import java.text.NumberFormat
 import moe.apex.breadboard.util.LargeTitleBar
 import moe.apex.breadboard.util.MainScreenScaffold
 import moe.apex.breadboard.largeimageview.OffsetBasedLargeImageView
@@ -47,6 +53,7 @@ import moe.apex.breadboard.util.ScrollToTopArrow
 import moe.apex.breadboard.util.TINY_SPACER
 import moe.apex.breadboard.util.availableRatingsForCurrentSource
 import moe.apex.breadboard.util.filterChipSolidColor
+import moe.apex.breadboard.util.pluralise
 import moe.apex.breadboard.util.refreshImageMetadata
 import moe.apex.breadboard.util.rememberPullToRefreshController
 import moe.apex.breadboard.viewmodel.SearchResultsViewModel
@@ -77,6 +84,8 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
     val viewModelImages by viewModel.images.collectAsStateWithLifecycle()
     val blockedTags by viewModel.blockedTags.collectAsStateWithLifecycle()
     val selectedRatings by viewModel.selectedRatings.collectAsStateWithLifecycle()
+    val totalResultsCount by viewModel.totalResultsCount.collectAsStateWithLifecycle()
+
     val state = if (prefs.useStaggeredGrid) {
         viewModel.staggeredGridState
     } else {
@@ -87,7 +96,8 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
         viewModel.setup(
             imageSource = source,
             auth = auth ?: prefs.authFor(source, context),
-            tags = tagList
+            tags = tagList,
+            loadResultsCount = prefs.showResultsCount
         )
     }
 
@@ -165,7 +175,23 @@ fun SearchResults(navController: NavController, source: ImageSource, tagList: Li
     MainScreenScaffold(
         topAppBar = {
             LargeTitleBar(
-                title = "Search results",
+                title = {
+                    AnimatedContent(
+                        targetState = totalResultsCount,
+                        contentAlignment = Alignment.CenterEnd,
+                        transitionSpec = { fadeIn() togetherWith fadeOut() }
+                    ) {
+                        if (it == null) {
+                            Text("Search results", overflow = TextOverflow.Ellipsis)
+                        } else {
+                            val text = NumberFormat.getInstance().format(totalResultsCount ?: 0)
+                            Text(
+                                text = "$text ${"result".pluralise(totalResultsCount ?: 0, "results")}",
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                },
                 scrollBehavior = scrollBehavior,
                 navController = navController,
                 additionalActions = {
