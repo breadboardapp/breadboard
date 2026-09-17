@@ -1,11 +1,14 @@
 package moe.apex.breadboard.util
 
 import android.content.ActivityNotFoundException
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.core.net.toUri
+import moe.apex.breadboard.MainActivity
+import moe.apex.breadboard.preferences.ImageSource
 
 
 fun getDefaultPackageForIntent(packageManager: PackageManager, intent: Intent): String? {
@@ -31,6 +34,25 @@ fun createViewIntent(uri: Uri, targetPackage: String? = null): Intent {
         flags = Intent.FLAG_ACTIVITY_NEW_TASK
         targetPackage?.let { setPackage(it) }
     }
+}
+
+
+private fun createMainActivityIntent(context: Context, destination: String): Intent {
+    val intent = Intent(Intent.ACTION_VIEW)
+    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+    intent.component = ComponentName(
+        context,
+        MainActivity::class.java
+    )
+    intent.putExtra("destination", destination)
+    return intent
+}
+
+
+fun createSearchIntent(context: Context, imageSource: ImageSource, query: String): Intent {
+    return createMainActivityIntent(context, "search")
+        .putExtra("source", imageSource.name)
+        .putExtra("query", listOf(query).toTypedArray())
 }
 
 

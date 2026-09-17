@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.plus
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.MoreVert
@@ -56,6 +57,7 @@ import moe.apex.breadboard.util.SMALL_SPACER
 import moe.apex.breadboard.util.TINY_SPACER
 import moe.apex.breadboard.util.TitleSummary
 import moe.apex.breadboard.util.launchInWebBrowser
+import moe.apex.breadboard.util.navBarHeight
 
 
 private enum class ApiKeyField(val label: String, val hide: Boolean) {
@@ -81,7 +83,10 @@ private data class ApiKeyDialogData(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ApiKeysSettingsScreen(navController: NavHostController) {
+fun ApiKeysSettingsScreen(
+    navController: NavHostController,
+    addBottomPadding: Boolean = true // When opened from deep link activity we don't want to add padding for the non-existent bottom nav
+) {
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
     val scope = rememberCoroutineScope()
@@ -102,14 +107,18 @@ fun ApiKeysSettingsScreen(navController: NavHostController) {
                 scrollBehavior = scrollBehavior,
                 navController = navController
             )
-        }
+        },
+        addBottomPadding = addBottomPadding
     ) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(it)
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
-            contentPadding = PaddingValues(MEDIUM_SPACER.dp)
+            /* The bottom nav bar handles system nav already.
+               We need to do that ourselves if we aren't showing the navbar (i.e. from deep link) */
+            contentPadding = PaddingValues(bottom = if (!addBottomPadding) navBarHeight else 0.dp)
+                    + PaddingValues(MEDIUM_SPACER.dp)
         ) {
             LazyExpressiveGroup(
                 title = "Content sources",

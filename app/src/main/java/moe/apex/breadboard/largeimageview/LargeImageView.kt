@@ -1,7 +1,6 @@
 package moe.apex.breadboard.largeimageview
 
 import android.annotation.SuppressLint
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
@@ -139,11 +138,11 @@ import me.saket.telephoto.zoomable.ZoomSpec
 import me.saket.telephoto.zoomable.ZoomableState
 import me.saket.telephoto.zoomable.rememberZoomableState
 import me.saket.telephoto.zoomable.zoomable
-import moe.apex.breadboard.MainActivity
 import moe.apex.breadboard.R
 import moe.apex.breadboard.VolumeButtonHandler
 import moe.apex.breadboard.image.Image
 import moe.apex.breadboard.image.ImageBoardRequirement
+import moe.apex.breadboard.navigation.ApiKeysSettings
 import moe.apex.breadboard.preferences.AutoplayVideosMode
 import moe.apex.breadboard.preferences.DataSaver
 import moe.apex.breadboard.preferences.Experiment
@@ -661,11 +660,8 @@ fun LazyLargeImageView(
                 title = "API key missing or invalid",
                 summary = "To view a post from ${imageSource.label}, you must first set a valid API key."
             ) {
-                val intent = Intent(Intent.ACTION_VIEW)
-                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                intent.component = ComponentName(context, MainActivity::class.java)
-                intent.putExtra("destination", "api_keys_settings")
-                context.startActivity(intent)
+                // ApiKeysSettings is one of the screens the DeepLinkActivity is allowed to have.
+                navController.navigate(ApiKeysSettings)
             }
         }
     }

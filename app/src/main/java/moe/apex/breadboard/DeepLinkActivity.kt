@@ -27,8 +27,8 @@ import coil3.gif.GifDecoder
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import moe.apex.breadboard.navigation.ArtistProfile
+import moe.apex.breadboard.navigation.DeepLinkNavigation
 import moe.apex.breadboard.navigation.ImageView
-import moe.apex.breadboard.navigation.Navigation
 import moe.apex.breadboard.preferences.ImageSource
 import moe.apex.breadboard.preferences.LocalPreferences
 import moe.apex.breadboard.util.FlagSecureHelper
@@ -107,13 +107,13 @@ class DeepLinkActivity : SingletonImageLoader.Factory, ComponentActivity(), Volu
                 intent.data?.let {
                     if (it.scheme == "breadboard") {
                         handleBreadboardScheme(it, prefs.imageSource)?.let { dest ->
-                            Navigation(navController = navController, startDestination = dest)
+                            DeepLinkNavigation(navController = navController, startDestination = dest)
                         } ?: finishAndRemoveTask()
                     } else {
                         ImageView.fromUri(it)?.let { iv ->
-                            Navigation(navController = navController, startDestination = iv)
+                            DeepLinkNavigation(navController = navController, startDestination = iv)
                         } ?: ArtistProfile.fromUri(it, prefs.imageSource)?.let { ap ->
-                            Navigation(navController = navController, startDestination = ap)
+                            DeepLinkNavigation(navController = navController, startDestination = ap)
                         } ?: reopenInBrowser(intent)
                     }
                 } ?: finishAndRemoveTask()

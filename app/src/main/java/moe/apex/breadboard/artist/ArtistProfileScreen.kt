@@ -93,6 +93,7 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import moe.apex.breadboard.DeepLinkActivity
 import moe.apex.breadboard.R
 import moe.apex.breadboard.detailview.FlexibleImageGrid
 import moe.apex.breadboard.detailview.FlexibleImageGridDefaults
@@ -117,6 +118,7 @@ import moe.apex.breadboard.util.SMALL_SPACER
 import moe.apex.breadboard.util.Summary
 import moe.apex.breadboard.util.TINY_SPACER
 import moe.apex.breadboard.util.copyText
+import moe.apex.breadboard.util.createSearchIntent
 import moe.apex.breadboard.util.generateColours
 import moe.apex.breadboard.util.navBarHeight
 import moe.apex.breadboard.util.showToast
@@ -188,7 +190,11 @@ fun ArtistProfileScreen(
                         )
                     },
                     onClick = {
-                        navController.navigate(Results(originImageSource, listOf(artistTag)))
+                        if (context is DeepLinkActivity) {
+                            context.startActivity(createSearchIntent(context, originImageSource, artistTag))
+                        } else {
+                            navController.navigate(Results(originImageSource, listOf(artistTag)))
+                        }
                     }
                 )
             }

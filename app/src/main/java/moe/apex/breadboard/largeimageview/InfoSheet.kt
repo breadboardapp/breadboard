@@ -2,9 +2,6 @@ package moe.apex.breadboard.largeimageview
 
 
 import android.annotation.SuppressLint
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
 import android.util.Log
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SharedTransitionLayout
@@ -75,13 +72,11 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import moe.apex.breadboard.DeepLinkActivity
-import moe.apex.breadboard.MainActivity
 import moe.apex.breadboard.image.AI_TAG_NAMES
 import moe.apex.breadboard.image.Image
 import moe.apex.breadboard.navigation.ArtistProfile
 import moe.apex.breadboard.navigation.ImageView
 import moe.apex.breadboard.navigation.Results
-import moe.apex.breadboard.preferences.ImageSource
 import moe.apex.breadboard.preferences.LocalPreferences
 import moe.apex.breadboard.preferences.PreferenceKeys
 import moe.apex.breadboard.prefs
@@ -106,6 +101,7 @@ import moe.apex.breadboard.util.TitleSummary
 import moe.apex.breadboard.util.TitledModalBottomSheet
 import moe.apex.breadboard.util.bouncyAnimationSpec
 import moe.apex.breadboard.util.copyText
+import moe.apex.breadboard.util.createSearchIntent
 import moe.apex.breadboard.util.isWebLink
 import moe.apex.breadboard.util.largerShapeCornerSize
 import moe.apex.breadboard.util.launchInWebBrowser
@@ -176,19 +172,15 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
 
     fun startTagSearch(tag: String, category: TagCategory, artistProfileForUncategorisedTags: Boolean = false) {
         hideAndThen {
-            /* Don't do new interactions inside the DeepLinkActivity.
-               We should only ever do them inside the main one. */
-            if (context is DeepLinkActivity) {
-                val intent = if (category == TagCategory.ARTIST || (category == TagCategory.GENERAL && artistProfileForUncategorisedTags)) {
-                    createArtistIntent(context, tag, image.imageSource)
-                } else {
-                    createSearchIntent(context, image.imageSource, tag)
-                }
-                context.startActivity(intent)
-            } else if (category == TagCategory.ARTIST || (category == TagCategory.GENERAL && artistProfileForUncategorisedTags)) {
+            if (category == TagCategory.ARTIST || (category == TagCategory.GENERAL && artistProfileForUncategorisedTags)) {
                 navController.navigate(ArtistProfile(tag, image.imageSource))
             } else {
-                navController.navigate(Results(image.imageSource, listOf(tag)))
+                if (context is DeepLinkActivity) {
+                    val intent = createSearchIntent(context, image.imageSource, tag)
+                    context.startActivity(intent)
+                } else {
+                    navController.navigate(Results(image.imageSource, listOf(tag)))
+                }
             }
         }
     }
@@ -865,32 +857,6 @@ private fun ExpandCollapseRow(
             Text(label)
         }
     }
-}
-
-
-private fun createSearchIntent(context: Context, imageSource: ImageSource, query: String): Intent {
-    return createMainActivityIntent(context, "search")
-        .putExtra("source", imageSource.name)
-        .putExtra("query", listOf(query).toTypedArray())
-}
-
-
-private fun createArtistIntent(context: Context, artistTag: String, originImageSource: ImageSource): Intent {
-    return createMainActivityIntent(context, "artist")
-        .putExtra("artist", artistTag)
-        .putExtra("origin_source", originImageSource.name)
-}
-
-
-private fun createMainActivityIntent(context: Context, destination: String): Intent {
-    val intent = Intent(Intent.ACTION_VIEW)
-    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-    intent.component = ComponentName(
-        context,
-        MainActivity::class.java
-    )
-    intent.putExtra("destination", destination)
-    return intent
 }
 
 

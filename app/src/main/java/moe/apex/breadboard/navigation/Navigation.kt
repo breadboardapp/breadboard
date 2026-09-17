@@ -1,6 +1,8 @@
 package moe.apex.breadboard.navigation
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
@@ -22,6 +24,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -70,28 +73,7 @@ import moe.apex.breadboard.preferences.ApiKeysSettingsScreen
 import moe.apex.breadboard.util.WhatsNew
 
 
-@Composable
-fun Navigation(navController: NavHostController, startDestination: Any = Search) {
-    val density = LocalDensity.current
-    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-
-    var isNavigationBarVisible by remember { mutableStateOf(true) }
-    val currentBSE by navController.currentBackStackEntryAsState()
-    val currentRoute = currentBSE?.destination
-    val focusRequester = remember { FocusRequester() }
-    val keyboard = LocalSoftwareKeyboardController.current
-
-    val slideDistance = remember {
-        val distance = 70.let { if(isRtl) -it else it }.dp
-        with(density) { distance.roundToPx() }
-    }
-
-    val easing = CubicBezierEasing(0.4f, 0.0f, 0.0f, 1f)
-    val enterTransition = slideInHorizontally(tween(easing = easing)) { slideDistance } + fadeIn(tween(easing = easing))
-    val exitTransition = slideOutHorizontally(tween(easing = easing)) { -slideDistance } + fadeOut(tween(easing = easing))
-    val popExitTransition = slideOutHorizontally(tween(easing = easing)) { slideDistance } + fadeOut( tween(easing = easing))
-    val popEnterTransition = slideInHorizontally(tween(easing = easing)) { -slideDistance } + fadeIn(tween(easing = easing))
-
+private object ScreenTypes{
     val homeScreens = listOf(Home::class, FollowedArtists::class)
     val searchScreens = listOf(Search::class, Results::class, ArtistProfile::class)
     val reverseSearchScreens = listOf(ReverseSearch::class, SauceNaoResults::class)
@@ -111,11 +93,58 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
     )
     val topLevelScreens = listOf(Home::class, Search::class, ReverseSearch::class, Favourites::class, FollowedArtists::class) + settingsScreens
     val slideTransitionScreens = listOf(Results::class, ImageView::class, ArtistProfile::class, FollowedArtists::class, SauceNaoResults::class, *settingsScreens.filter { it != Settings::class }.toTypedArray())
+}
+
+
+@Immutable
+private data class NavigationTransitions(
+    val enterTransition: EnterTransition,
+    val exitTransition: ExitTransition,
+    val popExitTransition: ExitTransition,
+    val popEnterTransition: EnterTransition
+)
+
+
+@Composable
+private fun rememberNavigationTransitions(): NavigationTransitions {
+    val density = LocalDensity.current
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+
+    val slideDistance = remember {
+        val distance = 70.let { if (isRtl) -it else it }.dp
+        with(density) { distance.roundToPx() }
+    }
+
+    val easing = CubicBezierEasing(0.4f, 0.0f, 0.0f, 1f)
+    val enterTransition =
+        slideInHorizontally(tween(easing = easing)) { slideDistance } + fadeIn(tween(easing = easing))
+    val exitTransition =
+        slideOutHorizontally(tween(easing = easing)) { -slideDistance } + fadeOut(tween(easing = easing))
+    val popExitTransition =
+        slideOutHorizontally(tween(easing = easing)) { slideDistance } + fadeOut(tween(easing = easing))
+    val popEnterTransition =
+        slideInHorizontally(tween(easing = easing)) { -slideDistance } + fadeIn(tween(easing = easing))
+
+    return remember {
+        NavigationTransitions(enterTransition, exitTransition, popExitTransition, popEnterTransition)
+    }
+}
+
+
+@Composable
+fun Navigation(navController: NavHostController, startDestination: Any = Search) {
+    var isNavigationBarVisible by remember { mutableStateOf(true) }
+    val currentBSE by navController.currentBackStackEntryAsState()
+    val currentRoute = currentBSE?.destination
+    val focusRequester = remember { FocusRequester() }
+    val keyboard = LocalSoftwareKeyboardController.current
+
+    val transitions = rememberNavigationTransitions()
 
     /* Some screens have the ability to hide the bottom bar, so we need to ensure it appears again
        when navigating to a different screen. */
     SideEffect(currentRoute) {
-        if (currentRoute.routeIs(topLevelScreens)) {
+        if (currentRoute.routeIs(ScreenTypes.topLevelScreens)) {
             isNavigationBarVisible = true
         }
     }
@@ -126,23 +155,26 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
         Scaffold(
             bottomBar = {
                 AnimatedVisibility(
-                    visible = currentRoute.routeIs(topLevelScreens) && isNavigationBarVisible,
+                    visible = currentRoute.routeIs(ScreenTypes.topLevelScreens) && isNavigationBarVisible,
                     enter = slideInVertically { it /3} + fadeIn(),
                     exit = slideOutVertically { it/3 } + fadeOut()
                 ) {
                     NavigationBar(containerColor = BreadboardTheme.colors.titleBar) {
                         NavigationBarItem(
                             label = { Text("Browse") },
-                            selected = currentRoute.routeIs(homeScreens),
+                            selected = currentRoute.routeIs(ScreenTypes.homeScreens),
                             icon = {
                                 Icon(
-                                    painter = painterResource(if (currentRoute.routeIs(homeScreens)){
-                                        R.drawable.ic_home_filled
-                                    } else {
-                                        R.drawable.ic_home_hollow
-                                    }),
+                                    painter = painterResource(
+                                        id = if (currentRoute.routeIs(ScreenTypes.homeScreens)) {
+                                            R.drawable.ic_home_filled
+                                        } else {
+                                            R.drawable.ic_home_hollow
+                                        }
+                                    ),
                                     contentDescription = "Browse",
-                                    modifier = Modifier.pulseOnSelect(currentRoute.routeIs(homeScreens))
+                                    modifier = Modifier.pulseOnSelect(currentRoute.routeIs(
+                                        ScreenTypes.homeScreens))
                                 )
                             },
                             onClick = {
@@ -163,12 +195,14 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
                         )
                         NavigationBarItem(
                             label = { Text("Search") },
-                            selected = currentRoute.routeIs(searchScreens),
+                            selected = currentRoute.routeIs(ScreenTypes.searchScreens),
                             icon = {
                                 Icon(
                                     imageVector = Icons.Rounded.Search,
                                     contentDescription = "Search",
-                                    modifier = Modifier.pulseOnSelect(currentRoute.routeIs(searchScreens))
+                                    modifier = Modifier.pulseOnSelect(currentRoute.routeIs(
+                                        ScreenTypes.searchScreens
+                                    ))
                                 )
                             },
                             onClick = {
@@ -186,18 +220,20 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
                         )
                         NavigationBarItem(
                             label = { Text("SauceNAO") },
-                            selected = currentRoute.routeIs(reverseSearchScreens),
+                            selected = currentRoute.routeIs(ScreenTypes.reverseSearchScreens),
                             icon = {
                                 Icon(
                                     painter = painterResource(
-                                        if (currentRoute.routeIs(reverseSearchScreens)) {
+                                        if (currentRoute.routeIs(ScreenTypes.reverseSearchScreens)) {
                                             R.drawable.ic_image_search_filled
                                         } else {
                                             R.drawable.ic_image_search_hollow
                                         }
                                     ),
                                     contentDescription = "SauceNAO Reverse image search",
-                                    modifier = Modifier.pulseOnSelect(currentRoute.routeIs(reverseSearchScreens))
+                                    modifier = Modifier.pulseOnSelect(currentRoute.routeIs(
+                                        ScreenTypes.reverseSearchScreens
+                                    ))
                                 )
                             },
                             onClick = {
@@ -228,12 +264,18 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
                         )
                         NavigationBarItem(
                             label = { Text("Settings") },
-                            selected = currentRoute.routeIs(settingsScreens),
+                            selected = currentRoute.routeIs(ScreenTypes.settingsScreens),
                             icon = {
                                 Icon(
-                                    painter = if (currentRoute.routeIs(settingsScreens)) rememberVectorPainter(Icons.Rounded.Settings) else painterResource(R.drawable.ic_settings_hollow),
+                                    painter = if (currentRoute.routeIs(ScreenTypes.settingsScreens)) {
+                                        rememberVectorPainter(Icons.Rounded.Settings)
+                                    } else {
+                                        painterResource(R.drawable.ic_settings_hollow)
+                                    },
                                     contentDescription = "Settings",
-                                    modifier = Modifier.pulseOnSelect(currentRoute.routeIs(settingsScreens))
+                                    modifier = Modifier.pulseOnSelect(currentRoute.routeIs(
+                                        ScreenTypes.settingsScreens
+                                    ))
                                 )
                             },
                             onClick = {
@@ -242,8 +284,10 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
                                    In such cases, tapping the settings tab should take them to the
                                    settings home page, not back to where they were before. */
                                 if (
-                                    currentRoute.routeIs(settingsScreens.filter { it != Settings::class }) &&
-                                    navController.previousBackStackEntry?.destination.routeIs(settingsScreens)
+                                    currentRoute.routeIs(ScreenTypes.settingsScreens.filter { it != Settings::class }) &&
+                                    navController.previousBackStackEntry?.destination.routeIs(
+                                        ScreenTypes.settingsScreens
+                                    )
                                 ) {
                                     navController.popBackStack()
                                 } else if (!currentRoute.routeIs(Settings::class)) {
@@ -262,23 +306,23 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
                 navController = navController,
                 startDestination = startDestination,
                 enterTransition = {
-                    if (targetState.destination.routeIs(slideTransitionScreens))
-                        enterTransition
+                    if (targetState.destination.routeIs(ScreenTypes.slideTransitionScreens))
+                        transitions.enterTransition
                     else fadeIn()
                 },
                 exitTransition = {
-                    if (targetState.destination.routeIs(slideTransitionScreens))
-                        exitTransition
+                    if (targetState.destination.routeIs(ScreenTypes.slideTransitionScreens))
+                        transitions.exitTransition
                     else fadeOut()
                 },
                 popEnterTransition = {
-                    if (initialState.destination.routeIs(slideTransitionScreens))
-                        popEnterTransition
+                    if (initialState.destination.routeIs(ScreenTypes.slideTransitionScreens))
+                        transitions.popEnterTransition
                     else fadeIn()
                 },
                 popExitTransition = {
-                    if (initialState.destination.routeIs(slideTransitionScreens))
-                        popExitTransition
+                    if (initialState.destination.routeIs(ScreenTypes.slideTransitionScreens))
+                        transitions.popExitTransition
                     else fadeOut()
                 }
             ) {
@@ -317,6 +361,42 @@ fun Navigation(navController: NavHostController, startDestination: Any = Search)
                 composable<SauceNaoResults> {
                     val args = it.toRoute<SauceNaoResults>()
                     SauceNaoResultsScreen(navController, args.imageUrl, args.fileUri)
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+fun DeepLinkNavigation(navController: NavHostController, startDestination: Any) {
+    val transitions = rememberNavigationTransitions()
+
+    BreadboardTheme {
+        Scaffold { padding ->
+            NavHost(
+                modifier = Modifier.padding(padding.withoutVertical()),
+                navController = navController,
+                startDestination = startDestination,
+                enterTransition = { transitions.enterTransition },
+                exitTransition = { transitions.exitTransition },
+                popEnterTransition = { transitions.popEnterTransition },
+                popExitTransition = { transitions.popExitTransition }
+            ) {
+                composable<ImageView> {
+                    val args = it.toRoute<ImageView>()
+                    LazyLargeImageView(navController, args.source, args.id, args.isMd5)
+                }
+                composable<ArtistProfile> {
+                    val args = it.toRoute<ArtistProfile>()
+                    ArtistProfileScreen(
+                        args.artistTag,
+                        args.originImageSource,
+                        navController = navController
+                    )
+                }
+                composable<ApiKeysSettings> {
+                    ApiKeysSettingsScreen(navController, addBottomPadding = false)
                 }
             }
         }
