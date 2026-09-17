@@ -30,7 +30,6 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.material.icons.rounded.ContentCopy
@@ -82,6 +81,7 @@ import moe.apex.breadboard.preferences.PreferenceKeys
 import moe.apex.breadboard.prefs
 import moe.apex.breadboard.tag.TagCategory
 import moe.apex.breadboard.ui.theme.prefTitle
+import moe.apex.breadboard.util.AiWarning
 import moe.apex.breadboard.util.BasicExpressiveContainer
 import moe.apex.breadboard.util.ButtonListItem
 import moe.apex.breadboard.util.CHIP_SPACING
@@ -102,6 +102,7 @@ import moe.apex.breadboard.util.TitledModalBottomSheet
 import moe.apex.breadboard.util.bouncyAnimationSpec
 import moe.apex.breadboard.util.copyText
 import moe.apex.breadboard.util.createSearchIntent
+import moe.apex.breadboard.util.isAiGenerated
 import moe.apex.breadboard.util.isWebLink
 import moe.apex.breadboard.util.largerShapeCornerSize
 import moe.apex.breadboard.util.launchInWebBrowser
@@ -564,7 +565,12 @@ private fun LazyListScope.infoContentItems(
 ) {
     if (image.isAiGenerated) {
         item {
-            InfoSheetAiWarning()
+            AiWarning(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = LARGE_SPACER.dp),
+                text = "This post is AI-generated."
+            )
         }
     }
 
@@ -856,32 +862,5 @@ private fun ExpandCollapseRow(
         ) {
             Text(label)
         }
-    }
-}
-
-
-private val Image.isAiGenerated: Boolean
-    get() = AI_TAG_NAMES.any { it in this.metadata?.tags.orEmpty() }
-
-
-@Composable
-private fun InfoSheetAiWarning() {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = LARGE_SPACER.dp),
-        horizontalArrangement = Arrangement.spacedBy(MEDIUM_SPACER.dp, Alignment.CenterHorizontally),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            imageVector = Icons.Outlined.Info,
-            contentDescription = null
-        )
-        Text(
-            text = "This post is AI-generated.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }

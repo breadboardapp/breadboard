@@ -1,5 +1,6 @@
 package moe.apex.breadboard.util
 
+import moe.apex.breadboard.image.AI_TAG_NAMES
 import moe.apex.breadboard.image.Image
 import moe.apex.breadboard.image.ImageBoardAuth
 
@@ -28,3 +29,7 @@ suspend fun refreshImageMetadata(
         true
     } else false
 }
+
+
+val Image.isAiGenerated: Boolean
+    get() = AI_TAG_NAMES.any { it in this.metadata?.tags.orEmpty() }

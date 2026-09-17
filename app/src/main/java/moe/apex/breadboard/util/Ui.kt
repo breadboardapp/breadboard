@@ -58,6 +58,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
@@ -1693,6 +1694,30 @@ fun ApiKeyRequiredPrompt(
         beforeActions = beforeActions
     ) {
         navController.navigate(ApiKeysSettings)
+    }
+}
+
+
+@Composable
+fun AiWarning(
+    modifier: Modifier = Modifier,
+    text: String
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(MEDIUM_SPACER.dp, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            imageVector = Icons.Outlined.Info,
+            contentDescription = null
+        )
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

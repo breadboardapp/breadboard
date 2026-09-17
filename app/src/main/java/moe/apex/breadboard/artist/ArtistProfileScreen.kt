@@ -108,8 +108,10 @@ import moe.apex.breadboard.prefs
 import moe.apex.breadboard.social.SocialEntry
 import moe.apex.breadboard.social.SocialSite
 import moe.apex.breadboard.ui.theme.BreadboardTheme
+import moe.apex.breadboard.util.AiWarning
 import moe.apex.breadboard.util.LARGE_SPACER
 import moe.apex.breadboard.util.LargeVerticalSpacer
+import moe.apex.breadboard.util.MEDIUM_LARGE_SPACER
 import moe.apex.breadboard.util.MEDIUM_SPACER
 import moe.apex.breadboard.util.MainScreenScaffold
 import moe.apex.breadboard.util.NavigationIcon
@@ -120,6 +122,7 @@ import moe.apex.breadboard.util.TINY_SPACER
 import moe.apex.breadboard.util.copyText
 import moe.apex.breadboard.util.createSearchIntent
 import moe.apex.breadboard.util.generateColours
+import moe.apex.breadboard.util.isAiGenerated
 import moe.apex.breadboard.util.navBarHeight
 import moe.apex.breadboard.util.showToast
 import moe.apex.breadboard.viewmodel.ArtistProfileViewModel
@@ -141,13 +144,24 @@ fun ArtistProfileScreen(
     val images by viewModel.images.collectAsState()
     val isInitialised by viewModel.isInitialised.collectAsState()
 
+    var hasAi by remember { mutableStateOf(false) }
+
     val context = LocalContext.current
     val prefs = LocalPreferences.current
     val windowInfo = LocalWindowInfo.current
     val density = LocalDensity.current
 
     val filteredImages = remember(images) {
-        images.filter { it.metadata?.tags?.all { t -> t !in prefs.blockedTags } ?: true }
+        images
+            .filter {
+                if (it.isAiGenerated) {
+                    hasAi = true
+                    !prefs.excludeAi
+                } else {
+                    true
+                }
+            }
+            .filter { it.metadata?.tags.orEmpty().none { t -> t in prefs.manuallyBlockedTags } }
     }
 
     val isWideScreen = remember {
@@ -223,6 +237,7 @@ fun ArtistProfileScreen(
                 navController = navController,
                 artist = artist,
                 artistTag = artistTag,
+                hasAi = hasAi,
                 images = filteredImages
             ) { index, _ ->
                 selectedImageIndex = index
@@ -233,6 +248,7 @@ fun ArtistProfileScreen(
                 navController = navController,
                 artist = artist,
                 artistTag = artistTag,
+                hasAi = hasAi,
                 images = filteredImages
             ) { index, _ ->
                 selectedImageIndex = index
@@ -258,6 +274,7 @@ private fun SinglePaneProfileLayout(
     artist: Artist?,
     artistTag: String,
     images: List<Image>,
+    hasAi: Boolean,
     onImageClick: (Int, Image) -> Unit
 ) {
     val prefs = LocalPreferences.current
@@ -284,6 +301,14 @@ private fun SinglePaneProfileLayout(
             item {
                 ArtistToolbar(artistTag)
             }
+            if (hasAi) {
+                item {
+                    AiWarning(
+                        modifier = Modifier.padding(top = MEDIUM_LARGE_SPACER.dp),
+                        text = "This user has been known to generate images with AI."
+                    )
+                }
+            }
             item {
                 PopularPostsHeading()
             }
@@ -304,12 +329,14 @@ private fun SplitProfileLayout(
     artist: Artist?,
     artistTag: String,
     images: List<Image>,
+    hasAi: Boolean,
     onImageClick: (Int, Image) -> Unit
 ) {
     val prefs = LocalPreferences.current
 
     Row(modifier = Modifier.fillMaxSize()) {
         Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(SMALL_SPACER.dp),
             modifier = Modifier
                 .weight(1f)
@@ -327,6 +354,11 @@ private fun SplitProfileLayout(
             )
             ArtistHeader(artist!!, images)
             ArtistToolbar(artistTag)
+            if (hasAi) {
+                AiWarning(
+                    modifier = Modifier.padding(top = MEDIUM_LARGE_SPACER.dp),
+                    text = "This user has been known to generate images with AI.")
+            }
         }
         FlexibleImageGrid(
             modifier = Modifier
@@ -600,7 +632,8 @@ private fun NavigationButtonBox(
         modifier = Modifier
             .windowInsetsPadding(WindowInsets.statusBars)
             .padding(bottom = SMALL_SPACER.dp)
-            .height(TopAppBarDefaults.LargeAppBarCollapsedHeight),
+            .height(TopAppBarDefaults.LargeAppBarCollapsedHeight)
+            .fillMaxWidth(),
         contentAlignment = Alignment.CenterStart
     ) {
         NavigationIcon(
