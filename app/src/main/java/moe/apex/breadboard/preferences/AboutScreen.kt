@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
@@ -35,6 +36,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import coil3.compose.AsyncImage
@@ -45,13 +51,14 @@ import moe.apex.breadboard.BuildConfig
 import moe.apex.breadboard.R
 import moe.apex.breadboard.navigation.LibrariesSettings
 import moe.apex.breadboard.util.ChevronRight
-import moe.apex.breadboard.util.ExpressiveGroup
-import moe.apex.breadboard.util.LARGE_SPACER
 import moe.apex.breadboard.util.LargeTitleBar
+import moe.apex.breadboard.util.LazyExpressiveGroup
 import moe.apex.breadboard.util.MainScreenScaffold
 import moe.apex.breadboard.util.SmallVerticalSpacer
 import moe.apex.breadboard.util.MEDIUM_SPACER
+import moe.apex.breadboard.util.SMALL_SPACER
 import moe.apex.breadboard.util.TitleSummary
+import moe.apex.breadboard.util.WhatsNewState
 import moe.apex.breadboard.util.openUrl
 import moe.apex.breadboard.util.releasePlatform
 
@@ -101,8 +108,7 @@ fun AboutScreen(navController: NavHostController) {
                 .fillMaxSize()
                 .padding(it)
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
-            contentPadding = PaddingValues(vertical = MEDIUM_SPACER.dp),
-            verticalArrangement = Arrangement.spacedBy(LARGE_SPACER.dp)
+            contentPadding = PaddingValues(MEDIUM_SPACER.dp)
         ) {
             item {
                 var isMonochrome by remember { mutableStateOf(false) }
@@ -120,7 +126,10 @@ fun AboutScreen(navController: NavHostController) {
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                             .clickable {
                                 if (easterEggCounter == 5) {
-                                    openUrl(context, "https://www.youtube.com/watch?v=3ZeHmdJnny4") // 🐟
+                                    openUrl(
+                                        context,
+                                        "https://www.youtube.com/watch?v=3ZeHmdJnny4"
+                                    ) // 🐟
                                     easterEggCounter = 0
                                 } else {
                                     easterEggCounter++
@@ -143,49 +152,78 @@ fun AboutScreen(navController: NavHostController) {
                                 .offset(y = (-2).dp),
                         )
                     }
+
                     SmallVerticalSpacer()
+
                     Text(
                         text = "Breadboard",
                         style = MaterialTheme.typography.titleLarge
                     )
-                    Text(
-                        text = "${BuildConfig.VERSION_NAME} (${releasePlatform.displayName})",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            item {
-                ExpressiveGroup("Maintainer") {
-                    item {
-                        GitHubUserContainer(apex2504)
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(SMALL_SPACER.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "${BuildConfig.VERSION_NAME} (${releasePlatform.displayName})",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "•",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = buildAnnotatedString {
+                                withLink(
+                                    LinkAnnotation.Clickable(
+                                        tag = "What's new",
+                                        styles = TextLinkStyles(
+                                            style = SpanStyle(
+                                                color = MaterialTheme.colorScheme.secondary
+                                            )
+                                        )
+                                    ) {
+                                        WhatsNewState.show()
+                                    }
+                                ) {
+                                    append("What's new")
+                                }
+                            },
+                            style = MaterialTheme.typography.labelLarge
+                        )
                     }
                 }
             }
-            item {
-                ExpressiveGroup("Original concept") {
-                    item {
-                        GitHubUserContainer(devoxin)
-                    }
+
+            LazyExpressiveGroup("Maintainer") {
+                item {
+                    GitHubUserContainer(apex2504)
                 }
             }
-            item {
-                ExpressiveGroup("Breadboard") {
-                    item {
-                        TitleSummary(
-                            modifier = Modifier.fillMaxWidth(),
-                            title = "GitHub",
-                            summary = "Report bugs, request features, or contribute!"
-                        ) { openUrl(context, "https://github.com/breadboardapp/breadboard") }
-                    }
-                    item {
-                        TitleSummary(
-                            modifier = Modifier.fillMaxWidth(),
-                            title = "Third-party notices",
-                            summary = "Libraries used in Breadboard",
-                            trailingIcon = { ChevronRight() }
-                        ) { navController.navigate(LibrariesSettings) }
-                    }
+
+            LazyExpressiveGroup("Original concept") {
+                item {
+                    GitHubUserContainer(devoxin)
+                }
+            }
+
+            LazyExpressiveGroup("Breadboard") {
+                item {
+                    TitleSummary(
+                        modifier = Modifier.fillMaxWidth(),
+                        title = "GitHub",
+                        summary = "Report bugs, request features, or contribute!"
+                    ) { openUrl(context, "https://github.com/breadboardapp/breadboard") }
+                }
+                item {
+                    TitleSummary(
+                        modifier = Modifier.fillMaxWidth(),
+                        title = "Third-party notices",
+                        summary = "Libraries used in Breadboard",
+                        trailingIcon = { ChevronRight() }
+                    ) { navController.navigate(LibrariesSettings) }
                 }
             }
         }

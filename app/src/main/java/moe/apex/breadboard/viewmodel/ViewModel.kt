@@ -13,9 +13,11 @@ import moe.apex.breadboard.image.Image
 import moe.apex.breadboard.preferences.DataSaver
 import moe.apex.breadboard.tag.TagSuggestion
 import moe.apex.breadboard.util.RecommendationsProvider
+import moe.apex.breadboard.util.FollowingProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
+import moe.apex.breadboard.preferences.BrowseTab
 
 
 object GlobalViewModelOwner : ViewModelStoreOwner {
@@ -30,6 +32,9 @@ class BreadboardViewModel : ViewModel() {
     private val _recommendationsProvider = MutableStateFlow<RecommendationsProvider?>(null)
     val recommendationsProvider: StateFlow<RecommendationsProvider?> = _recommendationsProvider.asStateFlow()
 
+    private val _followingProvider = MutableStateFlow<FollowingProvider?>(null)
+    val followingProvider: StateFlow<FollowingProvider?> = _followingProvider.asStateFlow()
+
     private val _downloadingImages = MutableStateFlow<Set<Image>>(emptySet())
     val downloadingImages: StateFlow<Set<Image>> = _downloadingImages.asStateFlow()
 
@@ -42,8 +47,20 @@ class BreadboardViewModel : ViewModel() {
     private val _imageHdQualityOverrides = MutableStateFlow<Map<String, Boolean>>(emptyMap())
     val imageHdQualityOverrides: StateFlow<Map<String, Boolean>> = _imageHdQualityOverrides.asStateFlow()
 
+    private val _defaultBrowseTab = MutableStateFlow<BrowseTab?>(null)
+    val defaultBrowseTab: StateFlow<BrowseTab?> = _defaultBrowseTab.asStateFlow()
+
     fun setRecommendationsProvider(provider: RecommendationsProvider?) {
         _recommendationsProvider.value = provider
+    }
+
+    fun setFollowingProvider(provider: FollowingProvider?) {
+        _followingProvider.value = provider
+    }
+
+    fun resetProviders() {
+        _recommendationsProvider.value = null
+        _followingProvider.value = null
     }
 
     fun setIncognito(value: Boolean) {
@@ -52,6 +69,10 @@ class BreadboardViewModel : ViewModel() {
 
     fun setUserMutePreference(muted: Boolean) {
         _userMutePreference.value = muted
+    }
+
+    fun setDefaultBrowseTab(browseTab: BrowseTab) {
+        _defaultBrowseTab.value = browseTab
     }
 
     @Composable

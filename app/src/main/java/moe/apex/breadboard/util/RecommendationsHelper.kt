@@ -163,6 +163,27 @@ object RecommendationsHelper {
     }
 
 
+    /**
+     * Recommends a set of artists based on the user's favorites, ranked by frequency.
+     * Artists already in [followedTags] are excluded.
+     */
+    fun getRecommendedArtists(
+        images: List<Image>,
+        followedTags: Set<String>,
+        limit: Int = 10
+    ): List<String> {
+        return images.flatMap { it.metadata?.artists ?: emptyList() }
+            .map { it.lowercase() }
+            .filter { it.isNotEmpty() && it !in followedTags }
+            .groupingBy { it }
+            .eachCount()
+            .entries
+            .sortedByDescending { it.value }
+            .take(limit)
+            .map { it.key }
+    }
+
+
     private fun pickWeightedTag(
         candidates: List<String>,
         frequencies: Map<String, Int>,

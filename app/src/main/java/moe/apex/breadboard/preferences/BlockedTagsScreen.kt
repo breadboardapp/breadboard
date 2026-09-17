@@ -104,6 +104,13 @@ fun BlockedTagsScreen(navController: NavHostController) {
                                         true
                                     )
                                 } else {
+                                    if (tag in prefs.followedTags) {
+                                        userPreferencesRepository.removeFromSet(
+                                            PreferenceKeys.FOLLOWED_TAGS,
+                                            tag
+                                        )
+                                        viewModel.setFollowingProvider(null)
+                                    }
                                     userPreferencesRepository.addToSet(
                                         PreferenceKeys.MANUALLY_BLOCKED_TAGS,
                                         tag
@@ -112,7 +119,7 @@ fun BlockedTagsScreen(navController: NavHostController) {
                             }
                         }
                         showAddDialog = false
-                        viewModel.setRecommendationsProvider(null)
+                        viewModel.resetProviders()
                     }
                 ) {
                     Text("Add")
@@ -222,7 +229,7 @@ fun BlockedTagsScreen(navController: NavHostController) {
                                         tag
                                     )
                                 }
-                                viewModel.setRecommendationsProvider(null)
+                                viewModel.resetProviders()
                             }
                         ) {
                             Icon(

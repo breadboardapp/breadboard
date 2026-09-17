@@ -2,9 +2,7 @@ package moe.apex.breadboard.largeimageview
 
 
 import android.annotation.SuppressLint
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
+import android.util.Log
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.animateColorAsState
@@ -32,10 +30,13 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Copyright
+import androidx.compose.material.icons.rounded.DataObject
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.PersonSearch
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.ButtonDefaults
@@ -51,7 +52,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -61,6 +62,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.selected
@@ -69,17 +71,17 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import moe.apex.breadboard.DeepLinkActivity
-import moe.apex.breadboard.MainActivity
 import moe.apex.breadboard.image.AI_TAG_NAMES
 import moe.apex.breadboard.image.Image
+import moe.apex.breadboard.navigation.ArtistProfile
 import moe.apex.breadboard.navigation.ImageView
 import moe.apex.breadboard.navigation.Results
-import moe.apex.breadboard.preferences.ImageSource
 import moe.apex.breadboard.preferences.LocalPreferences
 import moe.apex.breadboard.preferences.PreferenceKeys
 import moe.apex.breadboard.prefs
 import moe.apex.breadboard.tag.TagCategory
 import moe.apex.breadboard.ui.theme.prefTitle
+import moe.apex.breadboard.util.AiWarning
 import moe.apex.breadboard.util.BasicExpressiveContainer
 import moe.apex.breadboard.util.ButtonListItem
 import moe.apex.breadboard.util.CHIP_SPACING
@@ -94,10 +96,13 @@ import moe.apex.breadboard.util.MEDIUM_SPACER
 import moe.apex.breadboard.util.LazyExpressiveGroup
 import moe.apex.breadboard.util.SMALL_LARGE_SPACER
 import moe.apex.breadboard.util.TINY_SPACER
+import moe.apex.breadboard.util.TITLE_SUMMARY_VERTICAL_SPACING
 import moe.apex.breadboard.util.TitleSummary
 import moe.apex.breadboard.util.TitledModalBottomSheet
 import moe.apex.breadboard.util.bouncyAnimationSpec
 import moe.apex.breadboard.util.copyText
+import moe.apex.breadboard.util.createSearchIntent
+import moe.apex.breadboard.util.isAiGenerated
 import moe.apex.breadboard.util.isWebLink
 import moe.apex.breadboard.util.largerShapeCornerSize
 import moe.apex.breadboard.util.launchInWebBrowser
@@ -111,6 +116,14 @@ private enum class InfoSheetPage {
     SOURCES,
     IMAGEBOARD
 }
+
+
+private sealed class TagMenuAction(val icon: ImageVector, val label: String)
+private object ArtistAction : TagMenuAction(Icons.Rounded.Person, "View profile")
+private object CharacterAction : TagMenuAction(Icons.Rounded.PersonSearch, "Search character")
+private object CopyrightAction : TagMenuAction(Icons.Rounded.Copyright, "Search copyright")
+private object MetaAction : TagMenuAction(Icons.Rounded.DataObject, "Search meta")
+private object GeneralAction : TagMenuAction(Icons.Rounded.Search, "Search")
 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -148,7 +161,7 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
     /* The unified sheet should always open in half-expanded state,
        but should never go back to the half-expanded state when closing.  */
     if (unified) {
-        LaunchedEffect(sheetState.targetValue) {
+        SideEffect(sheetState.targetValue) {
             if (sheetState.currentValue == SheetValue.Expanded && sheetState.targetValue == SheetValue.PartiallyExpanded) {
                 hideAndThen()
             }
@@ -156,16 +169,19 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
     }
 
     var selectedTag: String? by remember { mutableStateOf(null) }
+    var selectedTagCategory: TagCategory? by remember { mutableStateOf(null) }
 
-    fun startTagSearch(tag: String) {
+    fun startTagSearch(tag: String, category: TagCategory, artistProfileForUncategorisedTags: Boolean = false) {
         hideAndThen {
-            /* Don't do new searches inside the DeepLinkActivity. We should only
-               ever do them inside the main one. */
-            if (context is DeepLinkActivity) {
-                val intent = createSearchIntent(context, image.imageSource, tag)
-                context.startActivity(intent)
+            if (category == TagCategory.ARTIST || (category == TagCategory.GENERAL && artistProfileForUncategorisedTags)) {
+                navController.navigate(ArtistProfile(tag, image.imageSource))
             } else {
-                navController.navigate(Results(image.imageSource, listOf(tag)))
+                if (context is DeepLinkActivity) {
+                    val intent = createSearchIntent(context, image.imageSource, tag)
+                    context.startActivity(intent)
+                } else {
+                    navController.navigate(Results(image.imageSource, listOf(tag)))
+                }
             }
         }
     }
@@ -206,15 +222,34 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                     )
 
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        val action = when {
+                            selectedTagCategory == TagCategory.ARTIST || (prefs.profilesForAllTags && selectedTagCategory == TagCategory.GENERAL) -> ArtistAction
+                            selectedTagCategory == TagCategory.CHARACTER -> CharacterAction
+                            selectedTagCategory == TagCategory.COPYRIGHT -> CopyrightAction
+                            selectedTagCategory == TagCategory.META -> MetaAction
+                            selectedTagCategory == TagCategory.GENERAL -> GeneralAction
+                            else -> {
+                                Log.w("InfoSheet", "Action not implemented for category: $selectedTagCategory")
+                                GeneralAction
+                            }
+                        }
                         ButtonListItem(
-                            label = "Search",
-                            icon = Icons.Rounded.Search,
+                            label = action.label,
+                            icon = action.icon,
                             modifier = Modifier.fillMaxWidth(),
                             position = ListItemPosition.TOP
                         ) {
                             val searchTag = selectedTag!!
+                            val category = selectedTagCategory!!
                             selectedTag = null
-                            startTagSearch(searchTag)
+                            selectedTagCategory = null
+                            hideAndThen {
+                                startTagSearch(
+                                    tag = searchTag,
+                                    category = category,
+                                    artistProfileForUncategorisedTags = prefs.profilesForAllTags
+                                )
+                            }
                         }
                         ButtonListItem(
                             label = "Copy to clipboard",
@@ -259,6 +294,12 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                                             PreferenceKeys.MANUALLY_BLOCKED_TAGS,
                                             selectedTag!!
                                         )
+                                        if (selectedTag in prefs.followedTags) {
+                                            preferencesRepository.removeFromSet(
+                                                PreferenceKeys.FOLLOWED_TAGS,
+                                                selectedTag!!
+                                            )
+                                        }
                                     }
                                 }
                                 showToast(context, "Blocked tag ${selectedTag!!}")
@@ -281,7 +322,10 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
             val onBrowserLinkClick = { url: String -> // Bypass Breadboard's handling of file URLs like for Yande.re
                 launchInWebBrowser(context, url)
             }
-            val onTagLongClick = { tag: String -> selectedTag = tag }
+            val onTagLongClick = { tag: String, category: TagCategory ->
+                selectedTag = tag
+                selectedTagCategory = category
+            }
             val onViewParentClick = { id: String ->
                 hideAndThen {
                     navController.navigate(ImageView(image.imageSource, id, false))
@@ -295,8 +339,8 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                     onBrowserLinkClick = onBrowserLinkClick,
                     onCopyClick = onCopyClick,
                     onViewParentClick = onViewParentClick,
-                    onViewRelatedClick = { startTagSearch("parent:$it") },
-                    onTagClick = ::startTagSearch,
+                    onViewRelatedClick = { startTagSearch("parent:$it", TagCategory.GENERAL) },
+                    onTagClick = { tag, category -> startTagSearch(tag, category) },
                     onTagLongClick = onTagLongClick
                 )
             } else {
@@ -312,8 +356,8 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                             onBrowserLinkClick = onBrowserLinkClick,
                             onCopyClick = onCopyClick,
                             onViewParentClick = onViewParentClick,
-                            onViewRelatedClick = { startTagSearch("parent:$it") },
-                            onTagClick = ::startTagSearch,
+                            onViewRelatedClick = { startTagSearch("parent:$it", TagCategory.GENERAL) },
+                            onTagClick = { tag, category -> startTagSearch(tag, category) },
                             onTagLongClick = onTagLongClick
                         )
 
@@ -322,7 +366,7 @@ fun InfoSheet(navController: NavController, image: Image, onDismissRequest: () -
                             onLinkClick = onLinkClick,
                             onBrowserLinkClick = onBrowserLinkClick,
                             onCopyClick = onCopyClick,
-                            onTagClick = ::startTagSearch,
+                            onTagClick = { tag, category -> startTagSearch(tag, category) },
                             onTagLongClick = onTagLongClick
                         )
                     }
@@ -413,8 +457,8 @@ private fun InfoTabContent(
     onCopyClick: (String) -> Unit,
     onViewParentClick: (String) -> Unit,
     onViewRelatedClick: (String) -> Unit,
-    onTagClick: (String) -> Unit,
-    onTagLongClick: (String) -> Unit
+    onTagClick: (String, TagCategory) -> Unit,
+    onTagLongClick: (String, TagCategory) -> Unit
 ) {
     SplitInfoSheetLazyColumn {
         infoContentItems(
@@ -437,8 +481,8 @@ private fun ImageboardDataTabContent(
     onLinkClick: (String) -> Unit,
     onBrowserLinkClick: (String) -> Unit,
     onCopyClick: (String) -> Unit,
-    onTagClick: (String) -> Unit,
-    onTagLongClick: (String) -> Unit
+    onTagClick: (String, TagCategory) -> Unit,
+    onTagLongClick: (String, TagCategory) -> Unit
 ) {
     SplitInfoSheetLazyColumn {
         imageboardDataContentItems(
@@ -461,8 +505,8 @@ private fun UnifiedInfoContent(
     onCopyClick: (String) -> Unit,
     onViewParentClick: (String) -> Unit,
     onViewRelatedClick: (String) -> Unit,
-    onTagClick: (String) -> Unit,
-    onTagLongClick: (String) -> Unit
+    onTagClick: (String, TagCategory) -> Unit,
+    onTagLongClick: (String, TagCategory) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
@@ -515,13 +559,18 @@ private fun LazyListScope.infoContentItems(
     onCopyClick: (String) -> Unit,
     onViewParentClick: (String) -> Unit,
     onViewRelatedClick: (String) -> Unit,
-    onTagClick: (String) -> Unit,
-    onTagLongClick: (String) -> Unit,
+    onTagClick: (String, TagCategory) -> Unit,
+    onTagLongClick: (String, TagCategory) -> Unit,
     unified: Boolean = false
 ) {
     if (image.isAiGenerated) {
         item {
-            InfoSheetAiWarning()
+            AiWarning(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = LARGE_SPACER.dp),
+                text = "This post is AI-generated."
+            )
         }
     }
 
@@ -573,20 +622,18 @@ private fun LazyListScope.infoContentItems(
         /* In unified mode, display file URL with the other URLs.
            In split mode, it's displayed on the other tab.  */
         if (unified) {
-            image.highestQualityFormatUrl.let {
-                UrlItem(
-                    label = "File URL",
-                    url = it,
-                    onLinkClick = onBrowserLinkClick,
-                    onCopyClick = onCopyClick
-                )
-            }
+            UrlItem(
+                label = "File URL",
+                url = image.highestQualityFormatUrl,
+                onLinkClick = onBrowserLinkClick,
+                onCopyClick = onCopyClick
+            )
         }
 
         image.metadata.parentId?.let {
             item {
                 TitleSummary(
-                    title = "View parent image",
+                    title = "View parent post",
                     onClick = { onViewParentClick(it) },
                     trailingIcon = {
                         ChevronRight()
@@ -599,7 +646,7 @@ private fun LazyListScope.infoContentItems(
             image.id?.let {
                 item {
                     TitleSummary(
-                        title = "View related images",
+                        title = "View related posts",
                         onClick = { onViewRelatedClick(it) },
                         trailingIcon = {
                             ChevronRight()
@@ -612,7 +659,7 @@ private fun LazyListScope.infoContentItems(
 
     // In unified mode, these are displayed on the first page instead of this one.
     if (!unified) {
-        LazyExpressiveGroup(useBox = true) {
+        LazyExpressiveGroup(clip = false) {
             mainTagsItems(image, onTagClick, onTagLongClick)
         }
     }
@@ -625,8 +672,8 @@ private fun LazyListScope.imageboardDataContentItems(
     onLinkClick: (String) -> Unit, // Not currently used but keeping for consistency and possible future use
     onBrowserLinkClick: (String) -> Unit,
     onCopyClick: (String) -> Unit,
-    onTagClick: (String) -> Unit,
-    onTagLongClick: (String) -> Unit,
+    onTagClick: (String, TagCategory) -> Unit,
+    onTagLongClick: (String, TagCategory) -> Unit,
     unified: Boolean = false
 ) {
     if (!unified) {
@@ -642,7 +689,7 @@ private fun LazyListScope.imageboardDataContentItems(
         }
     }
 
-    LazyExpressiveGroup(useBox = true) {
+    LazyExpressiveGroup(clip = false) {
         if (unified) {
             mainTagsItems(image, onTagClick, onTagLongClick)
         }
@@ -692,8 +739,8 @@ private fun ExpressiveGroupScope.UrlItem(
 
 private fun ExpressiveGroupScope.mainTagsItems(
     image: Image,
-    onTagClick: (String) -> Unit,
-    onTagLongClick: (String) -> Unit
+    onTagClick: (String, TagCategory) -> Unit,
+    onTagLongClick: (String, TagCategory) -> Unit
 ) {
     image.metadata!!.artists.takeIf { it.isNotEmpty() }?.let {
         item {
@@ -739,8 +786,8 @@ private fun CopyIcon(itemType: String, onClick: () -> Unit) {
 private fun TagsContainer(
     category: TagCategory,
     tags: List<String>,
-    onTagClick: (String) -> Unit,
-    onTagLongClick: (String) -> Unit
+    onTagClick: (String, TagCategory) -> Unit,
+    onTagLongClick: (String, TagCategory) -> Unit
 ) {
     val maxLines = 11 // 10 but apparently the expand indicator is included in this figure so 11
     val prefs = LocalPreferences.current
@@ -750,7 +797,7 @@ private fun TagsContainer(
         Modifier
             .fillMaxWidth()
             .padding(
-                top = SMALL_LARGE_SPACER.dp,
+                top = TITLE_SUMMARY_VERTICAL_SPACING.dp,
                 bottom = (SMALL_LARGE_SPACER - 8).dp, // Chips have 8dp vertical padding already
                 start = SMALL_LARGE_SPACER.dp,
                 end = SMALL_LARGE_SPACER.dp
@@ -791,8 +838,8 @@ private fun TagsContainer(
             CombinedClickableFilterChip(
                 label = { Text(text = tag, maxLines = 1) },
                 warning = tag in prefs.blockedTags,
-                onClick = { onTagClick(tag) },
-                onLongClick = { onTagLongClick(tag) }
+                onClick = { onTagClick(tag, category) },
+                onLongClick = { onTagLongClick(tag, category) }
             )
         }
     }
@@ -815,50 +862,5 @@ private fun ExpandCollapseRow(
         ) {
             Text(label)
         }
-    }
-}
-
-
-private fun createSearchIntent(context: Context, imageSource: ImageSource, query: String): Intent {
-    return createSearchIntent(context, imageSource, listOf(query))
-}
-
-
-private fun createSearchIntent(context: Context, imageSource: ImageSource, queries: List<String>): Intent {
-    val intent = Intent(Intent.ACTION_VIEW)
-    intent.putExtra("source", imageSource.name)
-    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-    intent.putExtra("query", queries.toTypedArray())
-    intent.component = ComponentName(
-        context,
-        MainActivity::class.java
-    )
-    return intent
-}
-
-
-private val Image.isAiGenerated: Boolean
-    get() = AI_TAG_NAMES.any { it in this.metadata?.tags.orEmpty() }
-
-
-@Composable
-private fun InfoSheetAiWarning() {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = LARGE_SPACER.dp),
-        horizontalArrangement = Arrangement.spacedBy(MEDIUM_SPACER.dp, Alignment.CenterHorizontally),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            imageVector = Icons.Outlined.Info,
-            contentDescription = null
-        )
-        Text(
-            text = "This post is AI-generated.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }

@@ -4,7 +4,7 @@ import android.annotation.SuppressLint
 import android.view.WindowManager
 import androidx.activity.compose.LocalActivity
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import moe.apex.breadboard.preferences.FlagSecureMode
@@ -32,7 +32,7 @@ class FlagSecureHelper {
                 window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
             }
 
-            LaunchedEffect(prefs.flagSecureMode, incognito) {
+            SideEffect(prefs.flagSecureMode, incognito) {
                 when (prefs.flagSecureMode) {
                     FlagSecureMode.ON -> enableFlagSecure()
                     FlagSecureMode.OFF -> disableFlagSecure()

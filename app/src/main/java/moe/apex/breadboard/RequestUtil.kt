@@ -17,7 +17,7 @@ object RequestUtil {
 
     suspend fun get(url: String, apply: Request.Builder.() -> Unit = {}): String = withContext(Dispatchers.IO) {
         val req = Request.Builder().url(url).apply(apply).get().build()
-        
+
         suspendCancellableCoroutine { continuation ->
             val call = client.newCall(req)
 
@@ -35,8 +35,46 @@ object RequestUtil {
                 override fun onResponse(call: Call, response: Response) {
                     if (continuation.isActive) {
                         response.use {
-                            val body = it.body.string()
-                            continuation.resume(body)
+                            if (it.isSuccessful) {
+                                val body = it.body.string()
+                                continuation.resume(body)
+                            } else {
+                                onFailure(call, IOException("${it.code}"))
+                            }
+                        }
+                    }
+                }
+            })
+        }
+    }
+
+
+    suspend fun post(url: String, body: RequestBody, apply: Request.Builder.() -> Unit = {}): String = withContext(Dispatchers.IO) {
+        val req = Request.Builder().url(url).apply(apply).post(body).build()
+
+        suspendCancellableCoroutine { continuation ->
+            val call = client.newCall(req)
+
+            continuation.invokeOnCancellation {
+                call.cancel()
+            }
+
+            call.enqueue(object : Callback {
+                override fun onFailure(call: Call, e: IOException) {
+                    if (continuation.isActive) {
+                        continuation.resumeWithException(e)
+                    }
+                }
+
+                override fun onResponse(call: Call, response: Response) {
+                    if (continuation.isActive) {
+                        response.use {
+                            if (it.isSuccessful) {
+                                val responseBody = it.body.string()
+                                continuation.resume(responseBody)
+                            } else {
+                                onFailure(call, IOException("${it.code}"))
+                            }
                         }
                     }
                 }
