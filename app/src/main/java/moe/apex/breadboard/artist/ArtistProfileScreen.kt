@@ -184,8 +184,13 @@ fun ArtistProfileScreen(
 
         if (artist == null) {
             showToast(context, "Couldn't fetch profile. Performing search instead...")
-            navController.popBackStack()
-            navController.navigate(Results(originImageSource, listOf(artistTag)))
+            if (context is DeepLinkActivity) {
+                context.startActivity(createSearchIntent(context, originImageSource, artistTag))
+                context.finishAndRemoveTask()
+            } else {
+                navController.popBackStack()
+                navController.navigate(Results(originImageSource, listOf(artistTag)))
+            }
         }
     }
 
