@@ -381,7 +381,20 @@ object Gelbooru : GelbooruBasedImageBoard {
         val generalTags = mutableListOf<String>()
         val metaTags = mutableListOf<String>()
 
-        val chunkedTags = image.metadata?.tags?.chunked(100) ?: emptyList()
+        /* Breadboard used to have a bug where the artist tag could get lost when refreshing
+           metadata on Gelbooru posts because we store artists separately from other tags.
+           This would result in every tag having an updated correct category,
+           but the artist would be completely gone.
+           For posts that might be affected by this, we'll re-fetch the post to get full tag list,
+           and then categorise based on that. */
+        val tagsToGroup = if (image.metadata?.artists.isNullOrEmpty()) {
+            val fetchedImage = image.id?.let { loadImage(it, auth) } ?: loadImageMd5(image.fileName, auth)
+            fetchedImage?.metadata?.tags ?: image.metadata?.tags ?: emptyList()
+        } else {
+            image.metadata.tags
+        }
+
+        val chunkedTags = tagsToGroup.chunked(100)
 
         for (i in 0 until chunkedTags.size) {
             val url = buildTagSearchUrl(chunkedTags[i].joinToString(" "), auth) ?: return null
