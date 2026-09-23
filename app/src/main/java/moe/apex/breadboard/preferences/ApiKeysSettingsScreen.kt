@@ -58,6 +58,7 @@ import moe.apex.breadboard.util.TINY_SPACER
 import moe.apex.breadboard.util.TitleSummary
 import moe.apex.breadboard.util.launchInWebBrowser
 import moe.apex.breadboard.util.navBarHeight
+import moe.apex.breadboard.viewmodel.getGlobalViewModel
 
 
 private enum class ApiKeyField(val label: String, val hide: Boolean) {
@@ -90,6 +91,8 @@ fun ApiKeysSettingsScreen(
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
     val scope = rememberCoroutineScope()
+
+    val viewModel = getGlobalViewModel()
 
     var apiKeyDialogData: ApiKeyDialogData? by remember { mutableStateOf(null) }
 
@@ -166,6 +169,9 @@ fun ApiKeysSettingsScreen(
                                             )
                                         }.invokeOnCompletion {
                                             apiKeyDialogData = null
+                                            if (imageBoard == currentSettings.imageSource) {
+                                                viewModel.setRecommendationsProvider(null)
+                                            }
                                         }
                                     }
                                 )
