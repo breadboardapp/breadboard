@@ -36,6 +36,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -209,6 +210,7 @@ fun HomeScreen(
                     ) {
                         FilledIconButton(
                             modifier = Modifier.padding(start = TINY_SPACER.dp),
+                            shapes = IconButtonDefaults.shapes(),
                             onClick = {
                                 navController.navigate(FollowedArtists)
                             }
