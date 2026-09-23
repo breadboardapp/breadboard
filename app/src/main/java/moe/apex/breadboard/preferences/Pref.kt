@@ -761,7 +761,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
 
     suspend fun updateFavouriteImage(image: Image, newImage: Image) {
         val images = getPreferences.first().favouriteImages.toMutableList()
-        val index = images.indexOf(image)
+        val index = images.indexOfFirst { it.key == image.key }
+            .takeIf { it != -1 } ?: images.indexOf(image)
         if (index != -1) {
             images[index] = newImage
             updateFavouriteImages(images)

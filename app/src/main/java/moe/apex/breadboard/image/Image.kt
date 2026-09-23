@@ -36,7 +36,7 @@ data class ImageMetadata(
 ) {
     /** A non-categorised list of tags. [groupedTags] should be preferred in most cases. */
     val tags: List<String>
-        get() = groupedTags.fold(emptyList()) { acc, tagGroup -> acc + tagGroup.tags }
+        get() = (artists + groupedTags.fold(emptyList()) { acc, tagGroup -> acc + tagGroup.tags }).distinct()
 
     val pixivId: Int?
         get() = pixivArtworkId ?: pixivArtwork?.id
@@ -84,6 +84,7 @@ data class Image(
            The images that pass would usually have ungrouped tags, but it could also catch actual images that
            literally only have general tags. They're usually due to bad tagging and should be re-fetched anyway. */
         if (
+            metadata.artists.isNotEmpty() ||
             metadata.groupedTags.size > 1 ||
             (metadata.groupedTags.size == 1 && metadata.groupedTags[0].category != TagCategory.GENERAL)
         ) {
