@@ -4,6 +4,9 @@ import android.util.Log
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import moe.apex.breadboard.RequestUtil
+import moe.apex.breadboard.artist.Artist
+import moe.apex.breadboard.social.SocialEntry
+import moe.apex.breadboard.artist.ArtistTag
 import moe.apex.breadboard.preferences.ImageSource
 import moe.apex.breadboard.tag.TagCategory
 import moe.apex.breadboard.tag.TagGroup
@@ -48,6 +51,9 @@ interface ImageBoard {
         get() = null
     val authenticatedTagSearchUrl: String?
         get() = tagSearchUrl?.let { "$it&api_key=%s&user_id=%s" }
+    val totalPostCountUrl: String
+    val authenticatedTotalPostCountUrl: String
+        get() = "$totalPostCountUrl&api_key=%s&user_id=%s"
     val apiKeyCreationUrl: String?
         get() = null
     val firstPageIndex: Int
@@ -96,6 +102,8 @@ interface ImageBoard {
 
     suspend fun loadPage(tags: String, page: Int, auth: ImageBoardAuth? = null): List<Image>
 
+    suspend fun loadTotalCount(tags: String, auth: ImageBoardAuth? = null): Int? = null
+
     suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth? = null): ImageMetadata?
 
     fun formatTagString(tags: List<TagSuggestion>): String {
@@ -138,6 +146,9 @@ interface ImageBoard {
 
 
 interface GelbooruBasedImageBoard : ImageBoard {
+    override val totalPostCountUrl: String
+        get() = "${baseUrl}index.php?page=dapi&s=post&q=index&limit=1&tags=%s"
+
     fun parseImage(imageSource: ImageSource, e: JSONObject): Image? {
         val id = e.getString("id")
         val (fileName, fileFormat) = e.getString("image").split('.', limit = 2)
@@ -243,6 +254,24 @@ interface GelbooruBasedImageBoard : ImageBoard {
         }
 
         return images
+    }
+
+    override suspend fun loadTotalCount(tags: String, auth: ImageBoardAuth?): Int? {
+        return try {
+            val encodedTags = URLEncoder.encode(tags, "utf-8")
+            val url = if (auth != null) {
+                authenticatedTotalPostCountUrl.format(encodedTags, auth.apiKey, auth.user)
+            } else {
+                totalPostCountUrl.format(encodedTags)
+            }
+
+            val body = RequestUtil.get(url)
+
+            Regex("""count="(\d+)"""").find(body)?.groupValues?.get(1)?.toIntOrNull()
+        } catch (e: Exception) {
+            Log.e("ImageBoard", "Error loading total count for $baseUrl", e)
+            null
+        }
     }
 
     override fun getRatingFromString(rating: String): ImageRating {
@@ -352,7 +381,20 @@ object Gelbooru : GelbooruBasedImageBoard {
         val generalTags = mutableListOf<String>()
         val metaTags = mutableListOf<String>()
 
-        val chunkedTags = image.metadata?.tags?.chunked(100) ?: emptyList()
+        /* Breadboard used to have a bug where the artist tag could get lost when refreshing
+           metadata on Gelbooru posts because we store artists separately from other tags.
+           This would result in every tag having an updated correct category,
+           but the artist would be completely gone.
+           For posts that might be affected by this, we'll re-fetch the post to get full tag list,
+           and then categorise based on that. */
+        val tagsToGroup = if (image.metadata?.artists.isNullOrEmpty()) {
+            val fetchedImage = image.id?.let { loadImage(it, auth) } ?: loadImageMd5(image.fileName, auth)
+            fetchedImage?.metadata?.tags ?: image.metadata?.tags ?: emptyList()
+        } else {
+            image.metadata.tags
+        }
+
+        val chunkedTags = tagsToGroup.chunked(100)
 
         for (i in 0 until chunkedTags.size) {
             val url = buildTagSearchUrl(chunkedTags[i].joinToString(" "), auth) ?: return null
@@ -413,11 +455,33 @@ object Danbooru : ImageBoard {
         "5" to "meta",
     )
     override val imageSearchUrl = "${baseUrl}posts.json?tags=%s&page=%d&limit=100"
-    override val firstPageIndex = 1
     override val authenticatedImageSearchUrl = "$imageSearchUrl&api_key=%s&login=%s"
+    override val totalPostCountUrl = "${baseUrl}counts/posts.json?tags=%s"
+    override val firstPageIndex = 1
     override val apiKeyCreationUrl = "${baseUrl}/profile"
     override val apiKeyRequirement = ImageBoardRequirement.RECOMMENDED
     override val localFilterType = ImageBoardRequirement.RECOMMENDED
+
+    private val artistSearchUrl = "${baseUrl}artists.json?only=name,urls,other_names,tag&search[any_name_matches]=%s"
+
+    suspend fun loadFollowingPage(artists: List<String>, page: Int, safe: Boolean): List<Image> {
+        val baseUrl = "https://breadboard.moe/api/v1/following/posts"
+        val artistsQuery = artists.joinToString(",") { URLEncoder.encode(it, "utf-8") }
+        val url = "$baseUrl?artists=$artistsQuery&page=$page&safe=$safe"
+        
+        val body = RequestUtil.get(url)
+        if (body.isEmpty()) return emptyList()
+
+        val json = JSONArray(body)
+        val images = mutableListOf<Image>()
+
+        for (i in 0 until json.length()) {
+            val e = json.getJSONObject(i)
+            parseImage(e)?.let { images.add(it) }
+        }
+
+        return images
+    }
 
     override fun parseImage(e: JSONObject): Image? {
         if (e.isNull("md5")) return null
@@ -491,9 +555,66 @@ object Danbooru : ImageBoard {
         return subjects.toList()
     }
 
+    override suspend fun loadTotalCount(tags: String, auth: ImageBoardAuth?): Int? {
+        return try {
+            val encodedTags = URLEncoder.encode(tags, "utf-8")
+            val url = if (auth != null) {
+                authenticatedTotalPostCountUrl.format(encodedTags, auth.apiKey, auth.user)
+            } else {
+                totalPostCountUrl.format(encodedTags)
+            }
+
+            val body = RequestUtil.get(url)
+            if (body.isEmpty()) {
+                return null
+            }
+            val json = JSONObject(body)
+
+            json.optJSONObject("counts")?.optInt("posts") ?: json.optInt("posts")
+        } catch (e: Exception) {
+            Log.e("ImageBoard", "Error loading total count for Danbooru", e)
+            null
+        }
+    }
+
     override suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth?): ImageMetadata? {
         val img = image.id?.let { loadImage(it, auth) } ?: loadImageMd5(image.fileName, auth)
         return img?.metadata
+    }
+
+    suspend fun getArtist(artistTag: String): Artist? {
+        val url = artistSearchUrl.format(artistTag)
+        val body = RequestUtil.get(url)
+        val json = JSONArray(body)
+
+        if (json.length() == 0){
+            return null
+        }
+
+        val primaryArtist = json.getJSONObject(0)
+        return Artist(
+            name = primaryArtist.getString("name"),
+            otherNames = primaryArtist.optJSONArray("other_names")?.let { otherNamesArray ->
+                (0 until otherNamesArray.length()).mapNotNull { index ->
+                    otherNamesArray.optString(index).takeIf { it.isNotBlank() }
+                }
+            } ?: emptyList(),
+            socialUrls = primaryArtist.optJSONArray("urls")?.let { urlArray ->
+                (0 until urlArray.length()).mapNotNull { index ->
+                    val urlEntry = urlArray.optJSONObject(index)
+                    SocialEntry(
+                        url = urlEntry.optString("url").takeUnless { it.isBlank() } ?: return@mapNotNull null,
+                        isActive = urlEntry.optBoolean("is_active", false)
+                    )
+                }
+            } ?: emptyList(),
+            tag = primaryArtist.getJSONObject("tag").let { tagObj ->
+                ArtistTag(
+                    name = tagObj.getString("name"),
+                    postCount = tagObj.getInt("post_count")
+                )
+            }
+        )
     }
 
 
@@ -505,6 +626,84 @@ object Danbooru : ImageBoard {
             "e" -> ImageRating.EXPLICIT
             else -> ImageRating.UNKNOWN
         }
+    }
+}
+
+
+object DanbooruSafe : ImageBoard by Danbooru {
+    override val baseUrl = "https://safebooru.donmai.us/"
+    override val autoCompleteSearchUrl = "${baseUrl}autocomplete.json?search[query]=%s&search[type]=tag_query&limit=10"
+    override val imageSearchUrl = "${baseUrl}posts.json?tags=%s&page=%d&limit=100"
+    override val authenticatedImageSearchUrl = "$imageSearchUrl&api_key=%s&login=%s"
+
+    private val popularUrl = "${baseUrl}posts.json?tags=%s order:favcount&limit=20"
+
+    override fun buildImageSearchUrl(tags: String, page: Int, auth: ImageBoardAuth?): String {
+        val encodedTags = URLEncoder.encode(tags, "utf-8")
+
+        val url = if (auth != null) {
+            authenticatedImageSearchUrl.format(encodedTags, page, auth.apiKey, auth.user)
+        } else {
+            imageSearchUrl.format(encodedTags, page)
+        }
+        return url
+    }
+
+
+    override suspend fun loadPage(tags: String, page: Int, auth: ImageBoardAuth?): List<Image> {
+        val url = buildImageSearchUrl(tags, page, auth)
+        val body = RequestUtil.get(url)
+        if (body.isEmpty()) return emptyList()
+
+        val json = JSONArray(body)
+        val subjects = mutableListOf<Image>()
+
+        for (i in 0 until json.length()) {
+            val e = json.getJSONObject(i)
+            Danbooru.parseImage(e)?.let { subjects.add(it) }
+        }
+
+        return subjects.toList()
+    }
+
+
+    override suspend fun loadTotalCount(tags: String, auth: ImageBoardAuth?): Int? {
+        return try {
+            val encodedTags = URLEncoder.encode(tags, "utf-8")
+            val url = if (auth != null) {
+                authenticatedTotalPostCountUrl.format(encodedTags, auth.apiKey, auth.user)
+            } else {
+                totalPostCountUrl.format(encodedTags)
+            }
+
+            val body = RequestUtil.get(url)
+            if (body.isEmpty()){
+                return null
+            }
+            val json = JSONObject(body)
+
+            json.optJSONObject("counts")?.optInt("posts") ?: json.optInt("posts")
+        } catch (e: Exception) {
+            Log.e("ImageBoard", "Error loading total count for DanbooruSafe", e)
+            null
+        }
+    }
+
+
+    suspend fun getMostPopularPosts(artistTag: String): List<Image> {
+        val url = popularUrl.format(artistTag)
+        val body = RequestUtil.get(url)
+        if (body.isEmpty()) return emptyList()
+
+        val json = JSONArray(body)
+        val subjects = mutableListOf<Image>()
+
+        for (i in 0 until json.length()) {
+            val e = json.getJSONObject(i)
+            Danbooru.parseImage(e)?.let { subjects.add(it) }
+        }
+
+        return subjects.toList()
     }
 }
 
@@ -521,6 +720,7 @@ object Yandere : ImageBoard {
         "6" to "faults",
     )
     override val imageSearchUrl = "${baseUrl}post.json?tags=%s&page=%d&limit=100"
+    override val totalPostCountUrl = "${baseUrl}post.xml?tags=%s&limit=1"
     override val firstPageIndex = 1
     override val localFilterType = ImageBoardRequirement.REQUIRED
 
@@ -584,6 +784,27 @@ object Yandere : ImageBoard {
 
     override suspend fun loadImageGroupedTags(image: Image, auth: ImageBoardAuth?): ImageMetadata? {
         return null // TODO
+    }
+
+    override suspend fun loadTotalCount(tags: String, auth: ImageBoardAuth?): Int? {
+        return try {
+            val encodedTags = URLEncoder.encode(tags, "utf-8")
+            val url = if (auth != null) {
+                authenticatedTotalPostCountUrl.format(encodedTags, auth.apiKey, auth.user)
+            } else {
+                totalPostCountUrl.format(encodedTags)
+            }
+
+            val body = RequestUtil.get(url)
+            if (body.isEmpty()) {
+                return null
+            }
+
+            Regex("""count="(\d+)"""").find(body)?.groupValues?.get(1)?.toIntOrNull()
+        } catch (e: Exception) {
+            Log.e("ImageBoard", "Error loading total count for Yandere", e)
+            null
+        }
     }
 
     override fun getRatingFromString(rating: String): ImageRating {

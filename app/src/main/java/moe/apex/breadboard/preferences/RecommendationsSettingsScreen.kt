@@ -93,6 +93,7 @@ fun RecommendationsSettingsScreen(navController: NavHostController) {
     val userPreferencesRepository = LocalContext.current.prefs
     val prefs = LocalPreferences.current
     val recommendationsProvider by viewModel.recommendationsProvider.collectAsState()
+    val recommendedTags = recommendationsProvider?.recommendedTags?.collectAsState()?.value ?: emptyList()
 
     var showAgeVerificationDialog by remember { mutableStateOf(false) }
     var showIgnored by rememberSaveable { mutableStateOf(false) }
@@ -144,10 +145,6 @@ fun RecommendationsSettingsScreen(navController: NavHostController) {
 
     val pagerState = rememberPagerState(ImageSource.entries.indexOf(prefs.imageSource)) { topTags.size }
 
-    fun resetRecommendations() {
-        viewModel.setRecommendationsProvider(null)
-    }
-
     fun showUnfollowedToast(tagName: String) {
         showToast(context, "Ignored $tagName")
     }
@@ -172,7 +169,7 @@ fun RecommendationsSettingsScreen(navController: NavHostController) {
                 showUnfollowedToast(tagName)
             }
         }.invokeOnCompletion {
-            resetRecommendations()
+            viewModel.resetProviders()
         }
     }
 
@@ -193,7 +190,8 @@ fun RecommendationsSettingsScreen(navController: NavHostController) {
         }
     ) {
         val hasProvider = rememberSaveable { recommendationsProvider != null }
-        val recentRecommendations = rememberSaveable { recommendationsProvider?.recommendedTags ?: emptyList() }
+        val recentRecommendations = rememberSaveable { recommendedTags }
+
         LazyColumn(
             modifier = Modifier
                 .padding(it)
@@ -362,7 +360,7 @@ fun RecommendationsSettingsScreen(navController: NavHostController) {
                 Summary(
                     modifier = Modifier.padding(horizontal = MEDIUM_LARGE_SPACER.dp),
                     text = "Your frequent tags consist of the most common tags from your " +
-                            "favourite images. Breadboard will intelligently use these tags to " +
+                            "favourite posts. Breadboard will intelligently use these tags to " +
                             "recommend new content. You can tap a tag above to ignore it, " +
                             "preventing it from being used to recommend new content."
                 )
@@ -387,7 +385,7 @@ fun RecommendationsSettingsScreen(navController: NavHostController) {
                                     it
                                 )
                             }
-                            resetRecommendations()
+                            viewModel.resetProviders()
                         }
                     }
                     item {
@@ -404,7 +402,7 @@ fun RecommendationsSettingsScreen(navController: NavHostController) {
                                     it.roundToInt()
                                 )
                             }
-                            resetRecommendations()
+                            viewModel.resetProviders()
                         }
                     }
                     item {
@@ -421,7 +419,7 @@ fun RecommendationsSettingsScreen(navController: NavHostController) {
                                         it.roundToInt()
                                     )
                                 }
-                                resetRecommendations()
+                                viewModel.resetProviders()
                             }
                             AnimatedVisibility(
                                 visible = prefs.recommendationsTagCount > prefs.recommendationsPoolSize,

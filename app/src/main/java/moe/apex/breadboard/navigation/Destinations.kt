@@ -82,7 +82,13 @@ data class ImageView(
 object Home
 
 @Serializable
+object FollowedArtists
+
+@Serializable
 object Search
+
+@Serializable
+data class ReverseSearch(val initialImageUrl: String? = null, val initialFileUri: String? = null)
 
 @Serializable
 data class Results(
@@ -95,6 +101,21 @@ object Favourites
 
 @Serializable
 object Settings
+
+@Serializable
+object GeneralSettings
+
+@Serializable
+object ContentSettings
+
+@Serializable
+object ApiKeysSettings
+
+@Serializable
+object LayoutSettings
+
+@Serializable
+object DataSettings
 
 @Serializable
 object BlockedTagsSettings
@@ -113,6 +134,31 @@ object RecommendationsSettings
 
 @Serializable
 object IgnoredTagsSettings
+
+@Serializable
+data class SauceNaoResults(val imageUrl: String = "", val fileUri: String = "")
+
+@Serializable
+data class ArtistProfile(
+    val artistTag: String,
+    val originImageSource: ImageSource,
+) {
+    companion object {
+        fun fromUri(uri: Uri, imageSource: ImageSource): ArtistProfile? {
+            val host = uri.host ?: return null
+            val path = uri.pathSegments ?: return null
+
+            if (host == "breadboard.moe" && path.firstOrNull() == "artist") {
+                val tag = path.getOrNull(1)?.takeIf { it.isNotEmpty() }
+                if (tag != null) {
+                    return ArtistProfile(tag, imageSource)
+                }
+            }
+            return null
+        }
+    }
+}
+
 
 fun NavDestination?.routeIs(routes: Collection<KClass<*>>): Boolean {
     return routeIs(*routes.toTypedArray())

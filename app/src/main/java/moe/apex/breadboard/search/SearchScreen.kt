@@ -65,6 +65,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -89,7 +90,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.navigation.NavController
 import kotlinx.coroutines.CancellationException
@@ -136,6 +136,7 @@ import moe.apex.breadboard.util.showToast
 import java.text.SimpleDateFormat
 import java.util.Date
 import androidx.compose.ui.platform.LocalLocale
+import moe.apex.breadboard.util.MediumEmphasisCenteredLabel
 import moe.apex.breadboard.viewmodel.getGlobalViewModel
 
 
@@ -495,7 +496,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester) {
             ) {
                 var opacity by remember { mutableFloatStateOf(1f) }
                 var scale by remember { mutableFloatStateOf(1f) }
-                LaunchedEffect(showSourceRatingBox) {
+                SideEffect(showSourceRatingBox) {
                     if (showSourceRatingBox) {
                         opacity = 1f
                         scale = 1f
@@ -586,7 +587,7 @@ fun SearchScreen(navController: NavController, focusRequester: FocusRequester) {
                             bottom = SMALL_SPACER.dp
                         )
                 ) {
-                    LaunchedEffect(prefs.ratingsFilter) {
+                    SideEffect(prefs.ratingsFilter) {
                         Log.i("Breadboard", "new ratings filter: ${prefs.ratingsFilter}")
                     }
 
@@ -761,13 +762,9 @@ fun AutoCompleteTagResults(
             ) {
                 if (mostRecentSuggestions.isEmpty()) {
                     item {
-                        Text(
-                            fontSize = 16.sp,
+                        MediumEmphasisCenteredLabel(
                             text = "No results :(",
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier
-                                .padding(SMALL_LARGE_SPACER.dp)
-                                .fillMaxWidth(),
+                            modifier = Modifier.padding(SMALL_LARGE_SPACER.dp)
                         )
                     }
                 } else {
