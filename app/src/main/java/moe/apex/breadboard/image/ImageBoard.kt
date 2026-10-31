@@ -456,6 +456,7 @@ object Danbooru : ImageBoard {
     )
     override val imageSearchUrl = "${baseUrl}posts.json?tags=%s&page=%d&limit=100"
     override val authenticatedImageSearchUrl = "$imageSearchUrl&api_key=%s&login=%s"
+    private val popularUrl = "${baseUrl}posts.json?tags=%s order:favcount&limit=20"
     override val totalPostCountUrl = "${baseUrl}counts/posts.json?tags=%s"
     override val firstPageIndex = 1
     override val apiKeyCreationUrl = "${baseUrl}/profile"
@@ -617,6 +618,21 @@ object Danbooru : ImageBoard {
         )
     }
 
+    suspend fun getMostPopularPosts(artistTag: String): List<Image> {
+        val url = popularUrl.format(formatTagNameString(listOf(artistTag, "rating:g")))
+        val body = RequestUtil.get(url)
+        if (body.isEmpty()) return emptyList()
+
+        val json = JSONArray(body)
+        val subjects = mutableListOf<Image>()
+
+        for (i in 0 until json.length()) {
+            val e = json.getJSONObject(i)
+            parseImage(e)?.let { subjects.add(it) }
+        }
+
+        return subjects.toList()
+    }
 
     override fun getRatingFromString(rating: String): ImageRating {
         return when (rating) {
