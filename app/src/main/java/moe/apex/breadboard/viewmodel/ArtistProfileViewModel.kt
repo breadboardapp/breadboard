@@ -27,8 +27,15 @@ class ArtistProfileViewModel(private val artistTag: String): ViewModel() {
 
         Log.i("ArtistProfileViewModel", "Loading artist profile for $artistTag")
 
-        _artistProfile.value = Danbooru.getArtist(artistTag)
-        _images.value = DanbooruSafe.getMostPopularPosts(artistTag)
+        _artistProfile.value = runCatching { Danbooru.getArtist(artistTag) }
+            .onFailure { Log.e("ArtistProfileViewModel", "Failed to load artist profile for $artistTag", it) }
+            .getOrThrow()
+
+        runCatching { DanbooruSafe.getMostPopularPosts(artistTag) }
+            .onFailure { Log.e("ArtistProfileViewModel", "Failed to load posts with DanbooruSafe for artist $artistTag. Attempting regular Danbooru.", it) }
+            .recoverCatching { Danbooru.getMostPopularPosts(artistTag) }
+            .onFailure { Log.e("ArtistProfileViewModel", "Failed to load posts with Danbooru for artist $artistTag", it) }
+            .onSuccess { _images.value = it }
 
         _isInitialised.value = true
     }
